@@ -14,6 +14,7 @@ import { FormFieldDefinition } from '../../../core/models';
 export class FormFieldComponent {
   @Input({ required: true }) field!: FormFieldDefinition;
   @Input() labelClass = 'text-slate-700';
+  @Input() labelWidthClass = 'w-32';
   @Input() highlightClass = 'bg-yellow-100';
 
   inputValue: string | number = '';
