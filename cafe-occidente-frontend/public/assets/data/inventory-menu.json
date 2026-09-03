@@ -1,0 +1,11 @@
+{
+  "windowTitle": "INVENTARIOS",
+  "options": [
+    { "label": "Registrar Salidas", "route": "/compras/inventarios", "emphasis": true },
+    { "label": "Reporte Inventario por Esp.", "route": "/compras/inventarios" },
+    { "label": "Reporte Inventario por Cod.", "route": "/compras/inventarios" },
+    { "label": "Ingresar Conductores", "route": "/compras/inventarios" },
+    { "label": "Reimprimir Remisión", "route": "/compras/inventarios" },
+    { "label": "Volver al Pánel de Control Compras", "route": "/compras" }
+  ]
+}

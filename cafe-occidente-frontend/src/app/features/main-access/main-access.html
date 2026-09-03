@@ -1,0 +1,18 @@
+<div class="flex h-screen items-center justify-center bg-panel-welcome p-6" *ngIf="data() as d">
+  <div class="w-[620px]">
+    <app-access-window [title]="d.windowTitle" bodyClass="bg-panel-welcome">
+      <div class="flex items-center justify-end gap-2 bg-panel-welcome-bar px-4 py-2">
+        <span class="text-sm font-semibold text-slate-700">{{ d.welcomeLabel }}</span>
+        <span class="text-sm font-bold text-slate-800">{{ d.userName }}</span>
+      </div>
+
+      <div class="p-8">
+        <app-menu-button-grid [options]="d.options" [columns]="3"></app-menu-button-grid>
+      </div>
+
+      <div class="flex justify-end px-8 pb-6">
+        <app-button [label]="d.exitLabel" variant="access" (pressed)="onExit()"></app-button>
+      </div>
+    </app-access-window>
+  </div>
+</div>

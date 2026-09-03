@@ -1,0 +1,18 @@
+<div class="h-screen bg-white p-3" *ngIf="data() as d">
+  <app-access-window [title]="d.windowTitle" bodyClass="bg-white">
+    <div class="flex flex-col gap-4 p-6">
+      <h1 class="text-2xl font-semibold text-slate-700">{{ d.heading }}</h1>
+
+      <div class="grid grid-cols-2 gap-x-12 gap-y-3">
+        <div class="flex flex-col gap-3">
+          <app-form-field *ngFor="let field of d.leftColumn" [field]="field" labelClass="text-blue-900"></app-form-field>
+        </div>
+        <div class="flex flex-col gap-3">
+          <app-form-field *ngFor="let field of d.rightColumn" [field]="field" labelClass="text-blue-900"></app-form-field>
+        </div>
+      </div>
+    </div>
+
+    <app-status-bar [config]="{ totalRecords: 1, currentRecord: 1 }"></app-status-bar>
+  </app-access-window>
+</div>

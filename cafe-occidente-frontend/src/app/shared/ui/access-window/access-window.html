@@ -1,0 +1,15 @@
+<section class="flex h-full w-full flex-col overflow-hidden rounded-sm border border-window-titlebar-border shadow-sm">
+  <header
+    class="flex items-center justify-between border-b border-window-titlebar-border bg-window-titlebar px-3 py-1.5"
+  >
+    <div class="flex items-center gap-2">
+      <span class="inline-block h-3.5 w-3.5 rounded-sm bg-blue-800"></span>
+      <span class="text-[13px] font-medium text-slate-600">{{ title }}</span>
+    </div>
+    <span class="cursor-pointer text-slate-400 hover:text-slate-600">&#10005;</span>
+  </header>
+
+  <div class="flex-1 overflow-auto" [class]="bodyClass">
+    <ng-content></ng-content>
+  </div>
+</section>

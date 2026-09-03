@@ -1,0 +1,75 @@
+{
+  "windowTitle": "CONSULTA COMPRAS",
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "text", "value": "BUESACO1 OCCIDE" },
+    { "key": "purchaseDate", "label": "Fecha de Compra", "type": "date", "value": "1/01/2026" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "value": 3488 },
+    { "key": "announcementDate", "label": "Fecha de Anuncio", "type": "date", "value": "1/01/2026" },
+    { "key": "remission", "label": "Remisión", "type": "text" }
+  ],
+  "identificationFields": [
+    { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
+    { "key": "invoice", "label": "Factura", "type": "text", "value": "SDBU", "highlighted": true },
+    { "key": "invoiceNumber", "label": "", "type": "number", "value": 27728, "highlighted": true },
+    { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency", "value": "2.742.000" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "value": "0110002000002" }
+  ],
+  "contactFields": [
+    { "key": "idNumber", "label": "Cedula", "type": "text", "value": "1.084.227.387" },
+    { "key": "firstName", "label": "", "type": "text", "value": "DIEGO FERNANDO" },
+    { "key": "lastName", "label": "", "type": "text", "value": "ORDOÑEZ ORTIZ" },
+    { "key": "idType", "label": "Tipo", "type": "text", "value": "C" },
+    { "key": "address", "label": "Direccion", "type": "text", "value": "BARRIO LAS PALMAS CA" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "value": "3005241386" }
+  ],
+  "qualityFields": [
+    { "key": "special", "label": "Especial", "type": "text", "value": "RN" },
+    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency", "value": "0,00" },
+    { "key": "defectStoredPrice", "label": "Pr Alm Defec", "type": "currency", "value": "0,00" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "value": "0,00" },
+    { "key": "costs", "label": "Costos", "type": "currency", "value": "0,00" }
+  ],
+  "weightFields": [
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number", "value": "199,00" },
+    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage", "value": "20,40" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number", "value": "0,00" },
+    { "key": "huskPercentage", "label": "% Kg Pasilla", "type": "percentage", "value": "0,00" },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number", "value": "0,00" },
+    { "key": "factor", "label": "Factor", "type": "number", "value": "0,00" }
+  ],
+  "netWeightFields": [
+    { "key": "bags", "label": "Sacos", "type": "number", "value": 0 },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number", "value": 0 },
+    { "key": "greenKg", "label": "Kilos Verdes", "type": "number", "value": 0 },
+    { "key": "tare", "label": "Destare", "type": "number", "value": 0 },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number", "value": "0,00" },
+    { "key": "penalty", "label": "Castigo", "type": "currency", "value": "0,00" }
+  ],
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "value": 0 },
+  "statusField": { "key": "status", "label": "ESTADO", "type": "text", "value": "ANULADA" },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [
+      { "label": "Efectivo", "value": "0,00" },
+      { "label": "Cheque", "value": "0,00" },
+      { "label": "Núm Cheque", "value": "0" },
+      { "label": "Transfer", "value": "0,00" },
+      { "label": "Datáfono", "value": "0,00" }
+    ],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": "0,00"
+  },
+  "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "value": 0 },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "value": 0 },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "value": 0, "highlighted": true }
+  ],
+  "additionalDiscountFields": [
+    { "key": "associateContribution", "label": "Aporte Socio", "type": "currency", "value": 0 },
+    { "key": "coopDiscount", "label": "Dto Coop", "type": "currency", "value": 0 },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "value": 0 },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "value": 0 }
+  ],
+  "reprintButtonLabel": "Reimprimir Dcto Equiv"
+}

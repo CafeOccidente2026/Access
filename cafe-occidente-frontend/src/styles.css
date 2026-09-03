@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Paleta de diseño inspirada en el sistema de escritorio original (Access).
+   Los tokens se centralizan aqui para no repetir colores en los componentes. */
+@theme {
+  --color-shell-bg: #ffffff;
+  --color-shell-titlebar: #f4efe1;
+  --color-shell-titlebar-border: #e4dcc6;
+  --color-shell-statusbar: #7a1f2b;
+
+  --color-panel-sky: #9ccdf5;
+  --color-panel-teal-strong: #3fb6c4;
+  --color-panel-teal-soft: #c9f3f5;
+  --color-panel-green: #b9e08a;
+  --color-panel-cyan: #37c7ec;
+  --color-panel-welcome: #62c3d1;
+  --color-panel-welcome-bar: #d8c89f;
+
+  --color-window-titlebar: #f2f2f2;
+  --color-window-titlebar-border: #d9d9d9;
+
+  --color-accent-highlight: #21e0e0;
+  --color-accent-yellow: #fdf58b;
+  --color-accent-orange: #f7c98e;
+  --color-accent-green-soft: #d6f2c4;
+
+  --color-btn-face: #dceaf7;
+  --color-btn-face-hover: #c7ddf2;
+  --color-btn-border: #7fa8cc;
+
+  --font-sans: "Segoe UI", "Inter", system-ui, sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+}

@@ -1,0 +1,19 @@
+{
+  "windowTitle": "MENUS COMPRAS A FUTURO",
+  "leftOptions": [
+    { "label": "Asignar Cupo a Anuncios", "route": "/compras/futuro" },
+    { "label": "Facturar Anuncios con Cupos", "route": "/compras/futuro" },
+    { "label": "Restaurar Anuncios con Cupos", "route": "/compras/futuro" }
+  ],
+  "leftStandaloneOption": { "label": "Anunciadas Hoy", "route": "/compras/futuro" },
+  "rightOptions": [
+    { "label": "Ingresar Compras a Futuro", "route": "/compras/futuro", "emphasis": true },
+    { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro" },
+    { "label": "Restaurar Compras Anunciadas", "route": "/compras/futuro" },
+    { "label": "Facturar Compras Fertifuturo", "route": "/compras/futuro" },
+    { "label": "Restaurar Cupos Fertifuturo", "route": "/compras/futuro" },
+    { "label": "Generar Informe Anuncios a Futuro", "route": "/compras/futuro" },
+    { "label": "Generar Informe Saldo Anuncios", "route": "/compras/futuro" },
+    { "label": "Volver al pánel de Control Compras", "route": "/compras" }
+  ]
+}

@@ -1,0 +1,26 @@
+<div class="flex h-screen items-center justify-center bg-white" *ngIf="data() as d">
+  <div class="w-[420px] overflow-hidden rounded-lg shadow-xl">
+    <header class="flex items-center gap-2 border-b border-window-titlebar-border bg-window-titlebar px-3 py-1.5">
+      <span class="inline-block h-3.5 w-3.5 rounded-sm bg-blue-800"></span>
+      <span class="text-[13px] text-slate-600">{{ d.windowTitle }}</span>
+      <span class="ml-auto cursor-pointer text-slate-400 hover:text-slate-600">&#10005;</span>
+    </header>
+
+    <div class="flex flex-col gap-5 bg-panel-cyan px-8 py-8">
+      <label class="flex items-center gap-3 text-sm font-semibold text-slate-800">
+        <span class="w-28 rounded bg-accent-orange px-1 py-0.5">{{ d.fromLabel }}:</span>
+        <input class="flex-1 rounded border border-slate-400 bg-accent-orange/60 px-2 py-1 text-sm" [(ngModel)]="fromDate" />
+      </label>
+
+      <label class="flex items-center gap-3 text-sm font-semibold text-slate-800">
+        <span class="w-28 rounded bg-accent-orange px-1 py-0.5">{{ d.toLabel }}:</span>
+        <input class="flex-1 rounded border border-slate-400 bg-accent-orange/60 px-2 py-1 text-sm" [(ngModel)]="toDate" />
+      </label>
+
+      <div class="mt-2 flex justify-center gap-4">
+        <app-button [label]="d.acceptLabel" variant="access"></app-button>
+        <app-button [label]="d.cancelLabel" variant="access" (pressed)="onCancel()"></app-button>
+      </div>
+    </div>
+  </div>
+</div>

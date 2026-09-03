@@ -1,0 +1,13 @@
+{
+  "windowTitle": "Acceso Principal",
+  "welcomeLabel": "Bienvenido:",
+  "userName": "DANIERS",
+  "options": [
+    { "label": "Menú Principal", "route": "/menu-principal" },
+    { "label": "Usuarios", "route": "/usuarios" },
+    { "label": "Acceso a Tablas", "route": "/acceso-tablas" },
+    { "label": "Menú Habilitación", "route": "/menu-habilitacion" },
+    { "label": "Permisos", "route": "/permisos" }
+  ],
+  "exitLabel": "Salir"
+}

@@ -1,0 +1,3 @@
+<div class="h-screen bg-white p-3">
+  <app-purchase-form-view *ngIf="data() as d" [content]="d" [readOnly]="true" (reprintPressed)="onReprint()"></app-purchase-form-view>
+</div>

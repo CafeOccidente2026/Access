@@ -1,0 +1,36 @@
+<app-window-shell
+  *ngIf="page() as p"
+  [appTitle]="p.shell.appTitle"
+  [leftStatus]="p.shell.leftStatus"
+  [rightStatus]="p.shell.rightStatus"
+>
+  <div class="flex h-full items-center justify-center bg-white">
+    <div class="w-[460px] overflow-hidden rounded-md border border-shell-titlebar-border shadow-lg">
+      <header class="flex items-center gap-2 border-b border-shell-titlebar-border bg-shell-titlebar px-3 py-2">
+        <span class="inline-block h-3.5 w-3.5 rounded-sm bg-blue-800"></span>
+        <span class="text-sm text-slate-600">{{ p.form.windowTitle }}</span>
+      </header>
+
+      <div class="space-y-5 bg-white px-10 py-8">
+        <div class="grid grid-cols-[110px_1fr_auto] items-center gap-3">
+          <label class="text-sm text-slate-600">{{ p.form.userLabel }}</label>
+          <input
+            class="rounded border border-slate-400 px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none"
+            [(ngModel)]="username"
+          />
+          <app-button [label]="p.form.acceptLabel" variant="access" (pressed)="onAccept()"></app-button>
+        </div>
+
+        <div class="grid grid-cols-[110px_1fr_auto] items-center gap-3">
+          <label class="text-sm text-slate-600">{{ p.form.passwordLabel }}</label>
+          <input
+            type="password"
+            class="rounded border border-slate-400 px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none"
+            [(ngModel)]="password"
+          />
+          <app-button [label]="p.form.cancelLabel" variant="access" (pressed)="onCancel()"></app-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</app-window-shell>

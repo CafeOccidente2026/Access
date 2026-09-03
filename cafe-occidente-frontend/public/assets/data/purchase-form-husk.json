@@ -1,0 +1,42 @@
+{
+  "windowTitle": "PASILLA",
+  "theme": "cyan",
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
+  ],
+  "identificationFields": [
+    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text" },
+    { "key": "basePriceDryLoad", "label": "Pr base carga perg seco", "type": "currency" }
+  ],
+  "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
+  "qualityFields": [
+    { "key": "special", "label": "Especial", "type": "select", "options": [] },
+    { "key": "pointPrice", "label": "Pr Punto", "type": "currency" },
+    { "key": "almondWeight", "label": "Peso Almendra", "type": "number" },
+    { "key": "almondPercentage", "label": "% Almendra", "type": "percentage" }
+  ],
+  "netWeightFields": [
+    { "key": "bags", "label": "Sacos", "type": "number" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
+    { "key": "tare", "label": "Destare", "type": "number" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number" }
+  ],
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [{ "label": "Efectivo", "value": "" }],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": ""
+  },
+  "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
+  "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
+  "settlementSecondaryFields": [
+    { "key": "withholding", "label": "Retefuente", "type": "currency" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "windowTitle": "COMPRAS",
+  "sideOptions": [
+    { "label": "Genera Remesa", "route": "/compras" },
+    { "label": "Genera Remesa Otros", "route": "/compras" }
+  ],
+  "options": [
+    { "label": "Actualizar Anuncios", "route": "/compras" },
+    { "label": "Compras Café Seco", "route": "/compras/cafe-seco", "emphasis": true },
+    { "label": "Compras Cafés Otros", "route": "/compras/cafe-otros" },
+    { "label": "Compras Café Verde", "route": "/compras/cafe-verde" },
+    { "label": "Compra Pasilla", "route": "/compras/pasilla" },
+    { "label": "Compras a Futuro", "route": "/compras/futuro" },
+    { "label": "Inventarios", "route": "/compras/inventarios" },
+    { "label": "Anular Documento", "route": "/compras" },
+    { "label": "Generar Reporte Anuncio", "route": "/compras" },
+    { "label": "Consulta compras por fecha", "route": "/compras/dialogo-fechas" },
+    { "label": "Consultar Compras", "route": "/compras/consulta" },
+    { "label": "Volver al Pánel de Control Principal", "route": "/menu-principal" }
+  ]
+}

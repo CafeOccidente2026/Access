@@ -1,0 +1,14 @@
+<div
+  class="grid gap-3"
+  [class.grid-cols-1]="columns === 1"
+  [class.grid-cols-2]="columns === 2"
+  [class.grid-cols-3]="columns === 3"
+>
+  <app-button
+    *ngFor="let option of options"
+    [label]="option.label"
+    variant="menu"
+    [active]="!!option.emphasis"
+    (pressed)="onSelect(option)"
+  ></app-button>
+</div>

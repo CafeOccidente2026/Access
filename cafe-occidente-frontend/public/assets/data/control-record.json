@@ -1,0 +1,30 @@
+{
+  "windowTitle": "RegControl",
+  "heading": "Registro de Control",
+  "leftColumn": [
+    { "key": "controlNumber", "label": "Núm Registro Control", "type": "number", "value": 2 },
+    { "key": "baseFactor", "label": "Factor Base", "type": "number", "value": 94 },
+    { "key": "baseWithholding", "label": "Base Rete Fuente", "type": "currency", "value": "8.379.840,00" },
+    { "key": "baseLoad", "label": "Base Carga", "type": "number", "value": 125 },
+    { "key": "withholdingPercentage", "label": "Porcentaje Rete Fuente", "type": "percentage", "value": "0,5" },
+    { "key": "baseHusk", "label": "Base Pasilla", "type": "number", "value": "12,5" },
+    { "key": "avgHuskPercentage", "label": "% Kg de Pasilla Promedio", "type": "percentage", "value": "6,14" },
+    { "key": "purchasePoint", "label": "Punto de Compra", "type": "text", "value": "BUESACO1 OCCIDENTE" },
+    { "key": "prefix", "label": "Prefijo", "type": "text", "value": "SDBU" },
+    { "key": "costs", "label": "Costos", "type": "currency", "value": "692,00" },
+    { "key": "sampleSize", "label": "Tamaño Muestra", "type": "number", "value": "250,00" },
+    { "key": "excelsoKg", "label": "Kg de Excelso", "type": "number", "value": "70,00" },
+    { "key": "greenCoffeePercentage", "label": "Pocentaje Café Verde", "type": "percentage", "value": 50 },
+    { "key": "specialtyThreshold", "label": "Umbral Cafés Especiales", "type": "percentage", "value": "93,33" },
+    { "key": "associatePercentage", "label": "Porc Aportes Asociados", "type": "percentage", "value": 2 },
+    { "key": "nonAssociateDiscount", "label": "Poc Desc Coop No Asoc", "type": "percentage", "value": "0,8" },
+    { "key": "trustedId", "label": "Fiel", "type": "text", "value": "1061699481" }
+  ],
+  "rightColumn": [
+    { "key": "dianResolution", "label": "Resol DIAN", "type": "text", "value": "18764112191428" },
+    { "key": "resolutionDate", "label": "Fecha Res", "type": "date", "value": "6/07/2026" },
+    { "key": "resolutionFrom", "label": "Desde REs", "type": "number", "value": 27867 },
+    { "key": "resolutionTo", "label": "Hasta REs", "type": "number", "value": 31567 },
+    { "key": "validity", "label": "Vigencia", "type": "number", "value": 24 }
+  ]
+}

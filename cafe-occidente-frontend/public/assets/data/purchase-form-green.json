@@ -1,0 +1,62 @@
+{
+  "windowTitle": "VERDES",
+  "theme": "teal",
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "value": "0110002000004" }
+  ],
+  "identificationFields": [
+    { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
+    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency" }
+  ],
+  "federationHeading": "Información Federación:",
+  "federationFields": [
+    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true },
+    { "key": "program", "label": "Programa", "type": "text", "highlighted": true }
+  ],
+  "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
+  "qualityFields": [
+    { "key": "special", "label": "Especial", "type": "select", "options": [] },
+    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
+    { "key": "defectStoredPrice", "label": "Pr_AlmDefec", "type": "currency" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency" },
+    { "key": "costs", "label": "Costos", "type": "currency" }
+  ],
+  "weightFields": [
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number", "value": "140,00" },
+    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage", "value": "44,00" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number", "value": "12,50" },
+    { "key": "huskPercentage", "label": "Porc Kg Pas %", "type": "percentage", "value": "5,00" },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number", "value": "186,18" },
+    { "key": "factor", "label": "Factor", "type": "number", "value": "94,00" }
+  ],
+  "netWeightFields": [
+    { "key": "bags", "label": "Sacos", "type": "number" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
+    { "key": "tare", "label": "Destare", "type": "number" },
+    { "key": "greenKg", "label": "Kilos Verdes", "type": "number" },
+    { "key": "netKg", "label": "Kilos_Netos", "type": "number" }
+  ],
+  "priceFields": [
+    { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency" },
+    { "key": "penalty", "label": "Castigo", "type": "currency" }
+  ],
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [{ "label": "Efectivo", "value": "" }],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": ""
+  },
+  "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
+  "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
+  "settlementSecondaryFields": [
+    { "key": "withholding", "label": "Retefuente", "type": "currency" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+  ]
+}

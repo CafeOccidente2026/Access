@@ -1,0 +1,8 @@
+<div class="h-screen bg-panel-teal-soft p-3" *ngIf="data() as d">
+  <app-access-window [title]="d.windowTitle" bodyClass="bg-panel-teal-soft">
+    <div class="w-72 p-8">
+      <app-menu-button-grid [options]="d.options" [columns]="1"></app-menu-button-grid>
+    </div>
+    <app-status-bar [config]="{ totalRecords: 1, currentRecord: 1 }"></app-status-bar>
+  </app-access-window>
+</div>

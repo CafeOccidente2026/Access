@@ -1,0 +1,8 @@
+{
+  "windowTitle": "AplicCompras Login",
+  "userLabel": "Usuario",
+  "passwordLabel": "Contraseña",
+  "acceptLabel": "Aceptar",
+  "cancelLabel": "Cancelar",
+  "successRoute": "/acceso-principal"
+}

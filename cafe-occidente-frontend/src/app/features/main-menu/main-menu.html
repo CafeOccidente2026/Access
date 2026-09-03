@@ -1,0 +1,14 @@
+<div class="h-screen bg-panel-sky p-4" *ngIf="data() as d">
+  <app-access-window [title]="d.windowTitle" bodyClass="bg-panel-sky">
+    <div class="grid h-full grid-cols-[280px_1fr] gap-8 p-8">
+      <app-menu-button-grid [options]="d.options" [columns]="1"></app-menu-button-grid>
+
+      <div class="flex flex-col items-center justify-center gap-6">
+        <div class="flex w-full max-w-md flex-col items-center gap-4 rounded bg-white p-6 shadow-sm">
+          <img [src]="d.logo.src" [alt]="d.logo.alt" class="h-40 w-40 object-contain" />
+        </div>
+        <p class="whitespace-pre-line text-center text-lg font-bold text-blue-900">{{ d.heading }}</p>
+      </div>
+    </div>
+  </app-access-window>
+</div>

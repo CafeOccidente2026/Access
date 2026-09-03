@@ -1,0 +1,19 @@
+{
+  "windowTitle": "MENU PRINCIPAL",
+  "heading": "APLICATIVO COMPRAS\nBUESACO AÑO 2026",
+  "logo": {
+    "src": "assets/images/cafe-occidente-logo.svg",
+    "alt": "CaféOccidente - Cooperativa de caficultores de occidente de Nariño Ltda."
+  },
+  "options": [
+    { "label": "Registro de Control", "route": "/registro-control" },
+    { "label": "Compras", "route": "/compras", "emphasis": true },
+    { "label": "Suministros", "route": "/suministros" },
+    { "label": "Vendedores", "route": "/vendedores" },
+    { "label": "Exportar Informacion", "route": "/exportar-informacion" },
+    { "label": "Importar Información", "route": "/importar-informacion" },
+    { "label": "Exportado Especial", "route": "/exportado-especial" },
+    { "label": "Volver Acceso Principal", "route": "/acceso-principal" },
+    { "label": "Salir de la aplicación", "route": "/login" }
+  ]
+}
