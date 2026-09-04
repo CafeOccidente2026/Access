@@ -1,0 +1,38 @@
+name: Frontend CI
+
+# Se ejecuta en cada Pull Request que toque el frontend, y tambien al
+# hacer push directo a main (por si alguna vez se permite excepcionalmente).
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "cafe-occidente-frontend/**"
+  push:
+    branches: [main]
+    paths:
+      - "cafe-occidente-frontend/**"
+
+jobs:
+  build:
+    name: Instalar y compilar el frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cafe-occidente-frontend
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+          cache: "npm"
+          cache-dependency-path: cafe-occidente-frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar (build de produccion)
+        run: npm run build
