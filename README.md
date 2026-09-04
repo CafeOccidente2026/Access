@@ -222,4 +222,3 @@ cafeoccidente-backend/
     └── resources/
         ├── application.yml / application-dev.yml / application-prod.yml
         └── db/migration/      Migraciones versionadas de Flyway
-```
