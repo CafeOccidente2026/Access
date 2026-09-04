@@ -1,0 +1,17 @@
+{
+  "windowTitle": "ASIGNACION CUPOS A ANUNCIOS",
+  "fields": [
+    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "date", "label": "Fecha", "type": "date" },
+    { "key": "healthyStoredPrice", "label": "Pr Almendra Sana", "type": "currency" },
+    { "key": "defectStoredPrice", "label": "Pr Almendra Defec", "type": "currency" },
+    { "key": "bonus", "label": "Bonificacion", "type": "currency" },
+    { "key": "basePriceCps", "label": "Pr base CPS", "type": "currency" },
+    { "key": "costs", "label": "Costos", "type": "currency" },
+    { "key": "special", "label": "Especial", "type": "text" },
+    { "key": "deliveredKg", "label": "Kilos Entregados", "type": "number" },
+    { "key": "quota", "label": "Cupo", "type": "number" },
+    { "key": "balance", "label": "Saldo", "type": "number" }
+  ]
+}

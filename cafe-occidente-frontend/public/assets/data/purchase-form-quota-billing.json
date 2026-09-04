@@ -1,0 +1,56 @@
+{
+  "windowTitle": "ANUNCIADAS",
+  "theme": "cyan",
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    { "key": "date", "label": "Fecha", "type": "date", "value": "4/09/2026", "highlighted": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
+  ],
+  "identificationFields": [
+    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text" },
+    { "key": "basePricePergaminoLoad", "label": "Pr carga Pergamino PC", "type": "currency" },
+    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }
+  ],
+  "contactFields": [
+    { "key": "idPart1", "label": "Cedula", "type": "text" },
+    { "key": "idType", "label": "Tipo", "type": "text" },
+    { "key": "address", "label": "Direccion", "type": "text" },
+    { "key": "cellphone", "label": "Cel", "type": "text" }
+  ],
+  "qualityFields": [
+    { "key": "special", "label": "Especial", "type": "select", "options": [] },
+    { "key": "sustentationPrice", "label": "Pr Sustentación", "type": "currency" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency" },
+    { "key": "costs", "label": "Costos", "type": "currency" }
+  ],
+  "weightFields": [
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number" },
+    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number" },
+    { "key": "huskPercentage", "label": "% Kg Pasilla", "type": "percentage" },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number" },
+    { "key": "factor", "label": "Factor", "type": "number" }
+  ],
+  "netWeightFields": [
+    { "key": "bags", "label": "Sacos", "type": "number" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
+    { "key": "tare", "label": "Destare", "type": "number" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number" },
+    { "key": "penalty", "label": "Castigo", "type": "currency" }
+  ],
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [{ "label": "Efectivo", "value": "" }],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": ""
+  },
+  "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
+  "settlementFields": [
+    { "key": "withholding", "label": "Retefuente", "type": "currency" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+  ]
+}

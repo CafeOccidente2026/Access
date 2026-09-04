@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { Location } from '@angular/common';
+import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
 
 /**
  * Ventana de escritorio de nivel superior (marco de la aplicacion),
- * igual a la pantalla inicial: barra de titulo con controles y barra de estado.
+ * igual a la pantalla inicial: barra de titulo con boton de cierre.
  */
 @Component({
   selector: 'app-window-shell',
@@ -12,6 +13,10 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 })
 export class WindowShellComponent {
   @Input() appTitle = '';
-  @Input() leftStatus = '';
-  @Input() rightStatus = '';
+
+  private readonly location = inject(Location);
+
+  onClose(): void {
+    this.location.back();
+  }
 }

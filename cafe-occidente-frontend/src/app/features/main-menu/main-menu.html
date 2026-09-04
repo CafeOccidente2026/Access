@@ -1,5 +1,5 @@
-<div class="h-screen bg-panel-sky p-4" *ngIf="data() as d">
-  <app-access-window [title]="d.windowTitle" bodyClass="bg-panel-sky">
+<div class="h-screen bg-gradient-to-br from-panel-sky to-panel-cyan p-4" *ngIf="data() as d">
+  <app-access-window [title]="d.windowTitle" bodyClass="bg-gradient-to-br from-panel-sky to-panel-cyan" closeRoute="/login">
     <div class="grid h-full grid-cols-[280px_1fr] gap-8 p-8">
       <app-menu-button-grid [options]="d.options" [columns]="1"></app-menu-button-grid>
 

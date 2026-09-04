@@ -3,7 +3,6 @@ export * from './access-window/access-window';
 export * from './window-shell/window-shell';
 export * from './form-field/form-field';
 export * from './menu-button-grid/menu-button-grid';
-export * from './status-bar/status-bar';
 export * from './payment-panel/payment-panel';
 export * from './section-divider/section-divider';
 export * from './field-row/field-row';

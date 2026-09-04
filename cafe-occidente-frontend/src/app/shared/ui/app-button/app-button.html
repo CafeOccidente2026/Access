@@ -3,9 +3,9 @@
   (click)="onClick()"
   [class]="
     variant === 'access'
-      ? 'min-w-[92px] rounded-md border border-btn-border bg-gradient-to-b from-white to-btn-face px-5 py-1.5 text-center text-sm font-medium text-slate-700 shadow-sm hover:from-btn-face hover:to-btn-face-hover active:shadow-inner'
+      ? 'min-w-[92px] rounded-lg border border-btn-border bg-gradient-to-b from-white to-btn-face px-5 py-1.5 text-center text-sm font-medium text-slate-700 shadow-md transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:from-btn-face hover:to-btn-face-hover active:translate-y-0 active:shadow-inner'
       : variant === 'menu'
-        ? 'w-full max-w-md rounded border px-4 py-2 text-left text-sm font-medium text-blue-800 shadow-sm transition-colors ' +
+        ? 'w-full max-w-md rounded-lg border px-4 py-2 text-left text-sm font-medium text-blue-800 shadow-md transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:shadow-md ' +
           (active
             ? 'border-blue-500 bg-white ring-1 ring-blue-400'
             : 'border-slate-300 bg-white hover:bg-blue-50')

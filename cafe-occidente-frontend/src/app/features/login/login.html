@@ -1,34 +1,32 @@
-<app-window-shell
-  *ngIf="page() as p"
-  [appTitle]="p.shell.appTitle"
-  [leftStatus]="p.shell.leftStatus"
-  [rightStatus]="p.shell.rightStatus"
->
-  <div class="flex h-full items-center justify-center bg-white">
-    <div class="w-[460px] overflow-hidden rounded-md border border-shell-titlebar-border shadow-lg">
-      <header class="flex items-center gap-2 border-b border-shell-titlebar-border bg-shell-titlebar px-3 py-2">
-        <span class="inline-block h-3.5 w-3.5 rounded-sm bg-blue-800"></span>
-        <span class="text-sm text-slate-600">{{ p.form.windowTitle }}</span>
-      </header>
+<app-window-shell *ngIf="page() as p" [appTitle]="p.shell.appTitle">
+  <div class="flex h-full items-center justify-center bg-gradient-to-br from-panel-welcome to-panel-teal-soft">
+    <div class="w-[400px] overflow-hidden rounded-xl bg-white shadow-2xl">
+      <div class="flex flex-col items-center gap-2 bg-gradient-to-br from-panel-teal-strong to-panel-cyan px-8 py-7 text-white">
+        <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-2xl">🔒</span>
+        <h1 class="text-lg font-semibold">{{ p.form.windowTitle }}</h1>
+      </div>
 
-      <div class="space-y-5 bg-white px-10 py-8">
-        <div class="grid grid-cols-[110px_1fr_auto] items-center gap-3">
-          <label class="text-sm text-slate-600">{{ p.form.userLabel }}</label>
+      <div class="flex flex-col gap-5 px-8 py-8">
+        <label class="flex flex-col gap-1 text-sm font-medium text-slate-600">
+          {{ p.form.userLabel }}
           <input
-            class="rounded border border-slate-400 px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none"
+            class="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-panel-cyan focus:outline-none focus:ring-2 focus:ring-panel-cyan/40"
             [(ngModel)]="username"
           />
-          <app-button [label]="p.form.acceptLabel" variant="access" (pressed)="onAccept()"></app-button>
-        </div>
+        </label>
 
-        <div class="grid grid-cols-[110px_1fr_auto] items-center gap-3">
-          <label class="text-sm text-slate-600">{{ p.form.passwordLabel }}</label>
+        <label class="flex flex-col gap-1 text-sm font-medium text-slate-600">
+          {{ p.form.passwordLabel }}
           <input
             type="password"
-            class="rounded border border-slate-400 px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none"
+            class="rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-panel-cyan focus:outline-none focus:ring-2 focus:ring-panel-cyan/40"
             [(ngModel)]="password"
           />
+        </label>
+
+        <div class="flex justify-end gap-3 pt-2">
           <app-button [label]="p.form.cancelLabel" variant="access" (pressed)="onCancel()"></app-button>
+          <app-button [label]="p.form.acceptLabel" variant="access" (pressed)="onAccept()"></app-button>
         </div>
       </div>
     </div>

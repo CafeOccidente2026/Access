@@ -4,18 +4,18 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, FormFieldComponent } from '../../shared/ui';
-import { ControlRecordContent } from './control-record.model';
+import { QuotaAssignmentContent } from './quota-assignment.model';
 
-/** Pantalla "Registro de Control": parametros generales de la operacion de compras. */
+/** Pantalla "Asignar Cupo a Anuncios": cupo de compra asignado a cada anuncio. */
 @Component({
-  selector: 'app-control-record',
+  selector: 'app-quota-assignment',
   standalone: true,
   imports: [CommonModule, AccessWindowComponent, FormFieldComponent],
-  templateUrl: './control-record.html',
+  templateUrl: './quota-assignment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ControlRecordComponent {
+export class QuotaAssignmentComponent {
   private readonly content = inject(ContentService);
 
-  readonly data = toSignal(this.content.loadJson<ControlRecordContent>('control-record'));
+  readonly data = toSignal(this.content.loadJson<QuotaAssignmentContent>('quota-assignment'));
 }

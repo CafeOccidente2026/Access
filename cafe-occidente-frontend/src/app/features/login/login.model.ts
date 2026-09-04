@@ -9,6 +9,4 @@ export interface LoginContent {
 
 export interface ShellContent {
   readonly appTitle: string;
-  readonly leftStatus: string;
-  readonly rightStatus: string;
 }

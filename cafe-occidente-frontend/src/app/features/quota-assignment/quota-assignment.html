@@ -1,0 +1,9 @@
+<div class="h-screen bg-white p-3" *ngIf="data() as d">
+  <app-access-window [title]="d.windowTitle" bodyClass="bg-white">
+    <div class="flex flex-col gap-3 p-6">
+      <div class="flex max-w-sm flex-col gap-3">
+        <app-form-field *ngFor="let field of d.fields" [field]="field" labelClass="text-blue-900" labelWidthClass="w-40"></app-form-field>
+      </div>
+    </div>
+  </app-access-window>
+</div>

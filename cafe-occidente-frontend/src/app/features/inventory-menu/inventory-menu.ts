@@ -3,14 +3,14 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, MenuButtonGridComponent, StatusBarComponent } from '../../shared/ui';
+import { AccessWindowComponent, MenuButtonGridComponent } from '../../shared/ui';
 import { InventoryMenuContent } from './inventory-menu.model';
 
 /** Panel "INVENTARIOS". */
 @Component({
   selector: 'app-inventory-menu',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, MenuButtonGridComponent, StatusBarComponent],
+  imports: [CommonModule, AccessWindowComponent, MenuButtonGridComponent],
   templateUrl: './inventory-menu.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

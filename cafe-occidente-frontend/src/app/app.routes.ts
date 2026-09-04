@@ -57,6 +57,27 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'compras/futuro/asignar-cupo',
+    loadComponent: () =>
+      import('./features/quota-assignment/quota-assignment').then(
+        (m) => m.QuotaAssignmentComponent,
+      ),
+  },
+  {
+    path: 'compras/futuro/ingresar',
+    loadComponent: () =>
+      import('./features/purchase-forms/future-purchase/future-purchase-form').then(
+        (m) => m.FuturePurchaseFormComponent,
+      ),
+  },
+  {
+    path: 'compras/futuro/facturar-cupos',
+    loadComponent: () =>
+      import('./features/purchase-forms/quota-billing/quota-billing-form').then(
+        (m) => m.QuotaBillingFormComponent,
+      ),
+  },
+  {
     path: 'compras/inventarios',
     loadComponent: () =>
       import('./features/inventory-menu/inventory-menu').then((m) => m.InventoryMenuComponent),
