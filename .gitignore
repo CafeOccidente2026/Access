@@ -44,3 +44,15 @@ __screenshots__/
 Thumbs.db
 .claude
 capturas
+
+# Java / Maven (backend)
+target/
+*.class
+*.jar
+.mvn/
+*.iml
+
+
+.env 
+.idea/ 
+.vscode/

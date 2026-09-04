@@ -1,171 +1,225 @@
-# CaféOccidente - Frontend de Compras (Angular 22)
+# CaféOccidente — Migración de Access a Web
 
-Migración del frontend del sistema de escritorio **AplicCompras** (Access) a una
-aplicación web con **Angular 22** y **Tailwind CSS v4**.
+Migración del sistema de escritorio **AplicCompras** (Access) de la Cooperativa
+CaféOccidente hacia una aplicación web moderna: frontend en Angular, backend en
+Spring Boot, base de datos PostgreSQL.
 
-> Este entregable cubre únicamente el **diseño y la estructura** de las pantallas.
-> La conexión con el backend (Java) y la lógica de negocio se implementarán en una
-> siguiente etapa.
+Este repositorio contiene **dos proyectos independientes**, uno en cada carpeta:
 
-## Cómo clonar y ejecutar el proyecto
+```
+Migracion de Access/
+├── cafe-occidente-frontend/   Angular 22 + Tailwind CSS
+└── cafeoccidente-backend/     Spring Boot 4 + PostgreSQL + Flyway (Docker)
+```
+
+Cada uno se instala y se corre por separado, como se explica abajo.
+
+---
+
+## Requisitos en tu PC
+
+| Herramienta | Para qué | Obligatorio |
+| --- | --- | --- |
+| **Git** | Clonar y trabajar con el repositorio | Sí |
+| **Node.js 22.22.3+** (o 24.15+/26+) y **npm 10+** | Correr el frontend | Sí, para el frontend |
+| **Docker Desktop** | Levantar el backend + base de datos | Sí, para el backend |
+| **JDK 25** | Solo si vas a abrir el backend en un IDE (VS Code, IntelliJ) para editar/depurar código Java | No — Docker ya trae su propio JDK adentro |
+
+No necesitas instalar PostgreSQL en tu PC — corre dentro de un contenedor Docker.
+
+---
+
+## 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/CafeOccidente2026/Access.git
-cd Access/cafe-occidente-frontend
+cd Access
+```
+
+## 2. Levantar el **frontend**
+
+```bash
+cd cafe-occidente-frontend
 npm install
 npm start
 ```
 
-Esto levanta el servidor de desarrollo en `http://localhost:4200/`. La app entra
-directo a `/login`.
+Se abre en **http://localhost:4200** (entra directo a `/login`).
 
-### Requisitos
-
-- Node.js 22.22.3+ (o 24.15+ / 26+)
-- npm 10+
-
-### Otros comandos útiles
-
+Otros comandos útiles:
 ```bash
 npm run build   # compila para producción (carpeta dist/)
-npm run watch   # build en modo watch (desarrollo)
-npm test        # corre los tests (Vitest)
+npm test        # corre los tests
 ```
 
-> Todo el código vive dentro de `cafe-occidente-frontend/`. La carpeta `capturas/`
-> en la raíz del repo es solo material de referencia visual (capturas de Access)
-> que **no** se sube a git (está en `.gitignore`); no forma parte de la app.
+## 3. Levantar el **backend**
 
-## Reglas de trabajo del proyecto
+```bash
+cd cafeoccidente-backend
+cp .env.example .env
+docker compose up --build
+```
 
-Estas son las convenciones que seguimos en todo el código, no solo sugerencias:
+Abre `.env` y revisa los valores (para desarrollo local, los de `.env.example` sirven
+tal cual; puedes cambiar `DB_PASSWORD` si quieres).
 
-1. **Código en inglés, comentarios en español.** Nombres de clases, variables,
-   métodos, selectores y archivos van en inglés (`FuturePurchaseFormComponent`,
-   `onAccept()`, `quota-assignment.ts`). Los comentarios (los `/** ... */` sobre
-   cada clase, o alguna línea puntual donde algo no sea obvio) van en español.
-   No se traduce el código, solo se explica en comentarios cuando hace falta.
-2. **Cero texto "quemado" en el código.** Ningún componente escribe literales
-   como `"Aceptar"`, `"Agencia"` o un valor de ejemplo directo en el `.html`/`.ts`.
-   Todo texto visible (títulos, etiquetas, opciones de menú, valores de muestra)
-   sale de un archivo JSON en **`cafe-occidente-frontend/public/assets/data/`**,
-   uno por pantalla, cargado con `ContentService.loadJson<T>('nombre-archivo')`.
-   Si hay que cambiar un texto o agregar un campo, se edita el JSON — no el
-   componente. Ver [¿Dónde está el JSON de cada pantalla?](#dónde-está-el-json-de-cada-pantalla).
-3. **Cero color "quemado" en las plantillas.** No se escriben hex ni clases de
-   color de Tailwind por defecto (`bg-blue-500`, `#3fb6c4`, etc.) sueltos en un
-   `.html` para representar la identidad visual del sistema. La paleta completa
-   vive centralizada en **`cafe-occidente-frontend/src/styles.css`**, dentro del
-   bloque `@theme` (variables `--color-panel-sky`, `--color-btn-face`, etc.), y
-   se consume como clases Tailwind generadas a partir de esos tokens
-   (`bg-panel-sky`, `text-shell-titlebar`, `border-btn-border`...). Un color
-   nuevo se agrega ahí, con su token, y se reutiliza por nombre.
-4. **Componentes standalone + `OnPush` + `toSignal`.** Todo componente es
-   `standalone: true` con `changeDetection: ChangeDetectionStrategy.OnPush`.
-   Los datos que vienen de `ContentService` (un `Observable`) se consumen con
-   `toSignal(...)`, nunca con `.subscribe()` manual (evita fugas de suscripción
-   y descontrol del ciclo de detección de cambios).
-5. **Reusar antes que crear.** Antes de escribir un componente o estilo nuevo,
-   revisar `shared/ui/` — botones, ventanas, filas de campos, grilla de menú,
-   panel de formas de pago, etc. ya están hechos y se reutilizan en todas las
-   pantallas que los necesitan.
+El backend queda disponible en **http://localhost:8090** (el contenedor escucha
+internamente en el 8080, pero se mapea al 8090 en tu PC para no chocar con otros
+proyectos que ya usen el 8080).
 
-## Estructura del proyecto
+**Cómo saber que quedó bien levantado** — en los logs deberías ver, en este orden:
+1. En el contenedor `postgres`: `database system is ready to accept connections`
+2. En el contenedor `backend`:
+   - Las migraciones de Flyway aplicándose (`Successfully applied 1 migration...`)
+   - Una línea `Using generated security password: <uuid>` → **esto es normal por
+     ahora**, todavía no hay login con JWT implementado, así que Spring Security
+     genera una contraseña temporal en cada arranque. No hace falta usarla ni
+     configurarla.
+   - `Tomcat started on port 8080`
+   - `Started BackendApplication in X seconds`
+
+Si después de `Started BackendApplication` ves alguna excepción, algo quedó mal
+configurado — avisa antes de seguir.
+
+Para bajar el backend cuando termines de trabajar:
+```bash
+docker compose down -v
+```
+
+---
+
+## Estado actual del proyecto
+
+### Frontend
+Cubre el **diseño y la estructura** de todas las pantallas migradas desde Access
+(login, menús, los 4 formularios de compra, compras a futuro, inventarios,
+consulta). Todavía no está conectado al backend — eso es la siguiente etapa.
+
+### Backend
+Es un **esqueleto por capas**: existen todos los paquetes, clases y endpoints
+planeados para cada módulo (`controller`, `service`, `service.impl`, `repository`,
+`entity`, `dto`, `mapper`), pero **todavía no tienen lógica de negocio real**. Las
+entidades solo tienen el campo `id`, los controllers/services están vacíos, y las
+tablas de la base de datos son placeholders (una tabla por entidad, sin columnas
+propias todavía).
+
+El objetivo de este esqueleto es fijar la arquitectura y los nombres de paquetes
+antes de implementar la lógica, para que el equipo se reparta los módulos sin
+pisarse.
+
+| Módulo | Representa | Pendiente |
+| --- | --- | --- |
+| `controlrecord` | Registro de control (parámetros generales) | Campos, reglas de negocio, endpoints |
+| `purchases.drycoffee` | Compras de café seco | Campos de la entidad, validaciones, DTOs |
+| `purchases.greencoffee` | Compras de café verde | Ídem |
+| `purchases.othercoffee` | Compras de otros cafés | Ídem |
+| `purchases.husk` | Compra de pasilla | Ídem |
+| `purchases.future` | Anuncios, cupos y compras a futuro | Relaciones entre entidades, reglas de cupos |
+| `purchases.shared` | Catálogos: Agencia, Fondo, Código de producto | Campos y uso desde los demás módulos |
+| `inventory` | Conductores, remisiones, movimientos | Relaciones con compras |
+| `users` | Usuarios, roles, permisos, autenticación | Todo: modelo, hashing, emisión de JWT |
+| `common` | Seguridad, CORS, OpenAPI, manejo de errores | `SecurityConfig`, `JwtService` y filtros JWT vacíos |
+
+### Base de datos
+- **Desarrollo**: PostgreSQL en Docker, sin conexión a Aurora.
+- **Migraciones**: versionadas con Flyway en
+  `cafeoccidente-backend/src/main/resources/db/migration/`. Cualquier cambio de
+  esquema es un archivo nuevo `Vx__descripcion.sql`, nunca se edita uno ya
+  aplicado.
+- **Producción (Aurora)**: cuando se despliegue, no se toca código — solo se
+  cambian las variables de conexión (`DB_URL`, `DB_USER`, `DB_PASSWORD`) al
+  perfil `prod`. Flyway aplica las mismas migraciones contra Aurora la primera
+  vez que arranque ahí.
+- Nota técnica: Spring Boot 4.1.1 no trae autoconfiguración propia de Flyway,
+  así que las migraciones se disparan manualmente en
+  `BackendApplication.main()` antes de que arranque el contexto de Spring.
+
+---
+
+## Convenciones de trabajo
+
+### Frontend (Angular)
+1. **Código en inglés, comentarios en español.** Clases, variables, métodos,
+   selectores y archivos en inglés; comentarios puntuales (no narrativos) en
+   español.
+2. **Cero texto "quemado".** Todo texto visible sale de un JSON en
+   `cafe-occidente-frontend/public/assets/data/`, uno por pantalla, cargado con
+   `ContentService.loadJson<T>('nombre-archivo')`. Para cambiar un texto se
+   edita el JSON, no el componente.
+3. **Cero color "quemado".** La paleta vive centralizada en
+   `cafe-occidente-frontend/src/styles.css` (`@theme`). Un color nuevo se
+   agrega ahí, con su token, y se reutiliza por nombre.
+4. **Componentes standalone + `OnPush` + `toSignal`.** Los datos de
+   `ContentService` se consumen con `toSignal(...)`, nunca con `.subscribe()`
+   manual.
+5. **Reusar antes que crear.** Revisar `shared/ui/` antes de escribir un
+   componente o estilo nuevo.
+
+### Backend (Spring Boot)
+1. **Monolito modular por dominio.** Cada módulo (`controlrecord`,
+   `purchases.*`, `inventory`, `users`) agrupa sus propias capas (`controller`,
+   `service`, `service.impl`, `repository`, `entity`, `dto`, `mapper`).
+2. **Nunca editar el esquema a mano.** Todo cambio de base de datos es una
+   migración nueva de Flyway.
+3. **`ddl-auto: validate`.** Hibernate nunca crea/modifica tablas solo; si
+   agregas un campo a una entidad, agrega también la columna en una migración.
+4. **Código en inglés, comentarios en español**, igual que el frontend.
+
+### Git
+- Existe **un solo `.gitignore`** y **un solo `README.md`**, ambos en esta
+  raíz — no se crean `.gitignore`/`README.md` dentro de
+  `cafe-occidente-frontend/` ni `cafeoccidente-backend/`.
+- **Nunca se sube**: `node_modules/`, `target/`, `dist/`, `.angular/`, `.env`,
+  `.claude/`, `capturas/`. Ya están todos en el `.gitignore`.
+- Cada quien crea su propio `.env` local a partir de `.env.example` (dentro de
+  `cafeoccidente-backend/`) — nunca se sube el `.env` real.
+
+---
+
+## Estructura del frontend
 
 ```
 cafe-occidente-frontend/
-├── public/
-│   └── assets/
-│       ├── data/       Un .json por pantalla: todos los textos y valores editables
-│       └── images/     Logo y recursos gráficos estáticos
-└── src/
-    ├── index.html, main.ts   Punto de entrada de Angular
-    ├── styles.css             Paleta de colores centralizada (@theme) + estilos base
-    └── app/
-        ├── app.ts             Componente raíz (solo <router-outlet>)
-        ├── app.config.ts      Providers globales (HttpClient, Router)
-        ├── app.routes.ts      Mapa de rutas: una entrada por pantalla
-        ├── core/              Infraestructura transversal, sin UI
-        │   ├── models/        Interfaces TypeScript compartidas (ver abajo)
-        │   └── services/      ContentService y NavigationService (ver abajo)
-        ├── shared/ui/         Componentes visuales reutilizables (ver abajo)
-        └── features/          Una carpeta por pantalla o grupo de pantallas
+├── public/assets/
+│   ├── data/       Un .json por pantalla: todos los textos y valores editables
+│   └── images/     Logo y recursos gráficos
+└── src/app/
+    ├── core/       models/ (interfaces compartidas) y services/ (ContentService, NavigationService)
+    ├── shared/ui/  Componentes reutilizables (botones, ventanas, formularios, paneles)
+    └── features/   Una carpeta por pantalla
 ```
 
-### `core/models/` — interfaces compartidas
+| Pantalla (Access) | Ruta | JSON de contenido |
+| --- | --- | --- |
+| AplicCompras Login | `/login` | `login.json` + `shell.json` |
+| Acceso Principal | `/acceso-principal` | `main-access.json` |
+| Menú Principal | `/menu-principal` | `main-menu.json` |
+| Registro de Control | `/registro-control` | `control-record.json` |
+| Compras (menú) | `/compras` | `purchases-menu.json` |
+| Compras Café Seco | `/compras/cafe-seco` | `purchase-form-dry.json` |
+| Compras Cafés Otros | `/compras/cafe-otros` | `purchase-form-other.json` |
+| Compras Café Verde | `/compras/cafe-verde` | `purchase-form-green.json` |
+| Compra Pasilla | `/compras/pasilla` | `purchase-form-husk.json` |
+| Menú Compras a Futuro | `/compras/futuro` | `future-purchases-menu.json` |
+| Menú Inventarios | `/compras/inventarios` | `inventory-menu.json` |
+| Consultar Compras | `/compras/consulta` | `purchase-query.json` |
 
-| Archivo | Qué define |
-| --- | --- |
-| `menu-option.model.ts` | Forma de un botón de menú (`label`, `route`, `emphasis`) |
-| `form-field.model.ts` | Forma declarativa de un campo de formulario (`key`, `label`, `type`, `value`, `options`...) |
-| `window-config.model.ts` | Config de la barra de título tipo ventana de escritorio |
-| `payment-method.model.ts` | Forma del panel "Formas de Pago" y sus métodos |
-| `purchase-form-content.model.ts` | Forma genérica del contenido de un formulario de compra (todas las secciones posibles) |
-| `index.ts` | Re-exporta todo lo anterior, para importar desde `core/models` en un solo `import` |
+## Estructura del backend
 
-### `core/services/` — infraestructura
-
-| Archivo | Qué hace |
-| --- | --- |
-| `content.service.ts` | Única puerta de entrada a `public/assets/data/*.json` vía `HttpClient`. Ninguna pantalla llama `HttpClient` directo. |
-| `navigation.service.ts` | Centraliza la navegación (`goTo(route)`), para no acoplar los componentes de presentación al `Router` de Angular. |
-
-### `shared/ui/` — componentes reutilizables
-
-| Componente | Uso |
-| --- | --- |
-| `access-window/` | Ventana interna estilo Access (barra de título + botón de cierre `X` funcional). Envuelve casi toda pantalla. |
-| `window-shell/` | Marco de ventana de escritorio de nivel superior (usado solo en `login`). |
-| `app-button/` | Botón único, con variantes `access` (diálogo), `menu` (opción de menú) y `plain` (link). |
-| `menu-button-grid/` | Grilla/lista de `app-button` a partir de un arreglo de `MenuOption`, usada en todas las pantallas de menú. |
-| `field-row/` | Fila horizontal de campos (`app-form-field` repetidos), usada en los formularios de compra. |
-| `form-field/` | Un único campo (label + input/select) según su `FormFieldDefinition`. |
-| `payment-panel/` | Panel "Formas de Pago" con métodos y total, repetido en los formularios de compra. |
-| `section-divider/` | Barra divisoria con texto centrado (encabezados de sección tipo "LIQUIDACIÓN..."). |
-| `purchase-form-view/` | Vista genérica de un formulario de compra completo: arma todas las secciones (arriba, identificación, federación, calidad, pesos, pago, liquidación) a partir de un `PurchaseFormContent`. La usan todas las pantallas de compra (seco, verde, pasilla, otros, futuro, cupos, consulta). |
-
-### `features/` — pantallas
-
-Cada pantalla "simple" es una carpeta con 2-3 archivos: `<nombre>.ts` (componente),
-`<nombre>.html` (plantilla) y, si tiene forma propia de contenido, `<nombre>.model.ts`.
-Las pantallas de formulario de compra viven agrupadas en `features/purchase-forms/`
-porque todas reutilizan `purchase-form-view` + `PurchaseFormContent` y solo cambian
-de JSON.
-
-| Pantalla original (Access) | Carpeta | Ruta | JSON de contenido |
-| --- | --- | --- | --- |
-| AplicCompras Login | `features/login/` | `/login` | `login.json` + `shell.json` |
-| Acceso Principal | `features/main-access/` | `/acceso-principal` | `main-access.json` |
-| Menú Principal | `features/main-menu/` | `/menu-principal` | `main-menu.json` |
-| Registro de Control | `features/control-record/` | `/registro-control` | `control-record.json` |
-| Compras (menú) | `features/purchases-menu/` | `/compras` | `purchases-menu.json` |
-| Compras Café Seco | `features/purchase-forms/dry-coffee/` | `/compras/cafe-seco` | `purchase-form-dry.json` |
-| Compras Cafés Otros (COMPRASESP) | `features/purchase-forms/other-coffee/` | `/compras/cafe-otros` | `purchase-form-other.json` |
-| Compras Café Verde (VERDES) | `features/purchase-forms/green-coffee/` | `/compras/cafe-verde` | `purchase-form-green.json` |
-| Compra Pasilla | `features/purchase-forms/husk/` | `/compras/pasilla` | `purchase-form-husk.json` |
-| Menú Compras a Futuro | `features/future-purchases-menu/` | `/compras/futuro` | `future-purchases-menu.json` |
-| Asignación Cupos a Anuncios | `features/quota-assignment/` | `/compras/futuro/asignar-cupo` | `quota-assignment.json` |
-| Ingresar Compras a Futuro (COMPRAS CUPOS) | `features/purchase-forms/future-purchase/` | `/compras/futuro/ingresar` | `purchase-form-future.json` |
-| Facturar Anuncios con Cupos (ANUNCIADAS) | `features/purchase-forms/quota-billing/` | `/compras/futuro/facturar-cupos` | `purchase-form-quota-billing.json` |
-| Menú Inventarios | `features/inventory-menu/` | `/compras/inventarios` | `inventory-menu.json` |
-| Diálogo de rango de fechas | `features/date-range-dialog/` | `/compras/dialogo-fechas` | `date-range-dialog.json` |
-| Consultar Compras | `features/purchase-query/` | `/compras/consulta` | `purchase-query.json` |
-
-> Botones del menú "Compras a Futuro" que todavía no tienen pantalla propia
-> (apuntan de vuelta a `/compras/futuro` como placeholder): *Restaurar Anuncios
-> con Cupos*, *Facturar/Restaurar Compras Anunciadas*, *Facturar/Restaurar Cupos
-> Fertifuturo*, *Generar Informes*.
-
-## ¿Dónde está el JSON de cada pantalla?
-
-En **`cafe-occidente-frontend/public/assets/data/`**. Hay un archivo por pantalla
-(mismo nombre que usa `ContentService.loadJson('nombre')` en el componente). Ver
-la tabla de arriba para el archivo exacto de cada una.
-
-## ¿Dónde se manejan los colores?
-
-En **`cafe-occidente-frontend/src/styles.css`**, dentro del bloque `@theme`. Ahí
-están todos los tokens (`--color-panel-sky`, `--color-panel-teal-strong`,
-`--color-btn-face`, `--color-accent-orange`, etc.) que Tailwind expone como
-clases (`bg-panel-sky`, `border-btn-border`...). Ningún componente debería tener
-un color hexadecimal escrito directamente; si falta un tono, se agrega ahí.
+```
+cafeoccidente-backend/
+├── .env.example / docker-compose.yml / Dockerfile / pom.xml
+└── src/main/
+    ├── java/com/cafeoccidente/backend/
+    │   ├── common/            Config, seguridad JWT, manejo de errores
+    │   ├── controlrecord/     Parámetros generales de compras
+    │   ├── purchases/
+    │   │   ├── drycoffee/ othercoffee/ greencoffee/ husk/
+    │   │   ├── future/        Anuncios, cupos, compras a futuro
+    │   │   └── shared/        Agencia, Fondo, Código de producto
+    │   ├── inventory/         Conductores, remisiones, movimientos
+    │   └── users/             Usuarios, roles, permisos, auth
+    └── resources/
+        ├── application.yml / application-dev.yml / application-prod.yml
+        └── db/migration/      Migraciones versionadas de Flyway
+```
