@@ -42,6 +42,9 @@ jobs:
       DB_URL: jdbc:postgresql://localhost:5432/cafeoccidente_ci
       DB_USER: ci_user
       DB_PASSWORD: ci_password
+      JWT_SECRET: ci-test-secret-key-minimo-32-caracteres-para-hs256
+      ADMIN_USERNAME: ci_admin
+      ADMIN_PASSWORD: ci_admin_password_2026
 
     steps:
       - name: Descargar el codigo
