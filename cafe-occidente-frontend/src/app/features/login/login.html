@@ -24,6 +24,8 @@
           />
         </label>
 
+        <p *ngIf="errorVisible()" class="text-sm text-red-600">{{ p.form.errorLabel }}</p>
+
         <div class="flex justify-end gap-3 pt-2">
           <app-button [label]="p.form.cancelLabel" variant="access" (pressed)="onCancel()"></app-button>
           <app-button [label]="p.form.acceptLabel" variant="access" (pressed)="onAccept()"></app-button>

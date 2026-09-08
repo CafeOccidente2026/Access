@@ -1,0 +1,24 @@
+{
+  "windowTitle": "Usuarios",
+  "listHeaders": {
+    "username": "Usuario",
+    "fullName": "Nombre completo",
+    "role": "Rol",
+    "active": "Estado"
+  },
+  "activeLabel": "Activo",
+  "inactiveLabel": "Inactivo",
+  "deactivateLabel": "Desactivar",
+  "createSectionTitle": "Crear usuario",
+  "usernameLabel": "Usuario",
+  "passwordLabel": "Contraseña",
+  "fullNameLabel": "Nombre completo",
+  "roleLabel": "Rol",
+  "roleOptions": [
+    { "value": "ADMIN", "label": "Administrador" },
+    { "value": "PURCHASE_AGENT", "label": "Fiel de Compra" }
+  ],
+  "createButtonLabel": "Crear",
+  "errorLabel": "No se pudo completar la acción",
+  "closeRoute": "/acceso-principal"
+}

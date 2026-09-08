@@ -1,18 +1,9 @@
 package com.cafeoccidente.backend.users.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import lombok.Getter;
-import lombok.Setter;
-
-@Entity
-@Getter
-@Setter
-public class Role {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+// Solo existen 2 roles fijos en el negocio, por lo que se modela como enum
+// simple embebido en User (columna string) en vez de una tabla role aparte:
+// evita una tabla y un mapeo extra para un catalogo que no va a crecer.
+public enum Role {
+    ADMIN,
+    PURCHASE_AGENT
 }

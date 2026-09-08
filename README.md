@@ -23,7 +23,7 @@ Cada uno se instala y se corre por separado, como se explica abajo.
 | **Git** | Clonar y trabajar con el repositorio | Sí |
 | **Node.js 22.22.3+** (o 24.15+/26+) y **npm 10+** | Correr el frontend | Sí, para el frontend |
 | **Docker Desktop** | Levantar el backend + base de datos | Sí, para el backend |
-| **JDK 25** | Solo si vas a abrir el backend en un IDE (VS Code, IntelliJ) para editar/depurar código Java | No — Docker ya trae su propio JDK adentro |
+| **JDK 21** | Solo si vas a abrir el backend en un IDE (VS Code, IntelliJ) para editar/depurar código Java | No — Docker ya trae su propio JDK adentro |
 
 No necesitas instalar PostgreSQL en tu PC — corre dentro de un contenedor Docker.
 
@@ -61,7 +61,12 @@ docker compose up --build
 ```
 
 Abre `.env` y revisa los valores (para desarrollo local, los de `.env.example` sirven
-tal cual; puedes cambiar `DB_PASSWORD` si quieres).
+tal cual; puedes cambiar `DB_PASSWORD` si quieres). Revisa también `ADMIN_USERNAME`
+y `ADMIN_PASSWORD`: son las credenciales del primer usuario administrador, que se
+crea automáticamente la primera vez que arranca el backend (tabla `users` vacía).
+**Cambia esa contraseña desde la pantalla de Usuarios apenas entres por primera
+vez** — el arranque solo la usa una vez, no la vuelve a pedir en arranques
+siguientes.
 
 El backend queda disponible en **http://localhost:8090** (el contenedor escucha
 internamente en el 8080, pero se mapea al 8090 en tu PC para no chocar con otros
@@ -70,11 +75,7 @@ proyectos que ya usen el 8080).
 **Cómo saber que quedó bien levantado** — en los logs deberías ver, en este orden:
 1. En el contenedor `postgres`: `database system is ready to accept connections`
 2. En el contenedor `backend`:
-   - Las migraciones de Flyway aplicándose (`Successfully applied 1 migration...`)
-   - Una línea `Using generated security password: <uuid>` → **esto es normal por
-     ahora**, todavía no hay login con JWT implementado, así que Spring Security
-     genera una contraseña temporal en cada arranque. No hace falta usarla ni
-     configurarla.
+   - Las migraciones de Flyway aplicándose (`Successfully applied 2 migrations...`)
    - `Tomcat started on port 8080`
    - `Started BackendApplication in X seconds`
 
@@ -93,7 +94,8 @@ docker compose down -v
 ### Frontend
 Cubre el **diseño y la estructura** de todas las pantallas migradas desde Access
 (login, menús, los 4 formularios de compra, compras a futuro, inventarios,
-consulta). Todavía no está conectado al backend — eso es la siguiente etapa.
+consulta). El login y la pantalla de Usuarios ya están conectados al backend real
+(autenticación JWT); el resto de pantallas sigue siendo maqueta sin conectar.
 
 ### Backend
 Es un **esqueleto por capas**: existen todos los paquetes, clases y endpoints
@@ -117,8 +119,8 @@ pisarse.
 | `purchases.future` | Anuncios, cupos y compras a futuro | Relaciones entre entidades, reglas de cupos |
 | `purchases.shared` | Catálogos: Agencia, Fondo, Código de producto | Campos y uso desde los demás módulos |
 | `inventory` | Conductores, remisiones, movimientos | Relaciones con compras |
-| `users` | Usuarios, roles, permisos, autenticación | Todo: modelo, hashing, emisión de JWT |
-| `common` | Seguridad, CORS, OpenAPI, manejo de errores | `SecurityConfig`, `JwtService` y filtros JWT vacíos |
+| `users` | Usuarios, roles, autenticación | Implementado: login/refresh JWT, alta/listado/baja de usuarios, bootstrap del admin inicial |
+| `common` | Seguridad, CORS, OpenAPI, manejo de errores | `SecurityConfig`, `JwtService` y CORS implementados; OpenAPI pendiente |
 
 ### Base de datos
 - **Desarrollo**: PostgreSQL en Docker, sin conexión a Aurora.
@@ -193,6 +195,7 @@ cafe-occidente-frontend/
 | --- | --- | --- |
 | AplicCompras Login | `/login` | `login.json` + `shell.json` |
 | Acceso Principal | `/acceso-principal` | `main-access.json` |
+| Usuarios (solo ADMIN) | `/usuarios` | `user-management.json` |
 | Menú Principal | `/menu-principal` | `main-menu.json` |
 | Registro de Control | `/registro-control` | `control-record.json` |
 | Compras (menú) | `/compras` | `purchases-menu.json` |

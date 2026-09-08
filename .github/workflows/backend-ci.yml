@@ -47,11 +47,11 @@ jobs:
       - name: Descargar el codigo
         uses: actions/checkout@v4
 
-      - name: Configurar JDK 25
+      - name: Configurar JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "25"
+          java-version: "21"
           cache: "maven"
 
       - name: Compilar y correr pruebas (levanta el contexto completo de Spring)

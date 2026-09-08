@@ -1,3 +1,4 @@
+export * from './auth.model';
 export * from './menu-option.model';
 export * from './form-field.model';
 export * from './window-config.model';

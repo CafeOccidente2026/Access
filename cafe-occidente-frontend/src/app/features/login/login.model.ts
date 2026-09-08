@@ -5,6 +5,7 @@ export interface LoginContent {
   readonly acceptLabel: string;
   readonly cancelLabel: string;
   readonly successRoute: string;
+  readonly errorLabel: string;
 }
 
 export interface ShellContent {
