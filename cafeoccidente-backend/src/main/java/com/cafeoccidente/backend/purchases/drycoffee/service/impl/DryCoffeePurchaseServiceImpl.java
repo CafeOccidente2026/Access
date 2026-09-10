@@ -9,6 +9,7 @@ import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRespon
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import com.cafeoccidente.backend.purchases.drycoffee.mapper.DryCoffeePurchaseMapper;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
+import com.cafeoccidente.backend.purchases.drycoffee.repository.MonthlyGrowerTotals;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
@@ -24,6 +25,7 @@ import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,7 +77,16 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         AnnouncementResponse announcement = announcementService.findLatest(agency.getId(), fund.getId());
         ControlRecord controlRecord = controlRecordService.getActive();
 
-        DryCoffeePurchaseCalculation calculation = calculator.calculate(request, controlRecord);
+        YearMonth currentMonth = YearMonth.now();
+        MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
+                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
+
+        DryCoffeePurchaseCalculation calculation = calculator.calculate(
+                request,
+                controlRecord,
+                announcement.basePriceLoad(),
+                monthlyTotals.grossValue(),
+                monthlyTotals.withholding());
 
         Long currentUserId = securityUtils.getCurrentUserId();
         User currentUser = userRepository.findById(currentUserId)
@@ -89,7 +100,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setProductCode(productCode);
         purchase.setAnnouncementNumber(announcement.announcementNumber());
         purchase.setAnnouncementDate(announcement.announcementDate());
-        purchase.setBasePriceLoad(announcement.basePriceLoad());
+        purchase.setBasePriceLoad(calculation.basePriceLoad());
         purchase.setIdNumber(request.idNumber());
         purchase.setFirstName(request.firstName());
         purchase.setLastName(request.lastName());

@@ -58,11 +58,7 @@ public class DryCoffeePurchase {
     @Column(name = "announcement_date", nullable = false)
     private LocalDate announcementDate;
 
-    /**
-     * Pr_Base_PC. El VBA calcula "vrcps - (Costos * Texto176)"; Texto176 no se pudo mapear con
-     * certeza (ver DryCoffeePurchaseCalculator), asi que por ahora se guarda el valor crudo del
-     * anuncio (vrcps) sin el ajuste de Texto176.
-     */
+    /** Pr_Base_PC = valor del anuncio (vrcps) - (Costos * ControlRecord.baseLoad). Ver DryCoffeePurchaseCalculator. */
     @Column(name = "base_price_load", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePriceLoad;
 

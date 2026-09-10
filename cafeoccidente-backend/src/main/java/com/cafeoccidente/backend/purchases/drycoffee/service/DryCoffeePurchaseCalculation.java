@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 /** Resultado de la cascada de calculo, listo para volcarse en la entidad. */
 public record DryCoffeePurchaseCalculation(
+        BigDecimal basePriceLoad,
         BigDecimal netKg,
         BigDecimal wastePercentage,
         BigDecimal defectivePercentage,

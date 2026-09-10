@@ -12,11 +12,8 @@ import org.springframework.stereotype.Component;
  * Unica responsabilidad: reproducir la cascada de calculo del formulario Access original
  * (Destare -> Kilos_Netos -> W_TotAlm/W_AlmSana/W_AlmDefec -> PorcMerma/PorcAlmSana/PorcAlmDefec
  * -> Sacos -> Castigo -> Vr_Kilo -> Vr_Bruto -> Aporte_Socio/Descuento_Coop -> Retefuente ->
- * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica.
- *
- * <p>Variables del VBA que no se pudieron mapear con certeza (Texto164, Texto105, Texto107) se
- * usan como cero, marcadas con TODO abajo. Ver README para el detalle de que falta para
- * completarlas (macro CalculoReteFteMes y programa pcompras).
+ * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica; el acumulado mensual
+ * del caficultor lo consulta el servicio y se pasa como parametro.
  */
 @Component
 public class DryCoffeePurchaseCalculator {
@@ -24,18 +21,27 @@ public class DryCoffeePurchaseCalculator {
     private static final int SCALE = 2;
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
-    // TODO: Texto164 (formula var4 de Sacos_LostFocus) no se pudo mapear con certeza a un campo
-    // existente. Se necesita ver la macro CalculoReteFteMes / el programa pcompras.
-    private static final BigDecimal TODO_TEXTO164 = BigDecimal.ZERO;
-    // TODO: Texto105 (var6 = Vr_Bruto + Texto105 en Castigo_lostFocus), mismo motivo que arriba.
-    private static final BigDecimal TODO_TEXTO105 = BigDecimal.ZERO;
-    // TODO: Texto107 (restado en la formula de Retefuente), mismo motivo que arriba.
-    private static final BigDecimal TODO_TEXTO107 = BigDecimal.ZERO;
-
-    public DryCoffeePurchaseCalculation calculate(DryCoffeePurchaseRequest request, ControlRecord controlRecord) {
+    /**
+     * @param announcementBasePriceLoad valor crudo del anuncio (vrcps en el VBA)
+     * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
+     *     mes actual (Texto105 en el VBA / macro CalculoReteFteMes)
+     * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el mes
+     *     actual (Texto107 en el VBA / macro CalculoReteFteMes)
+     */
+    public DryCoffeePurchaseCalculation calculate(
+            DryCoffeePurchaseRequest request,
+            ControlRecord controlRecord,
+            BigDecimal announcementBasePriceLoad,
+            BigDecimal monthlyAccumulatedGrossValue,
+            BigDecimal monthlyAccumulatedWithholding) {
         if ("F".equalsIgnoreCase(request.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
+
+        // Cedula_LostFocus: Pr_Base_PC = vrcps - (Costos * BaseCarga). BaseCarga = ControlRecord.baseLoad (Texto176).
+        BigDecimal basePriceLoad = announcementBasePriceLoad
+                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .setScale(SCALE, RoundingMode.HALF_UP);
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
@@ -74,7 +80,8 @@ public class DryCoffeePurchaseCalculator {
         }
         BigDecimal var2 = controlRecord.getSpecialtyThreshold().divide(healthyPercentage, MathContext.DECIMAL64);
         BigDecimal var3 = healthyPercentage.multiply(defectivePercentage).divide(HUNDRED, MathContext.DECIMAL64);
-        BigDecimal var4 = var3.subtract(TODO_TEXTO164)
+        // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec. PorcKgPasProm = ControlRecord.avgHuskPercentage (Texto164).
+        BigDecimal var4 = var3.subtract(controlRecord.getAvgHuskPercentage())
                 .divide(healthyPercentage, MathContext.DECIMAL64)
                 .multiply(request.defectiveUnitPrice());
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
@@ -96,12 +103,17 @@ public class DryCoffeePurchaseCalculator {
                     .setScale(SCALE, RoundingMode.HALF_UP);
         }
 
-        BigDecimal var6 = grossValue.add(TODO_TEXTO105);
+        // Retefuente incremental sobre el acumulado mensual del caficultor (macro CalculoReteFteMes):
+        // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado este
+        // mes), y se descuenta la Retefuente ya practicada este mes, dejando solo el diferencial.
+        // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
+        // Cuando existan othercoffee/greencoffee/husk habra que decidir si tambien deben sumar.
+        BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!request.withholdingExempt() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
-            withholding = var6.multiply(controlRecord.getWithholdingPercentage())
+        if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
+            withholding = thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(TODO_TEXTO107)
+                    .subtract(monthlyAccumulatedWithholding)
                     .setScale(SCALE, RoundingMode.HALF_UP);
         }
 
@@ -114,6 +126,7 @@ public class DryCoffeePurchaseCalculator {
                 .setScale(SCALE, RoundingMode.HALF_UP);
 
         return new DryCoffeePurchaseCalculation(
+                basePriceLoad,
                 netKg.setScale(SCALE, RoundingMode.HALF_UP),
                 wastePercentage,
                 defectivePercentage,

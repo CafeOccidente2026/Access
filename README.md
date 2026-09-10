@@ -134,24 +134,31 @@ pisarse.
   así que las migraciones se disparan manualmente en
   `BackendApplication.main()` antes de que arranque el contexto de Spring.
 
-### Pendiente en la migración del formulario "Compras Café Seco"
+### Migración del formulario "Compras Café Seco"
 
-Estas variables del VBA original no se pudieron mapear con certeza a campos
-existentes y quedan como constantes en cero en `DryCoffeePurchaseCalculator`,
-marcadas con `TODO`. Para completarlas hace falta ver la macro
-`CalculoReteFteMes` y abrir el programa `pcompras`:
+Las 4 variables del VBA original que estaban sin mapear ya están resueltas en
+`DryCoffeePurchaseCalculator` (confirmadas contra las propiedades del formulario
+Access):
 
-- `Texto176`: multiplicador en `Pr_Base_PC = vrcps - (Costos * Texto176)`. Por
-  ahora `basePriceLoad` guarda el valor crudo del anuncio sin ese ajuste.
-- `Texto164`: término dentro de la fórmula `var4` del precio unitario
-  (`Sacos_LostFocus`).
-- `Texto105` / `Texto107`: sumando/restando en el umbral de Retefuente.
+- `Texto164` = `PorcKgPasProm` de RegControl → `ControlRecord.avgHuskPercentage`
+  (fórmula `var4` del precio unitario en `Sacos_LostFocus`).
+- `Texto176` = `BaseCarga` de RegControl → `ControlRecord.baseLoad`
+  (`Pr_Base_PC = vrcps - (Costos * BaseCarga)`, calculado ahora en el servidor).
+- `Texto105` / `Texto107` = acumulado mensual del caficultor (por cédula) que en
+  Access calculaba la macro `CalculoReteFteMes`: suma de `Vr_Bruto` y de
+  `Retefuente` de las compras del mes en curso, antes de esta transacción
+  (`DryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber`). La Retefuente de la
+  compra nueva se calcula sobre ese acumulado y se le descuenta lo ya practicado
+  en el mes.
+  - **A revisar con el negocio:** hoy el acumulado solo suma compras del módulo
+    `drycoffee`. Cuando existan `othercoffee` / `greencoffee` / `husk` habrá que
+    decidir si el acumulado mensual debe incluirlas también.
 
-Otros pendientes del mismo formulario: la búsqueda del caficultor vía DLL
-externa / `pcompras` (hoy los datos del caficultor son de captura manual), la
-numeración/aviso de resolución de facturación, el split de pago
-multi-instrumento, y la lógica de cupo/`EnProg` (ligada a
-`purchases.future.AnnouncementQuota`, no solicitada aún).
+Pendientes del mismo formulario (no solicitados aún): generación del PDF del
+documento soporte, la búsqueda del caficultor vía DLL externa / `pcompras` (hoy
+los datos del caficultor son de captura manual), la numeración/aviso de
+resolución de facturación, el split de pago multi-instrumento, y la lógica de
+cupo/`EnProg` (ligada a `purchases.future.AnnouncementQuota`).
 
 ---
 
