@@ -4,5 +4,8 @@
   "passwordLabel": "Contraseña",
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
-  "successRoute": "/acceso-principal"
+  "successRoute": "/acceso-principal",
+  "showPasswordLabel": "Mostrar contraseña",
+  "hidePasswordLabel": "Ocultar contraseña",
+  "invalidCredentialsError": "Usuario o contraseña incorrectos"
 }

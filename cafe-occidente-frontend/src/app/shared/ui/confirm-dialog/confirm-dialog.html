@@ -1,0 +1,9 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="w-[360px] rounded-lg bg-white p-5 shadow-2xl">
+    <p class="text-sm text-slate-700">{{ message }}</p>
+    <div class="mt-5 flex justify-end gap-3">
+      <app-button [label]="cancelLabel" variant="access" (pressed)="cancelled.emit()"></app-button>
+      <app-button [label]="confirmLabel" variant="access" (pressed)="confirmed.emit()"></app-button>
+    </div>
+  </div>
+</div>

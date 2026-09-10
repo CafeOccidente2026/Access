@@ -1,4 +1,40 @@
 package com.cafeoccidente.backend.purchases.drycoffee.dto;
 
-public record DryCoffeePurchaseRequest() {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import java.math.BigDecimal;
+
+/**
+ * Solo lleva los campos de entrada manual del formulario (Cedula, Sacos, Destare, Castigo, etc).
+ * Los campos calculados (netKg, porcentajes, precios, Retefuente, netToPay, productCode) los
+ * calcula el servidor via DryCoffeePurchaseCalculator - nunca se reciben del cliente.
+ */
+public record DryCoffeePurchaseRequest(
+        @NotNull Long agencyId,
+        @NotNull Long fundId,
+        @NotBlank String specialType,
+        @NotBlank String idNumber,
+        @NotBlank String firstName,
+        @NotBlank String lastName,
+        @NotBlank String growerType,
+        @NotBlank String address,
+        @NotBlank String cellphone,
+        @NotNull @Positive Integer bagsCount,
+        @NotNull @PositiveOrZero BigDecimal grossKg,
+        @NotNull @PositiveOrZero BigDecimal tareKg,
+        @NotNull @PositiveOrZero BigDecimal totalStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal defectiveStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal healthyStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal healthyUnitPrice,
+        @NotNull @PositiveOrZero BigDecimal defectiveUnitPrice,
+        @NotNull @PositiveOrZero BigDecimal bonus,
+        @NotNull @PositiveOrZero BigDecimal penalty,
+        @NotNull @PositiveOrZero BigDecimal costs,
+        boolean withholdingExempt,
+        @NotNull @PositiveOrZero BigDecimal freightDiscount,
+        @NotNull @PositiveOrZero BigDecimal otherDiscounts,
+        @NotBlank String paymentMethod,
+        String checkNumber) {
 }

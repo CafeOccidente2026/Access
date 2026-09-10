@@ -110,7 +110,7 @@ pisarse.
 | Módulo | Representa | Pendiente |
 | --- | --- | --- |
 | `controlrecord` | Registro de control (parámetros generales) | Campos, reglas de negocio, endpoints |
-| `purchases.drycoffee` | Compras de café seco | Campos de la entidad, validaciones, DTOs |
+| `purchases.drycoffee` | Compras de café seco | Implementado (cascada VBA, `createdByUserId`, `municipality`). Falta: generación del PDF del documento soporte y un módulo de reportes/auditoría que cruce `createdByUserId` con las compras (prompt futuro) |
 | `purchases.greencoffee` | Compras de café verde | Ídem |
 | `purchases.othercoffee` | Compras de otros cafés | Ídem |
 | `purchases.husk` | Compra de pasilla | Ídem |
@@ -133,6 +133,25 @@ pisarse.
 - Nota técnica: Spring Boot 4.1.1 no trae autoconfiguración propia de Flyway,
   así que las migraciones se disparan manualmente en
   `BackendApplication.main()` antes de que arranque el contexto de Spring.
+
+### Pendiente en la migración del formulario "Compras Café Seco"
+
+Estas variables del VBA original no se pudieron mapear con certeza a campos
+existentes y quedan como constantes en cero en `DryCoffeePurchaseCalculator`,
+marcadas con `TODO`. Para completarlas hace falta ver la macro
+`CalculoReteFteMes` y abrir el programa `pcompras`:
+
+- `Texto176`: multiplicador en `Pr_Base_PC = vrcps - (Costos * Texto176)`. Por
+  ahora `basePriceLoad` guarda el valor crudo del anuncio sin ese ajuste.
+- `Texto164`: término dentro de la fórmula `var4` del precio unitario
+  (`Sacos_LostFocus`).
+- `Texto105` / `Texto107`: sumando/restando en el umbral de Retefuente.
+
+Otros pendientes del mismo formulario: la búsqueda del caficultor vía DLL
+externa / `pcompras` (hoy los datos del caficultor son de captura manual), la
+numeración/aviso de resolución de facturación, el split de pago
+multi-instrumento, y la lógica de cupo/`EnProg` (ligada a
+`purchases.future.AnnouncementQuota`, no solicitada aún).
 
 ---
 

@@ -1,3 +1,224 @@
-<div class="h-screen bg-white p-3">
-  <app-purchase-form-view *ngIf="data() as d" [content]="d"></app-purchase-form-view>
-</div>
+<app-access-window *ngIf="page() as p" [title]="p.windowTitle">
+  <div class="flex flex-col gap-6 p-5 text-sm">
+    <!-- Agencia y anuncio -->
+    <section class="flex flex-col gap-3">
+      <h2 class="font-semibold text-slate-700">{{ p.sections.agency }}</h2>
+
+      <label class="flex items-center gap-2">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['agencyId'] }}:</span>
+        <select
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 disabled:bg-slate-100"
+          [(ngModel)]="model.agencyId"
+          [disabled]="isLocked('agencyId')"
+          (change)="lock('agencyId')"
+        >
+          <option [ngValue]="null"></option>
+          <option *ngFor="let a of agencies()" [ngValue]="a.id">{{ a.name }}</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['fundId'] }}:</span>
+        <select
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 disabled:bg-slate-100"
+          [(ngModel)]="model.fundId"
+          [disabled]="isLocked('fundId')"
+          (change)="lock('fundId')"
+        >
+          <option [ngValue]="null"></option>
+          <option *ngFor="let f of funds()" [ngValue]="f.id">{{ f.code }} - {{ f.name }}</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['purchaseDate'] }}:</span>
+        <input class="w-full rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="today" readonly />
+      </label>
+
+      <ng-container *ngIf="announcement() as ann">
+        <label class="flex items-center gap-2">
+          <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['announcementNumber'] }}:</span>
+          <input class="w-full rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="ann.announcementNumber" readonly />
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['announcementDate'] }}:</span>
+          <input class="w-full rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="ann.announcementDate" readonly />
+        </label>
+        <label class="flex items-center gap-2">
+          <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['basePriceLoad'] }}:</span>
+          <input class="w-full rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="ann.basePriceLoad" readonly />
+        </label>
+      </ng-container>
+
+      <label class="flex items-center gap-2">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['specialType'] }}:</span>
+        <select
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 disabled:bg-slate-100"
+          [(ngModel)]="model.specialType"
+          [disabled]="isLocked('specialType')"
+          (change)="lock('specialType')"
+        >
+          <option value=""></option>
+          <option *ngFor="let s of p.specialTypeOptions" [value]="s">{{ s }}</option>
+        </select>
+      </label>
+    </section>
+
+    <!-- Caficultor -->
+    <section class="flex flex-col gap-3 border-t border-slate-200 pt-4">
+      <h2 class="font-semibold text-slate-700">{{ p.sections.grower }}</h2>
+
+      <label class="flex items-center gap-2" *ngFor="let k of ['idNumber','firstName','lastName','address','cellphone']">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels[k] }}:</span>
+        <input
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 read-only:bg-slate-100"
+          [ngModel]="$any(model)[k]"
+          (ngModelChange)="$any(model)[k] = $event"
+          [name]="k"
+          [readonly]="isLocked($any(k))"
+          (blur)="lock($any(k))"
+          (keydown.enter)="lock($any(k))"
+        />
+      </label>
+
+      <label class="flex items-center gap-2">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['growerType'] }}:</span>
+        <select
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 disabled:bg-slate-100"
+          [(ngModel)]="model.growerType"
+          [disabled]="isLocked('growerType')"
+          (change)="lock('growerType')"
+        >
+          <option value=""></option>
+          <option *ngFor="let g of p.growerTypeOptions" [value]="g.value">{{ g.label }}</option>
+        </select>
+      </label>
+    </section>
+
+    <!-- Pesos y almendra -->
+    <section class="flex flex-col gap-3 border-t border-slate-200 pt-4">
+      <h2 class="font-semibold text-slate-700">{{ p.sections.weights }}</h2>
+      <label
+        class="flex items-center gap-2"
+        *ngFor="let k of ['bagsCount','grossKg','tareKg','totalStoredWeight','defectiveStoredWeight','healthyStoredWeight']"
+      >
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels[k] }}:</span>
+        <input
+          type="number"
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 read-only:bg-slate-100"
+          [ngModel]="$any(model)[k]"
+          (ngModelChange)="$any(model)[k] = $event"
+          [name]="k"
+          [readonly]="isLocked($any(k))"
+          (blur)="lock($any(k))"
+          (keydown.enter)="lock($any(k))"
+        />
+      </label>
+    </section>
+
+    <!-- Precios y castigo -->
+    <section class="flex flex-col gap-3 border-t border-slate-200 pt-4">
+      <h2 class="font-semibold text-slate-700">{{ p.sections.pricing }}</h2>
+      <label
+        class="flex items-center gap-2"
+        *ngFor="let k of ['healthyUnitPrice','defectiveUnitPrice','bonus','penalty','costs']"
+      >
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels[k] }}:</span>
+        <input
+          type="number"
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 read-only:bg-slate-100"
+          [ngModel]="$any(model)[k]"
+          (ngModelChange)="$any(model)[k] = $event"
+          [name]="k"
+          [readonly]="isLocked($any(k))"
+          (blur)="lock($any(k))"
+          (keydown.enter)="lock($any(k))"
+        />
+      </label>
+    </section>
+
+    <!-- Descuentos y pago -->
+    <section class="flex flex-col gap-3 border-t border-slate-200 pt-4">
+      <h2 class="font-semibold text-slate-700">{{ p.sections.discounts }}</h2>
+
+      <label class="flex items-center gap-2">
+        <input type="checkbox" [(ngModel)]="model.withholdingExempt" [disabled]="isLocked('withholdingExempt')" (change)="lock('withholdingExempt')" />
+        <span class="font-medium text-slate-700">{{ p.labels['withholdingExempt'] }}</span>
+      </label>
+
+      <label class="flex items-center gap-2" *ngFor="let k of ['freightDiscount','otherDiscounts']">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels[k] }}:</span>
+        <input
+          type="number"
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 read-only:bg-slate-100"
+          [ngModel]="$any(model)[k]"
+          (ngModelChange)="$any(model)[k] = $event"
+          [name]="k"
+          [readonly]="isLocked($any(k))"
+          (blur)="lock($any(k))"
+          (keydown.enter)="lock($any(k))"
+        />
+      </label>
+
+      <label class="flex items-center gap-2">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['paymentMethod'] }}:</span>
+        <select
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 disabled:bg-slate-100"
+          [(ngModel)]="model.paymentMethod"
+          [disabled]="isLocked('paymentMethod')"
+          (change)="lock('paymentMethod')"
+        >
+          <option value=""></option>
+          <option *ngFor="let m of p.paymentMethodOptions" [value]="m">{{ m }}</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2" *ngIf="model.paymentMethod === 'CHEQUE'">
+        <span class="w-44 shrink-0 font-medium text-slate-700">{{ p.labels['checkNumber'] }}:</span>
+        <input
+          class="w-full rounded border border-slate-300 bg-white px-2 py-1 read-only:bg-slate-100"
+          [(ngModel)]="model.checkNumber"
+          name="checkNumber"
+          [readonly]="isLocked('checkNumber')"
+          (blur)="lock('checkNumber')"
+          (keydown.enter)="lock('checkNumber')"
+        />
+      </label>
+    </section>
+
+    <p *ngIf="errorMessage()" class="text-red-600">{{ errorMessage() }}</p>
+
+    <div *ngIf="canPrint" class="flex justify-end">
+      <app-button [label]="p.printButton" variant="access" (pressed)="print()"></app-button>
+    </div>
+
+    <!-- Liquidación (calculada por el servidor tras imprimir) -->
+    <section *ngIf="result() as r" class="flex flex-col gap-2 border-t-2 border-blue-300 pt-4">
+      <h2 class="font-semibold text-slate-700">{{ p.sections.settlement }}</h2>
+      <p class="text-green-700">{{ p.savedMessage }}</p>
+      <div class="grid grid-cols-2 gap-x-6 gap-y-1">
+        <div><span class="font-medium text-slate-600">{{ p.labels['productCode'] }}:</span> {{ r.productCode }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['netKg'] }}:</span> {{ r.netKg }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['wastePercentage'] }}:</span> {{ r.wastePercentage }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['defectivePercentage'] }}:</span> {{ r.defectivePercentage }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['healthyPercentage'] }}:</span> {{ r.healthyPercentage }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['unitPrice'] }}:</span> {{ r.unitPrice }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['grossValue'] }}:</span> {{ r.grossValue }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['inventoryValue'] }}:</span> {{ r.inventoryValue }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['associateContribution'] }}:</span> {{ r.associateContribution }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['cooperativeDiscount'] }}:</span> {{ r.cooperativeDiscount }}</div>
+        <div><span class="font-medium text-slate-600">{{ p.labels['withholding'] }}:</span> {{ r.withholding }}</div>
+        <div class="font-semibold"><span class="text-slate-600">{{ p.labels['netToPay'] }}:</span> {{ r.netToPay }}</div>
+      </div>
+    </section>
+  </div>
+
+  <app-confirm-dialog
+    *ngIf="pendingClose"
+    [message]="p.closeWithoutPrintingWarning"
+    [confirmLabel]="p.confirmDiscard"
+    [cancelLabel]="p.cancelDiscard"
+    (confirmed)="confirmClose()"
+    (cancelled)="cancelClose()"
+  ></app-confirm-dialog>
+</app-access-window>

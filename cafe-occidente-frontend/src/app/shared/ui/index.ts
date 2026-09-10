@@ -7,3 +7,4 @@ export * from './payment-panel/payment-panel';
 export * from './section-divider/section-divider';
 export * from './field-row/field-row';
 export * from './purchase-form-view/purchase-form-view';
+export * from './confirm-dialog/confirm-dialog';

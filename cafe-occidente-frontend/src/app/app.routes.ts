@@ -21,6 +21,11 @@ export const routes: Routes = [
       import('./features/control-record/control-record').then((m) => m.ControlRecordComponent),
   },
   {
+    path: 'usuarios',
+    loadComponent: () =>
+      import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
+  },
+  {
     path: 'compras',
     loadComponent: () =>
       import('./features/purchases-menu/purchases-menu').then((m) => m.PurchasesMenuComponent),
@@ -29,6 +34,9 @@ export const routes: Routes = [
     path: 'compras/cafe-seco',
     loadComponent: () =>
       import('./features/purchase-forms/dry-coffee/dry-coffee-form').then((m) => m.DryCoffeeFormComponent),
+    canDeactivate: [
+      (component: { canDeactivate(): boolean | Promise<boolean> }) => component.canDeactivate(),
+    ],
   },
   {
     path: 'compras/cafe-otros',

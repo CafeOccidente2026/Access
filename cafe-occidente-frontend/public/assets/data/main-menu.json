@@ -7,6 +7,7 @@
   },
   "options": [
     { "label": "Registro de Control", "route": "/registro-control" },
+    { "label": "Usuarios", "route": "/usuarios" },
     { "label": "Compras", "route": "/compras", "emphasis": true },
     { "label": "Suministros", "route": "/suministros" },
     { "label": "Vendedores", "route": "/vendedores" },

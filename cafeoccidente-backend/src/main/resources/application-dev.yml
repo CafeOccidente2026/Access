@@ -8,3 +8,13 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+jwt:
+  secret: ${JWT_SECRET}
+
+app:
+  admin:
+    username: ${ADMIN_USERNAME}
+    password: ${ADMIN_PASSWORD}
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:4200}

@@ -1,0 +1,72 @@
+<app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/menu-principal">
+  <div class="flex flex-col gap-8 p-6">
+    <section class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold text-slate-700">{{ p.userSectionTitle }}</h2>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.usernameLabel }}:</span>
+        <input
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="username"
+        />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.passwordLabel }}:</span>
+        <input
+          type="password"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="password"
+        />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.roleLabel }}:</span>
+        <select
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="roleId"
+        >
+          <option [ngValue]="null"></option>
+          <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.municipioLabel }}:</span>
+        <select
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="municipalityId"
+        >
+          <option [ngValue]="null"></option>
+          <option *ngFor="let municipio of municipalities()" [ngValue]="municipio.id">{{ municipio.name }}</option>
+        </select>
+      </label>
+
+      <p *ngIf="userMessage()" class="text-sm text-green-700">{{ userMessage() }}</p>
+      <p *ngIf="userError()" class="text-sm text-red-600">{{ userError() }}</p>
+
+      <div class="flex justify-end">
+        <app-button [label]="p.createUserButton" variant="access" (pressed)="createUser()"></app-button>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-3 border-t border-slate-200 pt-6">
+      <h2 class="text-sm font-semibold text-slate-700">{{ p.municipioSectionTitle }}</h2>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.municipioNameLabel }}:</span>
+        <input
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="municipioName"
+        />
+      </label>
+
+      <p *ngIf="municipioMessage()" class="text-sm text-green-700">{{ municipioMessage() }}</p>
+      <p *ngIf="municipioError()" class="text-sm text-red-600">{{ municipioError() }}</p>
+
+      <div class="flex justify-end">
+        <app-button [label]="p.createMunicipioButton" variant="access" (pressed)="createMunicipio()"></app-button>
+      </div>
+    </section>
+  </div>
+</app-access-window>
