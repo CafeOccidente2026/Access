@@ -1,88 +1,101 @@
 {
-  "windowTitle": "Compras Café Seco",
-  "sections": {
-    "agency": "Agencia y anuncio",
-    "grower": "Información del caficultor",
-    "weights": "Pesos y almendra",
-    "pricing": "Precios y castigo",
-    "discounts": "Descuentos y pago",
-    "settlement": "Liquidación (calculada por el servidor)"
-  },
-  "labels": {
-    "agencyId": "Agencia",
-    "fundId": "Fondo",
-    "purchaseDate": "Fecha",
-    "announcementNumber": "Anuncio",
-    "announcementDate": "Fecha Anuncio",
-    "basePriceLoad": "Precio Base Carga PC",
-    "specialType": "Especial",
-    "productCode": "Cod Prod",
-    "idNumber": "Cédula",
-    "firstName": "Nombres",
-    "lastName": "Apellidos",
-    "growerType": "Tipo",
-    "address": "Dirección",
-    "cellphone": "Celular",
-    "bagsCount": "Sacos",
-    "grossKg": "Kilos Brutos",
-    "tareKg": "Destare",
-    "netKg": "Kilos Netos",
-    "totalStoredWeight": "Peso Tot Alm",
-    "wastePercentage": "Porc Merma %",
-    "defectiveStoredWeight": "Peso Alm Defec",
-    "defectivePercentage": "Porc Alm Defec %",
-    "healthyStoredWeight": "Peso Alm Sana",
-    "healthyPercentage": "Porc Alm Sana %",
-    "healthyUnitPrice": "Precio Alm Sana",
-    "defectiveUnitPrice": "Precio Alm Defec",
-    "bonus": "Bonificación",
-    "penalty": "Castigo",
-    "costs": "Costos",
-    "withholdingExempt": "Exento de Retefuente (Asociación)",
-    "freightDiscount": "Descuento Fro",
-    "otherDiscounts": "Otros Desctos",
-    "paymentMethod": "Forma de pago",
-    "checkNumber": "Nº Cheque",
-    "unitPrice": "Vr. Kilo",
-    "grossValue": "Vr. Bruto",
-    "inventoryValue": "Vr. Inventario",
-    "associateContribution": "Aporte Socio",
-    "cooperativeDiscount": "Descuento Coop",
-    "withholding": "Retefuente",
-    "netToPay": "Neto a Pagar"
-  },
-  "specialTypeOptions": [
-    "RN",
-    "RAINFOREST",
-    "RAIN TE",
-    "NESS TE",
-    "NESPRESSO - FTUSA",
-    "NESPRESSO LATE HARVEST - FTUSA",
-    "NESPRESSO CON TAZA - FTUSA",
-    "NESPRESSO LATE HARVEST CON TAZA - FTUSA",
-    "EXPON",
-    "EXPOR",
-    "REGIONAL NARIÑO 4C",
-    "REGIONAL NARIÑO DIFERENCIADO 85 - 85.9",
-    "REGIONAL NARIÑO DIFERENCIADO 84 - 84.9",
-    "COLOMBIA TIERRA DE DIVERSIDAD NESS",
-    "COLOMBIA TIERRA DE DIVERSIDAD RN",
-    "ESTANDAR",
-    "ESTANDAR FED",
-    "ILLY",
-    "MICROLNESS",
-    "MICROLOTES 88+",
-    "MICROLOTES 86 - 87.9"
+  "windowTitle": "COMPRAS",
+  "theme": "sky",
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
   ],
-  "growerTypeOptions": [
-    { "value": "S", "label": "Asociado" },
-    { "value": "C", "label": "No asociado" }
+  "identificationFields": [
+    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text" },
+    { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency" },
+    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }
   ],
-  "paymentMethodOptions": ["EFECTIVO", "CHEQUE"],
-  "printButton": "Imprimir",
-  "savedMessage": "Compra registrada. Documento soporte generado.",
-  "errorMessage": "No se pudo registrar la compra. Verifique los datos.",
-  "closeWithoutPrintingWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
-  "confirmDiscard": "Cerrar sin guardar",
-  "cancelDiscard": "Seguir en el formulario"
+  "federationHeading": "Información Federación:",
+  "federationFields": [
+    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true },
+    { "key": "program", "label": "Programa", "type": "text", "highlighted": true },
+    { "key": "quota", "label": "Cupo", "type": "text", "highlighted": true }
+  ],
+  "contactFields": [
+    { "key": "idPart1", "label": "Cedula", "type": "text" },
+    { "key": "idType", "label": "Tipo", "type": "text" },
+    { "key": "address", "label": "Direccion", "type": "text" },
+    { "key": "cellphone", "label": "Celular", "type": "text" }
+  ],
+  "qualityFields": [
+    {
+      "key": "special",
+      "label": "Especial",
+      "type": "select",
+      "options": [
+        "RN",
+        "RAINFOREST",
+        "RAIN TE",
+        "NESS TE",
+        "NESPRESSO - FTUSA",
+        "NESPRESSO LATE HARVEST - FTUSA",
+        "NESPRESSO CON TAZA - FTUSA",
+        "NESPRESSO LATE HARVEST CON TAZA - FTUSA",
+        "EXPON",
+        "EXPOR",
+        "REGIONAL NARIÑO 4C",
+        "REGIONAL NARIÑO DIFERENCIADO 85 - 85.9",
+        "REGIONAL NARIÑO DIFERENCIADO 84 - 84.9",
+        "COLOMBIA TIERRA DE DIVERSIDAD NESS",
+        "COLOMBIA TIERRA DE DIVERSIDAD RN",
+        "ESTANDAR",
+        "ESTANDAR FED",
+        "ILLY",
+        "MICROLNESS",
+        "MICROLOTES 88+",
+        "MICROLOTES 86 - 87.9"
+      ]
+    },
+    { "key": "sustentationPrice", "label": "Pr Sustentación", "type": "currency" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency" },
+    { "key": "costs", "label": "Costos", "type": "currency" }
+  ],
+  "weightFields": [
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number" },
+    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number" },
+    { "key": "huskPercentage", "label": "Porc Kg Pas %", "type": "percentage" },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number" },
+    { "key": "factor", "label": "Factor", "type": "number" }
+  ],
+  "netWeightFields": [
+    { "key": "bags", "label": "Sacos", "type": "number" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
+    { "key": "tare", "label": "Destare", "type": "number" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number" },
+    { "key": "penalty", "label": "Castigo", "type": "currency" }
+  ],
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [{ "label": "Efectivo", "value": "" }],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": ""
+  },
+  "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true },
+    { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency" }
+  ],
+  "messages": {
+    "acceptLabel": "Aceptar",
+    "noAnnouncement": "No hay un anuncio activo para la agencia y el fondo seleccionados.",
+    "saveError": "No se pudo registrar la compra. Verifique los datos.",
+    "savedNotice": "Compra registrada. Documento soporte generado.",
+    "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "closeConfirm": "Cerrar sin guardar",
+    "closeCancel": "Seguir en el formulario"
+  }
 }

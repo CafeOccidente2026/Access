@@ -118,7 +118,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setHealthyStoredWeight(request.healthyStoredWeight());
         purchase.setHealthyPercentage(calculation.healthyPercentage());
         purchase.setHealthyUnitPrice(request.healthyUnitPrice());
-        purchase.setDefectiveUnitPrice(request.defectiveUnitPrice());
+        purchase.setDefectiveUnitPrice(controlRecord.getDefectiveAlmondUnitPrice());
         purchase.setBonus(request.bonus());
         purchase.setPenalty(request.penalty());
         purchase.setCosts(request.costs());

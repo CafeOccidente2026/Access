@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { PurchaseFormContent } from '../../../core/models';
 import { AccessWindowComponent } from '../access-window/access-window';
 import { AppButtonComponent } from '../app-button/app-button';
@@ -19,6 +19,9 @@ const THEME_BODY_CLASS: Record<PurchaseFormContent['theme'], string> = {
  * Vista generica para los formularios de compra (seco, otros, verde, pasilla
  * y consulta). Toda la variacion entre pantallas vive en el JSON de contenido;
  * este componente solo se encarga de la disposicion visual.
+ *
+ * Los eventos `fieldValueChange`/`fieldCommitted` son opcionales: la pantalla que quiera hacer el
+ * formulario interactivo (ej: Compras Café Seco) los escucha; las demas no y no cambia nada.
  */
 @Component({
   selector: 'app-purchase-form-view',
@@ -39,8 +42,22 @@ export class PurchaseFormViewComponent {
   @Input({ required: true }) content!: PurchaseFormContent;
   @Input() readOnly = false;
   @Output() readonly reprintPressed = new EventEmitter<void>();
+  @Output() readonly fieldValueChange = new EventEmitter<{ key: string; value: string | number }>();
+  @Output() readonly fieldCommitted = new EventEmitter<string>();
+  /** Igual que en AccessWindow: si el padre lo escucha, decide él; si no, volvemos atrás. */
+  @Output() readonly closeRequested = new EventEmitter<void>();
+
+  private readonly location = inject(Location);
 
   get bodyClass(): string {
     return THEME_BODY_CLASS[this.content.theme];
+  }
+
+  onCloseRequested(): void {
+    if (this.closeRequested.observed) {
+      this.closeRequested.emit();
+    } else {
+      this.location.back();
+    }
   }
 }

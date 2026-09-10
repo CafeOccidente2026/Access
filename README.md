@@ -153,6 +153,16 @@ Access):
   - **A revisar con el negocio:** hoy el acumulado solo suma compras del módulo
     `drycoffee`. Cuando existan `othercoffee` / `greencoffee` / `husk` habrá que
     decidir si el acumulado mensual debe incluirlas también.
+- `Pr_AlmDefec` (precio almendra defectuosa, factor `var4` de `Sacos_LostFocus`):
+  el VBA nunca le asigna un valor real (solo `= 0` en los resets) y la pantalla
+  migrada no tiene campo para capturarlo. Se guarda como
+  `ControlRecord.defectiveAlmondUnitPrice`, sembrado en **0** y marcado `TODO`
+  (migración `V6`). Con 0, `var4 = 0`, igual que hoy en Access.
+
+El diseño de la pantalla (`shared/ui/purchase-form-view` + `purchase-form-dry.json`)
+no se toca: la lógica (autollenado del anuncio, cascada, bloqueo secuencial,
+Escape, botón Imprimir, guardado y aviso al cerrar) se conecta con
+`@Input`/eventos añadidos a los componentes compartidos existentes.
 
 Pendientes del mismo formulario (no solicitados aún): generación del PDF del
 documento soporte, la búsqueda del caficultor vía DLL externa / `pcompras` (hoy

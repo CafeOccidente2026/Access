@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 
+import { dryCoffeeUnsavedChangesGuard } from './features/purchase-forms/dry-coffee/unsaved-changes.guard';
+
 /** Mapa de rutas de la aplicacion; cada pantalla migrada tiene su propia ruta. */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -34,9 +36,7 @@ export const routes: Routes = [
     path: 'compras/cafe-seco',
     loadComponent: () =>
       import('./features/purchase-forms/dry-coffee/dry-coffee-form').then((m) => m.DryCoffeeFormComponent),
-    canDeactivate: [
-      (component: { canDeactivate(): boolean | Promise<boolean> }) => component.canDeactivate(),
-    ],
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/cafe-otros',

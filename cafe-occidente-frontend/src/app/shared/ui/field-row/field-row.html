@@ -1,9 +1,11 @@
 <div class="flex flex-wrap gap-x-6 gap-y-3">
   <app-form-field
-    *ngFor="let field of fields"
+    *ngFor="let field of fields; trackBy: trackByKey"
     class="min-w-[240px] flex-1"
     [field]="field"
     [labelClass]="labelClass"
     [highlightClass]="highlightClass"
+    (valueChange)="fieldValueChange.emit({ key: field.key, value: $event })"
+    (committed)="fieldCommitted.emit(field.key)"
   ></app-form-field>
 </div>

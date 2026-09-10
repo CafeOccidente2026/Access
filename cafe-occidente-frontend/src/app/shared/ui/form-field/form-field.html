@@ -6,7 +6,10 @@
     class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
     [class]="field.highlighted ? highlightClass : ''"
     [disabled]="!!field.readonly"
-    [(ngModel)]="inputValue"
+    [ngModel]="inputValue"
+    (ngModelChange)="onInput($event)"
+    (change)="committed.emit()"
+    (blur)="committed.emit()"
   >
     <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
   </select>
@@ -17,7 +20,10 @@
       [class]="field.highlighted ? highlightClass : ''"
       [type]="field.type === 'number' || field.type === 'currency' || field.type === 'percentage' ? 'text' : field.type"
       [readonly]="field.readonly"
-      [(ngModel)]="inputValue"
+      [ngModel]="inputValue"
+      (ngModelChange)="onInput($event)"
+      (blur)="committed.emit()"
+      (keydown.enter)="committed.emit()"
     />
   </ng-template>
 </label>

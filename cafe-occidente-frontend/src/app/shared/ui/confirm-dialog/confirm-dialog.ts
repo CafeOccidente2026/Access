@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 
 import { AppButtonComponent } from '../app-button/app-button';
 
-/** Diálogo modal de confirmación reutilizable (primer modal reusable de la app). */
+/** Diálogo modal reutilizable. Sin `cancelLabel` funciona como aviso de un solo botón. */
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
@@ -14,7 +14,7 @@ import { AppButtonComponent } from '../app-button/app-button';
 export class ConfirmDialogComponent {
   @Input() message = '';
   @Input() confirmLabel = 'Aceptar';
-  @Input() cancelLabel = 'Cancelar';
+  @Input() cancelLabel = '';
   @Output() readonly confirmed = new EventEmitter<void>();
   @Output() readonly cancelled = new EventEmitter<void>();
 }

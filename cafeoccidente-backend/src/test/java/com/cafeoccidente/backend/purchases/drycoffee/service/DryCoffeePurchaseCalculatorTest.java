@@ -28,6 +28,7 @@ class DryCoffeePurchaseCalculatorTest {
         cr.setSpecialtyThreshold(new BigDecimal("93.33"));
         cr.setAssociatePercentage(new BigDecimal("2"));
         cr.setNonAssociateDiscount(new BigDecimal("0.8"));
+        cr.setDefectiveAlmondUnitPrice(BigDecimal.ZERO);
         return cr;
     }
 
@@ -36,7 +37,7 @@ class DryCoffeePurchaseCalculatorTest {
                 1L, 1L, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
-                new BigDecimal("12000"), new BigDecimal("8000"),
+                new BigDecimal("12000"),
                 new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("692"),
                 withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
     }

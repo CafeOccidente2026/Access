@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormFieldDefinition } from '../../../core/models';
 import { FormFieldComponent } from '../form-field/form-field';
 
@@ -15,4 +15,11 @@ export class FieldRowComponent {
   @Input() fields: FormFieldDefinition[] = [];
   @Input() labelClass = 'text-slate-700';
   @Input() highlightClass = 'bg-yellow-100';
+
+  @Output() readonly fieldValueChange = new EventEmitter<{ key: string; value: string | number }>();
+  @Output() readonly fieldCommitted = new EventEmitter<string>();
+
+  trackByKey(_: number, field: FormFieldDefinition): string {
+    return field.key;
+  }
 }

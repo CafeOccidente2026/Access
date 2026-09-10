@@ -80,10 +80,12 @@ public class DryCoffeePurchaseCalculator {
         }
         BigDecimal var2 = controlRecord.getSpecialtyThreshold().divide(healthyPercentage, MathContext.DECIMAL64);
         BigDecimal var3 = healthyPercentage.multiply(defectivePercentage).divide(HUNDRED, MathContext.DECIMAL64);
-        // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec. PorcKgPasProm = ControlRecord.avgHuskPercentage (Texto164).
+        // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec.
+        // PorcKgPasProm = ControlRecord.avgHuskPercentage (Texto164).
+        // Pr_AlmDefec = ControlRecord.defectiveAlmondUnitPrice (ver TODO en ControlRecord; hoy 0 -> var4 = 0).
         BigDecimal var4 = var3.subtract(controlRecord.getAvgHuskPercentage())
                 .divide(healthyPercentage, MathContext.DECIMAL64)
-                .multiply(request.defectiveUnitPrice());
+                .multiply(controlRecord.getDefectiveAlmondUnitPrice());
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
         // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191).

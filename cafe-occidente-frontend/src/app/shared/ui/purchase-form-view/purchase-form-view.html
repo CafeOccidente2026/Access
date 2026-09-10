@@ -1,7 +1,19 @@
-<app-access-window [title]="content.windowTitle" [bodyClass]="bodyClass">
+<app-access-window
+  [title]="content.windowTitle"
+  [bodyClass]="bodyClass"
+  (closeRequested)="onCloseRequested()"
+>
   <div class="flex flex-col gap-4 p-5 text-slate-800">
-    <app-field-row [fields]="content.topFields"></app-field-row>
-    <app-field-row [fields]="content.identificationFields"></app-field-row>
+    <app-field-row
+      [fields]="content.topFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
+    <app-field-row
+      [fields]="content.identificationFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
 
     <div *ngIf="content.federationFields" class="rounded border border-slate-500/40 p-3">
       <p class="mb-2 text-sm font-semibold text-slate-800">{{ content.federationHeading }}</p>
@@ -9,19 +21,56 @@
         [fields]="content.federationFields"
         labelClass="text-slate-800 font-semibold"
         highlightClass="bg-orange-200"
+        (fieldValueChange)="fieldValueChange.emit($event)"
+        (fieldCommitted)="fieldCommitted.emit($event)"
       ></app-field-row>
     </div>
 
-    <app-field-row *ngIf="content.contactFields" [fields]="content.contactFields"></app-field-row>
-    <app-field-row *ngIf="content.qualityFields" [fields]="content.qualityFields"></app-field-row>
-    <app-field-row *ngIf="content.weightFields" [fields]="content.weightFields"></app-field-row>
-    <app-field-row *ngIf="content.netWeightFields" [fields]="content.netWeightFields"></app-field-row>
-    <app-field-row *ngIf="content.priceFields" [fields]="content.priceFields"></app-field-row>
+    <app-field-row
+      *ngIf="content.contactFields"
+      [fields]="content.contactFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
+    <app-field-row
+      *ngIf="content.qualityFields"
+      [fields]="content.qualityFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
+    <app-field-row
+      *ngIf="content.weightFields"
+      [fields]="content.weightFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
+    <app-field-row
+      *ngIf="content.netWeightFields"
+      [fields]="content.netWeightFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
+    <app-field-row
+      *ngIf="content.priceFields"
+      [fields]="content.priceFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
 
     <div class="flex flex-wrap items-start gap-6">
       <div class="flex flex-col gap-3" *ngIf="content.discountField || content.paymentTypeField">
-        <app-form-field *ngIf="content.discountField" [field]="content.discountField"></app-form-field>
-        <app-form-field *ngIf="content.paymentTypeField" [field]="content.paymentTypeField"></app-form-field>
+        <app-form-field
+          *ngIf="content.discountField"
+          [field]="content.discountField"
+          (valueChange)="fieldValueChange.emit({ key: content.discountField.key, value: $event })"
+          (committed)="fieldCommitted.emit(content.discountField.key)"
+        ></app-form-field>
+        <app-form-field
+          *ngIf="content.paymentTypeField"
+          [field]="content.paymentTypeField"
+          (valueChange)="fieldValueChange.emit({ key: content.paymentTypeField.key, value: $event })"
+          (committed)="fieldCommitted.emit(content.paymentTypeField.key)"
+        ></app-form-field>
       </div>
 
       <app-payment-panel
@@ -33,12 +82,32 @@
 
     <app-section-divider [text]="content.settlementHeading"></app-section-divider>
 
-    <app-field-row [fields]="content.settlementFields"></app-field-row>
-    <app-field-row *ngIf="content.settlementSecondaryFields" [fields]="content.settlementSecondaryFields"></app-field-row>
+    <app-field-row
+      [fields]="content.settlementFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
+    <app-field-row
+      *ngIf="content.settlementSecondaryFields"
+      [fields]="content.settlementSecondaryFields"
+      (fieldValueChange)="fieldValueChange.emit($event)"
+      (fieldCommitted)="fieldCommitted.emit($event)"
+    ></app-field-row>
 
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <app-field-row *ngIf="content.additionalDiscountFields" [fields]="content.additionalDiscountFields" class="flex-1"></app-field-row>
-      <app-form-field *ngIf="content.netToPayField" [field]="content.netToPayField"></app-form-field>
+      <app-field-row
+        *ngIf="content.additionalDiscountFields"
+        [fields]="content.additionalDiscountFields"
+        class="flex-1"
+        (fieldValueChange)="fieldValueChange.emit($event)"
+        (fieldCommitted)="fieldCommitted.emit($event)"
+      ></app-field-row>
+      <app-form-field
+        *ngIf="content.netToPayField"
+        [field]="content.netToPayField"
+        (valueChange)="fieldValueChange.emit({ key: content.netToPayField.key, value: $event })"
+        (committed)="fieldCommitted.emit(content.netToPayField.key)"
+      ></app-form-field>
       <app-form-field *ngIf="content.statusField" [field]="content.statusField"></app-form-field>
     </div>
 
