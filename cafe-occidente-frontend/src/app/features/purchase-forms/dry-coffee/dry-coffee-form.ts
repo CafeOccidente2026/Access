@@ -3,13 +3,14 @@ import { ChangeDetectionStrategy, Component, HostListener, computed, inject, sig
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { Agency } from '../../../core/models/agency.model';
 import {
-  Agency,
   Announcement,
   DryCoffeePurchaseRequest,
   DryCoffeePurchaseResponse,
   Fund,
 } from '../../../core/models/dry-coffee-purchase.model';
+import { AgencyService } from '../../../core/services/agency.service';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
@@ -72,6 +73,7 @@ const num = (v: string | undefined | null): number => {
 export class DryCoffeeFormComponent {
   private readonly content = inject(ContentService);
   private readonly service = inject(DryCoffeePurchaseService);
+  private readonly agencyService = inject(AgencyService);
   private readonly location = inject(Location);
 
   private readonly base = toSignal(this.content.loadJson<DryCoffeeContent>('purchase-form-dry'));
@@ -107,7 +109,7 @@ export class DryCoffeeFormComponent {
   });
 
   constructor() {
-    this.service.agencies().subscribe((list) => {
+    this.agencyService.list().subscribe((list) => {
       this.agencies.set(list);
       this.agencyOptions = list.map((a) => a.name);
       list.forEach((a) => this.agencyIdByName.set(a.name, a.id));

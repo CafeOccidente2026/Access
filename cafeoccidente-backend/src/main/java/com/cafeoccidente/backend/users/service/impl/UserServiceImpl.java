@@ -2,8 +2,8 @@ package com.cafeoccidente.backend.users.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
-import com.cafeoccidente.backend.purchases.shared.entity.Municipality;
-import com.cafeoccidente.backend.purchases.shared.repository.MunicipalityRepository;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
+import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.dto.UserRequest;
 import com.cafeoccidente.backend.users.dto.UserResponse;
 import com.cafeoccidente.backend.users.entity.Role;
@@ -21,19 +21,19 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final MunicipalityRepository municipalityRepository;
+    private final AgencyRepository agencyRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
     public UserServiceImpl(
             UserRepository userRepository,
             RoleRepository roleRepository,
-            MunicipalityRepository municipalityRepository,
+            AgencyRepository agencyRepository,
             PasswordEncoder passwordEncoder,
             UserMapper userMapper) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
-        this.municipalityRepository = municipalityRepository;
+        this.agencyRepository = agencyRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
     }
@@ -50,14 +50,14 @@ public class UserServiceImpl implements UserService {
         }
         Role role = roleRepository.findById(request.roleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
-        Municipality municipality = municipalityRepository.findById(request.municipalityId())
-                .orElseThrow(() -> new ResourceNotFoundException("Municipio no encontrado"));
+        Agency agency = agencyRepository.findById(request.agencyId())
+                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
 
         User user = new User();
         user.setUsername(request.username());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(role);
-        user.setMunicipality(municipality);
+        user.setAgency(agency);
         user.setActive(true);
 
         return userMapper.toResponse(userRepository.save(user));

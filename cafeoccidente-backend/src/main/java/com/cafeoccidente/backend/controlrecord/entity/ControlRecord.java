@@ -48,15 +48,6 @@ public class ControlRecord {
     @Column(name = "avg_husk_percentage", nullable = false, precision = 5, scale = 2)
     private BigDecimal avgHuskPercentage;
 
-    /**
-     * Pr_AlmDefec (precio del kilo de almendra defectuosa) del formulario Compras Cafe Seco.
-     * TODO: el VBA nunca le asigna un valor real (solo lo pone en 0 en los resets) y la pantalla
-     * migrada no tiene campo para capturarlo. Sembrado en 0 hasta conocer el valor / la fuente
-     * (posiblemente el programa externo pcompras).
-     */
-    @Column(name = "defective_almond_unit_price", nullable = false, precision = 15, scale = 2)
-    private BigDecimal defectiveAlmondUnitPrice;
-
     @Column(name = "purchase_point", nullable = false)
     private String purchasePoint;
 

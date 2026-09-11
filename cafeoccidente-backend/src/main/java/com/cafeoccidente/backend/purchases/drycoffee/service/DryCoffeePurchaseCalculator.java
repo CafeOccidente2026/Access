@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * (Destare -> Kilos_Netos -> W_TotAlm/W_AlmSana/W_AlmDefec -> PorcMerma/PorcAlmSana/PorcAlmDefec
  * -> Sacos -> Castigo -> Vr_Kilo -> Vr_Bruto -> Aporte_Socio/Descuento_Coop -> Retefuente ->
  * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica; el acumulado mensual
- * del caficultor lo consulta el servicio y se pasa como parametro.
+ * del caficultor y los valores del anuncio los consulta el servicio y se pasan como parametro.
  */
 @Component
 public class DryCoffeePurchaseCalculator {
@@ -23,6 +23,8 @@ public class DryCoffeePurchaseCalculator {
 
     /**
      * @param announcementBasePriceLoad valor crudo del anuncio (vrcps en el VBA)
+     * @param announcementDefectiveUnitPrice Pr_AlmDefec vigente en el anuncio (ver
+     *     Announcement.defectiveUnitPrice)
      * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
      *     mes actual (Texto105 en el VBA / macro CalculoReteFteMes)
      * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el mes
@@ -32,6 +34,7 @@ public class DryCoffeePurchaseCalculator {
             DryCoffeePurchaseRequest request,
             ControlRecord controlRecord,
             BigDecimal announcementBasePriceLoad,
+            BigDecimal announcementDefectiveUnitPrice,
             BigDecimal monthlyAccumulatedGrossValue,
             BigDecimal monthlyAccumulatedWithholding) {
         if ("F".equalsIgnoreCase(request.growerType())) {
@@ -82,10 +85,10 @@ public class DryCoffeePurchaseCalculator {
         BigDecimal var3 = healthyPercentage.multiply(defectivePercentage).divide(HUNDRED, MathContext.DECIMAL64);
         // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec.
         // PorcKgPasProm = ControlRecord.avgHuskPercentage (Texto164).
-        // Pr_AlmDefec = ControlRecord.defectiveAlmondUnitPrice (ver TODO en ControlRecord; hoy 0 -> var4 = 0).
+        // Pr_AlmDefec = Announcement.defectiveUnitPrice (lo trae el anuncio vigente).
         BigDecimal var4 = var3.subtract(controlRecord.getAvgHuskPercentage())
                 .divide(healthyPercentage, MathContext.DECIMAL64)
-                .multiply(controlRecord.getDefectiveAlmondUnitPrice());
+                .multiply(announcementDefectiveUnitPrice);
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
         // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191).

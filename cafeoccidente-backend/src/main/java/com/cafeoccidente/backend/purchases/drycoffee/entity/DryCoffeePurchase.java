@@ -2,7 +2,6 @@ package com.cafeoccidente.backend.purchases.drycoffee.entity;
 
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
-import com.cafeoccidente.backend.purchases.shared.entity.Municipality;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -167,15 +166,6 @@ public class DryCoffeePurchase {
     /** Auditoria: usuario autenticado que registro la compra. */
     @Column(name = "created_by_user_id", nullable = false)
     private Long createdByUserId;
-
-    /**
-     * Auditoria: municipio de la compra. Por defecto se toma del municipio del usuario que crea
-     * el registro (el formulario no ofrece un selector de municipio distinto al de la agencia,
-     * asi que no hay eleccion explicita por ahora).
-     */
-    @ManyToOne
-    @JoinColumn(name = "municipality_id", nullable = false)
-    private Municipality municipality;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

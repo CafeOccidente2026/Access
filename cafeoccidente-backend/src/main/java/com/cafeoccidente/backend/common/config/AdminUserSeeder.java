@@ -1,7 +1,7 @@
 package com.cafeoccidente.backend.common.config;
 
-import com.cafeoccidente.backend.purchases.shared.entity.Municipality;
-import com.cafeoccidente.backend.purchases.shared.repository.MunicipalityRepository;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
+import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.Role;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
@@ -18,7 +18,7 @@ public class AdminUserSeeder implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final MunicipalityRepository municipalityRepository;
+    private final AgencyRepository agencyRepository;
     private final PasswordEncoder passwordEncoder;
     private final String adminUsername;
     private final String adminPassword;
@@ -26,13 +26,13 @@ public class AdminUserSeeder implements ApplicationRunner {
     public AdminUserSeeder(
             UserRepository userRepository,
             RoleRepository roleRepository,
-            MunicipalityRepository municipalityRepository,
+            AgencyRepository agencyRepository,
             PasswordEncoder passwordEncoder,
             @Value("${app.admin.username}") String adminUsername,
             @Value("${app.admin.password}") String adminPassword) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
-        this.municipalityRepository = municipalityRepository;
+        this.agencyRepository = agencyRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
@@ -45,14 +45,14 @@ public class AdminUserSeeder implements ApplicationRunner {
         }
         Role adminRole = roleRepository.findByName("ADMIN")
                 .orElseThrow(() -> new IllegalStateException("El rol ADMIN debe existir (ver Flyway V2)"));
-        Municipality municipality = municipalityRepository.findByActiveTrue().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException("Debe existir al menos un municipio (ver Flyway V3)"));
+        Agency agency = agencyRepository.findByActiveTrue().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("Debe existir al menos una agencia (ver Flyway V7)"));
 
         User admin = new User();
         admin.setUsername(adminUsername);
         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
         admin.setRole(adminRole);
-        admin.setMunicipality(municipality);
+        admin.setAgency(agency);
         admin.setActive(true);
         userRepository.save(admin);
     }

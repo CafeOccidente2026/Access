@@ -48,7 +48,5 @@ public record DryCoffeePurchaseResponse(
         BigDecimal netToPay,
         String paymentMethod,
         String checkNumber,
-        Long createdByUserId,
-        Long municipalityId,
-        String municipalityName) {
+        Long createdByUserId) {
 }

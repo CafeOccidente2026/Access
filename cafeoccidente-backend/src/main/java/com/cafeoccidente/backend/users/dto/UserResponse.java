@@ -6,6 +6,6 @@ public record UserResponse(
         boolean active,
         Long roleId,
         String roleName,
-        Long municipalityId,
-        String municipalityName) {
+        Long agencyId,
+        String agencyName) {
 }

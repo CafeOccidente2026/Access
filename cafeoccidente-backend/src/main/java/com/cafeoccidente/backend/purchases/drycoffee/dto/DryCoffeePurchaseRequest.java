@@ -10,8 +10,8 @@ import java.math.BigDecimal;
  * Solo lleva los campos de entrada manual del formulario (Cedula, Sacos, Destare, Castigo, etc).
  * Los campos calculados (netKg, porcentajes, precios, Retefuente, netToPay, productCode) los
  * calcula el servidor via DryCoffeePurchaseCalculator - nunca se reciben del cliente.
- * Pr_AlmDefec (precio almendra defectuosa) tampoco viene del cliente: la pantalla no tiene campo
- * para el y sale de ControlRecord.defectiveAlmondUnitPrice (ver TODO en esa entidad).
+ * Pr_AlmDefec (precio almendra defectuosa) tampoco viene del cliente: lo trae el anuncio vigente
+ * (ver Announcement.defectiveUnitPrice), igual que basePriceLoad.
  */
 public record DryCoffeePurchaseRequest(
         @NotNull Long agencyId,

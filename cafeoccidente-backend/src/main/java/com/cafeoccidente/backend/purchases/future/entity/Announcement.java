@@ -37,6 +37,14 @@ public class Announcement {
     @Column(name = "base_price_load", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePriceLoad;
 
+    /**
+     * Pr_AlmDefec: precio de la almendra defectuosa vigente en este anuncio (igual que
+     * basePriceLoad/Pr_AlmSana, lo trae el anuncio - no se captura a mano en el formulario de
+     * compra). Usado en DryCoffeePurchaseCalculator.
+     */
+    @Column(name = "defective_unit_price", nullable = false, precision = 15, scale = 2)
+    private BigDecimal defectiveUnitPrice;
+
     @ManyToOne
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;

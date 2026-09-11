@@ -8,6 +8,7 @@ public record AnnouncementResponse(
         String announcementNumber,
         LocalDate announcementDate,
         BigDecimal basePriceLoad,
+        BigDecimal defectiveUnitPrice,
         Long agencyId,
         Long fundId) {
 }

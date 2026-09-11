@@ -15,7 +15,7 @@ public class UserMapper {
                 user.isActive(),
                 user.getRole().getId(),
                 user.getRole().getName(),
-                user.getMunicipality().getId(),
-                user.getMunicipality().getName());
+                user.getAgency().getId(),
+                user.getAgency().getName());
     }
 }

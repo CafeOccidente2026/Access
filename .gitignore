@@ -52,7 +52,7 @@ target/
 .mvn/
 *.iml
 
-
+docs/
 .env 
 .idea/ 
 .vscode/

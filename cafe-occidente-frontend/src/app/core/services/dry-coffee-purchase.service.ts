@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
 import {
-  Agency,
   Announcement,
   DryCoffeePurchaseRequest,
   DryCoffeePurchaseResponse,
@@ -15,10 +14,6 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DryCoffeePurchaseService {
   private readonly http = inject(HttpClient);
-
-  agencies(): Observable<Agency[]> {
-    return this.http.get<Agency[]>(`${API_BASE_URL}/agencies`);
-  }
 
   funds(): Observable<Fund[]> {
     return this.http.get<Fund[]>(`${API_BASE_URL}/funds`);

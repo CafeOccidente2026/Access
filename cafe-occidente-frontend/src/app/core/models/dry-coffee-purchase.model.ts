@@ -1,8 +1,3 @@
-export interface Agency {
-  readonly id: number;
-  readonly name: string;
-}
-
 export interface Fund {
   readonly id: number;
   readonly code: string;
@@ -18,7 +13,7 @@ export interface Announcement {
   readonly fundId: number;
 }
 
-/** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: sale de ControlRecord). */
+/** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: lo trae el anuncio). */
 export interface DryCoffeePurchaseRequest {
   readonly agencyId: number;
   readonly fundId: number;
@@ -85,5 +80,4 @@ export interface DryCoffeePurchaseResponse {
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
   readonly netToPay: number;
-  readonly municipalityName: string;
 }

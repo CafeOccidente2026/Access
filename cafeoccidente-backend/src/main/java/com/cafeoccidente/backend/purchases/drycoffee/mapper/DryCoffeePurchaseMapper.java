@@ -54,8 +54,6 @@ public class DryCoffeePurchaseMapper {
                 purchase.getNetToPay(),
                 purchase.getPaymentMethod(),
                 purchase.getCheckNumber(),
-                purchase.getCreatedByUserId(),
-                purchase.getMunicipality().getId(),
-                purchase.getMunicipality().getName());
+                purchase.getCreatedByUserId());
     }
 }

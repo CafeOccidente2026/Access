@@ -21,8 +21,6 @@ import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
-import com.cafeoccidente.backend.users.entity.User;
-import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -40,7 +38,6 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final ControlRecordService controlRecordService;
     private final DryCoffeePurchaseCalculator calculator;
     private final DryCoffeePurchaseMapper mapper;
-    private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
 
     public DryCoffeePurchaseServiceImpl(
@@ -52,7 +49,6 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             ControlRecordService controlRecordService,
             DryCoffeePurchaseCalculator calculator,
             DryCoffeePurchaseMapper mapper,
-            UserRepository userRepository,
             SecurityUtils securityUtils) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
@@ -62,7 +58,6 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.controlRecordService = controlRecordService;
         this.calculator = calculator;
         this.mapper = mapper;
-        this.userRepository = userRepository;
         this.securityUtils = securityUtils;
     }
 
@@ -85,12 +80,11 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
+                announcement.defectiveUnitPrice(),
                 monthlyTotals.grossValue(),
                 monthlyTotals.withholding());
 
         Long currentUserId = securityUtils.getCurrentUserId();
-        User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
 
         DryCoffeePurchase purchase = new DryCoffeePurchase();
         purchase.setPurchaseDate(LocalDate.now());
@@ -118,7 +112,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setHealthyStoredWeight(request.healthyStoredWeight());
         purchase.setHealthyPercentage(calculation.healthyPercentage());
         purchase.setHealthyUnitPrice(request.healthyUnitPrice());
-        purchase.setDefectiveUnitPrice(controlRecord.getDefectiveAlmondUnitPrice());
+        purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
         purchase.setBonus(request.bonus());
         purchase.setPenalty(request.penalty());
         purchase.setCosts(request.costs());
@@ -135,7 +129,6 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setPaymentMethod(request.paymentMethod());
         purchase.setCheckNumber(request.checkNumber());
         purchase.setCreatedByUserId(currentUserId);
-        purchase.setMunicipality(currentUser.getMunicipality());
         purchase.setCreatedAt(Instant.now());
 
         return mapper.toResponse(dryCoffeePurchaseRepository.save(purchase));

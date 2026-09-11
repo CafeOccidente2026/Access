@@ -4,8 +4,8 @@ export interface User {
   readonly active: boolean;
   readonly roleId: number;
   readonly roleName: string;
-  readonly municipalityId: number;
-  readonly municipalityName: string;
+  readonly agencyId: number;
+  readonly agencyName: string;
 }
 
 export interface LoginRequest {
@@ -23,5 +23,5 @@ export interface CreateUserRequest {
   readonly username: string;
   readonly password: string;
   readonly roleId: number;
-  readonly municipalityId: number;
+  readonly agencyId: number;
 }

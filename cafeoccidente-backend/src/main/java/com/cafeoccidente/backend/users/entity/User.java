@@ -1,6 +1,6 @@
 package com.cafeoccidente.backend.users.entity;
 
-import com.cafeoccidente.backend.purchases.shared.entity.Municipality;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -36,6 +36,6 @@ public class User {
     private Role role;
 
     @ManyToOne
-    @JoinColumn(name = "municipality_id", nullable = false)
-    private Municipality municipality;
+    @JoinColumn(name = "agency_id", nullable = false)
+    private Agency agency;
 }

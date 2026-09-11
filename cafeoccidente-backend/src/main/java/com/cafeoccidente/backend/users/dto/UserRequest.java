@@ -8,5 +8,5 @@ public record UserRequest(
         @NotBlank String username,
         @NotBlank @Size(min = 8, message = "La contrasena debe tener al menos 8 caracteres") String password,
         @NotNull Long roleId,
-        @NotNull Long municipalityId) {
+        @NotNull Long agencyId) {
 }

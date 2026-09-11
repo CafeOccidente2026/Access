@@ -1,15 +1,11 @@
 {
-  "windowTitle": "USUARIOS Y MUNICIPIOS",
+  "windowTitle": "USUARIOS",
   "userSectionTitle": "Crear usuario",
   "usernameLabel": "Usuario",
   "passwordLabel": "Contraseña",
   "roleLabel": "Rol",
-  "municipioLabel": "Municipio",
+  "agencyLabel": "Agencia",
   "createUserButton": "Crear usuario",
   "userCreatedMessage": "Usuario creado correctamente.",
-  "municipioSectionTitle": "Crear municipio",
-  "municipioNameLabel": "Nombre",
-  "createMunicipioButton": "Crear municipio",
-  "municipioCreatedMessage": "Municipio creado correctamente.",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
 }

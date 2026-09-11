@@ -31,6 +31,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                 announcement.getAnnouncementNumber(),
                 announcement.getAnnouncementDate(),
                 announcement.getBasePriceLoad(),
+                announcement.getDefectiveUnitPrice(),
                 announcement.getAgency().getId(),
                 announcement.getFund().getId());
     }

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 class DryCoffeePurchaseCalculatorTest {
 
     private static final BigDecimal ANNOUNCEMENT_BASE = new BigDecimal("1200000.00");
+    private static final BigDecimal ANNOUNCEMENT_DEFECTIVE_PRICE = BigDecimal.ZERO;
 
     private final DryCoffeePurchaseCalculator calculator = new DryCoffeePurchaseCalculator();
 
@@ -28,7 +29,6 @@ class DryCoffeePurchaseCalculatorTest {
         cr.setSpecialtyThreshold(new BigDecimal("93.33"));
         cr.setAssociatePercentage(new BigDecimal("2"));
         cr.setNonAssociateDiscount(new BigDecimal("0.8"));
-        cr.setDefectiveAlmondUnitPrice(BigDecimal.ZERO);
         return cr;
     }
 
@@ -45,16 +45,32 @@ class DryCoffeePurchaseCalculatorTest {
     @Test
     void computesBasePriceLoadFromAnnouncementMinusCostsTimesBaseLoad() {
         DryCoffeePurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO, BigDecimal.ZERO);
+                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
+                BigDecimal.ZERO, BigDecimal.ZERO);
 
         // 1200000 - (692 * 125) = 1200000 - 86500 = 1113500
         assertThat(result.basePriceLoad()).isEqualByComparingTo("1113500.00");
     }
 
     @Test
+    void announcementDefectiveUnitPriceFeedsTheQualityUnitPrice() {
+        DryCoffeePurchaseCalculation withoutDefectivePrice = calculator.calculate(
+                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO);
+
+        DryCoffeePurchaseCalculation withDefectivePrice = calculator.calculate(
+                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, new BigDecimal("8000"),
+                BigDecimal.ZERO, BigDecimal.ZERO);
+
+        // var4 pasa de 0 a un valor positivo -> el precio unitario (y por lo tanto Vr. Bruto) sube.
+        assertThat(withDefectivePrice.unitPrice()).isGreaterThan(withoutDefectivePrice.unitPrice());
+    }
+
+    @Test
     void firstPurchaseOfMonthWithholdsOnItsOwnGrossValue() {
         DryCoffeePurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO, BigDecimal.ZERO);
+                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
+                BigDecimal.ZERO, BigDecimal.ZERO);
 
         // withholding = grossValue * 0.5 / 100 (por encima del umbral, sin acumulado previo)
         BigDecimal expected = result.grossValue()
@@ -67,10 +83,11 @@ class DryCoffeePurchaseCalculatorTest {
     @Test
     void secondPurchaseOfMonthWithholdsOnlyTheIncrementOverTheAccumulatedTotal() {
         DryCoffeePurchaseCalculation first = calculator.calculate(
-                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO, BigDecimal.ZERO);
+                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
+                BigDecimal.ZERO, BigDecimal.ZERO);
 
         DryCoffeePurchaseCalculation second = calculator.calculate(
-                request("S", false), controlRecord(), ANNOUNCEMENT_BASE,
+                request("S", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
                 first.grossValue(), first.withholding());
 
         // Retefuente incremental = (grossValue2 + grossValue1) * 0.5/100 - retefuente1
@@ -88,7 +105,7 @@ class DryCoffeePurchaseCalculatorTest {
     @Test
     void exemptGrowerNeverWithholds() {
         DryCoffeePurchaseCalculation result = calculator.calculate(
-                request("S", true), controlRecord(), ANNOUNCEMENT_BASE,
+                request("S", true), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
                 new BigDecimal("50000000"), new BigDecimal("250000"));
 
         assertThat(result.withholding()).isEqualByComparingTo("0");
@@ -97,7 +114,8 @@ class DryCoffeePurchaseCalculatorTest {
     @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(
-                request("F", false), controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO, BigDecimal.ZERO))
+                request("F", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
+                BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);
     }
 }
