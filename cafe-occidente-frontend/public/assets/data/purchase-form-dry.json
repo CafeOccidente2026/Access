@@ -2,7 +2,7 @@
   "windowTitle": "COMPRAS",
   "theme": "sky",
   "topFields": [
-    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
     { "key": "announcement", "label": "Anuncio", "type": "number" },
@@ -86,12 +86,14 @@
   "settlementFields": [
     { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" },
     { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency" },
     { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true },
     { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency" }
   ],
   "messages": {
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia y el fondo seleccionados.",
+    "deceasedBlocked": "No se le puede facturar a un fallecido.",
     "saveError": "No se pudo registrar la compra. Verifique los datos.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",

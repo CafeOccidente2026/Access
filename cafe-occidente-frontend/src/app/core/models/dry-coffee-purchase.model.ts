@@ -9,14 +9,61 @@ export interface Announcement {
   readonly announcementNumber: string;
   readonly announcementDate: string;
   readonly basePriceLoad: number;
+  readonly defectiveUnitPrice: number;
+  readonly healthyUnitPrice: number;
+  readonly bonus: number;
+  readonly costs: number;
   readonly agencyId: number;
   readonly fundId: number;
+}
+
+/** Autocompletado al confirmar "Especial" (paso 5): Cod Prod + datos del anuncio vigente. */
+export interface SpecialInfo {
+  readonly productCode: string;
+  readonly announcementNumber: string;
+  readonly announcementDate: string;
+  readonly basePriceLoad: number;
+  readonly defectiveUnitPrice: number;
+  readonly healthyUnitPrice: number;
+  readonly bonus: number;
+  readonly costs: number;
+}
+
+/** Siguiente factura a reservar al confirmar "Fondo" (paso 3). */
+export interface NextInvoiceNumber {
+  readonly invoiceNumber: number;
+  readonly prefix: string;
+  readonly warning: string | null;
+}
+
+/** Porcentajes calculados en los pasos "Peso Tot Alm"/"Peso Tot Pasilla"/"Peso Alm Sana". */
+export interface QualityPercentages {
+  readonly wastePercentage: number | null;
+  readonly defectivePercentage: number | null;
+  readonly healthyPercentage: number | null;
+}
+
+/** Resultado de la cascada completa de cálculo (mismo shape que al guardar, sin persistir). */
+export interface DryCoffeePurchaseCalculation {
+  readonly basePriceLoad: number;
+  readonly netKg: number;
+  readonly wastePercentage: number;
+  readonly defectivePercentage: number;
+  readonly healthyPercentage: number;
+  readonly unitPrice: number;
+  readonly grossValue: number;
+  readonly inventoryValue: number;
+  readonly associateContribution: number;
+  readonly cooperativeDiscount: number;
+  readonly withholding: number;
+  readonly netToPay: number;
 }
 
 /** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: lo trae el anuncio). */
 export interface DryCoffeePurchaseRequest {
   readonly agencyId: number;
   readonly fundId: number;
+  readonly invoiceNumber: number;
   readonly specialType: string;
   readonly idNumber: string;
   readonly firstName: string;
@@ -45,6 +92,7 @@ export interface DryCoffeePurchaseRequest {
 export interface DryCoffeePurchaseResponse {
   readonly id: number;
   readonly purchaseDate: string;
+  readonly invoiceNumber: number;
   readonly agencyName: string;
   readonly fundCode: string;
   readonly specialType: string;

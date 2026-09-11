@@ -12,6 +12,7 @@ public class DryCoffeePurchaseMapper {
         return new DryCoffeePurchaseResponse(
                 purchase.getId(),
                 purchase.getPurchaseDate(),
+                purchase.getInvoiceNumber(),
                 purchase.getAgency().getId(),
                 purchase.getAgency().getName(),
                 purchase.getFund().getId(),

@@ -1,4 +1,5 @@
 package com.cafeoccidente.backend.users.dto;
 
-public record LoginResponse(String token, String username, String roleName) {
+public record LoginResponse(
+        String token, String username, String roleName, Long agencyId, String agencyName) {
 }

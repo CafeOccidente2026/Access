@@ -35,6 +35,10 @@ public class DryCoffeePurchase {
     @Column(name = "purchase_date", nullable = false)
     private LocalDate purchaseDate;
 
+    /** Factura: consecutivo dentro del rango autorizado en ControlRecord (resolutionFrom/resolutionTo). */
+    @Column(name = "invoice_number", nullable = false, unique = true)
+    private Integer invoiceNumber;
+
     @ManyToOne
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;

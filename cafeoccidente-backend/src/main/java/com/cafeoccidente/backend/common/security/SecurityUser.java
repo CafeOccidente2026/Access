@@ -20,6 +20,14 @@ public class SecurityUser implements UserDetails {
         return user.getId();
     }
 
+    public Long getAgencyId() {
+        return user.getAgency().getId();
+    }
+
+    public String getAgencyName() {
+        return user.getAgency().getName();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()));

@@ -45,6 +45,18 @@ public class Announcement {
     @Column(name = "defective_unit_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal defectiveUnitPrice;
 
+    /** Pr_AlmSana: precio de la almendra sana vigente (autocompleta "Pr Sustentación"). */
+    @Column(name = "healthy_unit_price", nullable = false, precision = 15, scale = 2)
+    private BigDecimal healthyUnitPrice;
+
+    /** Bonificacion vigente en el anuncio (autocompleta "Bonificación"). */
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal bonus;
+
+    /** Costos vigentes en el anuncio (autocompleta "Costos"; alimenta Pr_Base_PC en el calculador). */
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal costs;
+
     @ManyToOne
     @JoinColumn(name = "agency_id", nullable = false)
     private Agency agency;

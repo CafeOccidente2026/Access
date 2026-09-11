@@ -17,6 +17,8 @@ export interface LoginResponse {
   readonly token: string;
   readonly username: string;
   readonly roleName: string;
+  readonly agencyId: number;
+  readonly agencyName: string;
 }
 
 export interface CreateUserRequest {

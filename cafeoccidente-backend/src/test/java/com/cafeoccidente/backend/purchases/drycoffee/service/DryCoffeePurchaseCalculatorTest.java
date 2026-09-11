@@ -34,7 +34,7 @@ class DryCoffeePurchaseCalculatorTest {
 
     private DryCoffeePurchaseRequest request(String growerType, boolean withholdingExempt) {
         return new DryCoffeePurchaseRequest(
-                1L, 1L, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                1L, 1L, 27867, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),

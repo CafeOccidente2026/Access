@@ -48,19 +48,8 @@ public class DryCoffeePurchaseCalculator {
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
-        BigDecimal sampleSize = controlRecord.getSampleSize();
-        if (sampleSize.signum() == 0) {
-            throw new BusinessRuleException("El tamaño de muestra configurado no puede ser cero");
-        }
-        BigDecimal wastePercentage = sampleSize.subtract(request.totalStoredWeight())
-                .divide(sampleSize, MathContext.DECIMAL64)
-                .multiply(HUNDRED)
-                .setScale(SCALE, RoundingMode.HALF_UP);
-
-        BigDecimal defectivePercentage = request.defectiveStoredWeight()
-                .multiply(HUNDRED)
-                .divide(sampleSize, MathContext.DECIMAL64)
-                .setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal wastePercentage = wastePercentage(request.totalStoredWeight(), controlRecord);
+        BigDecimal defectivePercentage = defectivePercentage(request.defectiveStoredWeight(), controlRecord);
 
         BigDecimal totalStored = request.defectiveStoredWeight().add(request.healthyStoredWeight());
         if (totalStored.compareTo(request.totalStoredWeight()) != 0) {
@@ -68,12 +57,7 @@ public class DryCoffeePurchaseCalculator {
                     "La almendra total debe ser igual a la suma de la almendra sana mas la defectuosa");
         }
 
-        if (request.healthyStoredWeight().signum() == 0) {
-            throw new BusinessRuleException("La almendra sana no puede ser cero");
-        }
-        BigDecimal healthyPercentage = sampleSize.multiply(BigDecimal.valueOf(controlRecord.getBaseFactor()))
-                .divide(request.healthyStoredWeight(), MathContext.DECIMAL64)
-                .setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal healthyPercentage = healthyPercentage(request.healthyStoredWeight(), controlRecord);
 
         // Sacos_LostFocus: precios unitarios intermedios (Texto190/Texto191 en el VBA original).
         BigDecimal var5 = request.healthyUnitPrice().subtract(request.penalty());
@@ -143,5 +127,40 @@ public class DryCoffeePurchaseCalculator {
                 cooperativeDiscount,
                 withholding,
                 netToPay);
+    }
+
+    /** PorcMerma: paso "Peso Tot Alm" (independiente del resto de la cascada). */
+    public BigDecimal wastePercentage(BigDecimal totalStoredWeight, ControlRecord controlRecord) {
+        BigDecimal sampleSize = sampleSize(controlRecord);
+        return sampleSize.subtract(totalStoredWeight)
+                .divide(sampleSize, MathContext.DECIMAL64)
+                .multiply(HUNDRED)
+                .setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    /** PorcAlmDefec: paso "Peso Tot Pasilla" (independiente del resto de la cascada). */
+    public BigDecimal defectivePercentage(BigDecimal defectiveStoredWeight, ControlRecord controlRecord) {
+        return defectiveStoredWeight
+                .multiply(HUNDRED)
+                .divide(sampleSize(controlRecord), MathContext.DECIMAL64)
+                .setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    /** PorcAlmSana (Factor): paso "Peso Alm Sana" (independiente del resto de la cascada). */
+    public BigDecimal healthyPercentage(BigDecimal healthyStoredWeight, ControlRecord controlRecord) {
+        if (healthyStoredWeight.signum() == 0) {
+            throw new BusinessRuleException("La almendra sana no puede ser cero");
+        }
+        return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getBaseFactor()))
+                .divide(healthyStoredWeight, MathContext.DECIMAL64)
+                .setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal sampleSize(ControlRecord controlRecord) {
+        BigDecimal sampleSize = controlRecord.getSampleSize();
+        if (sampleSize.signum() == 0) {
+            throw new BusinessRuleException("El tamaño de muestra configurado no puede ser cero");
+        }
+        return sampleSize;
     }
 }

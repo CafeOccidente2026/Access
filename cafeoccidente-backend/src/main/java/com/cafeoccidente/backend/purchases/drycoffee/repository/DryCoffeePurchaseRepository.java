@@ -25,4 +25,8 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
             @Param("idNumber") String idNumber,
             @Param("monthStart") LocalDate monthStart,
             @Param("monthEnd") LocalDate monthEnd);
+
+    /** Ultima factura ya usada, para reservar la siguiente (paso "Fondo"). Null si no hay ninguna. */
+    @Query("SELECT MAX(p.invoiceNumber) FROM DryCoffeePurchase p")
+    Integer findMaxInvoiceNumber();
 }

@@ -1,11 +1,15 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service.impl;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
+import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.drycoffee.dto.QualityPercentagesResponse;
+import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import com.cafeoccidente.backend.purchases.drycoffee.mapper.DryCoffeePurchaseMapper;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
@@ -21,6 +25,7 @@ import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -70,24 +75,13 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
         ProductCode productCode = productCodeResolver.resolve(request.specialType(), fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agency.getId(), fund.getId());
-        ControlRecord controlRecord = controlRecordService.getActive();
-
-        YearMonth currentMonth = YearMonth.now();
-        MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
-                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
-
-        DryCoffeePurchaseCalculation calculation = calculator.calculate(
-                request,
-                controlRecord,
-                announcement.basePriceLoad(),
-                announcement.defectiveUnitPrice(),
-                monthlyTotals.grossValue(),
-                monthlyTotals.withholding());
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
         DryCoffeePurchase purchase = new DryCoffeePurchase();
         purchase.setPurchaseDate(LocalDate.now());
+        purchase.setInvoiceNumber(request.invoiceNumber());
         purchase.setAgency(agency);
         purchase.setFund(fund);
         purchase.setSpecialType(request.specialType());
@@ -139,5 +133,80 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         return dryCoffeePurchaseRepository.findById(id)
                 .map(mapper::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de cafe seco no encontrada"));
+    }
+
+    @Override
+    public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
+        AnnouncementResponse announcement =
+                announcementService.findLatest(request.agencyId(), request.fundId());
+        return runCalculation(request, announcement);
+    }
+
+    /** Fetches agency-independent data (ControlRecord + acumulado mensual) and runs the cascade. */
+    private DryCoffeePurchaseCalculation runCalculation(
+            DryCoffeePurchaseRequest request, AnnouncementResponse announcement) {
+        ControlRecord controlRecord = controlRecordService.getActive();
+
+        YearMonth currentMonth = YearMonth.now();
+        MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
+                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
+
+        return calculator.calculate(
+                request,
+                controlRecord,
+                announcement.basePriceLoad(),
+                announcement.defectiveUnitPrice(),
+                monthlyTotals.grossValue(),
+                monthlyTotals.withholding());
+    }
+
+    @Override
+    public NextInvoiceNumberResponse nextInvoiceNumber() {
+        ControlRecord controlRecord = controlRecordService.getActive();
+        Integer maxUsed = dryCoffeePurchaseRepository.findMaxInvoiceNumber();
+        int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
+        if (next > controlRecord.getResolutionTo()) {
+            throw new BusinessRuleException(
+                    "Se agotó el rango de facturas autorizado por la resolución DIAN vigente");
+        }
+
+        String warning = null;
+        LocalDate expiration = controlRecord.getResolutionDate().plusMonths(controlRecord.getValidity());
+        if (LocalDate.now().isAfter(expiration)) {
+            warning = "La resolución de facturación está vencida";
+        } else if (controlRecord.getResolutionTo() - next < 100) {
+            warning = "La resolución de facturación está a punto de agotarse";
+        }
+
+        return new NextInvoiceNumberResponse(next, controlRecord.getPrefix(), warning);
+    }
+
+    @Override
+    public SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType) {
+        ProductCode productCode = productCodeResolver.resolve(specialType, fundId);
+        AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId);
+        return new SpecialInfoResponse(
+                productCode.getCode(),
+                announcement.announcementNumber(),
+                announcement.announcementDate(),
+                announcement.basePriceLoad(),
+                announcement.defectiveUnitPrice(),
+                announcement.healthyUnitPrice(),
+                announcement.bonus(),
+                announcement.costs());
+    }
+
+    @Override
+    public QualityPercentagesResponse qualityPercentages(
+            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, BigDecimal healthyStoredWeight) {
+        ControlRecord controlRecord = controlRecordService.getActive();
+        return new QualityPercentagesResponse(
+                totalStoredWeight == null ? null : calculator.wastePercentage(totalStoredWeight, controlRecord),
+                defectiveStoredWeight == null
+                        ? null
+                        : calculator.defectivePercentage(defectiveStoredWeight, controlRecord),
+                healthyStoredWeight == null
+                        ? null
+                        : calculator.healthyPercentage(healthyStoredWeight, controlRecord));
     }
 }

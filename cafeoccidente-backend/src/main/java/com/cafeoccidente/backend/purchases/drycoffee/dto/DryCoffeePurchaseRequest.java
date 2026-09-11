@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 public record DryCoffeePurchaseRequest(
         @NotNull Long agencyId,
         @NotNull Long fundId,
+        @NotNull Integer invoiceNumber,
         @NotBlank String specialType,
         @NotBlank String idNumber,
         @NotBlank String firstName,

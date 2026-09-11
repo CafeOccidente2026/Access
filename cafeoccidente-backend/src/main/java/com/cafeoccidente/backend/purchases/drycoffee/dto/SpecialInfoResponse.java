@@ -1,17 +1,16 @@
-package com.cafeoccidente.backend.purchases.future.dto;
+package com.cafeoccidente.backend.purchases.drycoffee.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record AnnouncementResponse(
-        Long id,
+/** Autocompletado al confirmar "Especial": Cod Prod + los datos del anuncio vigente. */
+public record SpecialInfoResponse(
+        String productCode,
         String announcementNumber,
         LocalDate announcementDate,
         BigDecimal basePriceLoad,
         BigDecimal defectiveUnitPrice,
         BigDecimal healthyUnitPrice,
         BigDecimal bonus,
-        BigDecimal costs,
-        Long agencyId,
-        Long fundId) {
+        BigDecimal costs) {
 }

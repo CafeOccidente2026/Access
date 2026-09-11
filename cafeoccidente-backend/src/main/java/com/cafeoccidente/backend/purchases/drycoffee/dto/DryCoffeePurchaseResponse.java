@@ -6,6 +6,7 @@ import java.time.LocalDate;
 public record DryCoffeePurchaseResponse(
         Long id,
         LocalDate purchaseDate,
+        Integer invoiceNumber,
         Long agencyId,
         String agencyName,
         Long fundId,
