@@ -1,13 +1,20 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Solo lectura: no hay administracion de anuncios todavia (pantalla ADMIN queda pendiente). */
 @RestController
 @RequestMapping("/api/announcements")
 public class AnnouncementController {
@@ -19,7 +26,22 @@ public class AnnouncementController {
     }
 
     @GetMapping("/latest")
-    public AnnouncementResponse latest(@RequestParam Long agencyId, @RequestParam Long fundId) {
-        return announcementService.findLatest(agencyId, fundId);
+    public AnnouncementResponse latest(
+            @RequestParam Long agencyId, @RequestParam Long fundId, @RequestParam String specialType) {
+        return announcementService.findLatest(agencyId, fundId, specialType);
+    }
+
+    /** "Actualizar Anuncio con Factor": solo ADMIN, siempre crea un anuncio nuevo. */
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AnnouncementResponse create(@Valid @RequestBody AnnouncementRequest request) {
+        return announcementService.create(request);
+    }
+
+    @GetMapping("/history")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<AnnouncementResponse> history() {
+        return announcementService.history();
     }
 }

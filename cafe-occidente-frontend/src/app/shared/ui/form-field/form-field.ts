@@ -19,6 +19,7 @@ export class FormFieldComponent {
   @Input({ required: true }) field!: FormFieldDefinition;
   @Input() labelClass = 'text-slate-700';
   @Input() labelWidthClass = 'w-32';
+  @Input() inputWidthClass = 'min-w-[100px]';
   @Input() highlightClass = 'bg-yellow-100';
 
   /** Nuevo valor escrito/seleccionado por el usuario. */

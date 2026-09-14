@@ -137,14 +137,14 @@ def load_control_record(cur, el_tambo_id):
     cur.execute(
         """
         INSERT INTO control_record (
-            active, control_number, base_factor, base_withholding, base_load,
+            agency_id, active, control_number, base_factor, base_withholding, base_load,
             withholding_percentage, base_husk, avg_husk_percentage, purchase_point,
             prefix, costs, sample_size, excelso_kg, green_coffee_percentage,
             specialty_threshold, associate_percentage, non_associate_discount,
             trusted_id, dian_resolution, resolution_date, resolution_from,
             resolution_to, validity
         ) VALUES (
-            true, %s, %s, %s, %s,
+            %s, true, %s, %s, %s, %s,
             %s, %s, %s, %s,
             %s, %s, %s, %s, %s,
             %s, %s, %s,
@@ -153,6 +153,7 @@ def load_control_record(cur, el_tambo_id):
         )
         """,
         (
+            el_tambo_id,
             parse_int(reg["numregistro"]),
             parse_int(reg["factorbase"]),
             parse_decimal(reg["baseretefte"]),
@@ -286,21 +287,29 @@ def load_growers(cur):
 def load_announcements(cur, el_tambo_id, rp_fund_id):
     rows = read_csv("anuncios_migrar.csv")
     inserted = 0
+    updated = 0
     for row in rows:
         number = s(row, "anuncio")
+        special_type = s(row, "especial")
         cur.execute(
             "SELECT id FROM announcement WHERE agency_id = %s AND announcement_number = %s",
             (el_tambo_id, number),
         )
-        if cur.fetchone():
+        existing = cur.fetchone()
+        if existing:
+            cur.execute(
+                "UPDATE announcement SET special_type = %s WHERE id = %s",
+                (special_type, existing[0]),
+            )
+            updated += 1
             continue
         cur.execute(
             """
             INSERT INTO announcement (
                 announcement_number, announcement_date, base_price_load,
                 defective_unit_price, healthy_unit_price, bonus, costs,
-                agency_id, fund_id, active
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, true)
+                agency_id, fund_id, special_type, active
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
             """,
             (
                 number,
@@ -312,10 +321,11 @@ def load_announcements(cur, el_tambo_id, rp_fund_id):
                 parse_decimal(row["costos"]),
                 el_tambo_id,
                 rp_fund_id,
+                special_type,
             ),
         )
         inserted += 1
-    print(f"  {inserted} announcements insertados ({len(rows) - inserted} ya existian).")
+    print(f"  {inserted} announcements insertados, {updated} actualizados (special_type).")
 
 
 def load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id):

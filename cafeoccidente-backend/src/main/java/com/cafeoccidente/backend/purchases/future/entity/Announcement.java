@@ -15,9 +15,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Anuncio de precio vigente para una agencia/fondo (campos Anuncio/Fecha_Anuncio/Pr_Base_PC del
- * formulario de compras). No hay pantalla de administracion todavia (se carga por Flyway); una
- * futura pantalla ADMIN para crearlos queda pendiente (ver README).
+ * Anuncio de precio vigente para una agencia/fondo/especial (campos Anuncio/Fecha_Anuncio/Pr_Base_PC
+ * del formulario de compras). Se crea desde "Actualizar Anuncio con Factor" (ADMIN); cada actualizacion
+ * de precio inserta un anuncio nuevo, nunca edita uno existente.
  */
 @Entity
 @Getter
@@ -64,6 +64,11 @@ public class Announcement {
     @ManyToOne
     @JoinColumn(name = "fund_id", nullable = false)
     private Fund fund;
+
+    /** Especial (Cod_Prod): tipo especial de cafe al que aplica este anuncio (ESTANDAR si no aplica
+     * ninguno especifico). Junto con agencia/fondo identifica el anuncio vigente a consultar. */
+    @Column(name = "special_type", nullable = false)
+    private String specialType;
 
     @Column(nullable = false)
     private boolean active = true;

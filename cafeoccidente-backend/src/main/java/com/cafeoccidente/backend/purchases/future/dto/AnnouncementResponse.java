@@ -13,5 +13,6 @@ public record AnnouncementResponse(
         BigDecimal bonus,
         BigDecimal costs,
         Long agencyId,
-        Long fundId) {
+        Long fundId,
+        String specialType) {
 }

@@ -10,6 +10,8 @@ export interface FormFieldDefinition {
   readonly options?: string[];
   readonly readonly?: boolean;
   readonly highlighted?: boolean;
+  /** Sobrescribe el highlightClass de la fila solo para este campo (p.ej. distinguirlo de sus vecinos). */
+  readonly highlightClass?: string;
   readonly columnSpan?: 1 | 2 | 3;
 }
 

@@ -3,7 +3,7 @@
   [bodyClass]="bodyClass"
   (closeRequested)="onCloseRequested()"
 >
-  <div class="flex flex-col gap-4 p-5 text-slate-800">
+  <div class="flex flex-col text-slate-800" [class]="content.compactFields ? 'gap-0.5 px-3 py-1' : 'gap-4 p-5'">
     <app-field-row
       [fields]="content.topFields"
       (fieldValueChange)="fieldValueChange.emit($event)"
@@ -15,12 +15,12 @@
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
 
-    <div *ngIf="content.federationFields" class="rounded border border-slate-500/40 p-3">
+    <div *ngIf="content.federationFields" class="rounded border border-slate-500/40" [class]="content.compactFields ? 'px-3 py-1' : 'p-3'">
       <p class="mb-2 text-sm font-semibold text-slate-800">{{ content.federationHeading }}</p>
       <app-field-row
         [fields]="content.federationFields"
         labelClass="text-slate-800 font-semibold"
-        highlightClass="bg-orange-200"
+        [highlightClass]="content.federationHighlightClass || 'bg-orange-200'"
         (fieldValueChange)="fieldValueChange.emit($event)"
         (fieldCommitted)="fieldCommitted.emit($event)"
       ></app-field-row>
@@ -41,12 +41,18 @@
     <app-field-row
       *ngIf="content.weightFields"
       [fields]="content.weightFields"
+      [fieldWidthClass]="content.compactFields ? 'min-w-[180px] flex-1' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-24' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'min-w-[70px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
     <app-field-row
       *ngIf="content.netWeightFields"
       [fields]="content.netWeightFields"
+      [fieldWidthClass]="content.compactFields ? 'min-w-[180px] flex-1' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-24' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'min-w-[70px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
@@ -111,7 +117,7 @@
       <app-form-field *ngIf="content.statusField" [field]="content.statusField"></app-form-field>
     </div>
 
-    <div *ngIf="content.reprintButtonLabel" class="pt-2">
+    <div *ngIf="content.reprintButtonLabel" [class]="content.compactFields ? '' : 'pt-2'">
       <app-button [label]="content.reprintButtonLabel" variant="access" (pressed)="reprintPressed.emit()"></app-button>
     </div>
   </div>

@@ -15,6 +15,9 @@ export class FieldRowComponent {
   @Input() fields: FormFieldDefinition[] = [];
   @Input() labelClass = 'text-slate-700';
   @Input() highlightClass = 'bg-yellow-100';
+  @Input() fieldWidthClass = 'min-w-[240px] flex-1';
+  @Input() labelWidthClass = 'w-32';
+  @Input() inputWidthClass = 'min-w-[100px]';
 
   @Output() readonly fieldValueChange = new EventEmitter<{ key: string; value: string | number }>();
   @Output() readonly fieldCommitted = new EventEmitter<string>();

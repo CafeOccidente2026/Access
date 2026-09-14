@@ -17,10 +17,11 @@
   "federationHeading": "Información Federación:",
   "federationFields": [
     { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true },
-    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "highlightClass": "bg-orange-200" },
     { "key": "program", "label": "Programa", "type": "text", "highlighted": true },
     { "key": "quota", "label": "Cupo", "type": "text", "highlighted": true }
   ],
+  "federationHighlightClass": "bg-green-200",
   "contactFields": [
     { "key": "idPart1", "label": "Cedula", "type": "text" },
     { "key": "idType", "label": "Tipo", "type": "text" },
@@ -86,10 +87,13 @@
   "settlementFields": [
     { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" },
     { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency" },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true },
-    { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency" }
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true }
   ],
+  "additionalDiscountFields": [
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency" }
+  ],
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency" },
+  "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia y el fondo seleccionados.",

@@ -14,4 +14,12 @@ public class SecurityUtils {
         }
         throw new IllegalStateException("No hay un usuario autenticado en el contexto actual");
     }
+
+    public Long getCurrentAgencyId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof SecurityUser securityUser) {
+            return securityUser.getAgencyId();
+        }
+        throw new IllegalStateException("No hay un usuario autenticado en el contexto actual");
+    }
 }

@@ -28,6 +28,13 @@ export const routes: Routes = [
       import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
   },
   {
+    path: 'anuncios/actualizar',
+    loadComponent: () =>
+      import('./features/announcement-update/announcement-update').then(
+        (m) => m.AnnouncementUpdateComponent,
+      ),
+  },
+  {
     path: 'compras',
     loadComponent: () =>
       import('./features/purchases-menu/purchases-menu').then((m) => m.PurchasesMenuComponent),

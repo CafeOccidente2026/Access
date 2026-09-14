@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
 import {
-  Announcement,
   DryCoffeePurchaseCalculation,
   DryCoffeePurchaseRequest,
   DryCoffeePurchaseResponse,
@@ -21,12 +20,6 @@ export class DryCoffeePurchaseService {
 
   funds(): Observable<Fund[]> {
     return this.http.get<Fund[]>(`${API_BASE_URL}/funds`);
-  }
-
-  latestAnnouncement(agencyId: number, fundId: number): Observable<Announcement> {
-    return this.http.get<Announcement>(
-      `${API_BASE_URL}/announcements/latest?agencyId=${agencyId}&fundId=${fundId}`,
-    );
   }
 
   create(request: DryCoffeePurchaseRequest): Observable<DryCoffeePurchaseResponse> {

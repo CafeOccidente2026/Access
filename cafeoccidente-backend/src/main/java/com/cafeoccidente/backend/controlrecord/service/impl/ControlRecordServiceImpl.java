@@ -16,8 +16,9 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     }
 
     @Override
-    public ControlRecord getActive() {
-        return controlRecordRepository.findByActiveTrue()
-                .orElseThrow(() -> new ResourceNotFoundException("No hay un registro de control activo (ver Flyway V4)"));
+    public ControlRecord getActive(Long agencyId) {
+        return controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Esta agencia no tiene parametros de compra (ControlRecord) configurados todavia"));
     }
 }

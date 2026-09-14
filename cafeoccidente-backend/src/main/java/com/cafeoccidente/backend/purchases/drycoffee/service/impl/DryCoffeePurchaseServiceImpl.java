@@ -74,7 +74,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         Fund fund = fundRepository.findById(request.fundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
         ProductCode productCode = productCodeResolver.resolve(request.specialType(), fund.getId());
-        AnnouncementResponse announcement = announcementService.findLatest(agency.getId(), fund.getId());
+        AnnouncementResponse announcement =
+                announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
         DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement);
 
         Long currentUserId = securityUtils.getCurrentUserId();
@@ -137,15 +138,15 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
-        AnnouncementResponse announcement =
-                announcementService.findLatest(request.agencyId(), request.fundId());
+        AnnouncementResponse announcement = announcementService.findLatest(
+                request.agencyId(), request.fundId(), request.specialType());
         return runCalculation(request, announcement);
     }
 
-    /** Fetches agency-independent data (ControlRecord + acumulado mensual) and runs the cascade. */
+    /** Fetches the current user's agency ControlRecord + acumulado mensual and runs the cascade. */
     private DryCoffeePurchaseCalculation runCalculation(
             DryCoffeePurchaseRequest request, AnnouncementResponse announcement) {
-        ControlRecord controlRecord = controlRecordService.getActive();
+        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
 
         YearMonth currentMonth = YearMonth.now();
         MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
@@ -162,7 +163,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        ControlRecord controlRecord = controlRecordService.getActive();
+        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
         Integer maxUsed = dryCoffeePurchaseRepository.findMaxInvoiceNumber();
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
@@ -184,7 +185,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     public SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType) {
         ProductCode productCode = productCodeResolver.resolve(specialType, fundId);
-        AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId);
+        AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId, specialType);
         return new SpecialInfoResponse(
                 productCode.getCode(),
                 announcement.announcementNumber(),
@@ -199,7 +200,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     public QualityPercentagesResponse qualityPercentages(
             BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, BigDecimal healthyStoredWeight) {
-        ControlRecord controlRecord = controlRecordService.getActive();
+        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
         return new QualityPercentagesResponse(
                 totalStoredWeight == null ? null : calculator.wastePercentage(totalStoredWeight, controlRecord),
                 defectiveStoredWeight == null

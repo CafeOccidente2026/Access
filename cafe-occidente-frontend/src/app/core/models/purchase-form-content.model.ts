@@ -13,6 +13,8 @@ export interface PurchaseFormContent {
   readonly identificationFields: FormFieldDefinition[];
   readonly federationHeading?: string;
   readonly federationFields?: FormFieldDefinition[];
+  /** Sobrescribe el color de resaltado de la fila federationFields (por defecto bg-orange-200). */
+  readonly federationHighlightClass?: string;
   readonly contactFields?: FormFieldDefinition[];
   readonly qualityFields?: FormFieldDefinition[];
   readonly weightFields?: FormFieldDefinition[];
@@ -28,4 +30,6 @@ export interface PurchaseFormContent {
   readonly statusField?: FormFieldDefinition;
   readonly additionalDiscountFields?: FormFieldDefinition[];
   readonly reprintButtonLabel?: string;
+  /** Reduce el ancho de las filas weightFields/netWeightFields para que quepan sin envolver (solo cafe seco por ahora). */
+  readonly compactFields?: boolean;
 }

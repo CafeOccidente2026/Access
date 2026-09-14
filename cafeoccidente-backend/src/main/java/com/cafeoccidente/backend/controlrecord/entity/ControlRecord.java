@@ -1,19 +1,22 @@
 package com.cafeoccidente.backend.controlrecord.entity;
 
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Parametros generales de la agencia (pantalla "RegControl" en Access).
+ * Parametros generales de una agencia (pantalla "RegControl" en Access).
  * Fuente de los porcentajes/bases usados en las formulas de compras (Retefuente, aportes, etc).
- * Solo se espera un registro activo a la vez (ver ControlRecordService.getActive()).
+ * Solo se espera un registro activo por agencia a la vez (ver ControlRecordService.getActive()).
  */
 @Entity
 @Getter
@@ -23,6 +26,10 @@ public class ControlRecord {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "agency_id", nullable = false)
+    private Agency agency;
 
     @Column(nullable = false)
     private boolean active = true;

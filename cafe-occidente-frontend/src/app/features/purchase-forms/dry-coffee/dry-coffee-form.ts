@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
@@ -56,6 +56,14 @@ const READONLY: string[] = [
   'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
+/** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario
+ *  (los campos autocalculados de por medio, p.ej. Porc Merma, se saltan porque no estan aqui). */
+const FOCUS_ORDER: string[] = [
+  'fund', 'idNumber', 'special',
+  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+];
+
 const num = (v: string | undefined | null): number => {
   const s = (v ?? '').trim();
   return s === '' ? 0 : Number(s);
@@ -81,6 +89,7 @@ export class DryCoffeeFormComponent {
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
   private readonly location = inject(Location);
+  private readonly elementRef = inject(ElementRef);
 
   private readonly base = toSignal(this.content.loadJson<DryCoffeeContent>('purchase-form-dry'));
   readonly messages = computed<DryCoffeeMessages | undefined>(() => this.base()?.messages);
@@ -123,8 +132,8 @@ export class DryCoffeeFormComponent {
     this.prefillAgency();
     this.service.funds().subscribe((list) => {
       this.funds.set(list);
-      this.fundOptions = list.map((f) => `${f.code} - ${f.name}`);
-      list.forEach((f) => this.fundIdByName.set(`${f.code} - ${f.name}`, f.id));
+      this.fundOptions = list.map((f) => f.code);
+      list.forEach((f) => this.fundIdByName.set(f.code, f.id));
       this.tick.update((n) => n + 1);
     });
   }
@@ -153,6 +162,25 @@ export class DryCoffeeFormComponent {
     this.locked.add(key);
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
+    if (key !== 'idNumber') {
+      this.advanceFocus(key);
+    }
+  }
+
+  /** Mueve el foco de teclado al siguiente campo que le toca llenar al usuario, sin que tenga que buscarlo. */
+  private focusField(key: string): void {
+    setTimeout(() => {
+      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
+      el?.focus();
+    });
+  }
+
+  private advanceFocus(afterKey: string): void {
+    const idx = FOCUS_ORDER.indexOf(afterKey);
+    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
+      return;
+    }
+    this.focusField(FOCUS_ORDER[idx + 1]);
   }
 
   private runSideEffects(key: string): void {
@@ -219,9 +247,10 @@ export class DryCoffeeFormComponent {
         this.model['cellphone'] = grower.phone;
         ['fullName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
         this.tick.update((n) => n + 1);
+        this.advanceFocus('idNumber');
       },
       // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => undefined,
+      error: () => this.advanceFocus('idNumber'),
     });
   }
 
@@ -449,8 +478,12 @@ export class DryCoffeeFormComponent {
     collect(base.weightFields);
     collect(base.netWeightFields);
     collect(base.settlementFields);
+    collect(base.additionalDiscountFields);
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
+    }
+    if (base.netToPayField) {
+      bmap.set(base.netToPayField.key, base.netToPayField);
     }
 
     const info = this.specialInfo();
@@ -529,6 +562,8 @@ export class DryCoffeeFormComponent {
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,
+      additionalDiscountFields: row(base.additionalDiscountFields),
+      netToPayField: base.netToPayField ? field(base.netToPayField.key) : undefined,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentPanel: base.paymentPanel
         ? {
