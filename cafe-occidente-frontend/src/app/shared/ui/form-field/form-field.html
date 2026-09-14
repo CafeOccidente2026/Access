@@ -4,7 +4,7 @@
   <select
     *ngIf="field.type === 'select'; else textLike"
     class="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-    [class]="inputWidthClass + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
+    [class]="(field.inputWidthClass || inputWidthClass) + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
     [attr.data-field-key]="field.key"
     [disabled]="!!field.readonly"
     [ngModel]="inputValue"
@@ -18,7 +18,7 @@
   <ng-template #textLike>
     <input
       class="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-      [class]="inputWidthClass + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
+      [class]="(field.inputWidthClass || inputWidthClass) + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
       [attr.data-field-key]="field.key"
       [type]="field.type === 'number' || field.type === 'currency' || field.type === 'percentage' ? 'text' : field.type"
       [readonly]="field.readonly"
