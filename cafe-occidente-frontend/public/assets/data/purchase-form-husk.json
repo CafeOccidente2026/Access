@@ -2,8 +2,8 @@
   "windowTitle": "PASILLA",
   "theme": "cyan",
   "topFields": [
-    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
-    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    { "key": "agency", "label": "Agencia", "type": "text" },
+    { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
     { "key": "announcement", "label": "Anuncio", "type": "number" },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
@@ -13,9 +13,14 @@
     { "key": "productCode", "label": "Cod Prod", "type": "text" },
     { "key": "basePriceDryLoad", "label": "Pr base carga perg seco", "type": "currency" }
   ],
+  "federationHeading": "Información Federación:",
+  "federationFields": [
+    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true }
+  ],
   "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
   "qualityFields": [
-    { "key": "special", "label": "Especial", "type": "select", "options": [] },
+    { "key": "special", "label": "Especial", "type": "text", "value": "PASILLA" },
     { "key": "pointPrice", "label": "Pr Punto", "type": "currency" },
     { "key": "almondWeight", "label": "Peso Almendra", "type": "number" },
     { "key": "almondPercentage", "label": "% Almendra", "type": "percentage" }
@@ -38,5 +43,15 @@
   "settlementSecondaryFields": [
     { "key": "withholding", "label": "Retefuente", "type": "currency" },
     { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
-  ]
+  ],
+  "messages": {
+    "acceptLabel": "Aceptar",
+    "noAnnouncement": "No hay un anuncio activo para la agencia (Especial PASILLA / Fondo RP).",
+    "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "saveError": "No se pudo registrar la compra. Verifique los datos.",
+    "savedNotice": "Compra registrada. Documento soporte generado.",
+    "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "closeConfirm": "Cerrar sin guardar",
+    "closeCancel": "Seguir en el formulario"
+  }
 }

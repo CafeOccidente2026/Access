@@ -1,4 +1,49 @@
 package com.cafeoccidente.backend.purchases.greencoffee.dto;
 
-public record GreenCoffeePurchaseResponse() {
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public record GreenCoffeePurchaseResponse(
+        Long id,
+        LocalDate purchaseDate,
+        Integer invoiceNumber,
+        Long agencyId,
+        String agencyName,
+        Long fundId,
+        String fundCode,
+        String specialType,
+        String productCode,
+        String announcementNumber,
+        LocalDate announcementDate,
+        BigDecimal basePriceLoad,
+        String idNumber,
+        String firstName,
+        String lastName,
+        String growerType,
+        String address,
+        String cellphone,
+        Integer bagsCount,
+        BigDecimal grossKg,
+        BigDecimal tareKg,
+        BigDecimal greenKg,
+        BigDecimal netKg,
+        BigDecimal healthyUnitPrice,
+        BigDecimal defectiveUnitPrice,
+        BigDecimal bonus,
+        BigDecimal costs,
+        BigDecimal penalty,
+        BigDecimal compKgPrice,
+        BigDecimal unitPrice,
+        BigDecimal grossValue,
+        BigDecimal inventoryValue,
+        BigDecimal associateContribution,
+        BigDecimal cooperativeDiscount,
+        boolean withholdingExempt,
+        BigDecimal withholding,
+        BigDecimal shrinkageDiscount,
+        BigDecimal otherDiscounts,
+        BigDecimal netToPay,
+        String paymentMethod,
+        String checkNumber,
+        Long createdByUserId) {
 }

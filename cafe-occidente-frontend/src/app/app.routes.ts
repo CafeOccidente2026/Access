@@ -58,11 +58,13 @@ export const routes: Routes = [
       import('./features/purchase-forms/green-coffee/green-coffee-form').then(
         (m) => m.GreenCoffeeFormComponent,
       ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/pasilla',
     loadComponent: () =>
       import('./features/purchase-forms/husk/husk-form').then((m) => m.HuskFormComponent),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/futuro',

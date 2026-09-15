@@ -1,4 +1,46 @@
 package com.cafeoccidente.backend.purchases.husk.dto;
 
-public record HuskPurchaseResponse() {
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+public record HuskPurchaseResponse(
+        Long id,
+        LocalDate purchaseDate,
+        Integer invoiceNumber,
+        Long agencyId,
+        String agencyName,
+        Long fundId,
+        String fundCode,
+        String specialType,
+        String productCode,
+        String announcementNumber,
+        LocalDate announcementDate,
+        BigDecimal basePriceDryLoad,
+        String idNumber,
+        String firstName,
+        String lastName,
+        String growerType,
+        String address,
+        String cellphone,
+        BigDecimal pointPrice,
+        BigDecimal costs,
+        BigDecimal almondWeight,
+        BigDecimal almondPercentage,
+        Integer bagsCount,
+        BigDecimal grossKg,
+        BigDecimal tareKg,
+        BigDecimal netKg,
+        BigDecimal unitPrice,
+        BigDecimal grossValue,
+        BigDecimal inventoryValue,
+        BigDecimal associateContribution,
+        BigDecimal cooperativeDiscount,
+        boolean withholdingExempt,
+        BigDecimal withholding,
+        BigDecimal shrinkageDiscount,
+        BigDecimal otherDiscounts,
+        BigDecimal netToPay,
+        String paymentMethod,
+        String checkNumber,
+        Long createdByUserId) {
 }

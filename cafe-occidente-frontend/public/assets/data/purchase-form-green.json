@@ -2,7 +2,7 @@
   "windowTitle": "VERDES",
   "theme": "teal",
   "topFields": [
-    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
     { "key": "announcement", "label": "Anuncio", "type": "number" },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" },
@@ -21,7 +21,7 @@
   ],
   "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
   "qualityFields": [
-    { "key": "special", "label": "Especial", "type": "select", "options": [] },
+    { "key": "special", "label": "Especial", "type": "text", "value": "CV" },
     { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
     { "key": "defectStoredPrice", "label": "Pr_AlmDefec", "type": "currency" },
     { "key": "bonus", "label": "Bonificación", "type": "currency" },
@@ -58,5 +58,15 @@
   "settlementSecondaryFields": [
     { "key": "withholding", "label": "Retefuente", "type": "currency" },
     { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
-  ]
+  ],
+  "messages": {
+    "acceptLabel": "Aceptar",
+    "noAnnouncement": "No hay un anuncio activo para la agencia (Especial CV / Fondo RP).",
+    "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "saveError": "No se pudo registrar la compra. Verifique los datos.",
+    "savedNotice": "Compra registrada. Documento soporte generado.",
+    "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "closeConfirm": "Cerrar sin guardar",
+    "closeCancel": "Seguir en el formulario"
+  }
 }
