@@ -193,6 +193,7 @@ export class DryCoffeeFormComponent {
         break;
       case 'special':
         this.loadSpecialInfo();
+        this.lookupProgram();
         break;
       case 'totalStoredWeight':
       case 'totalHuskWeight':
@@ -246,11 +247,39 @@ export class DryCoffeeFormComponent {
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
         ['fullName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
+        this.lookupProgram();
         this.tick.update((n) => n + 1);
         this.advanceFocus('idNumber');
       },
       // No encontrado: se deja en blanco y editable para captura manual.
       error: () => this.advanceFocus('idNumber'),
+    });
+  }
+
+  /**
+   * Programa/Cupo (staging_legacy_ness, solo 3 de ~20 Especiales tienen tabla migrada - ver
+   * GrowerServiceImpl.findProgram). Puramente informativo: si no hay match queda vacio y editable,
+   * nunca bloquea. Se llama al confirmar la cedula (sin Especial, autocompleta solo si no hay
+   * ambiguedad entre programas) y de nuevo al confirmar el Especial (para desambiguar/confirmar).
+   */
+  private lookupProgram(): void {
+    const idNumber = (this.model['idNumber'] ?? '').trim();
+    if (!idNumber) {
+      return;
+    }
+    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
+      if (program) {
+        this.model['program'] = program.programa;
+        this.model['quota'] = program.cupo;
+        this.locked.add('program');
+        this.locked.add('quota');
+      } else {
+        this.model['program'] = '';
+        this.model['quota'] = '';
+        this.locked.delete('program');
+        this.locked.delete('quota');
+      }
+      this.tick.update((n) => n + 1);
     });
   }
 

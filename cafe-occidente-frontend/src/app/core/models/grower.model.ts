@@ -12,3 +12,9 @@ export interface Grower {
   readonly deceased: boolean;
   readonly withdrawn: boolean;
 }
+
+/** Programa/Cupo informativos (staging_legacy_ness) - ver GrowerService.findProgram. */
+export interface GrowerProgram {
+  readonly programa: string;
+  readonly cupo: string;
+}
