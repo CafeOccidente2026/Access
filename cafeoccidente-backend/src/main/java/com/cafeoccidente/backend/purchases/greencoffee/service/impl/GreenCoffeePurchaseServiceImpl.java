@@ -18,6 +18,7 @@ import com.cafeoccidente.backend.purchases.greencoffee.repository.MonthlyGrowerT
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
+import java.math.BigDecimal;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
@@ -186,12 +187,18 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fund.getId(), SPECIAL_TYPE);
+        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) de la agencia
+        // compradora (Form_VERDES.bas: Pr_Base_PC = Texto91 - (Costos * Texto176)).
+        BigDecimal basePriceLoad = announcement.basePriceLoad()
+                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
         return new AnnouncementInfoResponse(
                 fund.getId(),
                 productCode.getCode(),
                 announcement.announcementNumber(),
                 announcement.announcementDate(),
-                announcement.basePriceLoad(),
+                basePriceLoad,
                 announcement.defectiveUnitPrice(),
                 announcement.healthyUnitPrice(),
                 announcement.bonus(),

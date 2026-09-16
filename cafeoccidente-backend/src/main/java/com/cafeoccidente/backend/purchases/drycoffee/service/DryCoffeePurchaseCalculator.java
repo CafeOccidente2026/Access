@@ -41,9 +41,10 @@ public class DryCoffeePurchaseCalculator {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
 
-        // Cedula_LostFocus: Pr_Base_PC = vrcps - (Costos * BaseCarga). BaseCarga = ControlRecord.baseLoad (Texto176).
+        // Cedula_LostFocus: Pr_Base_PC = vrcps - (Costos * BaseCarga). En el VBA, "Costos" en COMPRAS
+        // esta ligado directo al RegControl de la agencia compradora (no al anuncio) -> ControlRecord.costos.
         BigDecimal basePriceLoad = announcementBasePriceLoad
-                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());

@@ -187,11 +187,17 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     public SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType) {
         ProductCode productCode = productCodeResolver.resolve(specialType, fundId);
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId, specialType);
+        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) de la agencia
+        // compradora (Form_COMPRAS.bas: Pr_Base_PC = vrcps - (Costos * Texto176)).
+        BigDecimal basePriceLoad = announcement.basePriceLoad()
+                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
         return new SpecialInfoResponse(
                 productCode.getCode(),
                 announcement.announcementNumber(),
                 announcement.announcementDate(),
-                announcement.basePriceLoad(),
+                basePriceLoad,
                 announcement.defectiveUnitPrice(),
                 announcement.healthyUnitPrice(),
                 announcement.bonus(),

@@ -15,6 +15,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
+import { formatDisplayNumber } from '../../../shared/utils/number-format';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -480,8 +481,10 @@ export class GreenCoffeeFormComponent {
       paymentPanel: base.paymentPanel
         ? {
             ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) => (i === 0 ? { ...m, value: c?.netToPay ?? '' } : m)),
-            totalValue: c?.netToPay ?? '',
+            methods: base.paymentPanel.methods.map((m, i) =>
+              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
+            ),
+            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
           }
         : undefined,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,

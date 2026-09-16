@@ -15,9 +15,9 @@
   ],
   "federationHeading": "Información Federación:",
   "federationFields": [
-    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true },
-    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true },
-    { "key": "program", "label": "Programa", "type": "text", "highlighted": true }
+    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[140px]", "inputWidthClass": "min-w-[90px]" },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[420px] flex-[3]", "inputWidthClass": "min-w-[300px]" },
+    { "key": "program", "label": "Programa", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[140px]", "inputWidthClass": "min-w-[90px]" }
   ],
   "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
   "qualityFields": [
@@ -28,19 +28,19 @@
     { "key": "costs", "label": "Costos", "type": "currency" }
   ],
   "weightFields": [
-    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number", "value": "140,00" },
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "count", "value": "140,00" },
     { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage", "value": "44,00" },
-    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number", "value": "12,50" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "count", "value": "12,50" },
     { "key": "huskPercentage", "label": "Porc Kg Pas %", "type": "percentage", "value": "5,00" },
-    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number", "value": "186,18" },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "count", "value": "186,18" },
     { "key": "factor", "label": "Factor", "type": "number", "value": "94,00" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "number" },
-    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
-    { "key": "tare", "label": "Destare", "type": "number" },
-    { "key": "greenKg", "label": "Kilos Verdes", "type": "number" },
-    { "key": "netKg", "label": "Kilos_Netos", "type": "number" }
+    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "greenKg", "label": "Kilos Verdes", "type": "count" },
+    { "key": "netKg", "label": "Kilos_Netos", "type": "count" }
   ],
   "priceFields": [
     { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency" },

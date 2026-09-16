@@ -15,21 +15,21 @@
   ],
   "federationHeading": "Información Federación:",
   "federationFields": [
-    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true },
-    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true }
+    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[140px]", "inputWidthClass": "min-w-[90px]" },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[420px] flex-[3]", "inputWidthClass": "min-w-[300px]" }
   ],
   "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text", "value": "PASILLA" },
     { "key": "pointPrice", "label": "Pr Punto", "type": "currency" },
-    { "key": "almondWeight", "label": "Peso Almendra", "type": "number" },
+    { "key": "almondWeight", "label": "Peso Almendra", "type": "count" },
     { "key": "almondPercentage", "label": "% Almendra", "type": "percentage" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "number" },
-    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
-    { "key": "tare", "label": "Destare", "type": "number" },
-    { "key": "netKg", "label": "Kilos Netos", "type": "number" }
+    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "count" }
   ],
   "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
   "paymentPanel": {

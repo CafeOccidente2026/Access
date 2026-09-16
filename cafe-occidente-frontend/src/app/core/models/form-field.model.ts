@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'number' | 'date' | 'select' | 'currency' | 'percentage';
+export type FieldType = 'text' | 'number' | 'count' | 'date' | 'select' | 'currency' | 'percentage';
 
 /** Definicion declarativa de un campo de formulario, usada para renderizar
  *  dinamicamente sin repetir marcado en cada pantalla. */
@@ -14,6 +14,8 @@ export interface FormFieldDefinition {
   readonly highlightClass?: string;
   /** Sobrescribe el inputWidthClass de la fila solo para este campo (p.ej. fechas que necesitan mas ancho). */
   readonly inputWidthClass?: string;
+  /** Sobrescribe el ancho del contenedor flex (fieldWidthClass) de la fila solo para este campo. */
+  readonly rowWidthClass?: string;
   readonly columnSpan?: 1 | 2 | 3;
 }
 

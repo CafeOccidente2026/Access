@@ -32,9 +32,10 @@ public class GreenCoffeePurchaseCalculator {
             BigDecimal announcementBasePriceLoad,
             BigDecimal monthlyAccumulatedGrossValue,
             BigDecimal monthlyAccumulatedWithholding) {
-        // Cedula_AfterUpdate: Pr_Base_PC = Texto91 - (Costos * BaseCarga). Misma formula que Cafe Seco.
+        // Cedula_AfterUpdate: Pr_Base_PC = Texto91 - (Costos * BaseCarga). Misma formula que Cafe Seco;
+        // "Costos" viene del RegControl de la agencia compradora, no del anuncio -> ControlRecord.costos.
         BigDecimal basePriceLoad = announcementBasePriceLoad
-                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
 
         // Destare_LostFocus.

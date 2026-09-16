@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
+import { formatDisplayNumber } from '../../utils/number-format';
 
 /**
  * Renderiza un unico campo (etiqueta + control) segun su definicion.
@@ -30,7 +31,11 @@ export class FormFieldComponent {
   inputValue: string | number = '';
 
   ngOnChanges(): void {
-    this.inputValue = this.field.value ?? '';
+    const raw = this.field.value ?? '';
+    this.inputValue =
+      this.field.readonly && (this.field.type === 'currency' || this.field.type === 'count')
+        ? formatDisplayNumber(raw, this.field.type)
+        : raw;
   }
 
   onInput(value: string | number): void {
