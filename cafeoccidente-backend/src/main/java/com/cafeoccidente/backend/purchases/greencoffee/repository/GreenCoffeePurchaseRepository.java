@@ -22,7 +22,11 @@ public interface GreenCoffeePurchaseRepository extends JpaRepository<GreenCoffee
             @Param("monthStart") LocalDate monthStart,
             @Param("monthEnd") LocalDate monthEnd);
 
-    /** Ultima factura ya usada en este modulo ("Para asignar # factura verdes"). Null si no hay ninguna. */
-    @Query("SELECT MAX(p.invoiceNumber) FROM GreenCoffeePurchase p")
-    Integer findMaxInvoiceNumber();
+    /**
+     * Ultima factura ya usada en este modulo por esta agencia ("Para asignar # factura verdes").
+     * Null si no hay ninguna. Ver DryCoffeePurchaseRepository.findMaxInvoiceNumber - mismo motivo
+     * para filtrar por agencia.
+     */
+    @Query("SELECT MAX(p.invoiceNumber) FROM GreenCoffeePurchase p WHERE p.agency.id = :agencyId")
+    Integer findMaxInvoiceNumber(@Param("agencyId") Long agencyId);
 }

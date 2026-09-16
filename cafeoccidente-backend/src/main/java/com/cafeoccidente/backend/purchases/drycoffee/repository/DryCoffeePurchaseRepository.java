@@ -26,7 +26,12 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
             @Param("monthStart") LocalDate monthStart,
             @Param("monthEnd") LocalDate monthEnd);
 
-    /** Ultima factura ya usada, para reservar la siguiente (paso "Fondo"). Null si no hay ninguna. */
-    @Query("SELECT MAX(p.invoiceNumber) FROM DryCoffeePurchase p")
-    Integer findMaxInvoiceNumber();
+    /**
+     * Ultima factura ya usada por esta agencia, para reservar la siguiente (paso "Fondo"). Null si
+     * no hay ninguna. Debe filtrar por agencia: cada agencia tiene su propio rango de resolucion
+     * DIAN (ver ControlRecord), y mezclar el maximo entre agencias agota el rango de una con
+     * facturas de otra.
+     */
+    @Query("SELECT MAX(p.invoiceNumber) FROM DryCoffeePurchase p WHERE p.agency.id = :agencyId")
+    Integer findMaxInvoiceNumber(@Param("agencyId") Long agencyId);
 }

@@ -150,8 +150,9 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
-        Integer maxUsed = huskPurchaseRepository.findMaxInvoiceNumber();
+        Long agencyId = securityUtils.getCurrentAgencyId();
+        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        Integer maxUsed = huskPurchaseRepository.findMaxInvoiceNumber(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(

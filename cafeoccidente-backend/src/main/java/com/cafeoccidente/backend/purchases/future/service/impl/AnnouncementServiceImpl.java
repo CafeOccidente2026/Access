@@ -23,10 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AnnouncementServiceImpl implements AnnouncementService {
 
-    /** El formulario "ANUNCIOS CORRF" no expone selector de Fondo: los 77 anuncios reales de El
-     * Tambo son todos del fondo RP (ver scripts/migrate_eltambo.py). */
-    private static final String CORRF_FUND_CODE = "RP";
-
     private final AnnouncementRepository announcementRepository;
     private final AgencyRepository agencyRepository;
     private final FundRepository fundRepository;
@@ -62,8 +58,8 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         Long agencyId = securityUtils.getCurrentAgencyId();
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
-        Fund fund = fundRepository.findByCode(CORRF_FUND_CODE)
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo " + CORRF_FUND_CODE + " no encontrado"));
+        Fund fund = fundRepository.findById(request.fundId())
+                .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         BigDecimal baseLoad = BigDecimal.valueOf(controlRecord.getBaseLoad());
 

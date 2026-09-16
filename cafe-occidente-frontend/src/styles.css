@@ -37,3 +37,14 @@ html, body {
 body {
   font-family: var(--font-sans);
 }
+
+/* Marca brevemente el campo al que salta el foco automatico (avance por Enter),
+   para que el usuario lo ubique de un vistazo. */
+@keyframes field-flash {
+  0%, 100% { box-shadow: none; }
+  25%, 75% { box-shadow: 0 0 0 2px var(--color-accent-highlight); }
+}
+
+.field-flash {
+  animation: field-flash 1s ease-in-out;
+}

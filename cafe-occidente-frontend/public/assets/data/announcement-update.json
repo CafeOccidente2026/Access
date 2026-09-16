@@ -5,6 +5,7 @@
   "defectiveUnitPriceLabel": "Precio Pasilla",
   "specialSurchargeLabel": "SobrePr Carga Esp",
   "specialTypeLabel": "Especial",
+  "fundLabel": "Fondo",
   "updateButton": "Actualizar",
   "successMessage": "Anuncio actualizado. Número asignado:",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo.",

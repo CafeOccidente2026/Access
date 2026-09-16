@@ -18,12 +18,13 @@ export interface Announcement {
   readonly specialType: string;
 }
 
-/** Los 4 campos que llena el admin en "Actualizar Anuncio con Factor" (el resto se resuelve en el backend). */
+/** Los campos que llena el admin en "Actualizar Anuncio con Factor" (el resto se resuelve en el backend). */
 export interface AnnouncementRequest {
   readonly basePriceLoad: number;
   readonly defectiveUnitPrice: number;
   readonly specialSurcharge: number;
   readonly specialType: string;
+  readonly fundId: number;
 }
 
 /** Autocompletado al confirmar "Especial" (paso 5): Cod Prod + datos del anuncio vigente. */

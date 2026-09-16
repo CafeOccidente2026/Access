@@ -6,13 +6,14 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
 /**
- * Los 4 campos que llena el admin en "Actualizar Anuncio con Factor" (Pr_Base_CPS, Pr_AlmDefec,
- * SobrePr_CPS, Especial). Agencia, Numero de Anuncio, Fecha, Costos, Pr_AlmSana y Bonificacion los
- * completa el servidor (ver Form_ANUNCIOS CORRF.bas / AnnouncementServiceImpl.create).
+ * Los campos que llena el admin en "Actualizar Anuncio con Factor" (Pr_Base_CPS, Pr_AlmDefec,
+ * SobrePr_CPS, Especial, Fondo). Agencia, Numero de Anuncio, Fecha, Costos, Pr_AlmSana y
+ * Bonificacion los completa el servidor (ver Form_ANUNCIOS CORRF.bas / AnnouncementServiceImpl.create).
  */
 public record AnnouncementRequest(
         @NotNull @PositiveOrZero BigDecimal basePriceLoad,
         @NotNull @PositiveOrZero BigDecimal defectiveUnitPrice,
         @NotNull @PositiveOrZero BigDecimal specialSurcharge,
-        @NotBlank String specialType) {
+        @NotBlank String specialType,
+        @NotNull Long fundId) {
 }

@@ -163,8 +163,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
-        Integer maxUsed = dryCoffeePurchaseRepository.findMaxInvoiceNumber();
+        Long agencyId = securityUtils.getCurrentAgencyId();
+        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        Integer maxUsed = dryCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(

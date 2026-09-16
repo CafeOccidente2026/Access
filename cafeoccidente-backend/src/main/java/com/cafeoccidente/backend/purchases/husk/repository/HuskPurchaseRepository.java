@@ -21,7 +21,11 @@ public interface HuskPurchaseRepository extends JpaRepository<HuskPurchase, Long
             @Param("monthStart") LocalDate monthStart,
             @Param("monthEnd") LocalDate monthEnd);
 
-    /** Ultima factura ya usada en este modulo ("Para asignar # factura pasilla"). Null si no hay ninguna. */
-    @Query("SELECT MAX(p.invoiceNumber) FROM HuskPurchase p")
-    Integer findMaxInvoiceNumber();
+    /**
+     * Ultima factura ya usada en este modulo por esta agencia ("Para asignar # factura pasilla").
+     * Null si no hay ninguna. Ver DryCoffeePurchaseRepository.findMaxInvoiceNumber - mismo motivo
+     * para filtrar por agencia.
+     */
+    @Query("SELECT MAX(p.invoiceNumber) FROM HuskPurchase p WHERE p.agency.id = :agencyId")
+    Integer findMaxInvoiceNumber(@Param("agencyId") Long agencyId);
 }

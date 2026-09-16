@@ -4,37 +4,62 @@
       <h2 class="text-sm font-semibold text-slate-700">{{ p.sectionTitle }}</h2>
 
       <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
-        <input
-          type="number"
+        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.fundLabel }}:</span>
+        <select
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [(ngModel)]="basePriceLoad"
-        />
+          [(ngModel)]="fundId"
+        >
+          <option [ngValue]="null"></option>
+          <option *ngFor="let fund of funds()" [ngValue]="fund.id">{{ fund.code }}</option>
+        </select>
       </label>
 
       <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.defectiveUnitPriceLabel }}:</span>
+        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
         <input
-          type="number"
+          type="text"
+          inputmode="numeric"
+          data-field-key="basePriceLoad"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [(ngModel)]="defectiveUnitPrice"
+          [value]="numeric.basePriceLoad"
+          (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+          (keydown.enter)="onEnter('basePriceLoad')"
         />
       </label>
 
       <label class="flex items-center gap-2 text-sm">
         <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialSurchargeLabel }}:</span>
         <input
-          type="number"
+          type="text"
+          inputmode="numeric"
+          data-field-key="specialSurcharge"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [(ngModel)]="specialSurcharge"
+          [value]="numeric.specialSurcharge"
+          (input)="onNumericInput('specialSurcharge', $any($event.target).value)"
+          (keydown.enter)="onEnter('specialSurcharge')"
+        />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.defectiveUnitPriceLabel }}:</span>
+        <input
+          type="text"
+          inputmode="numeric"
+          data-field-key="defectiveUnitPrice"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [value]="numeric.defectiveUnitPrice"
+          (input)="onNumericInput('defectiveUnitPrice', $any($event.target).value)"
+          (keydown.enter)="onEnter('defectiveUnitPrice')"
         />
       </label>
 
       <label class="flex items-center gap-2 text-sm">
         <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialTypeLabel }}:</span>
         <select
+          data-field-key="specialType"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
           [(ngModel)]="specialType"
+          (keydown.enter)="onEnter('specialType')"
         >
           <option value=""></option>
           <option *ngFor="let special of p.specialOptions" [value]="special">{{ special }}</option>

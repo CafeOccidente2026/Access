@@ -172,6 +172,8 @@ export class DryCoffeeFormComponent {
     setTimeout(() => {
       const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
       el?.focus();
+      el?.classList.add('field-flash');
+      setTimeout(() => el?.classList.remove('field-flash'), 1000);
     });
   }
 
@@ -461,9 +463,12 @@ export class DryCoffeeFormComponent {
     if (this.closeResolver) {
       this.closeResolver(true);
       this.closeResolver = null;
-    } else {
-      this.location.back();
+      return;
     }
+    // Descarta los datos antes de navegar: si no, canDeactivate() vuelve a encontrar
+    // input sin guardar y reabre este mismo dialogo, obligando a un segundo clic.
+    this.model = {};
+    this.location.back();
   }
 
   cancelClose(): void {

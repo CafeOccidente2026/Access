@@ -159,8 +159,9 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
-        Integer maxUsed = greenCoffeePurchaseRepository.findMaxInvoiceNumber();
+        Long agencyId = securityUtils.getCurrentAgencyId();
+        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        Integer maxUsed = greenCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(

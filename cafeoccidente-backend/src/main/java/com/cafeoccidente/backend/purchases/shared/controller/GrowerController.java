@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Busqueda de caficultor por cedula (paso "Cedula" del formulario Compras Cafe Seco). */
 @RestController
-@RequestMapping("/api/growers")
+@RequestMapping("/api/growers/{idNumber}")
 public class GrowerController {
 
     private final GrowerService growerService;
@@ -22,13 +22,13 @@ public class GrowerController {
         this.growerService = growerService;
     }
 
-    @GetMapping("/{idNumber}")
+    @GetMapping
     public GrowerResponse findByIdNumber(@PathVariable String idNumber) {
         return growerService.findByIdNumber(idNumber);
     }
 
     /** Programa/Cupo informativos (staging_legacy_ness); 204 si no hay match, nunca bloquea. */
-    @GetMapping("/{idNumber}/program")
+    @GetMapping("/program")
     public ResponseEntity<GrowerProgramResponse> findProgram(
             @PathVariable String idNumber, @RequestParam(required = false) String special) {
         Optional<GrowerProgramResponse> program = growerService.findProgram(idNumber, special);

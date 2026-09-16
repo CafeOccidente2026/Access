@@ -5,6 +5,7 @@ export interface AnnouncementUpdateContent {
   readonly defectiveUnitPriceLabel: string;
   readonly specialSurchargeLabel: string;
   readonly specialTypeLabel: string;
+  readonly fundLabel: string;
   readonly updateButton: string;
   readonly successMessage: string;
   readonly errorMessage: string;
