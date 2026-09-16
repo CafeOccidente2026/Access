@@ -1,7 +1,10 @@
 package com.cafeoccidente.backend.users;
 
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
+import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.Role;
 import com.cafeoccidente.backend.users.entity.User;
+import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -19,16 +22,22 @@ import org.springframework.stereotype.Component;
 public class AdminUserInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final AgencyRepository agencyRepository;
     private final PasswordEncoder passwordEncoder;
     private final String adminUsername;
     private final String adminPassword;
 
     public AdminUserInitializer(
             UserRepository userRepository,
+            RoleRepository roleRepository,
+            AgencyRepository agencyRepository,
             PasswordEncoder passwordEncoder,
             @Value("${ADMIN_USERNAME:}") String adminUsername,
             @Value("${ADMIN_PASSWORD:}") String adminPassword) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.agencyRepository = agencyRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminUsername = adminUsername;
         this.adminPassword = adminPassword;
@@ -43,11 +52,18 @@ public class AdminUserInitializer implements ApplicationRunner {
             throw new IllegalStateException(
                     "ADMIN_USERNAME y ADMIN_PASSWORD deben estar definidas para crear el primer administrador");
         }
+        Role adminRole = roleRepository.findByName("ADMIN")
+                .orElseThrow(() -> new IllegalStateException("No existe el rol ADMIN en la base de datos"));
+        Agency agency = agencyRepository.findByActiveTrue().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No hay ninguna agencia activa para asignar al administrador inicial"));
+
         User admin = new User();
         admin.setUsername(adminUsername);
         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
-        admin.setFullName("Administrador");
-        admin.setRole(Role.ADMIN);
+        admin.setRole(adminRole);
+        admin.setAgency(agency);
         admin.setActive(true);
         userRepository.save(admin);
     }
