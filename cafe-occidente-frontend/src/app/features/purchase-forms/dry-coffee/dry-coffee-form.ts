@@ -50,6 +50,9 @@ const REQUIRED: string[] = [
   'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
 ];
 
+/** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
+const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
+
 /** Campos siempre de solo lectura: los calcula el servidor o los deriva la sesión actual. */
 const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoice', 'productCode',
@@ -156,6 +159,9 @@ export class DryCoffeeFormComponent {
     const value = (this.model[key] ?? '').trim();
     if (value === '' && REQUIRED.includes(key)) {
       return;
+    }
+    if (value === '' && ZERO_IF_EMPTY.includes(key)) {
+      this.model[key] = '0';
     }
     this.locked.add(key);
     this.runSideEffects(key);

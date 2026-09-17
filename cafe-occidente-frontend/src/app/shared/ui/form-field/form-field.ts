@@ -32,9 +32,20 @@ export class FormFieldComponent {
 
   ngOnChanges(): void {
     const raw = this.field.value ?? '';
+    const isNumeric =
+      this.field.type === 'currency' ||
+      this.field.type === 'count' ||
+      this.field.type === 'percentage' ||
+      this.field.type === 'number';
+    // Solo se formatea de solo-lectura: mientras el campo sigue editable siempre se ve el valor
+    // crudo (para no pelear con puntos de miles mientras se escribe). Los formularios de compra
+    // bloquean (readonly = true) cada campo apenas se confirma (blur/Enter), asi que esto alcanza
+    // para "formatear al confirmar, crudo mientras se edita" sin logica extra en cada formulario.
+    // `integer` (Sacos) pide 'count' (sin decimales forzados); el resto siempre fuerza 2 decimales,
+    // igual que 'currency' - reusa formatDisplayNumber tal cual, sin logica nueva.
     this.inputValue =
-      this.field.readonly && (this.field.type === 'currency' || this.field.type === 'count')
-        ? formatDisplayNumber(raw, this.field.type)
+      this.field.readonly && isNumeric
+        ? formatDisplayNumber(raw, this.field.integer ? 'count' : 'currency')
         : raw;
   }
 

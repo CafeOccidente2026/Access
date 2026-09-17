@@ -47,6 +47,10 @@ const EDITABLE: string[] = [
 /** Requeridos para habilitar "Imprimir" (descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = ['idNumber', 'fullName', 'almondWeight', 'bags', 'grossKg', 'tare'];
 
+/** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). Husk no tiene
+ *  Castigo (penalty) - ver docs/informe-formulas-compras-vs-vba.md. */
+const ZERO_IF_EMPTY: string[] = ['shrinkageDiscount', 'otherDiscounts'];
+
 const READONLY: string[] = [
   'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode',
   'basePriceDryLoad', 'idPart1', 'special', 'pointPrice', 'almondPercentage', 'netKg', 'kgPrice',
@@ -135,6 +139,9 @@ export class HuskFormComponent {
     const value = (this.model[key] ?? '').trim();
     if (value === '' && REQUIRED.includes(key)) {
       return;
+    }
+    if (value === '' && ZERO_IF_EMPTY.includes(key)) {
+      this.model[key] = '0';
     }
     this.locked.add(key);
     this.runSideEffects(key);

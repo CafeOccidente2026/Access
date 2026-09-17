@@ -36,7 +36,7 @@
     { "key": "factor", "label": "Factor", "type": "number", "value": "94,00" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
     { "key": "tare", "label": "Destare", "type": "count" },
     { "key": "greenKg", "label": "Kilos Verdes", "type": "count" },

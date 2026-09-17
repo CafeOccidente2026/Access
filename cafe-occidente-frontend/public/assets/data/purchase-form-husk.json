@@ -26,7 +26,7 @@
     { "key": "almondPercentage", "label": "% Almendra", "type": "percentage" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
     { "key": "tare", "label": "Destare", "type": "count" },
     { "key": "netKg", "label": "Kilos Netos", "type": "count" }

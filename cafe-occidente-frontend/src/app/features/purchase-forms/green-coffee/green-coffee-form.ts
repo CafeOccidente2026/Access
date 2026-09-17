@@ -47,6 +47,9 @@ const EDITABLE: string[] = [
 /** Requeridos para habilitar "Imprimir" (penalty/descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = ['idNumber', 'fullName', 'bags', 'grossKg', 'tare', 'compKgPrice'];
 
+/** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
+const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
+
 const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoice',
   'basePriceLoad', 'special', 'idPart1', 'healthyStoredPrice', 'defectStoredPrice', 'bonus', 'costs',
@@ -134,6 +137,9 @@ export class GreenCoffeeFormComponent {
     const value = (this.model[key] ?? '').trim();
     if (value === '' && REQUIRED.includes(key)) {
       return;
+    }
+    if (value === '' && ZERO_IF_EMPTY.includes(key)) {
+      this.model[key] = '0';
     }
     this.locked.add(key);
     this.runSideEffects(key);
