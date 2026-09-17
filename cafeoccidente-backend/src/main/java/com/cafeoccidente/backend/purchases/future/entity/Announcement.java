@@ -15,9 +15,16 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Anuncio de precio vigente para una agencia/fondo/especial (campos Anuncio/Fecha_Anuncio/Pr_Base_PC
- * del formulario de compras). Se crea desde "Actualizar Anuncio con Factor" (ADMIN); cada actualizacion
- * de precio inserta un anuncio nuevo, nunca edita uno existente.
+ * Anuncio "maestro": precio crudo publicado por el admin (Pr_Base_CPS/Pr_AlmDefec/SobrePr_CPS),
+ * compartido por TODAS las agencias con ControlRecord activo (ver docs/diseno-anuncios-compartidos.md).
+ * Se crea desde "Actualizar Anuncio con Factor" (ADMIN); cada actualizacion de precio inserta un
+ * anuncio nuevo, nunca edita uno existente. La numeracion propia de cada agencia vive en
+ * {@link AgencyAnnouncementNumber}, no aqui.
+ *
+ * <p>announcementNumber/agency/healthyUnitPrice/bonus/costs quedan SIN USAR por el codigo nuevo
+ * (Costos/Pr Sustentacion/Bonificacion ahora se calculan en el momento de la compra con el
+ * ControlRecord vivo de la agencia que compra, ver AnnouncementServiceImpl) - se conservan solo para
+ * no perder los anuncios historicos que ya los tenian poblados.
  */
 @Entity
 @Getter
@@ -28,7 +35,11 @@ public class Announcement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "announcement_number", nullable = false)
+    /** @deprecated sin usar desde el anuncio compartido - la numeracion vive en
+     *  {@link AgencyAnnouncementNumber}, una por agencia. Se conserva sin usar solo para no perder
+     *  los anuncios historicos que ya lo tenian poblado. */
+    @Deprecated
+    @Column(name = "announcement_number")
     private String announcementNumber;
 
     @Column(name = "announcement_date", nullable = false)
@@ -45,20 +56,33 @@ public class Announcement {
     @Column(name = "defective_unit_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal defectiveUnitPrice;
 
-    /** Pr_AlmSana: precio de la almendra sana vigente (autocompleta "Pr Sustentación"). */
-    @Column(name = "healthy_unit_price", nullable = false, precision = 15, scale = 2)
+    /**
+     * SobrePr_CPS: sobreprecio crudo digitado por el admin (Form_ANUNCIOS CORRF.bas). Junto con
+     * basePriceLoad es el dato crudo del maestro; Bonificacion (SobrePr_CPS / BaseCarga) se deriva
+     * de este valor con el BaseCarga de cada agencia al momento de la compra, no aqui.
+     */
+    @Column(name = "special_surcharge", precision = 15, scale = 2)
+    private BigDecimal specialSurcharge;
+
+    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
+    @Deprecated
+    @Column(name = "healthy_unit_price", precision = 15, scale = 2)
     private BigDecimal healthyUnitPrice;
 
-    /** Bonificacion vigente en el anuncio (autocompleta "Bonificación"). */
-    @Column(nullable = false, precision = 15, scale = 2)
+    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
+    @Deprecated
+    @Column(precision = 15, scale = 2)
     private BigDecimal bonus;
 
-    /** Costos vigentes en el anuncio (autocompleta "Costos"; alimenta Pr_Base_PC en el calculador). */
-    @Column(nullable = false, precision = 15, scale = 2)
+    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
+    @Deprecated
+    @Column(precision = 15, scale = 2)
     private BigDecimal costs;
 
+    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
+    @Deprecated
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agency_id")
     private Agency agency;
 
     @ManyToOne

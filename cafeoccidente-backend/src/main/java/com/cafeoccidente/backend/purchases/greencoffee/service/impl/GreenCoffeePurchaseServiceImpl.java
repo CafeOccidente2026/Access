@@ -188,11 +188,11 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fund.getId(), SPECIAL_TYPE);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) (Form_VERDES.bas
-        // Cedula_AfterUpdate linea 56: Pr_Base_PC = Texto91 - (Costos * Texto176)). "Costos" es el
-        // valor CONGELADO que la macro de anuncio escribe en el textbox -> announcement.costs() (misma
-        // fuente que request.costs() usa el calculador una vez que existe la compra real). BaseCarga
-        // (Texto176) si es vivo del RegControl -> controlRecord.getBaseLoad().
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio maestro - (Costos * BaseCarga)
+        // (Form_VERDES.bas: Pr_Base_PC = Texto91 - (Costos * Texto176)). Desde el anuncio compartido
+        // entre agencias (ver docs/diseno-anuncios-compartidos.md), "Costos" ya NO viene congelado:
+        // announcement.costs() lo calcula AnnouncementServiceImpl.findLatest() con el ControlRecord
+        // VIVO de esta agencia (decision de negocio para el sistema nuevo, distinta del VBA legado).
         BigDecimal basePriceLoad = announcement.basePriceLoad()
                 .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(2, java.math.RoundingMode.HALF_UP);

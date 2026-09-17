@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { dryCoffeeUnsavedChangesGuard } from './features/purchase-forms/dry-coffee/unsaved-changes.guard';
 
 /** Mapa de rutas de la aplicacion; cada pantalla migrada tiene su propia ruta. */
@@ -29,6 +30,7 @@ export const routes: Routes = [
   },
   {
     path: 'anuncios/actualizar',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/announcement-update/announcement-update').then(
         (m) => m.AnnouncementUpdateComponent,
