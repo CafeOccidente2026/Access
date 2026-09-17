@@ -188,10 +188,13 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         ProductCode productCode = productCodeResolver.resolve(specialType, fundId);
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId, specialType);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) de la agencia
-        // compradora (Form_COMPRAS.bas: Pr_Base_PC = vrcps - (Costos * Texto176)).
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) (Form_COMPRAS.bas:
+        // Cuadro_combinado61_AfterUpdate linea 361: Pr_Base_PC = vrcps - (Costos * Texto176)). "Costos"
+        // es el valor CONGELADO que la macro de anuncio escribe en el textbox -> announcement.costs()
+        // (misma fuente que request.costs() usa el calculador una vez que existe la compra real).
+        // BaseCarga (Texto176) si es del RegControl vivo -> controlRecord.getBaseLoad().
         BigDecimal basePriceLoad = announcement.basePriceLoad()
-                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(2, java.math.RoundingMode.HALF_UP);
         return new SpecialInfoResponse(
                 productCode.getCode(),

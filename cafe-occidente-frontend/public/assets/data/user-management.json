@@ -3,6 +3,8 @@
   "userSectionTitle": "Crear usuario",
   "usernameLabel": "Usuario",
   "passwordLabel": "Contraseña",
+  "passwordHint": "Mínimo 4 caracteres, combinando letras y números.",
+  "passwordInvalidMessage": "La contraseña debe tener mínimo 4 caracteres y combinar letras y números.",
   "roleLabel": "Rol",
   "agencyLabel": "Agencia",
   "createUserButton": "Crear usuario",

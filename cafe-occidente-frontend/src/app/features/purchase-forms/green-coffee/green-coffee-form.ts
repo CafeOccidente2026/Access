@@ -15,7 +15,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber } from '../../../shared/utils/number-format';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -58,10 +58,7 @@ const FOCUS_ORDER: string[] = [
   'idNumber', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
-const num = (v: string | undefined | null): number => {
-  const s = (v ?? '').trim();
-  return s === '' ? 0 : Number(s);
-};
+const num = parseDisplayNumber;
 
 /**
  * Compras Cafe Verde (VERDES). Mismo patron que Compras Cafe Seco (dry-coffee-form): agencia fija
@@ -168,6 +165,7 @@ export class GreenCoffeeFormComponent {
       case 'idNumber':
         this.lookupGrower();
         break;
+      case 'grossKg':
       case 'tare':
       case 'compKgPrice':
       case 'penalty':
@@ -203,6 +201,7 @@ export class GreenCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        this.announcementInfo.set(null);
         this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -251,6 +250,7 @@ export class GreenCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        this.calc.set(null);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -306,7 +306,8 @@ export class GreenCoffeeFormComponent {
         this.savedNoticeOpen.set(true);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },

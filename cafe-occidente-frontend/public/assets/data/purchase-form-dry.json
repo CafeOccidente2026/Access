@@ -2,11 +2,12 @@
   "windowTitle": "COMPRAS",
   "theme": "sky",
   "topFields": [
-    { "key": "agency", "label": "Agencia", "type": "text" },
+    { "key": "agency", "label": "Agencia", "type": "text", "inputWidthClass": "max-w-[140px]" },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
-    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true, "inputWidthClass": "min-w-[130px]" },
+    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true, "inputWidthClass": "max-w-[135px]" },
     { "key": "announcement", "label": "Anuncio", "type": "number" },
-    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "inputWidthClass": "min-w-[130px]" }
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "inputWidthClass": "max-w-[135px]" },
+    { "key": "associated", "label": "", "type": "text", "inputWidthClass": "max-w-[90px]" }
   ],
   "identificationFields": [
     { "key": "invoice", "label": "Factura", "type": "text" },
@@ -33,6 +34,7 @@
       "key": "special",
       "label": "Especial",
       "type": "select",
+      "inputWidthClass": "max-w-[200px]",
       "options": [
         "RN",
         "RAINFOREST",

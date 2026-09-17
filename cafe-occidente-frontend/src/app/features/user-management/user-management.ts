@@ -2,6 +2,10 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+
+/** Misma regla que UserRequest.password en el backend (Pattern): minimo 4 caracteres, letras y numeros. */
+const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{4,}$/;
 
 import { Agency } from '../../core/models/agency.model';
 import { Role } from '../../core/models/role.model';
@@ -48,6 +52,10 @@ export class UserManagementComponent {
     if (!this.roleId || !this.agencyId) {
       return;
     }
+    if (!PASSWORD_PATTERN.test(this.password)) {
+      this.userError.set(this.page()?.passwordInvalidMessage ?? null);
+      return;
+    }
     this.userService
       .create({
         username: this.username,
@@ -63,7 +71,12 @@ export class UserManagementComponent {
           this.roleId = null;
           this.agencyId = null;
         },
-        error: () => this.userError.set(this.page()?.errorMessage ?? null),
+        error: (err: HttpErrorResponse) => {
+          // Si el backend rechazo por una validacion de campo especifica (password, username, etc.),
+          // mostrarsela al admin en vez del mensaje generico - "Ocurrio un error" no dice que corregir.
+          const fieldError = err.error?.fieldErrors && Object.values(err.error.fieldErrors)[0];
+          this.userError.set((fieldError as string | undefined) ?? this.page()?.errorMessage ?? null);
+        },
       });
   }
 }

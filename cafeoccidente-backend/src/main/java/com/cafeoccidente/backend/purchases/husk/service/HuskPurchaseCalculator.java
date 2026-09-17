@@ -63,6 +63,9 @@ public class HuskPurchaseCalculator {
                     .setScale(SCALE, RoundingMode.HALF_UP);
         }
 
+        // SIN VERIFICAR: CalculoReteFteMesPas solo abre el reporte "ReteMesCursoPas" y copia
+        // TotalVrBruto/TotalRetefuente a Texto105/Texto107; el RecordSource del reporte no esta en
+        // el export de VBA disponible. sumMonthlyTotalsByIdNumber es el mejor esfuerzo hasta confirmarlo.
         BigDecimal var6 = grossValue.add(monthlyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {

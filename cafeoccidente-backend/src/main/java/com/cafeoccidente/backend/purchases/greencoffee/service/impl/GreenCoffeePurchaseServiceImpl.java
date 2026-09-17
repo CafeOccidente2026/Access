@@ -188,10 +188,13 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fund.getId(), SPECIAL_TYPE);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) de la agencia
-        // compradora (Form_VERDES.bas: Pr_Base_PC = Texto91 - (Costos * Texto176)).
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) (Form_VERDES.bas
+        // Cedula_AfterUpdate linea 56: Pr_Base_PC = Texto91 - (Costos * Texto176)). "Costos" es el
+        // valor CONGELADO que la macro de anuncio escribe en el textbox -> announcement.costs() (misma
+        // fuente que request.costs() usa el calculador una vez que existe la compra real). BaseCarga
+        // (Texto176) si es vivo del RegControl -> controlRecord.getBaseLoad().
         BigDecimal basePriceLoad = announcement.basePriceLoad()
-                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(2, java.math.RoundingMode.HALF_UP);
         return new AnnouncementInfoResponse(
                 fund.getId(),

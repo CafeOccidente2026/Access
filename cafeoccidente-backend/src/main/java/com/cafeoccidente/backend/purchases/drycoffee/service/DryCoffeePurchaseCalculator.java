@@ -41,10 +41,13 @@ public class DryCoffeePurchaseCalculator {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
 
-        // Cedula_LostFocus: Pr_Base_PC = vrcps - (Costos * BaseCarga). En el VBA, "Costos" en COMPRAS
-        // esta ligado directo al RegControl de la agencia compradora (no al anuncio) -> ControlRecord.costos.
+        // Cuadro_combinado61_AfterUpdate (linea 361): Pr_Base_PC = vrcps - (Costos * Texto176).
+        // El textbox "Costos" del VBA lo fija la macro "Asignar numero anuncio * PCompras" con el
+        // valor CONGELADO del anuncio vigente al elegir el producto; en todo Form_COMPRAS.bas no hay
+        // ninguna otra escritura de Costos (grep confirma solo esa macro + resets a 0 por cupo
+        // excedido) -> request.costs(), no ControlRecord.costos (que si es vivo para BaseCarga).
         BigDecimal basePriceLoad = announcementBasePriceLoad
-                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
@@ -98,6 +101,11 @@ public class DryCoffeePurchaseCalculator {
         // mes), y se descuenta la Retefuente ya practicada este mes, dejando solo el diferencial.
         // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
         // Cuando existan othercoffee/greencoffee/husk habra que decidir si tambien deben sumar.
+        // SIN VERIFICAR: CalculoReteFteMes solo abre el reporte "ReteMesCurso" y copia sus totales
+        // (TotalVrBruto/TotalRetefuente) a Texto105/Texto107; el RecordSource real de ese reporte
+        // (filtro de mes, agrupacion por cedula/agencia) no esta en el export de VBA disponible
+        // (docs/legacy-vba-export/eltambo/ solo trae modulos y macros, no reportes). La query
+        // sumMonthlyTotalsByIdNumber de abajo es el mejor esfuerzo hasta poder confirmarlo.
         BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {

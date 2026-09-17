@@ -49,7 +49,34 @@ class DryCoffeePurchaseCalculatorTest {
                 BigDecimal.ZERO, BigDecimal.ZERO);
 
         // 1200000 - (692 * 125) = 1200000 - 86500 = 1113500
+        // (request.costs() y controlRecord.costs() coinciden en este fixture -> no distingue las 2
+        // fuentes por si solo, ver test de abajo).
         assertThat(result.basePriceLoad()).isEqualByComparingTo("1113500.00");
+    }
+
+    @Test
+    void basePriceLoadUsesTheFrozenAnnouncementCostsNotTheLiveControlRecord() {
+        // Simula el caso que el bug de Pr_Base_PC realmente cubre: el RegControl de la agencia
+        // cambio DESPUES de publicado el anuncio. Form_COMPRAS.bas fija "Costos" en el textbox al
+        // elegir el anuncio (macro "Asignar numero anuncio * PCompras") y nunca lo vuelve a releer
+        // del RegControl -> el calculo debe usar request.costs() (700, el que trae el anuncio /
+        // se ve en pantalla), no controlRecord.getCosts() (692, que ya cambio en el RegControl).
+        ControlRecord controlRecordWithChangedCosts = controlRecord();
+        controlRecordWithChangedCosts.setCosts(new BigDecimal("692.00"));
+        DryCoffeePurchaseRequest requestWithFrozenAnnouncementCosts = new DryCoffeePurchaseRequest(
+                1L, 1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
+                10, new BigDecimal("1250"), new BigDecimal("50"),
+                new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
+                new BigDecimal("12000"),
+                new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("700"),
+                false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+
+        DryCoffeePurchaseCalculation result = calculator.calculate(
+                requestWithFrozenAnnouncementCosts, controlRecordWithChangedCosts, ANNOUNCEMENT_BASE,
+                ANNOUNCEMENT_DEFECTIVE_PRICE, BigDecimal.ZERO, BigDecimal.ZERO);
+
+        // 1200000 - (700 * 125) = 1200000 - 87500 = 1112500 (NO 1113500, que seria con el 692 vivo)
+        assertThat(result.basePriceLoad()).isEqualByComparingTo("1112500.00");
     }
 
     @Test

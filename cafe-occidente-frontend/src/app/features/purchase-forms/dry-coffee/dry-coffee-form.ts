@@ -17,7 +17,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber } from '../../../shared/utils/number-format';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -52,9 +52,9 @@ const REQUIRED: string[] = [
 
 /** Campos siempre de solo lectura: los calcula el servidor o los deriva la sesión actual. */
 const READONLY: string[] = [
-  'agency', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode', 'basePriceLoad',
-  'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idPart1', 'wastePercentage', 'huskPercentage',
-  'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
+  'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoice', 'productCode',
+  'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idPart1', 'wastePercentage',
+  'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario
@@ -65,10 +65,7 @@ const FOCUS_ORDER: string[] = [
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
-const num = (v: string | undefined | null): number => {
-  const s = (v ?? '').trim();
-  return s === '' ? 0 : Number(s);
-};
+const num = parseDisplayNumber;
 
 /**
  * Compras Café Seco. Reutiliza el diseño existente (PurchaseFormViewComponent + purchase-form-dry.json)
@@ -202,7 +199,10 @@ export class DryCoffeeFormComponent {
       case 'totalHuskWeight':
       case 'healthyStoredWeight':
         this.loadQualityPercentage(key);
+        this.recalculate();
         break;
+      case 'grossKg':
+      case 'tare':
       case 'penalty':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
@@ -300,6 +300,9 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        // Limpia el anuncio anterior: si no, Costos/Bonificacion/Pr Sustentación quedan mostrando
+        // (y usandose en el calculo) el valor de un Especial/Fondo distinto al que esta seleccionado.
+        this.specialInfo.set(null);
         this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -325,6 +328,16 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        // Limpia solo el porcentaje de este peso: si no, Porc Merma/Porc Kg Pas/Factor pueden quedar
+        // mostrando el valor de un peso digitado anteriormente en vez del que esta en pantalla ahora.
+        this.qualityCalc.update((prev) => ({
+          ...prev,
+          [key === 'totalStoredWeight'
+            ? 'wastePercentage'
+            : key === 'totalHuskWeight'
+              ? 'defectivePercentage'
+              : 'healthyPercentage']: null,
+        }));
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -343,6 +356,9 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        // Sin esto, un preview fallido deja Vr. Kilo/Vr. Bruto/Neto a Pagar/Kilos Netos mostrando
+        // (y el panel de pago usando) el resultado de un calculo anterior con otros datos de entrada.
+        this.calc.set(null);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -353,7 +369,12 @@ export class DryCoffeeFormComponent {
     const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!agencyId || !fundId || !invoiceNumber) {
+    // Sin este chequeo, recalculate() dispara un preview cada vez que se confirma un peso (para que
+    // Kilos Netos/Vr. Kilo nunca queden obsoletos, ver runSideEffects) - pero a mitad de captura,
+    // con healthyStoredWeight todavia en 0, el backend rechaza el calculo (no se puede dividir por
+    // almendra sana = 0) y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
+    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
@@ -402,7 +423,11 @@ export class DryCoffeeFormComponent {
         // TODO: generación real del documento soporte / factura PDF queda pendiente (prompt futuro).
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
+        // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
+        // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
+        // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
+        console.error('Error al registrar compra Cafe Seco:', err?.error ?? err);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -536,6 +561,9 @@ export class DryCoffeeFormComponent {
       date: this.today,
       announcement: info?.announcementNumber ?? '',
       announcementDate: info?.announcementDate ?? '',
+      // Castigo_lostFocus/Descuento_Fro_LostFocus (Form_COMPRAS.bas): Asociado = "ASOCIADO"/"NO ASOCIADO"
+      // segun Tipo ("S"/"C"); vacio hasta que se conoce el tipo (cedula sin buscar todavia).
+      associated: growerType === 'S' ? 'ASOCIADO' : growerType === 'C' ? 'NO ASOCIADO' : '',
       invoice: inv ? `${inv.prefix}${inv.invoiceNumber}` : '',
       productCode: info?.productCode ?? '',
       basePriceLoad: info?.basePriceLoad ?? '',

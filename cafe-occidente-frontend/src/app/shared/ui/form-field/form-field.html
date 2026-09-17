@@ -1,5 +1,5 @@
 <label class="flex items-center gap-2 text-sm">
-  <span class="shrink-0 truncate font-medium" [class]="labelWidthClass + ' ' + labelClass" [title]="field.label">{{ field.label }}:</span>
+  <span *ngIf="field.label" class="shrink-0 truncate font-medium" [class]="labelWidthClass + ' ' + labelClass" [title]="field.label">{{ field.label }}:</span>
 
   <select
     *ngIf="field.type === 'select'; else textLike"
