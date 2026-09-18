@@ -171,8 +171,8 @@ def load_control_record(cur, el_tambo_id):
             # NOTE: nombres de columnas del CSV estan cruzados respecto al orden de
             # los campos en ControlRecord - validado contra compras_migrar.csv real
             # (descuento_coop observado = 0.8% = porcdesccoop, no porcasociados).
+            parse_decimal(reg["porcasociados"]),  # -> associate_percentage
             parse_decimal(reg["porcdesccoop"]),  # -> non_associate_discount
-            parse_decimal(reg["porcasociados"]),  # -> associate_percentage... ver abajo
             s(reg, "fiel"),
             s(reg, "resdian"),
             parse_date(reg["fecharesdian"]),
