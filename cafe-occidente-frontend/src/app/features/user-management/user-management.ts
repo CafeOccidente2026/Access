@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -7,10 +7,17 @@ import { HttpErrorResponse } from '@angular/common/http';
 /** Misma regla que UserRequest.password en el backend (Pattern): minimo 4 caracteres, letras y numeros. */
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{4,}$/;
 
+/** Orden de captura y de avance de foco al presionar Enter. */
+const FOCUS_ORDER: readonly string[] = ['username', 'password', 'roleId', 'agencyId'];
+
+/** Ruta a la que vuelve la pantalla al crear el usuario con exito (misma que closeRoute del access-window). */
+const CLOSE_ROUTE = '/menu-principal';
+
 import { Agency } from '../../core/models/agency.model';
 import { Role } from '../../core/models/role.model';
 import { AgencyService } from '../../core/services/agency.service';
 import { ContentService } from '../../core/services/content.service';
+import { NavigationService } from '../../core/services/navigation.service';
 import { RoleService } from '../../core/services/role.service';
 import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
@@ -29,6 +36,8 @@ export class UserManagementComponent {
   private readonly agencyService = inject(AgencyService);
   private readonly roleService = inject(RoleService);
   private readonly userService = inject(UserService);
+  private readonly navigation = inject(NavigationService);
+  private readonly elementRef = inject(ElementRef);
 
   readonly page = toSignal(this.content.loadJson<UserManagementContent>('user-management'));
   readonly roles = signal<Role[]>([]);
@@ -38,16 +47,40 @@ export class UserManagementComponent {
   password = '';
   roleId: number | null = null;
   agencyId: number | null = null;
-  readonly userMessage = signal<string | null>(null);
   readonly userError = signal<string | null>(null);
 
   constructor() {
     this.roleService.list().subscribe((roles) => this.roles.set(roles));
     this.agencyService.list().subscribe((agencies) => this.agencies.set(agencies));
+    // Foco en el primer campo apenas la pantalla termina de cargar su contenido.
+    effect(() => {
+      if (this.page()) {
+        this.focusField(FOCUS_ORDER[0]);
+      }
+    });
+  }
+
+  /** Enter avanza al siguiente campo; en el ultimo (Agencia) dispara la creacion. */
+  onEnter(field: string): void {
+    const idx = FOCUS_ORDER.indexOf(field);
+    if (idx === -1) {
+      return;
+    }
+    if (idx === FOCUS_ORDER.length - 1) {
+      this.createUser();
+      return;
+    }
+    this.focusField(FOCUS_ORDER[idx + 1]);
+  }
+
+  private focusField(key: string): void {
+    setTimeout(() => {
+      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
+      el?.focus();
+    });
   }
 
   createUser(): void {
-    this.userMessage.set(null);
     this.userError.set(null);
     if (!this.roleId || !this.agencyId) {
       return;
@@ -64,13 +97,7 @@ export class UserManagementComponent {
         agencyId: this.agencyId,
       })
       .subscribe({
-        next: () => {
-          this.userMessage.set(this.page()?.userCreatedMessage ?? null);
-          this.username = '';
-          this.password = '';
-          this.roleId = null;
-          this.agencyId = null;
-        },
+        next: () => this.navigation.goTo(CLOSE_ROUTE),
         error: (err: HttpErrorResponse) => {
           // Si el backend rechazo por una validacion de campo especifica (password, username, etc.),
           // mostrarsela al admin en vez del mensaje generico - "Ocurrio un error" no dice que corregir.

@@ -5,6 +5,7 @@
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
   "successRoute": "/acceso-principal",
+  "userSuccessRoute": "/menu-principal",
   "showPasswordLabel": "Mostrar contraseña",
   "hidePasswordLabel": "Ocultar contraseña",
   "invalidCredentialsError": "Usuario o contraseña incorrectos"

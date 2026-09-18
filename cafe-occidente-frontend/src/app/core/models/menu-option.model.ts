@@ -3,6 +3,8 @@ export interface MenuOption {
   readonly label: string;
   readonly route?: string;
   readonly emphasis?: boolean;
+  /** Si es true, solo el rol ADMIN ve esta opcion (ej: Usuarios, Actualizar Anuncio). */
+  readonly adminOnly?: boolean;
 }
 
 export interface MenuOptionGroup {

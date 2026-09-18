@@ -6,17 +6,21 @@
       <label class="flex items-center gap-2 text-sm">
         <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.usernameLabel }}:</span>
         <input
+          data-field-key="username"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
           [(ngModel)]="username"
+          (keydown.enter)="onEnter('username')"
         />
       </label>
 
       <label class="flex items-center gap-2 text-sm">
         <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.passwordLabel }}:</span>
         <input
+          data-field-key="password"
           type="password"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
           [(ngModel)]="password"
+          (keydown.enter)="onEnter('password')"
         />
       </label>
       <p class="-mt-2 ml-[8.5rem] text-xs text-slate-500">{{ p.passwordHint }}</p>
@@ -24,8 +28,10 @@
       <label class="flex items-center gap-2 text-sm">
         <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.roleLabel }}:</span>
         <select
+          data-field-key="roleId"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
           [(ngModel)]="roleId"
+          (keydown.enter)="onEnter('roleId')"
         >
           <option [ngValue]="null"></option>
           <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
@@ -35,15 +41,16 @@
       <label class="flex items-center gap-2 text-sm">
         <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.agencyLabel }}:</span>
         <select
+          data-field-key="agencyId"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
           [(ngModel)]="agencyId"
+          (keydown.enter)="onEnter('agencyId')"
         >
           <option [ngValue]="null"></option>
           <option *ngFor="let agency of agencies()" [ngValue]="agency.id">{{ agency.name }}</option>
         </select>
       </label>
 
-      <p *ngIf="userMessage()" class="text-sm text-green-700">{{ userMessage() }}</p>
       <p *ngIf="userError()" class="text-sm text-red-600">{{ userError() }}</p>
 
       <div class="flex justify-end">

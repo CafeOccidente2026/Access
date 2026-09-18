@@ -8,6 +8,5 @@
   "roleLabel": "Rol",
   "agencyLabel": "Agencia",
   "createUserButton": "Crear usuario",
-  "userCreatedMessage": "Usuario creado correctamente.",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
 }

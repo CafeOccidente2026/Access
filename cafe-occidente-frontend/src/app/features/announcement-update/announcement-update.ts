@@ -14,6 +14,9 @@ type NumericField = 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice';
 /** Orden de captura (paso 1a) y de avance de foco al presionar Enter (paso 1b/1d). */
 const FOCUS_ORDER: readonly string[] = ['basePriceLoad', 'specialSurcharge', 'defectiveUnitPrice', 'specialType'];
 
+/** Tiempo que se muestra el mensaje de confirmacion antes de cerrarse solo. */
+const SUCCESS_MESSAGE_DURATION_MS = 2000;
+
 /** Separador de miles con punto, estilo colombiano (ej. "2500000" -> "2.500.000"). */
 const formatThousands = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
@@ -39,6 +42,7 @@ export class AnnouncementUpdateComponent {
   numeric: Record<NumericField, string> = { basePriceLoad: '', specialSurcharge: '', defectiveUnitPrice: '' };
   specialType = '';
   fundId: number | null = null;
+  private successMessageTimeout?: ReturnType<typeof setTimeout>;
 
   constructor() {
     this.announcementService.funds().subscribe((list) => this.funds.set(list));
@@ -86,6 +90,7 @@ export class AnnouncementUpdateComponent {
   update(): void {
     this.message.set(null);
     this.error.set(null);
+    clearTimeout(this.successMessageTimeout);
     const basePriceLoad = this.numberValue('basePriceLoad');
     const specialSurcharge = this.numberValue('specialSurcharge');
     const defectiveUnitPrice = this.numberValue('defectiveUnitPrice');
@@ -107,8 +112,10 @@ export class AnnouncementUpdateComponent {
         fundId: this.fundId,
       })
       .subscribe({
-        next: (announcement) =>
-          this.message.set(`${this.page()?.successMessage ?? ''} ${announcement.announcementNumber}`),
+        next: (announcement) => {
+          this.message.set(`${this.page()?.successMessage ?? ''} ${announcement.announcementNumber}`);
+          this.successMessageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
+        },
         error: () => this.error.set(this.page()?.errorMessage ?? null),
       });
   }

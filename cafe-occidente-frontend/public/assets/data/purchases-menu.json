@@ -5,7 +5,6 @@
     { "label": "Genera Remesa Otros", "route": "/compras" }
   ],
   "options": [
-    { "label": "Actualizar Anuncios", "route": "/compras" },
     { "label": "Compras Café Seco", "route": "/compras/cafe-seco", "emphasis": true },
     { "label": "Compras Cafés Otros", "route": "/compras/cafe-otros" },
     { "label": "Compras Café Verde", "route": "/compras/cafe-verde" },
