@@ -41,10 +41,11 @@ export class FormFieldComponent {
     // crudo (para no pelear con puntos de miles mientras se escribe). Los formularios de compra
     // bloquean (readonly = true) cada campo apenas se confirma (blur/Enter), asi que esto alcanza
     // para "formatear al confirmar, crudo mientras se edita" sin logica extra en cada formulario.
-    // `integer` (Sacos) pide 'count' (sin decimales forzados); el resto siempre fuerza 2 decimales,
-    // igual que 'currency' - reusa formatDisplayNumber tal cual, sin logica nueva.
+    // `integer` (Sacos, Bonificacion, Costos) pide 'count' (sin decimales forzados); el resto siempre
+    // fuerza 2 decimales, igual que 'currency'. `rawDisplay` (Destare, Castigo, Descuento Fro, Otros
+    // Desctos) se salta el formateo entero: se ve tal cual se tipeo, sin agregar ni quitar nada.
     this.inputValue =
-      this.field.readonly && isNumeric
+      this.field.readonly && isNumeric && !this.field.rawDisplay
         ? formatDisplayNumber(raw, this.field.integer ? 'count' : 'currency')
         : raw;
   }

@@ -60,8 +60,8 @@
       ]
     },
     { "key": "sustentationPrice", "label": "Pr Sustentación", "type": "currency" },
-    { "key": "bonus", "label": "Bonificación", "type": "currency" },
-    { "key": "costs", "label": "Costos", "type": "currency" }
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
+    { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
   ],
   "weightFields": [
     { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "count" },
@@ -74,11 +74,11 @@
   "netWeightFields": [
     { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
-    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "netKg", "label": "Kilos Netos", "type": "count" },
-    { "key": "penalty", "label": "Castigo", "type": "currency" }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],
@@ -94,7 +94,7 @@
   "additionalDiscountFields": [
     { "key": "contribution", "label": "Aporte Socio", "type": "currency" }
   ],
-  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency" },
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true },
   "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",

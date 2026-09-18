@@ -24,8 +24,8 @@
     { "key": "special", "label": "Especial", "type": "text", "value": "CV" },
     { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
     { "key": "defectStoredPrice", "label": "Pr_AlmDefec", "type": "currency" },
-    { "key": "bonus", "label": "Bonificación", "type": "currency" },
-    { "key": "costs", "label": "Costos", "type": "currency" }
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
+    { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
   ],
   "weightFields": [
     { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "count", "value": "140,00" },
@@ -38,15 +38,15 @@
   "netWeightFields": [
     { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
-    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "greenKg", "label": "Kilos Verdes", "type": "count" },
     { "key": "netKg", "label": "Kilos_Netos", "type": "count" }
   ],
   "priceFields": [
     { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency" },
-    { "key": "penalty", "label": "Castigo", "type": "currency" }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],
@@ -57,7 +57,7 @@
   "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
   "settlementSecondaryFields": [
     { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true }
   ],
   "messages": {
     "acceptLabel": "Aceptar",

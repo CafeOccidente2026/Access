@@ -20,6 +20,9 @@ export interface FormFieldDefinition {
   /** Campo numerico que es un conteo entero (p.ej. Sacos): no se le fuerzan 2 decimales al
    *  formatear, a diferencia del resto de los campos 'count' (pesos/kilos, que si son decimales). */
   readonly integer?: boolean;
+  /** Campo numerico que nunca se formatea (p.ej. Destare en libras, o Castigo/Descuento Fro/Otros
+   *  Desctos que pueden llevar decimales sueltos): se muestra tal cual se tipeo, incluso ya de solo lectura. */
+  readonly rawDisplay?: boolean;
 }
 
 export interface FormFieldSection {

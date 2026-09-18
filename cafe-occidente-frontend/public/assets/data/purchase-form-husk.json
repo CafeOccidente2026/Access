@@ -28,10 +28,10 @@
   "netWeightFields": [
     { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
-    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "netKg", "label": "Kilos Netos", "type": "count" }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],
@@ -42,7 +42,7 @@
   "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
   "settlementSecondaryFields": [
     { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true }
   ],
   "messages": {
     "acceptLabel": "Aceptar",
