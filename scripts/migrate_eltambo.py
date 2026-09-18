@@ -155,7 +155,11 @@ def load_control_record(cur, el_tambo_id):
         (
             el_tambo_id,
             parse_int(reg["numregistro"]),
-            parse_int(reg["factorbase"]),
+            # NOTE: nombres de columnas del CSV estan cruzados respecto al orden de
+            # los campos en ControlRecord - validado contra compras_migrar.csv real
+            # (base_factor observado = 70 = kgexcelso, no factorbase;
+            # specialty_threshold observado = 94 = factorbase, no umbralespeciales).
+            parse_int(reg["kgexcelso"]),  # -> base_factor
             parse_decimal(reg["baseretefte"]),
             parse_int(reg["basecarga"]),
             parse_decimal(reg["porcretefte"]),
@@ -165,9 +169,11 @@ def load_control_record(cur, el_tambo_id):
             prefix,
             parse_decimal(reg["costos"]),
             parse_decimal(reg["muestra"]),
+            # excelso_kg no se usa en ningun calculo (ver DryCoffeePurchaseCalculator);
+            # se deja igual a kgexcelso ya que no hay evidencia de su fuente real correcta.
             parse_decimal(reg["kgexcelso"]),
             parse_decimal(reg["porcverde"]),
-            parse_decimal(reg["umbralespeciales"]),
+            parse_decimal(reg["factorbase"]),  # -> specialty_threshold
             # NOTE: nombres de columnas del CSV estan cruzados respecto al orden de
             # los campos en ControlRecord - validado contra compras_migrar.csv real
             # (descuento_coop observado = 0.8% = porcdesccoop, no porcasociados).

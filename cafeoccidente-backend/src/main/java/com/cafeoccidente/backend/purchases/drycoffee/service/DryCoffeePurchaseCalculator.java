@@ -53,7 +53,14 @@ public class DryCoffeePurchaseCalculator {
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
         BigDecimal wastePercentage = wastePercentage(request.totalStoredWeight(), controlRecord);
-        BigDecimal defectivePercentage = defectivePercentage(request.defectiveStoredWeight(), controlRecord);
+        // El VBA original solo redondea PorcAlmSana/PorcAlmDefec para MOSTRARLOS en pantalla
+        // (Texto163/Texto162); la cascada de Vr_Kilo sigue usando el valor con precision completa
+        // (confirmado contra compras_migrar.csv: porcalmsana llega con 14+ decimales, ej.
+        // 97.22222222222223, no 97.22) - redondear antes de var2/var3/var4 desviaba Vr_Kilo varios
+        // pesos frente a Access.
+        BigDecimal defectivePercentageRaw =
+                defectivePercentageRaw(request.defectiveStoredWeight(), controlRecord);
+        BigDecimal defectivePercentage = defectivePercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
         BigDecimal totalStored = request.defectiveStoredWeight().add(request.healthyStoredWeight());
         if (totalStored.compareTo(request.totalStoredWeight()) != 0) {
@@ -61,21 +68,23 @@ public class DryCoffeePurchaseCalculator {
                     "La almendra total debe ser igual a la suma de la almendra sana mas la defectuosa");
         }
 
-        BigDecimal healthyPercentage = healthyPercentage(request.healthyStoredWeight(), controlRecord);
+        BigDecimal healthyPercentageRaw = healthyPercentageRaw(request.healthyStoredWeight(), controlRecord);
+        BigDecimal healthyPercentage = healthyPercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
         // Sacos_LostFocus: precios unitarios intermedios (Texto190/Texto191 en el VBA original).
         BigDecimal var5 = request.healthyUnitPrice().subtract(request.penalty());
         BigDecimal var1 = var5.add(request.bonus());
-        if (healthyPercentage.signum() == 0) {
+        if (healthyPercentageRaw.signum() == 0) {
             throw new BusinessRuleException("El porcentaje de almendra sana no puede ser cero");
         }
-        BigDecimal var2 = controlRecord.getSpecialtyThreshold().divide(healthyPercentage, MathContext.DECIMAL64);
-        BigDecimal var3 = healthyPercentage.multiply(defectivePercentage).divide(HUNDRED, MathContext.DECIMAL64);
+        BigDecimal var2 = controlRecord.getSpecialtyThreshold().divide(healthyPercentageRaw, MathContext.DECIMAL64);
+        BigDecimal var3 =
+                healthyPercentageRaw.multiply(defectivePercentageRaw).divide(HUNDRED, MathContext.DECIMAL64);
         // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec.
         // PorcKgPasProm = ControlRecord.avgHuskPercentage (Texto164).
         // Pr_AlmDefec = Announcement.defectiveUnitPrice (lo trae el anuncio vigente).
         BigDecimal var4 = var3.subtract(controlRecord.getAvgHuskPercentage())
-                .divide(healthyPercentage, MathContext.DECIMAL64)
+                .divide(healthyPercentageRaw, MathContext.DECIMAL64)
                 .multiply(announcementDefectiveUnitPrice);
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
@@ -149,20 +158,24 @@ public class DryCoffeePurchaseCalculator {
 
     /** PorcAlmDefec: paso "Peso Tot Pasilla" (independiente del resto de la cascada). */
     public BigDecimal defectivePercentage(BigDecimal defectiveStoredWeight, ControlRecord controlRecord) {
-        return defectiveStoredWeight
-                .multiply(HUNDRED)
-                .divide(sampleSize(controlRecord), MathContext.DECIMAL64)
-                .setScale(SCALE, RoundingMode.HALF_UP);
+        return defectivePercentageRaw(defectiveStoredWeight, controlRecord).setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal defectivePercentageRaw(BigDecimal defectiveStoredWeight, ControlRecord controlRecord) {
+        return defectiveStoredWeight.multiply(HUNDRED).divide(sampleSize(controlRecord), MathContext.DECIMAL64);
     }
 
     /** PorcAlmSana (Factor): paso "Peso Alm Sana" (independiente del resto de la cascada). */
     public BigDecimal healthyPercentage(BigDecimal healthyStoredWeight, ControlRecord controlRecord) {
+        return healthyPercentageRaw(healthyStoredWeight, controlRecord).setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal healthyPercentageRaw(BigDecimal healthyStoredWeight, ControlRecord controlRecord) {
         if (healthyStoredWeight.signum() == 0) {
             throw new BusinessRuleException("La almendra sana no puede ser cero");
         }
         return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getBaseFactor()))
-                .divide(healthyStoredWeight, MathContext.DECIMAL64)
-                .setScale(SCALE, RoundingMode.HALF_UP);
+                .divide(healthyStoredWeight, MathContext.DECIMAL64);
     }
 
     private BigDecimal sampleSize(ControlRecord controlRecord) {
