@@ -88,12 +88,12 @@
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" },
-    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true }
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
   ],
   "additionalDiscountFields": [
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency" }
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
   ],
   "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true },
   "compactFields": true,
