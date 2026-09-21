@@ -40,12 +40,12 @@ type HuskContent = PurchaseFormContent & { readonly messages: HuskMessages };
  * ningun sub de Form_PASILLA.bas).
  */
 const EDITABLE: string[] = [
-  'idPart1', 'fullName', 'almondWeight',
+  'idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'almondWeight',
   'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idPart1', 'fullName', 'almondWeight', 'bags', 'grossKg', 'tare'];
+const REQUIRED: string[] = ['idPart1', 'firstName', 'lastName', 'almondWeight', 'bags', 'grossKg', 'tare'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). Husk no tiene
  *  Castigo (penalty) - ver docs/informe-formulas-compras-vs-vba.md. */
@@ -53,7 +53,7 @@ const ZERO_IF_EMPTY: string[] = ['shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
   'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoicePrefix', 'invoiceNumber',
-  'productCode', 'basePriceDryLoad', 'idNumber', 'special', 'pointPrice', 'almondPercentage', 'netKg',
+  'productCode', 'basePriceDryLoad', 'special', 'pointPrice', 'almondPercentage', 'netKg',
   'kgPrice', 'withholding',
 ];
 
@@ -229,14 +229,12 @@ export class HuskFormComponent {
           this.tick.update((n) => n + 1);
           return;
         }
-        const fullName = [grower.firstName, grower.secondName, grower.lastName, grower.secondLastName]
-          .filter(Boolean)
-          .join(' ');
-        this.model['fullName'] = fullName;
+        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
+        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        this.locked.add('fullName');
+        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
@@ -271,14 +269,13 @@ export class HuskFormComponent {
     if (!agencyId || !invoiceNumber || !info) {
       return null;
     }
-    const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
       agencyId,
       fundId: info.fundId,
       invoiceNumber,
       idNumber: this.model['idPart1'],
-      firstName,
-      lastName,
+      firstName: this.model['firstName'] ?? '',
+      lastName: this.model['lastName'] ?? '',
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'] ?? '',
       cellphone: this.model['cellphone'] ?? '',
@@ -396,29 +393,15 @@ export class HuskFormComponent {
     );
   }
 
-  private splitName(full: string): [string, string] {
-    const parts = full.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return ['', ''];
-    }
-    if (parts.length === 1) {
-      return [parts[0], parts[0]];
-    }
-    const mid = Math.ceil(parts.length / 2);
-    return [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')];
-  }
-
   private buildContent(base: HuskContent): PurchaseFormContent {
     const bmap = new Map<string, FormFieldDefinition>();
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
     collect(base.topFields);
     collect(base.identificationFields);
     collect(base.federationFields);
-    collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.netWeightFields);
     collect(base.settlementFields);
-    collect(base.settlementSecondaryFields);
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
     }
@@ -437,7 +420,6 @@ export class HuskFormComponent {
       invoiceNumber: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
       basePriceDryLoad: info?.basePriceDryLoad ?? '',
-      idNumber: this.model['idPart1'] ?? '',
       special: 'PASILLA',
       pointPrice: info?.pointPrice ?? '',
       almondPercentage: c?.almondPercentage ?? '',
@@ -472,11 +454,9 @@ export class HuskFormComponent {
       topFields: row(base.topFields)!,
       identificationFields: row(base.identificationFields)!,
       federationFields: row(base.federationFields),
-      contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,
-      settlementSecondaryFields: row(base.settlementSecondaryFields),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentPanel: base.paymentPanel
         ? {

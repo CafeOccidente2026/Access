@@ -64,6 +64,15 @@ public class Announcement {
     @Column(name = "special_surcharge", precision = 15, scale = 2)
     private BigDecimal specialSurcharge;
 
+    /**
+     * Pr_AlmSana ("Pr Punto" en Form_ANUNCIOS PASILLA.bas): a diferencia de basePriceLoad en
+     * CORRF, este formulario nunca tuvo formula que lo derivara de basePriceLoad/BaseCarga - el
+     * admin lo digita directo en "Actualizar Anuncio Pasilla". Solo poblado cuando specialType =
+     * PASILLA; para los demas se sigue derivando en toResponse().
+     */
+    @Column(name = "point_price", precision = 15, scale = 2)
+    private BigDecimal pointPrice;
+
     /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
     @Deprecated
     @Column(name = "healthy_unit_price", precision = 15, scale = 2)

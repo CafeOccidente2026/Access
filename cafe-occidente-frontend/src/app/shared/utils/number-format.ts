@@ -17,6 +17,12 @@ function normalizeDecimalComma(value: string): string {
   return value.includes(',') ? value.replace(/\./g, '').replace(',', '.') : value;
 }
 
+/** Separador de miles con punto, estilo colombiano (ej. "2500000" -> "2.500.000"), para inputs que
+ *  formatean en vivo mientras el usuario digita (solo dígitos, sin decimales). */
+export function formatThousands(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 /** "SDTA-3500" -> "3500": el Anuncio se guarda y numera con prefijo por agencia, pero en
  *  pantalla se muestra solo el numero. */
 export function stripAnnouncementPrefix(value: string): string {

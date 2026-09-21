@@ -40,7 +40,7 @@ type GreenCoffeeContent = PurchaseFormContent & { readonly messages: GreenCoffee
  * staging_legacy_ness en Cafe Seco).
  */
 const EDITABLE: string[] = [
-  'idPart1', 'fullName', 'program',
+  'idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'program',
   'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
@@ -232,10 +232,12 @@ export class GreenCoffeeFormComponent {
           .filter(Boolean)
           .join(' ');
         this.model['fullName'] = fullName;
+        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
+        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        this.locked.add('fullName');
+        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
@@ -270,14 +272,13 @@ export class GreenCoffeeFormComponent {
     if (!agencyId || !invoiceNumber || !info) {
       return null;
     }
-    const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
       agencyId,
       fundId: info.fundId,
       invoiceNumber,
       idNumber: this.model['idPart1'],
-      firstName,
-      lastName,
+      firstName: this.model['firstName'] ?? '',
+      lastName: this.model['lastName'] ?? '',
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'] ?? '',
       cellphone: this.model['cellphone'] ?? '',
@@ -397,18 +398,6 @@ export class GreenCoffeeFormComponent {
     );
   }
 
-  private splitName(full: string): [string, string] {
-    const parts = full.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return ['', ''];
-    }
-    if (parts.length === 1) {
-      return [parts[0], parts[0]];
-    }
-    const mid = Math.ceil(parts.length / 2);
-    return [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')];
-  }
-
   private buildContent(base: GreenCoffeeContent): PurchaseFormContent {
     const bmap = new Map<string, FormFieldDefinition>();
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
@@ -421,7 +410,6 @@ export class GreenCoffeeFormComponent {
     collect(base.netWeightFields);
     collect(base.priceFields);
     collect(base.settlementFields);
-    collect(base.settlementSecondaryFields);
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
     }
@@ -484,7 +472,6 @@ export class GreenCoffeeFormComponent {
       netWeightFields: row(base.netWeightFields),
       priceFields: row(base.priceFields),
       settlementFields: row(base.settlementFields)!,
-      settlementSecondaryFields: row(base.settlementSecondaryFields),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentPanel: base.paymentPanel
         ? {

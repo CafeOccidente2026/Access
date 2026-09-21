@@ -10,8 +10,8 @@
   ],
   "identificationFields": [
     { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
-    { "key": "invoicePrefix", "label": "Factura", "type": "text" },
-    { "key": "invoiceNumber", "label": "", "type": "text" },
+    { "key": "invoicePrefix", "label": "Factura", "type": "text", "inputWidthClass": "max-w-[70px]" },
+    { "key": "invoiceNumber", "label": "", "type": "text", "inputWidthClass": "max-w-[70px]" },
     { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency" }
   ],
   "federationHeading": "Información Federación:",
@@ -20,7 +20,14 @@
     { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[420px] flex-[3]", "inputWidthClass": "min-w-[300px]" },
     { "key": "program", "label": "Programa", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[140px]", "inputWidthClass": "min-w-[90px]" }
   ],
-  "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
+  "contactFields": [
+    { "key": "idPart1", "label": "Cédula", "type": "text", "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" },
+    { "key": "firstName", "label": "Nombres", "type": "text", "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "lastName", "label": "Apellidos", "type": "text", "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "idType", "label": "Tipo", "type": "text", "rowWidthClass": "min-w-[90px]", "inputWidthClass": "min-w-[50px]" },
+    { "key": "address", "label": "Dirección", "type": "text", "rowWidthClass": "min-w-[170px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" }
+  ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text", "value": "CV" },
     { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
@@ -55,11 +62,12 @@
     "totalValue": ""
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
-  "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
-  "settlementSecondaryFields": [
-    { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true }
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
   ],
+  "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia (Especial CV / Fondo RP).",

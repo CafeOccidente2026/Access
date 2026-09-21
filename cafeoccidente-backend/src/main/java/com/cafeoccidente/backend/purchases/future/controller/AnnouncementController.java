@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.future.controller;
 
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.HuskAnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -37,6 +38,14 @@ public class AnnouncementController {
     @ResponseStatus(HttpStatus.CREATED)
     public AnnouncementResponse create(@Valid @RequestBody AnnouncementRequest request) {
         return announcementService.create(request);
+    }
+
+    /** "Actualizar Anuncio Pasilla": solo ADMIN, Fondo RP y Especial PASILLA van fijos. */
+    @PostMapping("/husk")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AnnouncementResponse createHusk(@Valid @RequestBody HuskAnnouncementRequest request) {
+        return announcementService.createHusk(request);
     }
 
     @GetMapping("/history")

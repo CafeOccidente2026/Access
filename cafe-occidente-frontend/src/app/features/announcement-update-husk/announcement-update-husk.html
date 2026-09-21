@@ -1,0 +1,40 @@
+<app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/menu-principal">
+  <div class="flex flex-col gap-8 p-6">
+    <section class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold text-slate-700">{{ p.sectionTitle }}</h2>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
+        <input
+          type="text"
+          inputmode="numeric"
+          data-field-key="basePriceLoad"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [value]="numeric.basePriceLoad"
+          (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+          (keydown.enter)="onEnter('basePriceLoad')"
+        />
+      </label>
+
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.pointPriceLabel }}:</span>
+        <input
+          type="text"
+          inputmode="numeric"
+          data-field-key="pointPrice"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [value]="numeric.pointPrice"
+          (input)="onNumericInput('pointPrice', $any($event.target).value)"
+          (keydown.enter)="onEnter('pointPrice')"
+        />
+      </label>
+
+      <p *ngIf="message()" class="text-sm text-green-700">{{ message() }}</p>
+      <p *ngIf="error()" class="text-sm text-red-600">{{ error() }}</p>
+
+      <div class="flex justify-end">
+        <app-button [label]="p.updateButton" variant="access" (pressed)="update()"></app-button>
+      </div>
+    </section>
+  </div>
+</app-access-window>

@@ -38,6 +38,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'anuncios/actualizar-pasilla',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/announcement-update-husk/announcement-update-husk').then(
+        (m) => m.AnnouncementUpdateHuskComponent,
+      ),
+  },
+  {
     path: 'compras',
     loadComponent: () =>
       import('./features/purchases-menu/purchases-menu').then((m) => m.PurchasesMenuComponent),

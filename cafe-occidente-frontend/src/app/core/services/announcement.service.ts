@@ -3,9 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { Announcement, AnnouncementRequest, Fund } from '../models/dry-coffee-purchase.model';
+import {
+  Announcement,
+  AnnouncementRequest,
+  Fund,
+  HuskAnnouncementRequest,
+} from '../models/dry-coffee-purchase.model';
 
-/** Unica responsabilidad: llamadas HTTP para "Actualizar Anuncio con Factor" (solo ADMIN). */
+/** Unica responsabilidad: llamadas HTTP para "Actualizar Anuncio con Factor" / "Actualizar Anuncio
+ *  Pasilla" (ambas solo ADMIN). */
 @Injectable({ providedIn: 'root' })
 export class AnnouncementService {
   private readonly http = inject(HttpClient);
@@ -16,6 +22,10 @@ export class AnnouncementService {
 
   create(request: AnnouncementRequest): Observable<Announcement> {
     return this.http.post<Announcement>(`${API_BASE_URL}/announcements`, request);
+  }
+
+  createHusk(request: HuskAnnouncementRequest): Observable<Announcement> {
+    return this.http.post<Announcement>(`${API_BASE_URL}/announcements/husk`, request);
   }
 
   history(): Observable<Announcement[]> {

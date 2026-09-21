@@ -27,6 +27,12 @@ export interface AnnouncementRequest {
   readonly fundId: number;
 }
 
+/** Los dos campos que llena el admin en "Actualizar Anuncio Pasilla" (Fondo/Especial van fijos). */
+export interface HuskAnnouncementRequest {
+  readonly basePriceLoad: number;
+  readonly pointPrice: number;
+}
+
 /** Autocompletado al confirmar "Especial" (paso 5): Cod Prod + datos del anuncio vigente. */
 export interface SpecialInfo {
   readonly productCode: string;
