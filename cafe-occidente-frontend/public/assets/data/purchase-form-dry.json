@@ -5,12 +5,13 @@
     { "key": "agency", "label": "Agencia", "type": "text", "inputWidthClass": "max-w-[140px]" },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true, "inputWidthClass": "max-w-[135px]" },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "inputWidthClass": "max-w-[135px]" },
     { "key": "associated", "label": "", "type": "text", "inputWidthClass": "max-w-[90px]" }
   ],
   "identificationFields": [
-    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "invoicePrefix", "label": "Factura", "type": "text" },
+    { "key": "invoiceNumber", "label": "", "type": "text" },
     { "key": "productCode", "label": "Cod Prod", "type": "text" },
     { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency" },
     { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }

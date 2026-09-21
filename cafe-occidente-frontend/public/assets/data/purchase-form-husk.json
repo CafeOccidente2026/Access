@@ -5,11 +5,12 @@
     { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
   ],
   "identificationFields": [
-    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "invoicePrefix", "label": "Factura", "type": "text" },
+    { "key": "invoiceNumber", "label": "", "type": "text" },
     { "key": "productCode", "label": "Cod Prod", "type": "text" },
     { "key": "basePriceDryLoad", "label": "Pr base carga perg seco", "type": "currency" }
   ],

@@ -17,7 +17,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -38,7 +38,7 @@ type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMess
 /** Campos editables en el orden de captura del formulario Access. "agency" no entra: la
  *  autocompleta la sesión y nunca la toca el usuario (paso 1). */
 const EDITABLE: string[] = [
-  'fund', 'idNumber', 'fullName', 'idType', 'address', 'cellphone', 'program', 'quota',
+  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone', 'program', 'quota',
   'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
@@ -46,7 +46,7 @@ const EDITABLE: string[] = [
 
 /** Requeridos para habilitar "Imprimir" (bonus/penalty/descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = [
-  'fund', 'idNumber', 'fullName', 'idType', 'address', 'cellphone',
+  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone',
   'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
 ];
 
@@ -55,15 +55,15 @@ const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts
 
 /** Campos siempre de solo lectura: los calcula el servidor o los deriva la sesión actual. */
 const READONLY: string[] = [
-  'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoice', 'productCode',
-  'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idPart1', 'wastePercentage',
-  'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
+  'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoicePrefix', 'invoiceNumber',
+  'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idNumber',
+  'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario
  *  (los campos autocalculados de por medio, p.ej. Porc Merma, se saltan porque no estan aqui). */
 const FOCUS_ORDER: string[] = [
-  'fund', 'idNumber', 'special',
+  'fund', 'idPart1', 'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
@@ -166,7 +166,7 @@ export class DryCoffeeFormComponent {
     this.locked.add(key);
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idNumber') {
+    if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
   }
@@ -194,7 +194,7 @@ export class DryCoffeeFormComponent {
       case 'fund':
         this.reserveInvoiceNumber();
         break;
-      case 'idNumber':
+      case 'idPart1':
         this.lookupGrower();
         break;
       case 'special':
@@ -236,7 +236,7 @@ export class DryCoffeeFormComponent {
 
   /** Paso 4: busca el caficultor por cédula; bloquea el formulario si está fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -258,10 +258,10 @@ export class DryCoffeeFormComponent {
         ['fullName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
         this.lookupProgram();
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idNumber');
+        this.advanceFocus('idPart1');
       },
       // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => this.advanceFocus('idNumber'),
+      error: () => this.advanceFocus('idPart1'),
     });
   }
 
@@ -272,7 +272,7 @@ export class DryCoffeeFormComponent {
    * ambiguedad entre programas) y de nuevo al confirmar el Especial (para desambiguar/confirmar).
    */
   private lookupProgram(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -389,7 +389,7 @@ export class DryCoffeeFormComponent {
       fundId,
       invoiceNumber,
       specialType: this.model['special'],
-      idNumber: this.model['idNumber'],
+      idNumber: this.model['idPart1'],
       firstName,
       lastName,
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
@@ -565,19 +565,20 @@ export class DryCoffeeFormComponent {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ?? '',
+      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
       announcementDate: info?.announcementDate ?? '',
       // Castigo_lostFocus/Descuento_Fro_LostFocus (Form_COMPRAS.bas): Asociado = "ASOCIADO"/"NO ASOCIADO"
       // segun Tipo ("S"/"C"); vacio hasta que se conoce el tipo (cedula sin buscar todavia).
       associated: growerType === 'S' ? 'ASOCIADO' : growerType === 'C' ? 'NO ASOCIADO' : '',
-      invoice: inv ? `${inv.prefix}${inv.invoiceNumber}` : '',
+      invoicePrefix: inv?.prefix ?? '',
+      invoiceNumber: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
       basePriceLoad: info?.basePriceLoad ?? '',
       huskPrice: info?.defectiveUnitPrice ?? '',
       sustentationPrice: info?.healthyUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
-      idPart1: this.model['idNumber'] ?? '',
+      idNumber: this.model['idPart1'] ?? '',
       wastePercentage: q.wastePercentage ?? '',
       huskPercentage: q.defectivePercentage ?? '',
       factor: q.healthyPercentage ?? '',

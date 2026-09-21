@@ -15,7 +15,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -40,25 +40,25 @@ type GreenCoffeeContent = PurchaseFormContent & { readonly messages: GreenCoffee
  * staging_legacy_ness en Cafe Seco).
  */
 const EDITABLE: string[] = [
-  'idNumber', 'fullName', 'program',
+  'idPart1', 'fullName', 'program',
   'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (penalty/descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idNumber', 'fullName', 'bags', 'grossKg', 'tare', 'compKgPrice'];
+const REQUIRED: string[] = ['idPart1', 'fullName', 'bags', 'grossKg', 'tare', 'compKgPrice'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
-  'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoice',
-  'basePriceLoad', 'special', 'idPart1', 'healthyStoredPrice', 'defectStoredPrice', 'bonus', 'costs',
-  'greenKg', 'netKg', 'kgPrice', 'withholding',
+  'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoicePrefix',
+  'invoiceNumber', 'basePriceLoad', 'special', 'idNumber', 'healthyStoredPrice', 'defectStoredPrice',
+  'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario. */
 const FOCUS_ORDER: string[] = [
-  'idNumber', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 const num = parseDisplayNumber;
@@ -144,7 +144,7 @@ export class GreenCoffeeFormComponent {
     this.locked.add(key);
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idNumber') {
+    if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
   }
@@ -168,7 +168,7 @@ export class GreenCoffeeFormComponent {
 
   private runSideEffects(key: string): void {
     switch (key) {
-      case 'idNumber':
+      case 'idPart1':
         this.lookupGrower();
         break;
       case 'grossKg':
@@ -216,7 +216,7 @@ export class GreenCoffeeFormComponent {
 
   /** Cedula_AfterUpdate: busca el caficultor; bloquea el formulario si esta fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -237,10 +237,10 @@ export class GreenCoffeeFormComponent {
         this.model['cellphone'] = grower.phone;
         this.locked.add('fullName');
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idNumber');
+        this.advanceFocus('idPart1');
       },
       // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => this.advanceFocus('idNumber'),
+      error: () => this.advanceFocus('idPart1'),
     });
   }
 
@@ -275,7 +275,7 @@ export class GreenCoffeeFormComponent {
       agencyId,
       fundId: info.fundId,
       invoiceNumber,
-      idNumber: this.model['idNumber'],
+      idNumber: this.model['idPart1'],
       firstName,
       lastName,
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
@@ -433,18 +433,19 @@ export class GreenCoffeeFormComponent {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ?? '',
+      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
       announcementDate: info?.announcementDate ?? '',
       productCode: info?.productCode ?? '',
       fund: 'RP',
-      invoice: inv ? `${inv.prefix}${inv.invoiceNumber}` : '',
+      invoicePrefix: inv?.prefix ?? '',
+      invoiceNumber: inv?.invoiceNumber ?? '',
       basePriceLoad: c ? c.basePriceLoad : (info?.basePriceLoad ?? ''),
       special: 'CV',
       healthyStoredPrice: info?.healthyUnitPrice ?? '',
       defectStoredPrice: info?.defectiveUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
-      idPart1: this.model['idNumber'] ?? '',
+      idNumber: this.model['idPart1'] ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
       kgPrice: c?.unitPrice ?? '',

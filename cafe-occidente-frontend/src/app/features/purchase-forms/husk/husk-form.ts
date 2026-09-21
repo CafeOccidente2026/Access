@@ -15,7 +15,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -40,27 +40,27 @@ type HuskContent = PurchaseFormContent & { readonly messages: HuskMessages };
  * ningun sub de Form_PASILLA.bas).
  */
 const EDITABLE: string[] = [
-  'idNumber', 'fullName', 'almondWeight',
+  'idPart1', 'fullName', 'almondWeight',
   'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idNumber', 'fullName', 'almondWeight', 'bags', 'grossKg', 'tare'];
+const REQUIRED: string[] = ['idPart1', 'fullName', 'almondWeight', 'bags', 'grossKg', 'tare'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). Husk no tiene
  *  Castigo (penalty) - ver docs/informe-formulas-compras-vs-vba.md. */
 const ZERO_IF_EMPTY: string[] = ['shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
-  'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode',
-  'basePriceDryLoad', 'idPart1', 'special', 'pointPrice', 'almondPercentage', 'netKg', 'kgPrice',
-  'withholding',
+  'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoicePrefix', 'invoiceNumber',
+  'productCode', 'basePriceDryLoad', 'idNumber', 'special', 'pointPrice', 'almondPercentage', 'netKg',
+  'kgPrice', 'withholding',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente (sigue el orden visual del JSON: calidad
  *  antes que pesos - igual que W_AlmSana_AfterUpdate/Destare_LostFocus son independientes). */
 const FOCUS_ORDER: string[] = [
-  'idNumber', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 const num = parseDisplayNumber;
@@ -146,7 +146,7 @@ export class HuskFormComponent {
     this.locked.add(key);
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idNumber') {
+    if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
   }
@@ -170,7 +170,7 @@ export class HuskFormComponent {
 
   private runSideEffects(key: string): void {
     switch (key) {
-      case 'idNumber':
+      case 'idPart1':
         this.lookupGrower();
         break;
       case 'almondWeight':
@@ -217,7 +217,7 @@ export class HuskFormComponent {
 
   /** Cedula_LostFocus: busca el caficultor; bloquea el formulario si esta fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -238,10 +238,10 @@ export class HuskFormComponent {
         this.model['cellphone'] = grower.phone;
         this.locked.add('fullName');
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idNumber');
+        this.advanceFocus('idPart1');
       },
       // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => this.advanceFocus('idNumber'),
+      error: () => this.advanceFocus('idPart1'),
     });
   }
 
@@ -276,7 +276,7 @@ export class HuskFormComponent {
       agencyId,
       fundId: info.fundId,
       invoiceNumber,
-      idNumber: this.model['idNumber'],
+      idNumber: this.model['idPart1'],
       firstName,
       lastName,
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
@@ -431,12 +431,13 @@ export class HuskFormComponent {
       agency: this.authService.agencyName() ?? '',
       fund: 'RP',
       date: this.today,
-      announcement: info?.announcementNumber ?? '',
+      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
       announcementDate: info?.announcementDate ?? '',
-      invoice: inv ? `${inv.prefix}${inv.invoiceNumber}` : '',
+      invoicePrefix: inv?.prefix ?? '',
+      invoiceNumber: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
       basePriceDryLoad: info?.basePriceDryLoad ?? '',
-      idPart1: this.model['idNumber'] ?? '',
+      idNumber: this.model['idPart1'] ?? '',
       special: 'PASILLA',
       pointPrice: info?.pointPrice ?? '',
       almondPercentage: c?.almondPercentage ?? '',
