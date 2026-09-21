@@ -88,8 +88,11 @@ public class DryCoffeePurchaseCalculator {
                 .multiply(announcementDefectiveUnitPrice);
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
-        // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191).
-        BigDecimal unitPrice = qualityUnitPrice.setScale(SCALE, RoundingMode.HALF_UP);
+        // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191). Vr_Kilo es un
+        // control ligado a un campo sin decimales (el COP no tiene centavos): Access lo redondea a
+        // peso entero ANTES de usarlo en Vr_Bruto = Vr_Kilo * Kilos_Netos (confirmado contra
+        // compras_migrar.csv: vr_kilo nunca trae decimales en ninguna de las 838 filas historicas).
+        BigDecimal unitPrice = qualityUnitPrice.setScale(0, RoundingMode.HALF_UP).setScale(SCALE, RoundingMode.HALF_UP);
         BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
         BigDecimal inventoryValue = grossValue;
 
