@@ -79,7 +79,7 @@
     { "key": "netKg", "label": "Kilos Netos", "type": "count" },
     { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "integer": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],

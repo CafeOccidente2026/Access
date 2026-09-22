@@ -120,6 +120,8 @@ export interface DryCoffeePurchaseResponse {
   readonly firstName: string;
   readonly lastName: string;
   readonly growerType: string;
+  readonly address: string;
+  readonly cellphone: string;
   readonly bagsCount: number;
   readonly grossKg: number;
   readonly tareKg: number;
@@ -144,4 +146,13 @@ export interface DryCoffeePurchaseResponse {
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
   readonly netToPay: number;
+  readonly paymentMethod: string;
+  readonly checkNumber: string | null;
+  readonly purchasePoint: string;
+  readonly prefix: string;
+  readonly dianResolution: string;
+  readonly resolutionDate: string;
+  readonly resolutionFrom: number;
+  readonly resolutionTo: number;
+  readonly validity: number;
 }

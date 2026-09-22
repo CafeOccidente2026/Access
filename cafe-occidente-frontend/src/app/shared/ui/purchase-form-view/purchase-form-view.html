@@ -99,9 +99,10 @@
       ></app-payment-panel>
     </div>
 
-    <app-section-divider [text]="content.settlementHeading"></app-section-divider>
+    <app-section-divider *ngIf="content.settlementHeading" [text]="content.settlementHeading"></app-section-divider>
 
     <app-field-row
+      *ngIf="content.settlementFields"
       [fields]="content.settlementFields"
       [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
       [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"

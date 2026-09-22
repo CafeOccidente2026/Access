@@ -76,7 +76,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         ProductCode productCode = productCodeResolver.resolve(request.specialType(), fund.getId());
         AnnouncementResponse announcement =
                 announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
-        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement);
+        ControlRecord controlRecord = controlRecordService.getActive(agency.getId());
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement, controlRecord);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
@@ -126,28 +127,28 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
-        return mapper.toResponse(dryCoffeePurchaseRepository.save(purchase));
+        return mapper.toResponse(dryCoffeePurchaseRepository.save(purchase), controlRecord);
     }
 
     @Override
     public DryCoffeePurchaseResponse findById(Long id) {
-        return dryCoffeePurchaseRepository.findById(id)
-                .map(mapper::toResponse)
+        DryCoffeePurchase purchase = dryCoffeePurchaseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de cafe seco no encontrada"));
+        ControlRecord controlRecord = controlRecordService.getActive(purchase.getAgency().getId());
+        return mapper.toResponse(purchase, controlRecord);
     }
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
         AnnouncementResponse announcement = announcementService.findLatest(
                 request.agencyId(), request.fundId(), request.specialType());
-        return runCalculation(request, announcement);
+        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
+        return runCalculation(request, announcement, controlRecord);
     }
 
-    /** Fetches the current user's agency ControlRecord + acumulado mensual and runs the cascade. */
+    /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
     private DryCoffeePurchaseCalculation runCalculation(
-            DryCoffeePurchaseRequest request, AnnouncementResponse announcement) {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
-
+            DryCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord) {
         YearMonth currentMonth = YearMonth.now();
         MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());

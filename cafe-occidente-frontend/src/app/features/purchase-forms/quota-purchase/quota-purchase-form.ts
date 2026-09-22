@@ -7,6 +7,7 @@ import {
   DryCoffeePurchaseCalculation,
   DryCoffeePurchaseRequest,
   Fund,
+  NextInvoiceNumber,
   SpecialInfo,
 } from '../../../core/models/dry-coffee-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -18,29 +19,26 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 
 type FormModel = Record<string, string>;
 
-/** Orden real del formulario Access (Form_ANUNCIADAS.bas): Fondo, Cedula, Especial, pesos, Sacos,
- *  Kilos, Castigo, Descuento Fro, Otros Dscts - no hay Fondo->reserva de factura como en Cafe Seco
- *  (Factura la tipea el cajero, Cedula_AfterUpdate solo valida el consecutivo contra la resolucion). */
 const EDITABLE: string[] = [
-  'fund', 'invoice', 'idPart1', 'special',
+  'fund', 'special', 'idPart1',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 const REQUIRED: string[] = [
-  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
+  'fund', 'special', 'idPart1', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
 ];
 
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
-  'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'basePricePergaminoLoad', 'huskPrice',
-  'sustentationPrice', 'bonus', 'costs',
+  'agency', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode', 'basePriceLoad', 'huskPrice',
+  'healthyUnitPrice', 'bonus', 'costs',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
 const FOCUS_ORDER: string[] = [
-  'fund', 'invoice', 'idPart1', 'special',
+  'fund', 'special', 'idPart1',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
@@ -48,22 +46,23 @@ const FOCUS_ORDER: string[] = [
 const num = parseDisplayNumber;
 
 /**
- * "Facturar Compras Anunciadas" (ANUNCIADAS): Form_ANUNCIADAS.bas tiene la MISMA cascada de calculo
- * que Cafe Seco (var1-var5, Vr_Kilo, Vr_Bruto, Aporte_Socio/Descuento_Coop, Retefuente, Neto_a_Pagar)
- * - a diferencia de "Compras a Futuro" (Form_COMPRAS A FUTURO.bas), que no tiene ninguna. Reusa el
- * mismo backend (DryCoffeePurchaseService) que Cafe Seco. Diferencias reales confirmadas contra el
- * VBA: sin seccion "Informacion Federacion" (no hay Texto108/110/111 en este modulo), y Factura la
- * tipea el cajero (Cedula_AfterUpdate valida el consecutivo contra la resolucion) en vez de
- * reservarse sola como en Cafe Seco.
+ * "Facturar Anuncios con Cupos" (COMPRAS CUPOS): Form_COMPRAS CUPOS.bas tiene la MISMA cascada de
+ * calculo que Cafe Seco linea por linea (var1-var5, Vr_Kilo, Vr_Bruto, Aporte_Socio/Descuento_Coop,
+ * Retefuente, Neto_a_Pagar) - reusa el mismo backend (DryCoffeePurchaseService). A diferencia de
+ * "Facturar Compras Anunciadas" (ver quota-billing-form.ts), este SI tiene "Informacion Federacion"
+ * (Texto108/110/111 via "abrir programa pcupos", igual patron que Cafe Seco).
+ * SIN CONFIRMAR: el VBA no muestra si Factura se reserva sola (como Cafe Seco) o la tipea el cajero
+ * (como Anunciadas) - se asume reserva automatica al confirmar Fondo, mismo patron que Cafe Seco,
+ * por ser el flujo mas parecido; revisar con el negocio si no es el caso real.
  */
 @Component({
-  selector: 'app-quota-billing-form',
+  selector: 'app-quota-purchase-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent],
-  templateUrl: './quota-billing-form.html',
+  templateUrl: './quota-purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class QuotaBillingFormComponent {
+export class QuotaPurchaseFormComponent {
   private readonly content = inject(ContentService);
   private readonly service = inject(DryCoffeePurchaseService);
   private readonly growerService = inject(GrowerService);
@@ -71,9 +70,10 @@ export class QuotaBillingFormComponent {
   private readonly location = inject(Location);
   private readonly elementRef = inject(ElementRef);
 
-  private readonly base = toSignal(this.content.loadJson<PurchaseFormContent>('purchase-form-quota-billing'));
+  private readonly base = toSignal(this.content.loadJson<PurchaseFormContent>('purchase-form-quota-purchase'));
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
+  readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
   readonly errorMessage = signal<string | null>(null);
   private readonly tick = signal(0);
@@ -96,6 +96,7 @@ export class QuotaBillingFormComponent {
 
   constructor() {
     this.model['agency'] = this.authService.agencyName() ?? '';
+    this.model['date'] = this.today;
     this.service.funds().subscribe((list) => {
       this.funds.set(list);
       this.fundOptions = list.map((f) => f.code);
@@ -146,11 +147,14 @@ export class QuotaBillingFormComponent {
 
   private runSideEffects(key: string): void {
     switch (key) {
-      case 'idPart1':
-        this.lookupGrower();
+      case 'fund':
+        this.reserveInvoiceNumber();
         break;
       case 'special':
         this.loadSpecialInfo();
+        break;
+      case 'idPart1':
+        this.lookupGrower();
         break;
       case 'totalStoredWeight':
       case 'totalHuskWeight':
@@ -168,23 +172,13 @@ export class QuotaBillingFormComponent {
     }
   }
 
-  private lookupGrower(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findByIdNumber(idNumber).subscribe({
-      next: (grower) => {
-        this.model['firstNames'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
-        this.model['lastNames'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
-        this.model['idType'] = grower.growerType;
-        this.model['address'] = grower.address;
-        this.model['cellphone'] = grower.phone;
-        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
+  private reserveInvoiceNumber(): void {
+    this.service.nextInvoiceNumber().subscribe({
+      next: (inv) => {
+        this.invoiceReservation.set(inv);
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
       },
-      error: () => this.advanceFocus('idPart1'),
+      error: () => this.tick.update((n) => n + 1),
     });
   }
 
@@ -205,6 +199,52 @@ export class QuotaBillingFormComponent {
         this.errorMessage.set('No hay un anuncio activo para esa agencia/fondo/especial.');
         this.tick.update((n) => n + 1);
       },
+    });
+  }
+
+  private lookupGrower(): void {
+    const idNumber = (this.model['idPart1'] ?? '').trim();
+    if (!idNumber) {
+      return;
+    }
+    this.growerService.findByIdNumber(idNumber).subscribe({
+      next: (grower) => {
+        const firstNames = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
+        const lastNames = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
+        this.model['firstNames'] = firstNames;
+        this.model['lastNames'] = lastNames;
+        this.model['idType'] = grower.growerType;
+        this.model['address'] = grower.address;
+        this.model['cellphone'] = grower.phone;
+        this.model['idNumber'] = idNumber;
+        this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
+        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'idNumber', 'fullName'].forEach((k) =>
+          this.locked.add(k),
+        );
+        this.lookupProgram();
+        this.tick.update((n) => n + 1);
+        this.advanceFocus('idPart1');
+      },
+      error: () => this.advanceFocus('idPart1'),
+    });
+  }
+
+  /** Mismo endpoint/mapeo que Cafe Seco (GrowerServiceImpl.findProgram): solo 3 Especiales tienen
+   *  tabla de programa migrada, el resto queda vacio y editable, nunca bloquea. */
+  private lookupProgram(): void {
+    const idNumber = (this.model['idPart1'] ?? '').trim();
+    if (!idNumber) {
+      return;
+    }
+    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
+      if (program) {
+        this.model['program'] = program.programa;
+        this.locked.add('program');
+      } else {
+        this.model['program'] = '';
+        this.locked.delete('program');
+      }
+      this.tick.update((n) => n + 1);
     });
   }
 
@@ -250,7 +290,7 @@ export class QuotaBillingFormComponent {
   private buildRequest(): DryCoffeePurchaseRequest | null {
     const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
-    const invoiceNumber = num(this.model['invoice']);
+    const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
     if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
@@ -284,18 +324,25 @@ export class QuotaBillingFormComponent {
     };
   }
 
-  /** Sin persistir todavia: no hay tabla propia para "compras anunciadas" (ver resumen). */
+  /** Sin persistir todavia: no hay tabla propia para "compras con cupo" (ver resumen). */
   print(): void {}
 
   private canPrint(): boolean {
-    return !!this.specialInfo() && !!this.calc() && this.locked.has('otherDiscounts') && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    return (
+      !!this.specialInfo() &&
+      !!this.invoiceReservation() &&
+      !!this.calc() &&
+      this.locked.has('otherDiscounts') &&
+      REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '')
+    );
   }
 
   @HostListener('document:keydown.escape')
   reset(): void {
-    this.model = { agency: this.authService.agencyName() ?? '' };
+    this.model = { agency: this.authService.agencyName() ?? '', date: this.today };
     this.locked.clear();
     this.specialInfo.set(null);
+    this.invoiceReservation.set(null);
     this.calc.set(null);
     this.errorMessage.set(null);
     this.fieldCache.clear();
@@ -311,6 +358,7 @@ export class QuotaBillingFormComponent {
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
     collect(base.topFields);
     collect(base.identificationFields);
+    collect(base.federationFields);
     collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.weightFields);
@@ -320,14 +368,12 @@ export class QuotaBillingFormComponent {
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
     }
-    if (base.netToPayField) {
-      bmap.set(base.netToPayField.key, base.netToPayField);
-    }
     if (base.additionalDiscountFields) {
       base.additionalDiscountFields.forEach((f) => bmap.set(f.key, f));
     }
 
     const info = this.specialInfo();
+    const inv = this.invoiceReservation();
     const c = this.calc();
     const growerType = (this.model['idType'] ?? '').trim().toUpperCase();
     const netKgLocal =
@@ -335,13 +381,13 @@ export class QuotaBillingFormComponent {
 
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
-      date: this.today,
       announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
       announcementDate: info?.announcementDate ?? '',
+      invoice: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
-      basePricePergaminoLoad: info?.basePriceLoad ?? '',
+      basePriceLoad: info?.basePriceLoad ?? '',
       huskPrice: info?.defectiveUnitPrice ?? '',
-      sustentationPrice: info?.healthyUnitPrice ?? '',
+      healthyUnitPrice: info?.healthyUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
       netKg: c ? c.netKg : netKgLocal,
@@ -359,7 +405,7 @@ export class QuotaBillingFormComponent {
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
@@ -379,6 +425,7 @@ export class QuotaBillingFormComponent {
       ...base,
       topFields: row(base.topFields)!,
       identificationFields: row(base.identificationFields)!,
+      federationFields: row(base.federationFields),
       contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       weightFields: row(base.weightFields),

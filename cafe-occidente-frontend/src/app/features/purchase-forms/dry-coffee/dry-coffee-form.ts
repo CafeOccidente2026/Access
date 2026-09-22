@@ -1,6 +1,8 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
 import {
@@ -18,6 +20,7 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -116,6 +119,7 @@ export class DryCoffeeFormComponent {
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
   private readonly fundIdByName = new Map<string, number>();
+  private logoDataUrlPromise!: Promise<string | null>;
 
   pendingClose = false;
   private closeResolver: ((value: boolean) => void) | null = null;
@@ -137,6 +141,10 @@ export class DryCoffeeFormComponent {
       list.forEach((f) => this.fundIdByName.set(f.code, f.id));
       this.tick.update((n) => n + 1);
     });
+    // Precargado ya (no en print()): abrir el PDF depende de un window.open() disparado por el
+    // gesto del click en "Imprimir" - si print() todavia estuviera esperando el fetch del logo en
+    // ese momento, el navegador pierde el gesto de usuario y bloquea la pestaña como pop-up.
+    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
   }
 
   /** Paso 1: la agencia la trae la sesión autenticada, nunca la elige el usuario. */
@@ -426,7 +434,7 @@ export class DryCoffeeFormComponent {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
-        // TODO: generación real del documento soporte / factura PDF queda pendiente (prompt futuro).
+        this.printInvoice(res);
         this.tick.update((n) => n + 1);
       },
       error: (err) => {
@@ -646,5 +654,14 @@ export class DryCoffeeFormComponent {
         : undefined,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
+  }
+
+  /** Genera el Documento Soporte en PDF (mismo layout que capturas/prueba de factura sin boton de nube.pdf). */
+  private printInvoice(purchase: DryCoffeePurchaseResponse): void {
+    this.logoDataUrlPromise.then((logoDataUrl) => {
+      const docDefinition = buildDryCoffeeInvoiceDocDefinition(purchase, logoDataUrl);
+      pdfMake.vfs = pdfFonts;
+      pdfMake.createPdf(docDefinition).open();
+    });
   }
 }

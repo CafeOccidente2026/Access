@@ -8,10 +8,8 @@
   "leftStandaloneOption": { "label": "Anunciadas Hoy", "route": "/compras/futuro" },
   "rightOptions": [
     { "label": "Ingresar Compras a Futuro", "route": "/compras/futuro/ingresar", "emphasis": true },
-    { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro" },
+    { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro/facturar-anunciadas" },
     { "label": "Restaurar Compras Anunciadas", "route": "/compras/futuro" },
-    { "label": "Facturar Compras Fertifuturo", "route": "/compras/futuro" },
-    { "label": "Restaurar Cupos Fertifuturo", "route": "/compras/futuro" },
     { "label": "Generar Informe Anuncios a Futuro", "route": "/compras/futuro" },
     { "label": "Generar Informe Saldo Anuncios", "route": "/compras/futuro" },
     { "label": "Volver al pánel de Control Compras", "route": "/compras" }
