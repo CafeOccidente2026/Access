@@ -23,6 +23,8 @@ export interface FormFieldDefinition {
   /** Campo numerico que nunca se formatea (p.ej. Destare en libras, o Castigo/Descuento Fro/Otros
    *  Desctos que pueden llevar decimales sueltos): se muestra tal cual se tipeo, incluso ya de solo lectura. */
   readonly rawDisplay?: boolean;
+  /** Campo de texto que solo acepta digitos (ej. Cedula): sin letras ni otros caracteres. */
+  readonly digitsOnly?: boolean;
 }
 
 export interface FormFieldSection {

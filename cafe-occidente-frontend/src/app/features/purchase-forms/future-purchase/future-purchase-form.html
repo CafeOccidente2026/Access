@@ -6,4 +6,11 @@
     (fieldCommitted)="onFieldCommitted($event)"
     (reprintPressed)="print()"
   ></app-purchase-form-view>
+
+  <app-confirm-dialog
+    *ngIf="errorMessage() as msg"
+    [message]="msg"
+    confirmLabel="Aceptar"
+    (confirmed)="errorMessage.set(null)"
+  ></app-confirm-dialog>
 </div>

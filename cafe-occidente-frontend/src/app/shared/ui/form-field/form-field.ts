@@ -52,8 +52,33 @@ export class FormFieldComponent {
   }
 
   onInput(value: string | number): void {
-    this.inputValue = value;
-    this.valueChange.emit(value);
+    const sanitized = this.sanitize(value);
+    this.inputValue = sanitized;
+    this.valueChange.emit(sanitized);
+  }
+
+  /** Regla global: los campos numericos (Peso Tot Alm, Sacos, Kilos Brutos, Destare, Castigo,
+   *  Descuento Fro, Otros Desctos, etc. - cualquier campo 'number'/'count'/'currency'/'percentage')
+   *  solo aceptan digitos y una coma decimal, nunca signo negativo ni letras. Los de texto marcados
+   *  `digitsOnly` (Cedula) solo aceptan digitos, ni siquiera coma. El resto de campos de texto
+   *  (Nombres, Direccion...) no se tocan. */
+  private sanitize(value: string | number): string | number {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    if (this.field.digitsOnly) {
+      return value.replace(/[^0-9]/g, '');
+    }
+    const numericTypes = ['number', 'count', 'currency', 'percentage'];
+    if (numericTypes.includes(this.field.type)) {
+      let cleaned = value.replace(/[^0-9,]/g, '');
+      const firstComma = cleaned.indexOf(',');
+      if (firstComma !== -1) {
+        cleaned = cleaned.slice(0, firstComma + 1) + cleaned.slice(firstComma + 1).replace(/,/g, '');
+      }
+      return cleaned;
+    }
+    return value;
   }
 
   /** Un <select> nativo dispara 'change' en cada letra durante el typeahead del navegador (no solo

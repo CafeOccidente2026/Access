@@ -16,6 +16,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -24,6 +25,7 @@ interface HuskMessages {
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
+  readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
   readonly closeWarning: string;
@@ -143,7 +145,9 @@ export class HuskFormComponent {
     if (value === '' && ZERO_IF_EMPTY.includes(key)) {
       this.model[key] = '0';
     }
-    this.locked.add(key);
+    if (key !== 'idPart1') {
+      this.locked.add(key);
+    }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
     if (key !== 'idPart1') {
@@ -234,12 +238,15 @@ export class HuskFormComponent {
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
+        ['idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
-      // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => this.advanceFocus('idPart1'),
+      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
+      error: () => {
+        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
+        this.tick.update((n) => n + 1);
+      },
     });
   }
 
@@ -437,6 +444,8 @@ export class HuskFormComponent {
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
+      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+        patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);

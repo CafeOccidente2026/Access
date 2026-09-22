@@ -22,7 +22,7 @@
     { "key": "quota", "label": "Cupo", "type": "text", "highlighted": true }
   ],
   "contactFields": [
-    { "key": "idPart1", "label": "Cedula", "type": "text" },
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
     { "key": "idType", "label": "Tipo", "type": "text" },
     { "key": "address", "label": "Direccion", "type": "text" },
     { "key": "cellphone", "label": "Celular", "type": "text" }

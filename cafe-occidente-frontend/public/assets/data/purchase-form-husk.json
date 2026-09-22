@@ -16,7 +16,7 @@
   ],
   "federationHeading": "Información Federación:",
   "federationFields": [
-    { "key": "idPart1", "label": "Cédula", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" },
+    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true, "highlighted": true, "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" },
     { "key": "firstName", "label": "Nombres", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
     { "key": "lastName", "label": "Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
     { "key": "idType", "label": "Tipo", "type": "text", "rowWidthClass": "min-w-[90px]", "inputWidthClass": "min-w-[50px]" },
@@ -53,6 +53,7 @@
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia (Especial PASILLA / Fondo RP).",
     "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
     "saveError": "No se pudo registrar la compra. Verifique los datos.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",

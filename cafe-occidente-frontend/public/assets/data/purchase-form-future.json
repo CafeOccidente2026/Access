@@ -3,7 +3,7 @@
   "theme": "green",
   "compactFields": true,
   "topFields": [
-    { "key": "idPart1", "label": "Cédula", "type": "text" },
+    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true },
     { "key": "firstNames", "label": "", "type": "text", "readonly": true },
     { "key": "lastNames", "label": "", "type": "text", "readonly": true },
     { "key": "idType", "label": "Tipo", "type": "text", "readonly": true }

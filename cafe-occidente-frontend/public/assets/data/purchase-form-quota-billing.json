@@ -15,7 +15,7 @@
     { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }
   ],
   "contactFields": [
-    { "key": "idPart1", "label": "Cedula", "type": "text" },
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
     { "key": "firstNames", "label": "", "type": "text", "readonly": true },
     { "key": "lastNames", "label": "", "type": "text", "readonly": true },
     { "key": "idType", "label": "Tipo", "type": "text", "readonly": true },

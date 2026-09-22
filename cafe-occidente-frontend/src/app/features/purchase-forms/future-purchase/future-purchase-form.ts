@@ -6,7 +6,8 @@ import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
-import { PurchaseFormViewComponent } from '../../../shared/ui';
+import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
+import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 type FormModel = Record<string, string>;
 
@@ -32,7 +33,7 @@ const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'delive
 @Component({
   selector: 'app-future-purchase-form',
   standalone: true,
-  imports: [CommonModule, PurchaseFormViewComponent],
+  imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
   templateUrl: './future-purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -44,6 +45,7 @@ export class FuturePurchaseFormComponent {
 
   private readonly base = toSignal(this.content.loadJson<PurchaseFormContent>('purchase-form-future'));
   private readonly tick = signal(0);
+  readonly errorMessage = signal<string | null>(null);
 
   model: FormModel = {};
   private readonly locked = new Set<string>();
@@ -74,10 +76,16 @@ export class FuturePurchaseFormComponent {
     if (value === '' && REQUIRED.includes(key)) {
       return;
     }
-    this.locked.add(key);
+    // idPart1 se bloquea (locked) recien cuando lookupGrower confirma que la cedula existe - hasta
+    // entonces sigue editable para poder corregirla (ver mensaje "no existe" en lookupGrower).
+    if (key !== 'idPart1') {
+      this.locked.add(key);
+    }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    this.advanceFocus(key);
+    if (key !== 'idPart1') {
+      this.advanceFocus(key);
+    }
   }
 
   private runSideEffects(key: string): void {
@@ -104,11 +112,18 @@ export class FuturePurchaseFormComponent {
         this.model['address'] = grower.address;
         this.model['idNumber'] = idNumber;
         this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
-        ['firstNames', 'lastNames', 'idType', 'address', 'idNumber', 'fullName'].forEach((k) => this.locked.add(k));
+        ['idPart1', 'firstNames', 'lastNames', 'idType', 'address', 'idNumber', 'fullName'].forEach((k) =>
+          this.locked.add(k),
+        );
         this.lookupProgram();
         this.tick.update((n) => n + 1);
+        this.advanceFocus('idPart1');
       },
-      error: () => {},
+      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
+      error: () => {
+        this.errorMessage.set('Este número de cédula no existe.');
+        this.tick.update((n) => n + 1);
+      },
     });
   }
 
@@ -174,6 +189,8 @@ export class FuturePurchaseFormComponent {
       if (b.readonly || this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
+      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+        patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);

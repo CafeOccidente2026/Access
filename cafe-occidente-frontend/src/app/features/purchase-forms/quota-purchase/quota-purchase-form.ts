@@ -14,8 +14,9 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
-import { PurchaseFormViewComponent } from '../../../shared/ui';
+import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 type FormModel = Record<string, string>;
 
@@ -58,7 +59,7 @@ const num = parseDisplayNumber;
 @Component({
   selector: 'app-quota-purchase-form',
   standalone: true,
-  imports: [CommonModule, PurchaseFormViewComponent],
+  imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
   templateUrl: './quota-purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -120,7 +121,9 @@ export class QuotaPurchaseFormComponent {
     if (value === '' && ZERO_IF_EMPTY.includes(key)) {
       this.model[key] = '0';
     }
-    this.locked.add(key);
+    if (key !== 'idPart1') {
+      this.locked.add(key);
+    }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
     if (key !== 'idPart1') {
@@ -218,14 +221,18 @@ export class QuotaPurchaseFormComponent {
         this.model['cellphone'] = grower.phone;
         this.model['idNumber'] = idNumber;
         this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
-        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'idNumber', 'fullName'].forEach((k) =>
-          this.locked.add(k),
+        ['idPart1', 'firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'idNumber', 'fullName'].forEach(
+          (k) => this.locked.add(k),
         );
         this.lookupProgram();
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
-      error: () => this.advanceFocus('idPart1'),
+      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
+      error: () => {
+        this.errorMessage.set('Este número de cédula no existe.');
+        this.tick.update((n) => n + 1);
+      },
     });
   }
 
@@ -409,6 +416,8 @@ export class QuotaPurchaseFormComponent {
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
+      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+        patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
