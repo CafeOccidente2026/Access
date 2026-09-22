@@ -88,24 +88,24 @@ public class DryCoffeePurchaseCalculator {
                 .multiply(announcementDefectiveUnitPrice);
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
-        // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191). Vr_Kilo es un
-        // control ligado a un campo sin decimales (el COP no tiene centavos): Access lo redondea a
-        // peso entero ANTES de usarlo en Vr_Bruto = Vr_Kilo * Kilos_Netos (confirmado contra
-        // compras_migrar.csv: vr_kilo nunca trae decimales en ninguna de las 838 filas historicas).
-        BigDecimal unitPrice = qualityUnitPrice.setScale(0, RoundingMode.HALF_UP).setScale(SCALE, RoundingMode.HALF_UP);
+        // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191). Vr_Kilo, Vr_Bruto,
+        // Aporte_Socio/Descuento_Coop, Retefuente y Neto_a_Pagar son todos controles ligados a campos
+        // sin decimales (el COP no tiene centavos): Access los redondea a peso entero apenas se
+        // calculan, aunque el VBA no llame Round()/CLng() explicito (lo hace el tipo de dato de la
+        // columna ligada). Confirmado contra compras_migrar.csv: ninguna de esas columnas trae
+        // decimales en ninguna de las 904 filas historicas.
+        BigDecimal unitPrice = roundToWholePeso(qualityUnitPrice);
         BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
         BigDecimal inventoryValue = grossValue;
 
         BigDecimal associateContribution = BigDecimal.ZERO;
         BigDecimal cooperativeDiscount = BigDecimal.ZERO;
         if ("S".equalsIgnoreCase(request.growerType())) {
-            associateContribution = grossValue.multiply(controlRecord.getAssociatePercentage())
-                    .divide(HUNDRED, MathContext.DECIMAL64)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+            associateContribution = roundToWholePeso(grossValue.multiply(controlRecord.getAssociatePercentage())
+                    .divide(HUNDRED, MathContext.DECIMAL64));
         } else if ("C".equalsIgnoreCase(request.growerType())) {
-            cooperativeDiscount = grossValue.multiply(controlRecord.getNonAssociateDiscount())
-                    .divide(HUNDRED, MathContext.DECIMAL64)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+            cooperativeDiscount = roundToWholePeso(grossValue.multiply(controlRecord.getNonAssociateDiscount())
+                    .divide(HUNDRED, MathContext.DECIMAL64));
         }
 
         // Retefuente incremental sobre el acumulado mensual del caficultor (macro CalculoReteFteMes):
@@ -121,19 +121,17 @@ public class DryCoffeePurchaseCalculator {
         BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
-            withholding = thresholdBase.multiply(controlRecord.getWithholdingPercentage())
+            withholding = roundToWholePeso(thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+                    .subtract(monthlyAccumulatedWithholding));
         }
 
-        BigDecimal netToPay = grossValue
+        BigDecimal netToPay = roundToWholePeso(grossValue
                 .subtract(associateContribution)
                 .subtract(cooperativeDiscount)
                 .subtract(withholding)
                 .subtract(request.freightDiscount())
-                .subtract(request.otherDiscounts())
-                .setScale(SCALE, RoundingMode.HALF_UP);
+                .subtract(request.otherDiscounts()));
 
         return new DryCoffeePurchaseCalculation(
                 basePriceLoad,
@@ -179,6 +177,12 @@ public class DryCoffeePurchaseCalculator {
         }
         return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getBaseFactor()))
                 .divide(healthyStoredWeight, MathContext.DECIMAL64);
+    }
+
+    /** Redondea a peso entero (COP no tiene centavos) y vuelve a escalar a SCALE para poder operar
+     *  con el resto de la cascada, que siempre trabaja en BigDecimal de 2 decimales. */
+    private BigDecimal roundToWholePeso(BigDecimal value) {
+        return value.setScale(0, RoundingMode.HALF_UP).setScale(SCALE, RoundingMode.HALF_UP);
     }
 
     private BigDecimal sampleSize(ControlRecord controlRecord) {

@@ -29,6 +29,7 @@ export class FormFieldComponent {
   @Output() readonly committed = new EventEmitter<void>();
 
   inputValue: string | number = '';
+  private selectCommitTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnChanges(): void {
     const raw = this.field.value ?? '';
@@ -53,5 +54,28 @@ export class FormFieldComponent {
   onInput(value: string | number): void {
     this.inputValue = value;
     this.valueChange.emit(value);
+  }
+
+  /** Un <select> nativo dispara 'change' en cada letra durante el typeahead del navegador (no solo
+   *  al elegir con el mouse/Enter): confirmar en el acto bloqueaba el campo a mitad de tipeo (ver
+   *  bug "No hay un anuncio activo..." en Especial). Se espera a que el valor deje de moverse antes
+   *  de confirmar; Enter/blur (una eleccion con mouse+click afuera, o Tab) siguen confirmando ya
+   *  mismo, sin esperar el debounce, igual que en los inputs de texto. */
+  onSelectChange(): void {
+    if (this.selectCommitTimer) {
+      clearTimeout(this.selectCommitTimer);
+    }
+    this.selectCommitTimer = setTimeout(() => {
+      this.selectCommitTimer = null;
+      this.committed.emit();
+    }, 300);
+  }
+
+  commitSelectNow(): void {
+    if (this.selectCommitTimer) {
+      clearTimeout(this.selectCommitTimer);
+      this.selectCommitTimer = null;
+    }
+    this.committed.emit();
   }
 }

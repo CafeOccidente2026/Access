@@ -9,8 +9,9 @@
     [disabled]="!!field.readonly"
     [ngModel]="inputValue"
     (ngModelChange)="onInput($event)"
-    (change)="committed.emit()"
-    (blur)="committed.emit()"
+    (change)="onSelectChange()"
+    (keydown.enter)="commitSelectNow()"
+    (blur)="commitSelectNow()"
   >
     <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
   </select>
