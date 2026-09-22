@@ -28,7 +28,8 @@ function shortDate(isoDate: string): string {
 }
 
 const CELL = { fontSize: 8, margin: [2, 2, 2, 2] as [number, number, number, number] };
-const LABEL_CELL = { ...CELL, bold: true };
+const LABEL_CELL = { ...CELL };
+const HEADER_CELL = { fontSize: 8, bold: true, alignment: 'center' as const, margin: [2, 2, 2, 2] as [number, number, number, number] };
 
 /**
  * Documento Soporte de compra de café pergamino seco - mismo layout y campos que el PDF de
@@ -141,8 +142,10 @@ export function buildDryCoffeeInvoiceDocDefinition(
     { text: factor ?? '', ...CELL, alignment: 'right' },
   ];
 
+  /** NETO A PAGAR es la unica fila de esta columna que sale en negro y negrita (no azul) - se
+   *  distingue del resto de las etiquetas de LIQUIDACION en las dos capturas de referencia. */
   const liquidationRow = (label: string, value: string, bold = false): Content[] => [
-    { text: label, ...LABEL_CELL, bold },
+    { text: label, ...LABEL_CELL, ...(bold ? { color: 'black', bold: true } : {}) },
     { text: value, ...CELL, alignment: 'right', bold },
   ];
 
@@ -156,7 +159,16 @@ export function buildDryCoffeeInvoiceDocDefinition(
       widths: [125, 55, 35, 28, 35, 85, 130],
       body: [
         [
-          ...dataRow('Sacos', money(purchase.bagsCount), '', 'Peso gr', ''),
+          { text: '', ...CELL },
+          { text: '', ...CELL },
+          { text: 'Peso gr', ...HEADER_CELL },
+          { text: '%', ...HEADER_CELL },
+          { text: 'Factor', ...HEADER_CELL },
+          { text: 'LIQUIDACION', ...HEADER_CELL, colSpan: 2 },
+          {},
+        ],
+        [
+          ...dataRow('Sacos', money(purchase.bagsCount)),
           ...liquidationRow('VALOR BRUTO $', money(purchase.grossValue)),
         ],
         [
@@ -201,7 +213,7 @@ export function buildDryCoffeeInvoiceDocDefinition(
             money(purchase.defectiveStoredWeight),
             money(purchase.defectivePercentage),
           ),
-          { text: 'FORMAS\nDE\nPAGO', rowSpan: 4, ...LABEL_CELL, alignment: 'center' },
+          { text: 'FORMAS\nDE\nPAGO', rowSpan: 4, ...CELL, bold: true, alignment: 'center' },
           {
             table: { widths: ['*', 70], body: [paymentRow('EFECTIVO $', money(cash))] },
             layout: 'noBorders',
@@ -244,9 +256,9 @@ export function buildDryCoffeeInvoiceDocDefinition(
 
   const signatures: Content = {
     columns: [
-      { text: 'FIRMA VENDEDOR', alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
-      { text: 'COMPRADO POR:', alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
-      { text: 'REVISADO POR:', alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
+      { text: 'FIRMA VENDEDOR', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
+      { text: 'COMPRADO POR:', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
+      { text: 'REVISADO POR:', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
     ],
   };
 
