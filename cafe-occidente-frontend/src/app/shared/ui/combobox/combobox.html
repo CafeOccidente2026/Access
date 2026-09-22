@@ -1,0 +1,35 @@
+<div class="relative w-full">
+  <input
+    #inputEl
+    type="text"
+    autocomplete="off"
+    role="combobox"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="isOpen"
+    [attr.data-field-key]="dataFieldKey"
+    [class]="inputClass"
+    [disabled]="disabled"
+    [value]="inputText"
+    (input)="onInputChange($any($event.target).value)"
+    (focus)="onFocus()"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+  />
+
+  <ul
+    #listEl
+    *ngIf="isOpen && filteredOptions.length"
+    role="listbox"
+    class="absolute left-0 right-0 top-full z-20 mt-0.5 max-h-48 overflow-auto rounded border border-slate-300 bg-white text-sm shadow-lg"
+  >
+    <li
+      *ngFor="let option of filteredOptions; let i = index"
+      role="option"
+      [attr.aria-selected]="i === highlightedIndex"
+      [class]="'cursor-pointer px-2 py-1 ' + (i === highlightedIndex ? 'bg-blue-100 text-slate-900' : 'text-slate-800 hover:bg-slate-100')"
+      (mousedown)="onOptionMouseDown($event, option)"
+    >
+      {{ option }}
+    </li>
+  </ul>
+</div>

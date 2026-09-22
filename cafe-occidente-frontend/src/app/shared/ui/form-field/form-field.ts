@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
 import { formatDisplayNumber } from '../../utils/number-format';
+import { ComboboxComponent } from '../combobox/combobox';
 
 /**
  * Renderiza un unico campo (etiqueta + control) segun su definicion.
@@ -12,7 +13,7 @@ import { formatDisplayNumber } from '../../utils/number-format';
 @Component({
   selector: 'app-form-field',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ComboboxComponent],
   templateUrl: './form-field.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -29,7 +30,6 @@ export class FormFieldComponent {
   @Output() readonly committed = new EventEmitter<void>();
 
   inputValue: string | number = '';
-  private selectCommitTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnChanges(): void {
     const raw = this.field.value ?? '';
@@ -79,28 +79,5 @@ export class FormFieldComponent {
       return cleaned;
     }
     return value;
-  }
-
-  /** Un <select> nativo dispara 'change' en cada letra durante el typeahead del navegador (no solo
-   *  al elegir con el mouse/Enter): confirmar en el acto bloqueaba el campo a mitad de tipeo (ver
-   *  bug "No hay un anuncio activo..." en Especial). Se espera a que el valor deje de moverse antes
-   *  de confirmar; Enter/blur (una eleccion con mouse+click afuera, o Tab) siguen confirmando ya
-   *  mismo, sin esperar el debounce, igual que en los inputs de texto. */
-  onSelectChange(): void {
-    if (this.selectCommitTimer) {
-      clearTimeout(this.selectCommitTimer);
-    }
-    this.selectCommitTimer = setTimeout(() => {
-      this.selectCommitTimer = null;
-      this.committed.emit();
-    }, 300);
-  }
-
-  commitSelectNow(): void {
-    if (this.selectCommitTimer) {
-      clearTimeout(this.selectCommitTimer);
-      this.selectCommitTimer = null;
-    }
-    this.committed.emit();
   }
 }

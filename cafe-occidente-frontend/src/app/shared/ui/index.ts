@@ -2,6 +2,7 @@ export * from './app-button/app-button';
 export * from './access-window/access-window';
 export * from './window-shell/window-shell';
 export * from './form-field/form-field';
+export * from './combobox/combobox';
 export * from './menu-button-grid/menu-button-grid';
 export * from './payment-panel/payment-panel';
 export * from './section-divider/section-divider';

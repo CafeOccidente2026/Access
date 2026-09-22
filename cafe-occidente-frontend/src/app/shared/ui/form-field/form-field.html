@@ -1,20 +1,16 @@
 <label class="flex items-center gap-2 text-sm">
   <span *ngIf="field.label" class="shrink-0 truncate font-medium" [class]="labelWidthClass + ' ' + labelClass" [title]="field.label">{{ field.label }}:</span>
 
-  <select
+  <app-combobox
     *ngIf="field.type === 'select'; else textLike"
-    class="w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-    [class]="(field.inputWidthClass || inputWidthClass) + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
-    [attr.data-field-key]="field.key"
+    [inputClass]="'w-full rounded border border-slate-300 px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none ' + (field.inputWidthClass || inputWidthClass) + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
+    [dataFieldKey]="field.key"
     [disabled]="!!field.readonly"
-    [ngModel]="inputValue"
-    (ngModelChange)="onInput($event)"
-    (change)="onSelectChange()"
-    (keydown.enter)="commitSelectNow()"
-    (blur)="commitSelectNow()"
-  >
-    <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
-  </select>
+    [options]="field.options || []"
+    [value]="inputValue"
+    (valueChange)="onInput($event)"
+    (committed)="committed.emit()"
+  ></app-combobox>
 
   <ng-template #textLike>
     <input
