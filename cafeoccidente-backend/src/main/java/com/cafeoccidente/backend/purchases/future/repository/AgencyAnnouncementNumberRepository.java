@@ -31,4 +31,6 @@ public interface AgencyAnnouncementNumberRepository extends JpaRepository<Agency
     }
 
     List<AgencyAnnouncementNumber> findByAgencyIdOrderByAssignedAtDescIdDesc(Long agencyId);
+
+    Optional<AgencyAnnouncementNumber> findByAgencyIdAndAnnouncementNumber(Long agencyId, Integer announcementNumber);
 }

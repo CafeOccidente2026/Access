@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.greencoffee.service;
 
+import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import java.math.BigDecimal;
@@ -43,6 +44,7 @@ public class GreenCoffeePurchaseCalculator {
         BigDecimal basePriceLoad = announcementBasePriceLoad
                 .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(basePriceLoad, "Precio Base Carga PC");
 
         // Destare_LostFocus.
         BigDecimal greenKg = request.grossKg().subtract(request.tareKg());
@@ -52,9 +54,11 @@ public class GreenCoffeePurchaseCalculator {
 
         // Vr_Kilo_Comp_AfterUpdate: Vr_Kilo = Vr_Kilo_Comp (digitado a mano, sin formula de calidad).
         BigDecimal unitPrice = request.compKgPrice().setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
         // Castigo_lostFocus: Vr_Bruto = Vr_Kilo_Comp * Kilos_Verdes (no Kilos_Netos).
         BigDecimal grossValue = unitPrice.multiply(greenKg).setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
         BigDecimal associateContribution = BigDecimal.ZERO;
@@ -90,6 +94,7 @@ public class GreenCoffeePurchaseCalculator {
                 .subtract(request.shrinkageDiscount())
                 .subtract(request.otherDiscounts())
                 .setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(netToPay, "Neto a Pagar");
 
         return new GreenCoffeePurchaseCalculation(
                 basePriceLoad,

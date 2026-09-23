@@ -23,6 +23,7 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -47,6 +48,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final HuskPurchaseCalculator calculator;
     private final HuskPurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final GrowerService growerService;
 
     public HuskPurchaseServiceImpl(
             HuskPurchaseRepository huskPurchaseRepository,
@@ -57,7 +59,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             ControlRecordService controlRecordService,
             HuskPurchaseCalculator calculator,
             HuskPurchaseMapper mapper,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            GrowerService growerService) {
         this.huskPurchaseRepository = huskPurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -67,6 +70,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.growerService = growerService;
     }
 
     @Override
@@ -145,7 +149,12 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         MonthlyGrowerTotals monthlyTotals = huskPurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
 
-        return calculator.calculate(request, controlRecord, monthlyTotals.grossValue(), monthlyTotals.withholding());
+        HuskPurchaseCalculation calculation =
+                calculator.calculate(request, controlRecord, monthlyTotals.grossValue(), monthlyTotals.withholding());
+        // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("PASILLA") nunca matchea
+        // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
+        growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());
+        return calculation;
     }
 
     @Override

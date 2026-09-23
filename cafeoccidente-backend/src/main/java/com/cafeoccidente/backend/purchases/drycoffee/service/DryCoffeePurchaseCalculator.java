@@ -1,6 +1,7 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import java.math.BigDecimal;
@@ -49,6 +50,10 @@ public class DryCoffeePurchaseCalculator {
         BigDecimal basePriceLoad = announcementBasePriceLoad
                 .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(basePriceLoad, "Precio Base Carga PC");
+        // Pr Sustentacion (Texto190 en el VBA): no se recalcula aca, llega ya resuelto por el
+        // anuncio/specialInfo() - se valida igual porque alimenta var5/var1 mas abajo.
+        MoneyValidation.requireNonNegative(request.healthyUnitPrice(), "Pr Sustentación");
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
@@ -95,7 +100,9 @@ public class DryCoffeePurchaseCalculator {
         // columna ligada). Confirmado contra compras_migrar.csv: ninguna de esas columnas trae
         // decimales en ninguna de las 904 filas historicas.
         BigDecimal unitPrice = roundToWholePeso(qualityUnitPrice);
+        MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
         BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
         BigDecimal associateContribution = BigDecimal.ZERO;
@@ -132,6 +139,7 @@ public class DryCoffeePurchaseCalculator {
                 .subtract(withholding)
                 .subtract(request.freightDiscount())
                 .subtract(request.otherDiscounts()));
+        MoneyValidation.requireNonNegative(netToPay, "Neto a Pagar");
 
         return new DryCoffeePurchaseCalculation(
                 basePriceLoad,

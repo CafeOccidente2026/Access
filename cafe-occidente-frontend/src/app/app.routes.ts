@@ -20,6 +20,7 @@ export const routes: Routes = [
   },
   {
     path: 'registro-control',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/control-record/control-record').then((m) => m.ControlRecordComponent),
   },

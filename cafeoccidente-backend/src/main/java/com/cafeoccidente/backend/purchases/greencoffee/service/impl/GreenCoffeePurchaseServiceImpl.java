@@ -24,6 +24,7 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -48,6 +49,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final GreenCoffeePurchaseCalculator calculator;
     private final GreenCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final GrowerService growerService;
 
     public GreenCoffeePurchaseServiceImpl(
             GreenCoffeePurchaseRepository greenCoffeePurchaseRepository,
@@ -58,7 +60,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             ControlRecordService controlRecordService,
             GreenCoffeePurchaseCalculator calculator,
             GreenCoffeePurchaseMapper mapper,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            GrowerService growerService) {
         this.greenCoffeePurchaseRepository = greenCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -68,6 +71,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.growerService = growerService;
     }
 
     @Override
@@ -150,12 +154,16 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         MonthlyGrowerTotals monthlyTotals = greenCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
 
-        return calculator.calculate(
+        GreenCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
                 monthlyTotals.grossValue(),
                 monthlyTotals.withholding());
+        // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("CV") nunca matchea
+        // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
+        growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());
+        return calculation;
     }
 
     @Override

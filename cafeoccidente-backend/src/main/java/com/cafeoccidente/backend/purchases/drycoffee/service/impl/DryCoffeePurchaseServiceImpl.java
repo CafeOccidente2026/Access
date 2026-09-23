@@ -24,6 +24,7 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,6 +45,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final DryCoffeePurchaseCalculator calculator;
     private final DryCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final GrowerService growerService;
 
     public DryCoffeePurchaseServiceImpl(
             DryCoffeePurchaseRepository dryCoffeePurchaseRepository,
@@ -54,7 +56,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             ControlRecordService controlRecordService,
             DryCoffeePurchaseCalculator calculator,
             DryCoffeePurchaseMapper mapper,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            GrowerService growerService) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -64,6 +67,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.growerService = growerService;
     }
 
     @Override
@@ -153,13 +157,16 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
 
-        return calculator.calculate(
+        DryCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
                 announcement.defectiveUnitPrice(),
                 monthlyTotals.grossValue(),
                 monthlyTotals.withholding());
+        // Item C (cupo, Form_COMPRAS.bas lineas 412/465/518/571/624) - ver GrowerService.checkQuota.
+        growerService.checkQuota(request.idNumber(), request.specialType(), calculation.netKg());
+        return calculation;
     }
 
     @Override
