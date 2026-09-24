@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -144,6 +144,12 @@ export class OtherCoffeeFormComponent {
       this.tick.update((n) => n + 1);
     });
     this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
+    // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
+    effect(() => {
+      if (this.base()) {
+        this.focusField(FOCUS_ORDER[0]);
+      }
+    });
   }
 
   /** Paso 1: la agencia la trae la sesión autenticada, nunca la elige el usuario. */

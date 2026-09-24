@@ -19,8 +19,42 @@
       <div *ngIf="conductor() as c" class="rounded bg-teal-50 p-2 text-sm text-teal-900">
         {{ c.firstName }} {{ c.lastName }} — {{ c.transportCompany || 'sin transportadora registrada' }} — Placa: {{ c.vehiclePlate || 'N/A' }}
       </div>
-      <div *ngIf="conductorNotFound()" class="rounded bg-red-50 p-2 text-sm text-red-700">
-        Esa cédula no corresponde a ningún caficultor registrado.
+      <div *ngIf="conductorNotFound() && !showNewConductorForm()" class="flex items-center justify-between rounded bg-red-50 p-2 text-sm text-red-700">
+        <span>Esa cédula no corresponde a ningún caficultor registrado.</span>
+        <button type="button" class="rounded border border-red-400 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100" (click)="openNewConductorForm()">
+          Ingresar Conductor
+        </button>
+      </div>
+
+      <div *ngIf="showNewConductorForm()" class="rounded border border-teal-300 bg-teal-50 p-3">
+        <h2 class="mb-2 text-sm font-semibold text-teal-900">Ingresar Conductor — Cédula {{ conductorIdNumber() }}</h2>
+        <div class="grid grid-cols-4 gap-3">
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Nombre</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorFirstName()" (input)="newConductorFirstName.set($any($event.target).value)" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Apellido</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorLastName()" (input)="newConductorLastName.set($any($event.target).value)" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Transportadora</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorTransportCompany()" (input)="newConductorTransportCompany.set($any($event.target).value)" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Placa</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorVehiclePlate()" (input)="newConductorVehiclePlate.set($any($event.target).value)" />
+          </label>
+        </div>
+        <p *ngIf="newConductorError()" class="mt-2 text-sm text-red-600">{{ newConductorError() }}</p>
+        <div class="mt-2 flex justify-end gap-2">
+          <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 text-sm hover:bg-slate-100" (click)="showNewConductorForm.set(false)">
+            Cancelar
+          </button>
+          <button type="button" class="rounded border border-teal-500 bg-teal-600 px-3 py-1 text-sm font-medium text-white hover:bg-teal-700" (click)="saveNewConductor()">
+            Guardar Conductor
+          </button>
+        </div>
       </div>
 
       <div class="rounded border border-slate-300 p-3">
@@ -98,7 +132,10 @@
           </tr>
         </tbody>
       </table>
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-2">
+        <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="print()">
+          Imprimir
+        </button>
         <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="reset()">
           Nueva Remisión
         </button>

@@ -6,6 +6,7 @@ import com.cafeoccidente.backend.purchases.greencoffee.repository.GreenCoffeePur
 import com.cafeoccidente.backend.purchases.husk.repository.HuskPurchaseRepository;
 import com.cafeoccidente.backend.purchases.othercoffee.repository.OtherCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,9 @@ public class PurchaseInvoiceNumberServiceImpl implements PurchaseInvoiceNumberSe
         this.fertiFuturoPurchaseRepository = fertiFuturoPurchaseRepository;
     }
 
+    // El analisis de null de JDT no logra propagar el filter(Objects::nonNull) de abajo al tipo
+    // del Stream, y marca el Comparator de mas() como advertencia aunque no puede llegar null ahi.
+    @SuppressWarnings("null")
     @Override
     public Integer findMaxUsed(Long agencyId) {
         return Stream.of(
@@ -41,7 +45,7 @@ public class PurchaseInvoiceNumberServiceImpl implements PurchaseInvoiceNumberSe
                         otherCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
                         fertiFuturoPurchaseRepository.findMaxInvoiceNumber(agencyId))
                 .filter(Objects::nonNull)
-                .max(Integer::compareTo)
+                .max(Comparator.naturalOrder())
                 .orElse(null);
     }
 }

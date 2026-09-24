@@ -1,8 +1,8 @@
 {
   "windowTitle": "COMPRAS",
   "sideOptions": [
-    { "label": "Genera Remesa", "route": "/compras" },
-    { "label": "Genera Remesa Otros", "route": "/compras" }
+    { "label": "Genera Remesa", "route": "/compras/remesa" },
+    { "label": "Genera Remesa Otros", "route": "/compras/remesa" }
   ],
   "options": [
     { "label": "Compras Café Seco", "route": "/compras/cafe-seco", "emphasis": true },

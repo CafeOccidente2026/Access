@@ -23,6 +23,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,6 +117,40 @@ public class RemissionServiceImpl implements RemissionService {
         Remission remission = remissionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Remision no encontrada"));
         return toResponse(remission, remissionLineRepository.findByRemissionId(id));
+    }
+
+    @Override
+    public List<RemissionResponse> listByAgency(Long agencyId) {
+        return remissionRepository.findByAgencyIdOrderByRemissionNumberDesc(agencyId).stream()
+                .map(this::toResponseWithLines)
+                .toList();
+    }
+
+    @Override
+    public Optional<RemissionResponse> findByNumber(Long agencyId, Integer remissionNumber) {
+        return remissionRepository
+                .findByAgencyIdAndRemissionNumber(agencyId, remissionNumber)
+                .map(this::toResponseWithLines);
+    }
+
+    @Override
+    public List<RemissionResponse> listPendingExport(Long agencyId) {
+        return remissionRepository.findByAgencyIdAndExportedFalseOrderByRemissionNumberAsc(agencyId).stream()
+                .map(this::toResponseWithLines)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public List<RemissionResponse> markExported(List<Long> remissionIds) {
+        List<Remission> remissions = remissionRepository.findAllById(remissionIds);
+        remissions.forEach(r -> r.setExported(true));
+        remissionRepository.saveAll(remissions);
+        return remissions.stream().map(this::toResponseWithLines).toList();
+    }
+
+    private RemissionResponse toResponseWithLines(Remission remission) {
+        return toResponse(remission, remissionLineRepository.findByRemissionId(remission.getId()));
     }
 
     private RemissionResponse toResponse(Remission remission, List<RemissionLine> lines) {

@@ -18,4 +18,20 @@ export class InventoryService {
   createRemission(request: RemissionRequest): Observable<RemissionResponse> {
     return this.http.post<RemissionResponse>(`${API_BASE_URL}/remissions`, request);
   }
+
+  /** "Reimprimir Remision": busca por numero correlativo (0 o 1 resultado). */
+  findRemissionByNumber(agencyId: number, remissionNumber: number): Observable<RemissionResponse[]> {
+    return this.http.get<RemissionResponse[]>(
+      `${API_BASE_URL}/remissions?agencyId=${agencyId}&remissionNumber=${remissionNumber}`,
+    );
+  }
+
+  /** "Genera Remesa"/"Genera Remesa Otros": remisiones aun no incluidas en una remesa. */
+  listPendingExportRemissions(agencyId: number): Observable<RemissionResponse[]> {
+    return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions?agencyId=${agencyId}&pendingExport=true`);
+  }
+
+  markRemissionsExported(remissionIds: number[]): Observable<RemissionResponse[]> {
+    return this.http.post<RemissionResponse[]>(`${API_BASE_URL}/remissions/mark-exported`, remissionIds);
+  }
 }

@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
@@ -103,6 +103,12 @@ export class QuotaPurchaseFormComponent {
       this.fundOptions = list.map((f) => f.code);
       list.forEach((f) => this.fundIdByName.set(f.code, f.id));
       this.tick.update((n) => n + 1);
+    });
+    // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
+    effect(() => {
+      if (this.base()) {
+        this.focusField(FOCUS_ORDER[0]);
+      }
     });
   }
 

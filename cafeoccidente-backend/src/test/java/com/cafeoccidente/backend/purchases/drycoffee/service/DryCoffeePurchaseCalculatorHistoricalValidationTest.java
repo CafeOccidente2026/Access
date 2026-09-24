@@ -91,6 +91,10 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
     @PersistenceContext
     private EntityManager entityManager;
 
+    // El analisis de null de JDT no logra propagar el filtrado previo (o que estos getters de JPA
+    // siempre vienen poblados aca) al tipo de las referencias a metodo usadas como Comparator/
+    // BiFunction mas abajo - advertencias sin caso real, no un bug.
+    @SuppressWarnings("null")
     @Test
     void recalculatesEveryHistoricalElTamboPurchaseAndReportsExactMatchRate() throws IOException {
         Assumptions.assumeTrue(Files.exists(CSV_PATH),

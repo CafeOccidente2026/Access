@@ -1,0 +1,48 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window title="GENERAR REMESA" bodyClass="bg-white">
+    <div class="flex flex-col gap-3 p-4">
+      <p class="text-sm text-slate-600">Remisiones sin exportar todavía. Elija las que va a incluir en la remesa y descargue el Excel.</p>
+
+      <p *ngIf="exportedMessage()" class="rounded bg-green-50 p-2 text-sm text-green-700">{{ exportedMessage() }}</p>
+
+      <div class="max-h-[calc(100vh-220px)] overflow-auto rounded border border-slate-300">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-blue-900 text-white">
+            <tr>
+              <th class="p-2"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" /></th>
+              <th class="p-2 text-left">N°</th>
+              <th class="p-2 text-left">Fecha</th>
+              <th class="p-2 text-left">Destino</th>
+              <th class="p-2 text-left">Conductor</th>
+              <th class="p-2 text-right">Líneas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of remissions()" class="border-t border-slate-200 odd:bg-slate-50">
+              <td class="p-2"><input type="checkbox" [checked]="isSelected(r.id)" (change)="toggle(r.id)" /></td>
+              <td class="p-2">{{ r.remissionNumber }}</td>
+              <td class="p-2">{{ r.remissionDate }}</td>
+              <td class="p-2">{{ r.destination || '—' }}</td>
+              <td class="p-2">{{ r.conductorName || '—' }}</td>
+              <td class="p-2 text-right">{{ r.lines.length }}</td>
+            </tr>
+            <tr *ngIf="remissions().length === 0">
+              <td colspan="6" class="p-4 text-center text-slate-500">No hay remisiones pendientes de exportar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200 disabled:opacity-50"
+          [disabled]="selectedIds().size === 0"
+          (click)="generateRemesa()"
+        >
+          Generar Remesa (descargar Excel)
+        </button>
+      </div>
+    </div>
+  </app-access-window>
+</div>

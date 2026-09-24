@@ -2,10 +2,13 @@ package com.cafeoccidente.backend.purchases.shared.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.entity.LegacyNessProgram;
+import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
@@ -29,7 +32,7 @@ public class GrowerServiceImpl implements GrowerService {
      * <ul>
      *   <li><b>Cupo excedido</b> ({@code Kilos_Netos > Texto118}, lineas 412/465/518/571/624):
      *       implementado en {@link #checkQuota} desde 2026-09-23 (Item C).</li>
-     *   <li><b>TODO(EnProg)</b>: bloqueo si el caficultor no aparece en su programa (EnProg=0),
+     *   <li><b>Pendiente (EnProg)</b>: bloqueo si el caficultor no aparece en su programa (EnProg=0),
      *       para estos mismos Especiales + RAINFOREST/EXPON (lineas 761-779, "Abrir RAIN/EXPON
      *       pcompras" - tablas de programa de esos dos aun no migradas). Sigue SIN activar: con
      *       cobertura de datos parcial (3 de ~20 Especiales), bloquear impediria facturar por falta
@@ -44,11 +47,15 @@ public class GrowerServiceImpl implements GrowerService {
 
     private final GrowerRepository growerRepository;
     private final LegacyNessProgramRepository legacyNessProgramRepository;
+    private final AgencyRepository agencyRepository;
 
     public GrowerServiceImpl(
-            GrowerRepository growerRepository, LegacyNessProgramRepository legacyNessProgramRepository) {
+            GrowerRepository growerRepository,
+            LegacyNessProgramRepository legacyNessProgramRepository,
+            AgencyRepository agencyRepository) {
         this.growerRepository = growerRepository;
         this.legacyNessProgramRepository = legacyNessProgramRepository;
+        this.agencyRepository = agencyRepository;
     }
 
     @Override
@@ -70,6 +77,45 @@ public class GrowerServiceImpl implements GrowerService {
                 grower.isWithdrawn(),
                 grower.getTransportCompany(),
                 grower.getVehiclePlate());
+    }
+
+    @Override
+    public GrowerResponse createConductor(GrowerCreateRequest request) {
+        if (growerRepository.findByIdNumber(request.idNumber()).isPresent()) {
+            throw new BusinessRuleException("Ya existe un caficultor/conductor con esa cedula");
+        }
+        Agency agency = agencyRepository.findById(request.agencyId())
+                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
+
+        Grower grower = new Grower();
+        grower.setIdNumber(request.idNumber());
+        grower.setFirstName(request.firstName());
+        grower.setSecondName(request.secondName());
+        grower.setLastName(request.lastName());
+        grower.setSecondLastName(request.secondLastName());
+        grower.setAgency(agency);
+        grower.setAddress("");
+        grower.setPhone("");
+        grower.setGrowerType("C");
+        grower.setTransportCompany(request.transportCompany());
+        grower.setVehiclePlate(request.vehiclePlate());
+        Grower saved = growerRepository.save(grower);
+
+        return new GrowerResponse(
+                saved.getId(),
+                saved.getIdNumber(),
+                saved.getFirstName(),
+                saved.getSecondName(),
+                saved.getLastName(),
+                saved.getSecondLastName(),
+                saved.getAddress(),
+                saved.getPhone(),
+                saved.getGrowerType(),
+                saved.isActive(),
+                saved.isDeceased(),
+                saved.isWithdrawn(),
+                saved.getTransportCompany(),
+                saved.getVehiclePlate());
     }
 
     @Override

@@ -148,6 +148,16 @@ export const routes: Routes = [
       import('./features/remission-form/remission-form').then((m) => m.RemissionFormComponent),
   },
   {
+    path: 'compras/inventarios/reimprimir-remision',
+    loadComponent: () =>
+      import('./features/remission-reprint/remission-reprint').then((m) => m.RemissionReprintComponent),
+  },
+  {
+    path: 'compras/remesa',
+    loadComponent: () =>
+      import('./features/remesa-export/remesa-export').then((m) => m.RemesaExportComponent),
+  },
+  {
     path: 'compras/dialogo-fechas',
     loadComponent: () =>
       import('./features/date-range-dialog/date-range-dialog').then(

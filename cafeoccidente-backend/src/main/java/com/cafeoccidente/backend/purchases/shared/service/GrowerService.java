@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.shared.service;
 
+import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import java.math.BigDecimal;
@@ -9,6 +10,16 @@ public interface GrowerService {
 
     /** @throws com.cafeoccidente.backend.common.exception.ResourceNotFoundException si no existe (captura manual en el formulario). */
     GrowerResponse findByIdNumber(String idNumber);
+
+    /**
+     * Alta rápida de conductor (Form_Conductores.bas, "Ingresar Conductores" - ver
+     * Grower.transportCompany/vehiclePlate). Usado desde Registrar Salidas cuando la cédula no
+     * corresponde a ningún caficultor. growerType queda en "C" (no asociado): un conductor no es
+     * necesariamente un caficultor.
+     *
+     * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si la cédula ya existe.
+     */
+    GrowerResponse createConductor(GrowerCreateRequest request);
 
     /**
      * Programa/Cupo informativos desde staging_legacy_ness (Compras Cafe Seco). Vacio si no hay
@@ -35,7 +46,7 @@ public interface GrowerService {
      * PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE"). Solo bloquea para los Especiales con
      * cobertura de datos confirmada (staging_legacy_ness/SPECIAL_TO_PROGRAMA) - para el resto no
      * hay forma de distinguir "no pertenece" de "dato no migrado", mismo criterio que
-     * {@link #checkQuota}. NO esta activado para Cafe Seco/Verde/Pasilla/Otros (ver TODO(EnProg)
+     * {@link #checkQuota}. NO esta activado para Cafe Seco/Verde/Pasilla/Otros (ver nota EnProg
      * en la implementacion) - esa es una decision de negocio pendiente, distinta de esta.
      *
      * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si no pertenece.

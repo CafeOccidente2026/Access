@@ -7,12 +7,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
+import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
+import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.entity.LegacyNessProgram;
+import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.impl.GrowerServiceImpl;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -21,7 +27,9 @@ class GrowerServiceImplTest {
 
     private final GrowerRepository growerRepository = mock(GrowerRepository.class);
     private final LegacyNessProgramRepository legacyNessProgramRepository = mock(LegacyNessProgramRepository.class);
-    private final GrowerService growerService = new GrowerServiceImpl(growerRepository, legacyNessProgramRepository);
+    private final AgencyRepository agencyRepository = mock(AgencyRepository.class);
+    private final GrowerService growerService =
+            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository);
 
     /** LegacyNessProgram es una entidad de staging de solo lectura (solo @Getter, sin setters) -
      *  se instancia real y se llenan los campos por reflexion en vez de mockearla. */
@@ -99,5 +107,35 @@ class GrowerServiceImplTest {
 
         growerService.requireProgramMembership("123456", "rain");
         assertThat(true).isTrue();
+    }
+
+    @Test
+    void createConductorRejectsDuplicateIdNumber() {
+        when(growerRepository.findByIdNumber("123456")).thenReturn(Optional.of(new Grower()));
+
+        GrowerCreateRequest request =
+                new GrowerCreateRequest("123456", "Juan", null, "Perez", null, 1L, "Coop", "ABC123");
+
+        assertThatThrownBy(() -> growerService.createConductor(request))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Ya existe");
+    }
+
+    @Test
+    void createConductorDefaultsGrowerTypeToNoAsociado() {
+        when(growerRepository.findByIdNumber("999888")).thenReturn(Optional.empty());
+        Agency agency = new Agency();
+        agency.setId(1L);
+        when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency));
+        when(growerRepository.save(org.mockito.ArgumentMatchers.any(Grower.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        GrowerCreateRequest request =
+                new GrowerCreateRequest("999888", "Ana", null, "Gomez", null, 1L, "Coop", "XYZ987");
+        GrowerResponse response = growerService.createConductor(request);
+
+        assertThat(response.growerType()).isEqualTo("C");
+        assertThat(response.transportCompany()).isEqualTo("Coop");
+        assertThat(response.vehiclePlate()).isEqualTo("XYZ987");
     }
 }

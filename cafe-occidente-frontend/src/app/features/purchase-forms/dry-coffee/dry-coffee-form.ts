@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -147,6 +147,15 @@ export class DryCoffeeFormComponent {
     // gesto del click en "Imprimir" - si print() todavia estuviera esperando el fetch del logo en
     // ese momento, el navegador pierde el gesto de usuario y bloquea la pestaña como pop-up.
     this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
+    // Foco en el primer campo (Fondo) apenas carga el contenido: sin esto, el desplegable de Fondo
+    // no aparecia hasta que el cajero hacia clic a mano - con el foco ya puesto, se puede elegir
+    // directo con el mouse o escribiendo + Enter, y de ahi sigue el mismo avance automatico de
+    // siempre (advanceFocus).
+    effect(() => {
+      if (this.base()) {
+        this.focusField(FOCUS_ORDER[0]);
+      }
+    });
   }
 
   /** Paso 1: la agencia la trae la sesión autenticada, nunca la elige el usuario. */

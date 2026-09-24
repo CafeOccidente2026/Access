@@ -21,10 +21,16 @@ export class InventoryConsultaComponent {
 
   readonly movements = signal<InventoryMovementResponse[]>([]);
   readonly onlyWithBalance = signal(false);
+  readonly codeFilter = signal('');
 
-  readonly visibleMovements = computed(() =>
-    this.onlyWithBalance() ? this.movements().filter((m) => m.remainingKg > 0) : this.movements(),
-  );
+  readonly visibleMovements = computed(() => {
+    let list = this.onlyWithBalance() ? this.movements().filter((m) => m.remainingKg > 0) : this.movements();
+    const code = this.codeFilter().trim().toLowerCase();
+    if (code) {
+      list = list.filter((m) => m.productCode.toLowerCase().includes(code));
+    }
+    return list;
+  });
 
   constructor() {
     const agencyId = this.authService.agencyId();
