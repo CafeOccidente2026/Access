@@ -30,6 +30,26 @@ export function stripAnnouncementPrefix(value: string): string {
   return idx === -1 ? value : value.slice(idx + 1);
 }
 
+/** Valida un campo numerico entero sin decimales (precios de anuncio: Pr Base Carga, SobrePr,
+ *  Precio Pasilla, Pr Por Punto) mientras el usuario escribe. Devuelve el mensaje de error a
+ *  mostrar cerca del campo, o null si el valor (posiblemente vacio, mientras se sigue escribiendo)
+ *  es valido hasta ahora. Vacio no es error: recien se exige un valor al confirmar el formulario. */
+export function validateWholeNumberField(rawValue: string): string | null {
+  const trimmed = rawValue.trim();
+  if (trimmed === '') {
+    return null;
+  }
+  // Un punto de miles ya insertado por formatThousands es valido; cualquier otro caracter no.
+  const withoutThousands = trimmed.replace(/\./g, '');
+  if (!/^-?\d+$/.test(withoutThousands)) {
+    return 'No se aceptan letras, solo números';
+  }
+  if (withoutThousands.startsWith('-')) {
+    return 'No se aceptan valores negativos en este campo';
+  }
+  return null;
+}
+
 /** Convierte lo que el usuario digita (0, 122, o el formato colombiano 1,8 / 1.234,56) a number.
  *  `Number()` nativo no entiende la coma decimal -> sin esto, "1,8" da NaN (y termina viajando
  *  como null al backend, que lo rechaza con "must not be null" sin explicarle nada al usuario). */

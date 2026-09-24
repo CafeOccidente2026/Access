@@ -8,8 +8,7 @@
   "options": [
     { "label": "Registro de Control", "route": "/registro-control" },
     { "label": "Usuarios", "route": "/usuarios", "adminOnly": true },
-    { "label": "Actualizar Anuncio", "route": "/anuncios/actualizar", "adminOnly": true },
-    { "label": "Actualizar Anuncio Pasilla", "route": "/anuncios/actualizar-pasilla", "adminOnly": true },
+    { "label": "Actualizar Anuncios", "route": "/anuncios", "adminOnly": true },
     { "label": "Compras", "route": "/compras", "emphasis": true },
     { "label": "Suministros", "route": "/suministros" },
     { "label": "Vendedores", "route": "/vendedores" },

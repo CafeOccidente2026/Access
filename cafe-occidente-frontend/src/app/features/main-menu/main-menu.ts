@@ -22,7 +22,7 @@ export class MainMenuComponent {
 
   readonly data = toSignal(this.content.loadJson<MainMenuContent>('main-menu'));
 
-  /** El rol USER no ve las opciones exclusivas de ADMIN (Usuarios, Actualizar Anuncio). */
+  /** El rol USER no ve las opciones exclusivas de ADMIN (Usuarios, Actualizar Anuncios). */
   readonly options = computed<MenuOption[]>(() => {
     const isAdmin = this.auth.isAdmin();
     return (this.data()?.options ?? []).filter((option) => isAdmin || !option.adminOnly);

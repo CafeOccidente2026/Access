@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
-import { formatThousands } from '../../shared/utils/number-format';
+import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
 import { AnnouncementUpdateHuskContent } from './announcement-update-husk.model';
 
 type NumericField = 'basePriceLoad' | 'pointPrice';
@@ -41,6 +41,8 @@ export class AnnouncementUpdateHuskComponent {
 
   /** Valores formateados con puntos de miles, tal como se muestran en el input. */
   numeric: Record<NumericField, string> = { basePriceLoad: '', pointPrice: '' };
+  /** Mensaje de error puntual a mostrar cerca del campo, o null si lo que hay escrito es valido. */
+  fieldErrors: Record<NumericField, string | null> = { basePriceLoad: null, pointPrice: null };
   private successMessageTimeout?: ReturnType<typeof setTimeout>;
 
   constructor() {
@@ -52,8 +54,15 @@ export class AnnouncementUpdateHuskComponent {
     });
   }
 
-  /** Solo digitos, nunca letras ni signo negativo; formatea en vivo con puntos de miles. */
+  /** Valida en vivo mientras se escribe; si hay error deja ver lo tipeado tal cual, si no formatea
+   *  con puntos de miles como antes. */
   onNumericInput(field: NumericField, value: string): void {
+    const error = validateWholeNumberField(value);
+    this.fieldErrors[field] = error;
+    if (error) {
+      this.numeric[field] = value;
+      return;
+    }
     const digits = value.replace(/\D/g, '');
     this.numeric[field] = formatThousands(digits);
   }
@@ -78,6 +87,9 @@ export class AnnouncementUpdateHuskComponent {
   }
 
   private numberValue(field: NumericField): number | null {
+    if (this.fieldErrors[field]) {
+      return null;
+    }
     const digits = this.numeric[field].replace(/\./g, '');
     return digits === '' ? null : Number(digits);
   }
@@ -96,7 +108,10 @@ export class AnnouncementUpdateHuskComponent {
         this.message.set(`${this.page()?.successMessage ?? ''} ${announcement.announcementNumber}`);
         this.successMessageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
       },
-      error: () => this.error.set(this.page()?.errorMessage ?? null),
+      error: (err) => {
+        const message = (err as { error?: { message?: string } })?.error?.message;
+        this.error.set(message ?? this.page()?.errorMessage ?? null);
+      },
     });
   }
 }

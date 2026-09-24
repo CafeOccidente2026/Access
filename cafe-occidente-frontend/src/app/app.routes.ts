@@ -31,6 +31,14 @@ export const routes: Routes = [
       import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
   },
   {
+    path: 'anuncios',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/announcements-menu/announcements-menu').then(
+        (m) => m.AnnouncementsMenuComponent,
+      ),
+  },
+  {
     path: 'anuncios/actualizar',
     canActivate: [adminGuard],
     loadComponent: () =>

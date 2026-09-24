@@ -3,31 +3,45 @@
     <section class="flex flex-col gap-3">
       <h2 class="text-sm font-semibold text-slate-700">{{ p.sectionTitle }}</h2>
 
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
-        <input
-          type="text"
-          inputmode="numeric"
-          data-field-key="basePriceLoad"
-          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [value]="numeric.basePriceLoad"
-          (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
-          (keydown.enter)="onEnter('basePriceLoad')"
-        />
-      </label>
+      <div class="flex flex-col gap-1">
+        <label class="flex items-center gap-2 text-sm">
+          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            data-field-key="basePriceLoad"
+            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+            [class.border-red-500]="fieldErrors.basePriceLoad"
+            [class.bg-red-50]="fieldErrors.basePriceLoad"
+            [class.border-slate-300]="!fieldErrors.basePriceLoad"
+            [class.bg-white]="!fieldErrors.basePriceLoad"
+            [value]="numeric.basePriceLoad"
+            (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+            (keydown.enter)="onEnter('basePriceLoad')"
+          />
+        </label>
+        <p *ngIf="fieldErrors.basePriceLoad" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.basePriceLoad }}</p>
+      </div>
 
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.pointPriceLabel }}:</span>
-        <input
-          type="text"
-          inputmode="numeric"
-          data-field-key="pointPrice"
-          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [value]="numeric.pointPrice"
-          (input)="onNumericInput('pointPrice', $any($event.target).value)"
-          (keydown.enter)="onEnter('pointPrice')"
-        />
-      </label>
+      <div class="flex flex-col gap-1">
+        <label class="flex items-center gap-2 text-sm">
+          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.pointPriceLabel }}:</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            data-field-key="pointPrice"
+            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+            [class.border-red-500]="fieldErrors.pointPrice"
+            [class.bg-red-50]="fieldErrors.pointPrice"
+            [class.border-slate-300]="!fieldErrors.pointPrice"
+            [class.bg-white]="!fieldErrors.pointPrice"
+            [value]="numeric.pointPrice"
+            (input)="onNumericInput('pointPrice', $any($event.target).value)"
+            (keydown.enter)="onEnter('pointPrice')"
+          />
+        </label>
+        <p *ngIf="fieldErrors.pointPrice" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.pointPrice }}</p>
+      </div>
 
       <p *ngIf="message()" class="text-sm text-green-700">{{ message() }}</p>
       <p *ngIf="error()" class="text-sm text-red-600">{{ error() }}</p>

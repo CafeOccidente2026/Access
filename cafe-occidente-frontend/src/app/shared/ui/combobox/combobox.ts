@@ -37,7 +37,7 @@ function normalize(text: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ComboboxComponent implements OnChanges {
-  @Input({ required: true }) options: string[] = [];
+  @Input({ required: true }) options: readonly string[] = [];
   @Input() value: string | number = '';
   @Input() disabled = false;
   @Input() dataFieldKey = '';
@@ -51,7 +51,7 @@ export class ComboboxComponent implements OnChanges {
 
   inputText = '';
   isOpen = false;
-  filteredOptions: string[] = [];
+  filteredOptions: readonly string[] = [];
   highlightedIndex = -1;
 
   private closeTimer: ReturnType<typeof setTimeout> | null = null;

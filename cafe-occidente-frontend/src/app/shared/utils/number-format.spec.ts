@@ -4,6 +4,7 @@ import {
   formatThousands,
   parseDisplayNumber,
   stripAnnouncementPrefix,
+  validateWholeNumberField,
 } from './number-format';
 
 describe('parseDisplayNumber', () => {
@@ -60,6 +61,30 @@ describe('formatThousands', () => {
 
   it('leaves short numbers untouched', () => {
     expect(formatThousands('250')).toBe('250');
+  });
+});
+
+describe('validateWholeNumberField', () => {
+  it('allows an empty value (validation only applies once something is typed)', () => {
+    expect(validateWholeNumberField('')).toBeNull();
+    expect(validateWholeNumberField('   ')).toBeNull();
+  });
+
+  it('allows a plain digit string', () => {
+    expect(validateWholeNumberField('1200000')).toBeNull();
+  });
+
+  it('allows a value already formatted with thousands dots', () => {
+    expect(validateWholeNumberField('1.200.000')).toBeNull();
+  });
+
+  it('flags letters with the specific message', () => {
+    expect(validateWholeNumberField('12a3')).toBe('No se aceptan letras, solo números');
+    expect(validateWholeNumberField('abc')).toBe('No se aceptan letras, solo números');
+  });
+
+  it('flags a negative value with the specific message', () => {
+    expect(validateWholeNumberField('-500')).toBe('No se aceptan valores negativos en este campo');
   });
 });
 
