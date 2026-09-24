@@ -1,0 +1,83 @@
+{
+  "windowTitle": "COMPRAS CUPOS",
+  "theme": "green",
+  "compactFields": true,
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "text", "readonly": true },
+    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    {
+      "key": "special",
+      "label": "Especial",
+      "type": "select",
+      "options": [
+        "RN", "NESPRESSO - FTUSA", "REGIONAL NARIÑO 4C", "NESPRESSO LATE HARVEST - FTUSA",
+        "NESPRESSO CON TAZA - FTUSA", "RAINFOREST", "ESTANDAR", "CORR", "ILLY",
+        "REGIONAL NARIÑO DIFERENCIADO 85 - 85.9", "REGIONAL NARIÑO DIFERENCIADO 84 - 84.9",
+        "COLOMBIA TIERRA DE DIVERSIDAD", "MICROLOTES 88+", "MICROLOTES 86 - 87.9"
+      ]
+    },
+    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
+  ],
+  "identificationFields": [
+    { "key": "invoice", "label": "Factura", "type": "text", "readonly": true },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "readonly": true },
+    { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency", "readonly": true },
+    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency", "readonly": true }
+  ],
+  "federationHeading": "Información Federación:",
+  "federationFields": [
+    { "key": "idNumber", "label": "Cédula", "type": "text", "readonly": true },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "readonly": true },
+    { "key": "program", "label": "Programa", "type": "text", "readonly": true }
+  ],
+  "contactFields": [
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
+    { "key": "firstNames", "label": "", "type": "text", "readonly": true },
+    { "key": "lastNames", "label": "", "type": "text", "readonly": true },
+    { "key": "idType", "label": "Tipo", "type": "text", "readonly": true },
+    { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
+    { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true }
+  ],
+  "qualityFields": [
+    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true },
+    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true }
+  ],
+  "weightFields": [
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number" },
+    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage", "readonly": true },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number" },
+    { "key": "huskPercentage", "label": "Porc Kg Pas %", "type": "percentage", "readonly": true },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number" },
+    { "key": "factor", "label": "Factor", "type": "number", "readonly": true }
+  ],
+  "netWeightFields": [
+    { "key": "bags", "label": "Sacos", "type": "number" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
+    { "key": "tare", "label": "Destare", "type": "number" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number", "readonly": true },
+    { "key": "penalty", "label": "Castigo", "type": "currency" }
+  ],
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [{ "label": "Efectivo", "value": "" }],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": ""
+  },
+  "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
+  ],
+  "additionalDiscountFields": [
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
+  ],
+  "settlementSecondaryFields": [
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
+  ]
+}

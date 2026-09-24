@@ -1,0 +1,7 @@
+{
+  "windowTitle": "ACTUALIZAR ANUNCIOS",
+  "options": [
+    { "label": "Actualizar Anuncio con Factor", "route": "/anuncios/actualizar", "emphasis": true },
+    { "label": "Actualizar Anuncio Pasilla", "route": "/anuncios/actualizar-pasilla" }
+  ]
+}

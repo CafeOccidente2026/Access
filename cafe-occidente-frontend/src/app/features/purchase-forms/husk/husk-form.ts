@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
@@ -15,7 +15,8 @@ import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -24,6 +25,7 @@ interface HuskMessages {
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
+  readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
   readonly closeWarning: string;
@@ -40,29 +42,30 @@ type HuskContent = PurchaseFormContent & { readonly messages: HuskMessages };
  * ningun sub de Form_PASILLA.bas).
  */
 const EDITABLE: string[] = [
-  'idNumber', 'fullName', 'almondWeight',
+  'idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'almondWeight',
   'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idNumber', 'fullName', 'almondWeight', 'bags', 'grossKg', 'tare'];
+const REQUIRED: string[] = ['idPart1', 'firstName', 'lastName', 'almondWeight', 'bags', 'grossKg', 'tare'];
+
+/** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). Husk no tiene
+ *  Castigo (penalty) - ver docs/informe-formulas-compras-vs-vba.md. */
+const ZERO_IF_EMPTY: string[] = ['shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
-  'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode',
-  'basePriceDryLoad', 'idPart1', 'special', 'pointPrice', 'almondPercentage', 'netKg', 'kgPrice',
-  'withholding',
+  'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoicePrefix', 'invoiceNumber',
+  'productCode', 'basePriceDryLoad', 'special', 'pointPrice', 'almondPercentage', 'netKg',
+  'kgPrice', 'withholding',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente (sigue el orden visual del JSON: calidad
  *  antes que pesos - igual que W_AlmSana_AfterUpdate/Destare_LostFocus son independientes). */
 const FOCUS_ORDER: string[] = [
-  'idNumber', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
-const num = (v: string | undefined | null): number => {
-  const s = (v ?? '').trim();
-  return s === '' ? 0 : Number(s);
-};
+const num = parseDisplayNumber;
 
 /**
  * Compra Pasilla (PASILLA). Mismo patron que Compras Cafe Seco/VERDES: agencia fija por sesion,
@@ -117,6 +120,12 @@ export class HuskFormComponent {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
+    // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
+    effect(() => {
+      if (this.base()) {
+        this.focusField(FOCUS_ORDER[0]);
+      }
+    });
   }
 
   private prefillAgency(): void {
@@ -139,10 +148,15 @@ export class HuskFormComponent {
     if (value === '' && REQUIRED.includes(key)) {
       return;
     }
-    this.locked.add(key);
+    if (value === '' && ZERO_IF_EMPTY.includes(key)) {
+      this.model[key] = '0';
+    }
+    if (key !== 'idPart1') {
+      this.locked.add(key);
+    }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idNumber') {
+    if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
   }
@@ -166,10 +180,11 @@ export class HuskFormComponent {
 
   private runSideEffects(key: string): void {
     switch (key) {
-      case 'idNumber':
+      case 'idPart1':
         this.lookupGrower();
         break;
       case 'almondWeight':
+      case 'grossKg':
       case 'tare':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
@@ -203,6 +218,7 @@ export class HuskFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        this.announcementInfo.set(null);
         this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -211,7 +227,7 @@ export class HuskFormComponent {
 
   /** Cedula_LostFocus: busca el caficultor; bloquea el formulario si esta fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -223,19 +239,28 @@ export class HuskFormComponent {
           this.tick.update((n) => n + 1);
           return;
         }
-        const fullName = [grower.firstName, grower.secondName, grower.lastName, grower.secondLastName]
-          .filter(Boolean)
-          .join(' ');
-        this.model['fullName'] = fullName;
+        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
+        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        this.locked.add('fullName');
+        this.locked.add('idPart1');
+        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
+        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
+        // la cascada de calculo nunca llegaba a dispararse.
+        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
+          if ((this.model[k] ?? '').trim() !== '') {
+            this.locked.add(k);
+          }
+        });
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idNumber');
+        this.advanceFocus('idPart1');
       },
-      // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => this.advanceFocus('idNumber'),
+      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
+      error: () => {
+        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
+        this.tick.update((n) => n + 1);
+      },
     });
   }
 
@@ -251,6 +276,7 @@ export class HuskFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        this.calc.set(null);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -264,14 +290,13 @@ export class HuskFormComponent {
     if (!agencyId || !invoiceNumber || !info) {
       return null;
     }
-    const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
       agencyId,
       fundId: info.fundId,
       invoiceNumber,
-      idNumber: this.model['idNumber'],
-      firstName,
-      lastName,
+      idNumber: this.model['idPart1'],
+      firstName: this.model['firstName'] ?? '',
+      lastName: this.model['lastName'] ?? '',
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'] ?? '',
       cellphone: this.model['cellphone'] ?? '',
@@ -304,7 +329,8 @@ export class HuskFormComponent {
         this.savedNoticeOpen.set(true);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error al registrar compra Pasilla:', err?.error ?? err);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -388,29 +414,15 @@ export class HuskFormComponent {
     );
   }
 
-  private splitName(full: string): [string, string] {
-    const parts = full.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return ['', ''];
-    }
-    if (parts.length === 1) {
-      return [parts[0], parts[0]];
-    }
-    const mid = Math.ceil(parts.length / 2);
-    return [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')];
-  }
-
   private buildContent(base: HuskContent): PurchaseFormContent {
     const bmap = new Map<string, FormFieldDefinition>();
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
     collect(base.topFields);
     collect(base.identificationFields);
     collect(base.federationFields);
-    collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.netWeightFields);
     collect(base.settlementFields);
-    collect(base.settlementSecondaryFields);
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
     }
@@ -423,12 +435,12 @@ export class HuskFormComponent {
       agency: this.authService.agencyName() ?? '',
       fund: 'RP',
       date: this.today,
-      announcement: info?.announcementNumber ?? '',
+      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
       announcementDate: info?.announcementDate ?? '',
-      invoice: inv ? `${inv.prefix}${inv.invoiceNumber}` : '',
+      invoicePrefix: inv?.prefix ?? '',
+      invoiceNumber: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
       basePriceDryLoad: info?.basePriceDryLoad ?? '',
-      idPart1: this.model['idNumber'] ?? '',
       special: 'PASILLA',
       pointPrice: info?.pointPrice ?? '',
       almondPercentage: c?.almondPercentage ?? '',
@@ -446,6 +458,8 @@ export class HuskFormComponent {
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
+      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+        patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
@@ -463,11 +477,9 @@ export class HuskFormComponent {
       topFields: row(base.topFields)!,
       identificationFields: row(base.identificationFields)!,
       federationFields: row(base.federationFields),
-      contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,
-      settlementSecondaryFields: row(base.settlementSecondaryFields),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentPanel: base.paymentPanel
         ? {

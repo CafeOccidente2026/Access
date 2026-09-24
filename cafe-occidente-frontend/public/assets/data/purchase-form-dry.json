@@ -2,14 +2,16 @@
   "windowTitle": "COMPRAS",
   "theme": "sky",
   "topFields": [
-    { "key": "agency", "label": "Agencia", "type": "text" },
+    { "key": "agency", "label": "Agencia", "type": "text", "inputWidthClass": "max-w-[140px]" },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
-    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true, "inputWidthClass": "min-w-[130px]" },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
-    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "inputWidthClass": "min-w-[130px]" }
+    { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true, "inputWidthClass": "max-w-[135px]" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "rawDisplay": true },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "inputWidthClass": "max-w-[135px]" },
+    { "key": "associated", "label": "", "type": "text", "inputWidthClass": "max-w-[90px]" }
   ],
   "identificationFields": [
-    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "invoicePrefix", "label": "Factura", "type": "text" },
+    { "key": "invoiceNumber", "label": "", "type": "text" },
     { "key": "productCode", "label": "Cod Prod", "type": "text" },
     { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency" },
     { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }
@@ -23,7 +25,7 @@
   ],
   "federationHighlightClass": "bg-green-200",
   "contactFields": [
-    { "key": "idPart1", "label": "Cedula", "type": "text" },
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
     { "key": "idType", "label": "Tipo", "type": "text" },
     { "key": "address", "label": "Direccion", "type": "text" },
     { "key": "cellphone", "label": "Celular", "type": "text" }
@@ -33,6 +35,7 @@
       "key": "special",
       "label": "Especial",
       "type": "select",
+      "inputWidthClass": "max-w-[200px]",
       "options": [
         "RN",
         "RAINFOREST",
@@ -58,8 +61,8 @@
       ]
     },
     { "key": "sustentationPrice", "label": "Pr Sustentación", "type": "currency" },
-    { "key": "bonus", "label": "Bonificación", "type": "currency" },
-    { "key": "costs", "label": "Costos", "type": "currency" }
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
+    { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
   ],
   "weightFields": [
     { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "count" },
@@ -70,13 +73,13 @@
     { "key": "factor", "label": "Factor", "type": "number" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
-    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "netKg", "label": "Kilos Netos", "type": "count" },
-    { "key": "penalty", "label": "Castigo", "type": "currency" }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "integer": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],
@@ -85,19 +88,20 @@
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" },
-    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true }
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
   ],
   "additionalDiscountFields": [
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency" }
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
   ],
-  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency" },
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true },
   "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia y el fondo seleccionados.",
     "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
     "saveError": "No se pudo registrar la compra. Verifique los datos.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",

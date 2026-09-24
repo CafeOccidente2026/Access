@@ -14,5 +14,6 @@ public record AnnouncementResponse(
         BigDecimal costs,
         Long agencyId,
         Long fundId,
-        String specialType) {
+        String specialType,
+        BigDecimal qualityIncrement) {
 }

@@ -5,6 +5,8 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
@@ -24,7 +26,9 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,6 +48,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final DryCoffeePurchaseCalculator calculator;
     private final DryCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final GrowerService growerService;
+    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InventoryMovementService inventoryMovementService;
 
     public DryCoffeePurchaseServiceImpl(
             DryCoffeePurchaseRepository dryCoffeePurchaseRepository,
@@ -54,7 +61,10 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             ControlRecordService controlRecordService,
             DryCoffeePurchaseCalculator calculator,
             DryCoffeePurchaseMapper mapper,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            GrowerService growerService,
+            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InventoryMovementService inventoryMovementService) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -64,6 +74,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.growerService = growerService;
+        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.inventoryMovementService = inventoryMovementService;
     }
 
     @Override
@@ -76,7 +89,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         ProductCode productCode = productCodeResolver.resolve(request.specialType(), fund.getId());
         AnnouncementResponse announcement =
                 announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
-        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement);
+        ControlRecord controlRecord = controlRecordService.getActive(agency.getId());
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement, controlRecord);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
@@ -126,46 +140,57 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
-        return mapper.toResponse(dryCoffeePurchaseRepository.save(purchase));
+        DryCoffeePurchase savedPurchase = dryCoffeePurchaseRepository.save(purchase);
+
+        inventoryMovementService.recordFromPurchaseSafely(
+                InventoryMovement.PurchaseModule.DRY_COFFEE, savedPurchase.getId(),
+                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
+                purchase.getHealthyPercentage(), purchase.getInventoryValue());
+
+        return mapper.toResponse(savedPurchase, controlRecord);
     }
 
     @Override
     public DryCoffeePurchaseResponse findById(Long id) {
-        return dryCoffeePurchaseRepository.findById(id)
-                .map(mapper::toResponse)
+        DryCoffeePurchase purchase = dryCoffeePurchaseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de cafe seco no encontrada"));
+        ControlRecord controlRecord = controlRecordService.getActive(purchase.getAgency().getId());
+        return mapper.toResponse(purchase, controlRecord);
     }
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
         AnnouncementResponse announcement = announcementService.findLatest(
                 request.agencyId(), request.fundId(), request.specialType());
-        return runCalculation(request, announcement);
+        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
+        return runCalculation(request, announcement, controlRecord);
     }
 
-    /** Fetches the current user's agency ControlRecord + acumulado mensual and runs the cascade. */
+    /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
     private DryCoffeePurchaseCalculation runCalculation(
-            DryCoffeePurchaseRequest request, AnnouncementResponse announcement) {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
-
+            DryCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord) {
         YearMonth currentMonth = YearMonth.now();
         MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
 
-        return calculator.calculate(
+        DryCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
                 announcement.defectiveUnitPrice(),
                 monthlyTotals.grossValue(),
                 monthlyTotals.withholding());
+        // Item C (cupo, Form_COMPRAS.bas lineas 412/465/518/571/624) - ver GrowerService.checkQuota.
+        growerService.checkQuota(request.idNumber(), request.specialType(), calculation.netKg());
+        return calculation;
     }
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = securityUtils.getCurrentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = dryCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId);
+        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(
@@ -188,10 +213,13 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         ProductCode productCode = productCodeResolver.resolve(specialType, fundId);
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId, specialType);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) de la agencia
-        // compradora (Form_COMPRAS.bas: Pr_Base_PC = vrcps - (Costos * Texto176)).
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio maestro - (Costos * BaseCarga)
+        // (Form_COMPRAS.bas: Pr_Base_PC = vrcps - (Costos * Texto176)). Desde el anuncio compartido
+        // entre agencias (ver docs/diseno-anuncios-compartidos.md), "Costos" ya NO viene congelado:
+        // announcement.costs() lo calcula AnnouncementServiceImpl.findLatest() con el ControlRecord
+        // VIVO de esta agencia (decision de negocio para el sistema nuevo, distinta del VBA legado).
         BigDecimal basePriceLoad = announcement.basePriceLoad()
-                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(2, java.math.RoundingMode.HALF_UP);
         return new SpecialInfoResponse(
                 productCode.getCode(),

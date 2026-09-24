@@ -5,6 +5,8 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.husk.dto.AnnouncementInfoResponse;
@@ -23,7 +25,9 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -47,6 +51,9 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final HuskPurchaseCalculator calculator;
     private final HuskPurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final GrowerService growerService;
+    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InventoryMovementService inventoryMovementService;
 
     public HuskPurchaseServiceImpl(
             HuskPurchaseRepository huskPurchaseRepository,
@@ -57,7 +64,10 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             ControlRecordService controlRecordService,
             HuskPurchaseCalculator calculator,
             HuskPurchaseMapper mapper,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            GrowerService growerService,
+            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InventoryMovementService inventoryMovementService) {
         this.huskPurchaseRepository = huskPurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -67,6 +77,9 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.growerService = growerService;
+        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.inventoryMovementService = inventoryMovementService;
     }
 
     @Override
@@ -121,7 +134,15 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
-        return mapper.toResponse(huskPurchaseRepository.save(purchase));
+        HuskPurchase savedPurchase = huskPurchaseRepository.save(purchase);
+
+        inventoryMovementService.recordFromPurchaseSafely(
+                InventoryMovement.PurchaseModule.HUSK, savedPurchase.getId(),
+                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
+                purchase.getAlmondPercentage(), purchase.getInventoryValue());
+
+        return mapper.toResponse(savedPurchase);
     }
 
     @Override
@@ -145,14 +166,19 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         MonthlyGrowerTotals monthlyTotals = huskPurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
 
-        return calculator.calculate(request, controlRecord, monthlyTotals.grossValue(), monthlyTotals.withholding());
+        HuskPurchaseCalculation calculation =
+                calculator.calculate(request, controlRecord, monthlyTotals.grossValue(), monthlyTotals.withholding());
+        // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("PASILLA") nunca matchea
+        // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
+        growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());
+        return calculation;
     }
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = securityUtils.getCurrentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = huskPurchaseRepository.findMaxInvoiceNumber(agencyId);
+        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(

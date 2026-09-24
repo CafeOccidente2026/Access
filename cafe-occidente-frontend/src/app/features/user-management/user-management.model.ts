@@ -3,9 +3,10 @@ export interface UserManagementContent {
   readonly userSectionTitle: string;
   readonly usernameLabel: string;
   readonly passwordLabel: string;
+  readonly passwordHint: string;
+  readonly passwordInvalidMessage: string;
   readonly roleLabel: string;
   readonly agencyLabel: string;
   readonly createUserButton: string;
-  readonly userCreatedMessage: string;
   readonly errorMessage: string;
 }

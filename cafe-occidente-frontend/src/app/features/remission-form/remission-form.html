@@ -1,0 +1,145 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window title="REGISTRAR SALIDAS" bodyClass="bg-white">
+    <div class="flex flex-col gap-4 p-4" *ngIf="!result()">
+      <div class="grid grid-cols-3 gap-4">
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">Fecha</span>
+          <input type="date" class="rounded border border-slate-300 px-2 py-1" [value]="remissionDate()" (input)="remissionDate.set($any($event.target).value)" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">Destino</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="destination()" (input)="destination.set($any($event.target).value)" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">Cédula Conductor (opcional)</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="conductorIdNumber()" (input)="conductorIdNumber.set($any($event.target).value)" (blur)="onConductorBlur()" />
+        </label>
+      </div>
+
+      <div *ngIf="conductor() as c" class="rounded bg-teal-50 p-2 text-sm text-teal-900">
+        {{ c.firstName }} {{ c.lastName }} — {{ c.transportCompany || 'sin transportadora registrada' }} — Placa: {{ c.vehiclePlate || 'N/A' }}
+      </div>
+      <div *ngIf="conductorNotFound() && !showNewConductorForm()" class="flex items-center justify-between rounded bg-red-50 p-2 text-sm text-red-700">
+        <span>Esa cédula no corresponde a ningún caficultor registrado.</span>
+        <button type="button" class="rounded border border-red-400 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100" (click)="openNewConductorForm()">
+          Ingresar Conductor
+        </button>
+      </div>
+
+      <div *ngIf="showNewConductorForm()" class="rounded border border-teal-300 bg-teal-50 p-3">
+        <h2 class="mb-2 text-sm font-semibold text-teal-900">Ingresar Conductor — Cédula {{ conductorIdNumber() }}</h2>
+        <div class="grid grid-cols-4 gap-3">
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Nombre</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorFirstName()" (input)="newConductorFirstName.set($any($event.target).value)" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Apellido</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorLastName()" (input)="newConductorLastName.set($any($event.target).value)" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Transportadora</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorTransportCompany()" (input)="newConductorTransportCompany.set($any($event.target).value)" />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span>Placa</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="newConductorVehiclePlate()" (input)="newConductorVehiclePlate.set($any($event.target).value)" />
+          </label>
+        </div>
+        <p *ngIf="newConductorError()" class="mt-2 text-sm text-red-600">{{ newConductorError() }}</p>
+        <div class="mt-2 flex justify-end gap-2">
+          <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 text-sm hover:bg-slate-100" (click)="showNewConductorForm.set(false)">
+            Cancelar
+          </button>
+          <button type="button" class="rounded border border-teal-500 bg-teal-600 px-3 py-1 text-sm font-medium text-white hover:bg-teal-700" (click)="saveNewConductor()">
+            Guardar Conductor
+          </button>
+        </div>
+      </div>
+
+      <div class="rounded border border-slate-300 p-3">
+        <h2 class="mb-2 text-sm font-semibold text-blue-900">Agregar línea de despacho</h2>
+        <div class="flex items-end gap-3">
+          <label class="flex flex-1 flex-col gap-1 text-sm">
+            <span>Movimiento de inventario</span>
+            <select class="rounded border border-slate-300 px-2 py-1" [value]="selectedMovementId()" (change)="selectedMovementId.set($any($event.target).value ? +$any($event.target).value : null)">
+              <option [value]="null"></option>
+              <option *ngFor="let m of availableMovements()" [value]="m.id">
+                Factura {{ m.invoiceNumber }} - {{ m.specialType }} - Saldo: {{ kg(m.remainingKg) }} kg
+              </option>
+            </select>
+          </label>
+          <label class="flex w-40 flex-col gap-1 text-sm">
+            <span>Cantidad (kg)</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="draftQuantity()" (input)="draftQuantity.set($any($event.target).value)" />
+          </label>
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="addLine()">
+            Agregar
+          </button>
+        </div>
+      </div>
+
+      <table class="w-full text-sm" *ngIf="lines().length > 0">
+        <thead>
+          <tr class="border-b border-slate-300 text-left">
+            <th class="p-2">Origen</th>
+            <th class="p-2 text-right">Cantidad (kg)</th>
+            <th class="p-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let line of lines(); let i = index" class="border-b border-slate-100">
+            <td class="p-2">{{ line.label }}</td>
+            <td class="p-2 text-right">{{ kg(line.quantity) }}</td>
+            <td class="p-2 text-right">
+              <button type="button" class="text-red-600 hover:underline" (click)="removeLine(i)">Quitar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p *ngIf="errorMessage()" class="text-sm text-red-600">{{ errorMessage() }}</p>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200 disabled:opacity-50"
+          [disabled]="!canSave()"
+          (click)="save()"
+        >
+          Guardar Remisión
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3 p-6" *ngIf="result() as r">
+      <p class="text-lg font-semibold text-green-700">Remisión N° {{ r.remissionNumber }} registrada correctamente.</p>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-300 text-left">
+            <th class="p-2">Movimiento</th>
+            <th class="p-2 text-right">Cantidad</th>
+            <th class="p-2 text-right">Vr. Unitario</th>
+            <th class="p-2 text-right">Vr. Salida</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let line of r.lines" class="border-b border-slate-100">
+            <td class="p-2">{{ line.inventoryMovementId }}</td>
+            <td class="p-2 text-right">{{ kg(line.quantity) }}</td>
+            <td class="p-2 text-right">{{ kg(line.unitValue) }}</td>
+            <td class="p-2 text-right">{{ kg(line.outputValue) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="print()">
+          Imprimir
+        </button>
+        <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="reset()">
+          Nueva Remisión
+        </button>
+      </div>
+    </div>
+  </app-access-window>
+</div>

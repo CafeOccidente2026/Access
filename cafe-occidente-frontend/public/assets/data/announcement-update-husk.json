@@ -1,0 +1,9 @@
+{
+  "windowTitle": "ACTUALIZAR ANUNCIO PASILLA",
+  "sectionTitle": "Actualizar precios",
+  "basePriceLoadLabel": "Pr Base Carg Perg Seco",
+  "pointPriceLabel": "Pr Por Punto",
+  "updateButton": "Actualizar",
+  "successMessage": "Anuncio actualizado. Número asignado:",
+  "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
+}

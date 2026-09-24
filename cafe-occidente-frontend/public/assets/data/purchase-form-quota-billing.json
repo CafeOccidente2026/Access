@@ -2,11 +2,11 @@
   "windowTitle": "ANUNCIADAS",
   "theme": "cyan",
   "topFields": [
-    { "key": "agency", "label": "Agencia", "type": "select", "options": [] },
+    { "key": "agency", "label": "Agencia", "type": "text", "readonly": true },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
-    { "key": "date", "label": "Fecha", "type": "date", "value": "4/09/2026", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
-    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
+    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
   ],
   "identificationFields": [
     { "key": "invoice", "label": "Factura", "type": "text" },
@@ -15,10 +15,12 @@
     { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }
   ],
   "contactFields": [
-    { "key": "idPart1", "label": "Cedula", "type": "text" },
-    { "key": "idType", "label": "Tipo", "type": "text" },
-    { "key": "address", "label": "Direccion", "type": "text" },
-    { "key": "cellphone", "label": "Cel", "type": "text" }
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
+    { "key": "firstNames", "label": "", "type": "text", "readonly": true },
+    { "key": "lastNames", "label": "", "type": "text", "readonly": true },
+    { "key": "idType", "label": "Tipo", "type": "text", "readonly": true },
+    { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
+    { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true }
   ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "select", "options": [] },
@@ -50,7 +52,16 @@
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
-  ]
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
+  ],
+  "additionalDiscountFields": [
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
+  ],
+  "settlementSecondaryFields": [
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
+  ],
+  "compactFields": true
 }

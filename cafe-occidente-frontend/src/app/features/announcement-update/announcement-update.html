@@ -14,56 +14,76 @@
         </select>
       </label>
 
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
-        <input
-          type="text"
-          inputmode="numeric"
-          data-field-key="basePriceLoad"
-          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [value]="numeric.basePriceLoad"
-          (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
-          (keydown.enter)="onEnter('basePriceLoad')"
-        />
-      </label>
+      <div class="flex flex-col gap-1">
+        <label class="flex items-center gap-2 text-sm">
+          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.basePriceLoadLabel }}:</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            data-field-key="basePriceLoad"
+            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+            [class.border-red-500]="fieldErrors.basePriceLoad"
+            [class.bg-red-50]="fieldErrors.basePriceLoad"
+            [class.border-slate-300]="!fieldErrors.basePriceLoad"
+            [class.bg-white]="!fieldErrors.basePriceLoad"
+            [value]="numeric.basePriceLoad"
+            (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+            (keydown.enter)="onEnter('basePriceLoad')"
+          />
+        </label>
+        <p *ngIf="fieldErrors.basePriceLoad" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.basePriceLoad }}</p>
+      </div>
 
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialSurchargeLabel }}:</span>
-        <input
-          type="text"
-          inputmode="numeric"
-          data-field-key="specialSurcharge"
-          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [value]="numeric.specialSurcharge"
-          (input)="onNumericInput('specialSurcharge', $any($event.target).value)"
-          (keydown.enter)="onEnter('specialSurcharge')"
-        />
-      </label>
+      <div class="flex flex-col gap-1">
+        <label class="flex items-center gap-2 text-sm">
+          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialSurchargeLabel }}:</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            data-field-key="specialSurcharge"
+            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:outline-none"
+            [class.border-red-500]="fieldErrors.specialSurcharge"
+            [class.bg-red-50]="fieldErrors.specialSurcharge"
+            [class.border-slate-300]="!fieldErrors.specialSurcharge"
+            [class.bg-white]="!fieldErrors.specialSurcharge"
+            [value]="numeric.specialSurcharge"
+            (input)="onNumericInput('specialSurcharge', $any($event.target).value)"
+            (keydown.enter)="onEnter('specialSurcharge')"
+          />
+        </label>
+        <p *ngIf="fieldErrors.specialSurcharge" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.specialSurcharge }}</p>
+      </div>
 
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.defectiveUnitPriceLabel }}:</span>
-        <input
-          type="text"
-          inputmode="numeric"
-          data-field-key="defectiveUnitPrice"
-          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [value]="numeric.defectiveUnitPrice"
-          (input)="onNumericInput('defectiveUnitPrice', $any($event.target).value)"
-          (keydown.enter)="onEnter('defectiveUnitPrice')"
-        />
-      </label>
+      <div class="flex flex-col gap-1">
+        <label class="flex items-center gap-2 text-sm">
+          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.defectiveUnitPriceLabel }}:</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            data-field-key="defectiveUnitPrice"
+            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:outline-none"
+            [class.border-red-500]="fieldErrors.defectiveUnitPrice"
+            [class.bg-red-50]="fieldErrors.defectiveUnitPrice"
+            [class.border-slate-300]="!fieldErrors.defectiveUnitPrice"
+            [class.bg-white]="!fieldErrors.defectiveUnitPrice"
+            [value]="numeric.defectiveUnitPrice"
+            (input)="onNumericInput('defectiveUnitPrice', $any($event.target).value)"
+            (keydown.enter)="onEnter('defectiveUnitPrice')"
+          />
+        </label>
+        <p *ngIf="fieldErrors.defectiveUnitPrice" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.defectiveUnitPrice }}</p>
+      </div>
 
       <label class="flex items-center gap-2 text-sm">
         <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialTypeLabel }}:</span>
-        <select
-          data-field-key="specialType"
-          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [(ngModel)]="specialType"
-          (keydown.enter)="onEnter('specialType')"
-        >
-          <option value=""></option>
-          <option *ngFor="let special of p.specialOptions" [value]="special">{{ special }}</option>
-        </select>
+        <app-combobox
+          dataFieldKey="specialType"
+          inputClass="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [options]="p.specialOptions"
+          [value]="specialType"
+          (valueChange)="specialType = $event"
+          (committed)="onEnter('specialType')"
+        ></app-combobox>
       </label>
 
       <p *ngIf="message()" class="text-sm text-green-700">{{ message() }}</p>

@@ -6,11 +6,17 @@
   <div class="flex flex-col text-slate-800" [class]="content.compactFields ? 'gap-0.5 px-3 py-1' : 'gap-4 p-5'">
     <app-field-row
       [fields]="content.topFields"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[100px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
     <app-field-row
       [fields]="content.identificationFields"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[140px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
@@ -29,30 +35,36 @@
     <app-field-row
       *ngIf="content.contactFields"
       [fields]="content.contactFields"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[150px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
     <app-field-row
       *ngIf="content.qualityFields"
       [fields]="content.qualityFields"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[100px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
     <app-field-row
       *ngIf="content.weightFields"
       [fields]="content.weightFields"
-      [fieldWidthClass]="content.compactFields ? 'min-w-[180px] flex-1' : 'min-w-[240px] flex-1'"
-      [labelWidthClass]="content.compactFields ? 'w-24' : 'w-32'"
-      [inputWidthClass]="content.compactFields ? 'min-w-[70px]' : 'min-w-[100px]'"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[80px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
     <app-field-row
       *ngIf="content.netWeightFields"
       [fields]="content.netWeightFields"
-      [fieldWidthClass]="content.compactFields ? 'min-w-[180px] flex-1' : 'min-w-[240px] flex-1'"
-      [labelWidthClass]="content.compactFields ? 'w-24' : 'w-32'"
-      [inputWidthClass]="content.compactFields ? 'min-w-[70px]' : 'min-w-[100px]'"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[80px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
@@ -68,6 +80,7 @@
         <app-form-field
           *ngIf="content.discountField"
           [field]="content.discountField"
+          [inputWidthClass]="content.compactFields ? 'max-w-[100px]' : 'min-w-[100px]'"
           (valueChange)="fieldValueChange.emit({ key: content.discountField.key, value: $event })"
           (committed)="fieldCommitted.emit(content.discountField.key)"
         ></app-form-field>
@@ -86,10 +99,14 @@
       ></app-payment-panel>
     </div>
 
-    <app-section-divider [text]="content.settlementHeading"></app-section-divider>
+    <app-section-divider *ngIf="content.settlementHeading" [text]="content.settlementHeading"></app-section-divider>
 
     <app-field-row
+      *ngIf="content.settlementFields"
       [fields]="content.settlementFields"
+      [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+      [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+      [inputWidthClass]="content.compactFields ? 'max-w-[130px]' : 'min-w-[100px]'"
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
@@ -104,6 +121,9 @@
       <app-field-row
         *ngIf="content.additionalDiscountFields"
         [fields]="content.additionalDiscountFields"
+        [fieldWidthClass]="content.compactFields ? 'w-auto flex-initial' : 'min-w-[240px] flex-1'"
+        [labelWidthClass]="content.compactFields ? 'w-auto' : 'w-32'"
+        [inputWidthClass]="content.compactFields ? 'max-w-[130px]' : 'min-w-[100px]'"
         class="flex-1"
         (fieldValueChange)="fieldValueChange.emit($event)"
         (fieldCommitted)="fieldCommitted.emit($event)"
@@ -111,6 +131,7 @@
       <app-form-field
         *ngIf="content.netToPayField"
         [field]="content.netToPayField"
+        [inputWidthClass]="content.compactFields ? 'max-w-[130px]' : 'min-w-[100px]'"
         (valueChange)="fieldValueChange.emit({ key: content.netToPayField.key, value: $event })"
         (committed)="fieldCommitted.emit(content.netToPayField.key)"
       ></app-form-field>

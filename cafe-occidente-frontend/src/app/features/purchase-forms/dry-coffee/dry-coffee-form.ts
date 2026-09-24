@@ -1,6 +1,8 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
 import {
@@ -17,7 +19,9 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -26,6 +30,7 @@ interface DryCoffeeMessages {
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
+  readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
   readonly closeWarning: string;
@@ -38,7 +43,7 @@ type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMess
 /** Campos editables en el orden de captura del formulario Access. "agency" no entra: la
  *  autocompleta la sesión y nunca la toca el usuario (paso 1). */
 const EDITABLE: string[] = [
-  'fund', 'idNumber', 'fullName', 'idType', 'address', 'cellphone', 'program', 'quota',
+  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone', 'program', 'quota',
   'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
@@ -46,29 +51,29 @@ const EDITABLE: string[] = [
 
 /** Requeridos para habilitar "Imprimir" (bonus/penalty/descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = [
-  'fund', 'idNumber', 'fullName', 'idType', 'address', 'cellphone',
+  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone',
   'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
 ];
 
+/** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
+const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
+
 /** Campos siempre de solo lectura: los calcula el servidor o los deriva la sesión actual. */
 const READONLY: string[] = [
-  'agency', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode', 'basePriceLoad',
-  'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idPart1', 'wastePercentage', 'huskPercentage',
-  'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
+  'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoicePrefix', 'invoiceNumber',
+  'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idNumber',
+  'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario
  *  (los campos autocalculados de por medio, p.ej. Porc Merma, se saltan porque no estan aqui). */
 const FOCUS_ORDER: string[] = [
-  'fund', 'idNumber', 'special',
+  'fund', 'idPart1', 'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
-const num = (v: string | undefined | null): number => {
-  const s = (v ?? '').trim();
-  return s === '' ? 0 : Number(s);
-};
+const num = parseDisplayNumber;
 
 /**
  * Compras Café Seco. Reutiliza el diseño existente (PurchaseFormViewComponent + purchase-form-dry.json)
@@ -116,6 +121,7 @@ export class DryCoffeeFormComponent {
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
   private readonly fundIdByName = new Map<string, number>();
+  private logoDataUrlPromise!: Promise<string | null>;
 
   pendingClose = false;
   private closeResolver: ((value: boolean) => void) | null = null;
@@ -136,6 +142,19 @@ export class DryCoffeeFormComponent {
       this.fundOptions = list.map((f) => f.code);
       list.forEach((f) => this.fundIdByName.set(f.code, f.id));
       this.tick.update((n) => n + 1);
+    });
+    // Precargado ya (no en print()): abrir el PDF depende de un window.open() disparado por el
+    // gesto del click en "Imprimir" - si print() todavia estuviera esperando el fetch del logo en
+    // ese momento, el navegador pierde el gesto de usuario y bloquea la pestaña como pop-up.
+    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
+    // Foco en el primer campo (Fondo) apenas carga el contenido: sin esto, el desplegable de Fondo
+    // no aparecia hasta que el cajero hacia clic a mano - con el foco ya puesto, se puede elegir
+    // directo con el mouse o escribiendo + Enter, y de ahi sigue el mismo avance automatico de
+    // siempre (advanceFocus).
+    effect(() => {
+      if (this.base()) {
+        this.focusField(FOCUS_ORDER[0]);
+      }
     });
   }
 
@@ -160,10 +179,17 @@ export class DryCoffeeFormComponent {
     if (value === '' && REQUIRED.includes(key)) {
       return;
     }
-    this.locked.add(key);
+    if (value === '' && ZERO_IF_EMPTY.includes(key)) {
+      this.model[key] = '0';
+    }
+    // idPart1 se bloquea (locked) recien cuando lookupGrower confirma que la cedula existe - hasta
+    // entonces sigue editable para poder corregirla (ver mensaje "no existe" en lookupGrower).
+    if (key !== 'idPart1') {
+      this.locked.add(key);
+    }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idNumber') {
+    if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
   }
@@ -191,7 +217,7 @@ export class DryCoffeeFormComponent {
       case 'fund':
         this.reserveInvoiceNumber();
         break;
-      case 'idNumber':
+      case 'idPart1':
         this.lookupGrower();
         break;
       case 'special':
@@ -202,7 +228,10 @@ export class DryCoffeeFormComponent {
       case 'totalHuskWeight':
       case 'healthyStoredWeight':
         this.loadQualityPercentage(key);
+        this.recalculate();
         break;
+      case 'grossKg':
+      case 'tare':
       case 'penalty':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
@@ -230,7 +259,7 @@ export class DryCoffeeFormComponent {
 
   /** Paso 4: busca el caficultor por cédula; bloquea el formulario si está fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -249,13 +278,24 @@ export class DryCoffeeFormComponent {
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        ['fullName', 'idType', 'address', 'cellphone'].forEach((k) => this.locked.add(k));
+        this.locked.add('idPart1');
+        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
+        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
+        // la cascada de calculo (Vr. Kilo/Vr. Bruto/Neto a Pagar) nunca llegaba a dispararse.
+        ['fullName', 'idType', 'address', 'cellphone'].forEach((k) => {
+          if ((this.model[k] ?? '').trim() !== '') {
+            this.locked.add(k);
+          }
+        });
         this.lookupProgram();
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idNumber');
+        this.advanceFocus('idPart1');
       },
-      // No encontrado: se deja en blanco y editable para captura manual.
-      error: () => this.advanceFocus('idNumber'),
+      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
+      error: () => {
+        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
+        this.tick.update((n) => n + 1);
+      },
     });
   }
 
@@ -266,7 +306,7 @@ export class DryCoffeeFormComponent {
    * ambiguedad entre programas) y de nuevo al confirmar el Especial (para desambiguar/confirmar).
    */
   private lookupProgram(): void {
-    const idNumber = (this.model['idNumber'] ?? '').trim();
+    const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
@@ -300,6 +340,9 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        // Limpia el anuncio anterior: si no, Costos/Bonificacion/Pr Sustentación quedan mostrando
+        // (y usandose en el calculo) el valor de un Especial/Fondo distinto al que esta seleccionado.
+        this.specialInfo.set(null);
         this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -325,6 +368,16 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        // Limpia solo el porcentaje de este peso: si no, Porc Merma/Porc Kg Pas/Factor pueden quedar
+        // mostrando el valor de un peso digitado anteriormente en vez del que esta en pantalla ahora.
+        this.qualityCalc.update((prev) => ({
+          ...prev,
+          [key === 'totalStoredWeight'
+            ? 'wastePercentage'
+            : key === 'totalHuskWeight'
+              ? 'defectivePercentage'
+              : 'healthyPercentage']: null,
+        }));
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -343,6 +396,9 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: () => {
+        // Sin esto, un preview fallido deja Vr. Kilo/Vr. Bruto/Neto a Pagar/Kilos Netos mostrando
+        // (y el panel de pago usando) el resultado de un calculo anterior con otros datos de entrada.
+        this.calc.set(null);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -353,7 +409,12 @@ export class DryCoffeeFormComponent {
     const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!agencyId || !fundId || !invoiceNumber) {
+    // Sin este chequeo, recalculate() dispara un preview cada vez que se confirma un peso (para que
+    // Kilos Netos/Vr. Kilo nunca queden obsoletos, ver runSideEffects) - pero a mitad de captura,
+    // con healthyStoredWeight todavia en 0, el backend rechaza el calculo (no se puede dividir por
+    // almendra sana = 0) y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
+    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
@@ -362,7 +423,7 @@ export class DryCoffeeFormComponent {
       fundId,
       invoiceNumber,
       specialType: this.model['special'],
-      idNumber: this.model['idNumber'],
+      idNumber: this.model['idPart1'],
       firstName,
       lastName,
       growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
@@ -399,10 +460,14 @@ export class DryCoffeeFormComponent {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
-        // TODO: generación real del documento soporte / factura PDF queda pendiente (prompt futuro).
+        this.printInvoice(res);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
+        // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
+        // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
+        // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
+        console.error('Error al registrar compra Cafe Seco:', err?.error ?? err);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -534,16 +599,20 @@ export class DryCoffeeFormComponent {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ?? '',
+      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
       announcementDate: info?.announcementDate ?? '',
-      invoice: inv ? `${inv.prefix}${inv.invoiceNumber}` : '',
+      // Castigo_lostFocus/Descuento_Fro_LostFocus (Form_COMPRAS.bas): Asociado = "ASOCIADO"/"NO ASOCIADO"
+      // segun Tipo ("S"/"C"); vacio hasta que se conoce el tipo (cedula sin buscar todavia).
+      associated: growerType === 'S' ? 'ASOCIADO' : growerType === 'C' ? 'NO ASOCIADO' : '',
+      invoicePrefix: inv?.prefix ?? '',
+      invoiceNumber: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
       basePriceLoad: info?.basePriceLoad ?? '',
       huskPrice: info?.defectiveUnitPrice ?? '',
       sustentationPrice: info?.healthyUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
-      idPart1: this.model['idNumber'] ?? '',
+      idNumber: this.model['idPart1'] ?? '',
       wastePercentage: q.wastePercentage ?? '',
       huskPercentage: q.defectivePercentage ?? '',
       factor: q.healthyPercentage ?? '',
@@ -569,6 +638,10 @@ export class DryCoffeeFormComponent {
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
+      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+        // Regla global: todavia no le toca su turno (ver FOCUS_ORDER) - bloqueado hasta que se
+        // confirme el campo anterior, para que el cajero no pueda saltarse pasos.
+        patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
@@ -611,5 +684,14 @@ export class DryCoffeeFormComponent {
         : undefined,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
+  }
+
+  /** Genera el Documento Soporte en PDF (mismo layout que capturas/prueba de factura sin boton de nube.pdf). */
+  private printInvoice(purchase: DryCoffeePurchaseResponse): void {
+    this.logoDataUrlPromise.then((logoDataUrl) => {
+      const docDefinition = buildDryCoffeeInvoiceDocDefinition(purchase, logoDataUrl);
+      pdfMake.vfs = pdfFonts;
+      pdfMake.createPdf(docDefinition).open();
+    });
   }
 }

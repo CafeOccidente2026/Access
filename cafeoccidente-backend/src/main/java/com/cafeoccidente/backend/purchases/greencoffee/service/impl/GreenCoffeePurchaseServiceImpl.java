@@ -5,6 +5,8 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
@@ -24,7 +26,9 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -48,6 +52,9 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final GreenCoffeePurchaseCalculator calculator;
     private final GreenCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final GrowerService growerService;
+    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InventoryMovementService inventoryMovementService;
 
     public GreenCoffeePurchaseServiceImpl(
             GreenCoffeePurchaseRepository greenCoffeePurchaseRepository,
@@ -58,7 +65,10 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             ControlRecordService controlRecordService,
             GreenCoffeePurchaseCalculator calculator,
             GreenCoffeePurchaseMapper mapper,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            GrowerService growerService,
+            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InventoryMovementService inventoryMovementService) {
         this.greenCoffeePurchaseRepository = greenCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -68,6 +78,9 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.growerService = growerService;
+        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.inventoryMovementService = inventoryMovementService;
     }
 
     @Override
@@ -125,7 +138,15 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
-        return mapper.toResponse(greenCoffeePurchaseRepository.save(purchase));
+        GreenCoffeePurchase savedPurchase = greenCoffeePurchaseRepository.save(purchase);
+
+        inventoryMovementService.recordFromPurchaseSafely(
+                InventoryMovement.PurchaseModule.GREEN_COFFEE, savedPurchase.getId(),
+                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
+                null, purchase.getInventoryValue());
+
+        return mapper.toResponse(savedPurchase);
     }
 
     @Override
@@ -150,19 +171,23 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         MonthlyGrowerTotals monthlyTotals = greenCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
                 request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
 
-        return calculator.calculate(
+        GreenCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
                 monthlyTotals.grossValue(),
                 monthlyTotals.withholding());
+        // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("CV") nunca matchea
+        // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
+        growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());
+        return calculation;
     }
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = securityUtils.getCurrentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = greenCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId);
+        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(
@@ -188,10 +213,13 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fund.getId(), SPECIAL_TYPE);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio - (Costos * BaseCarga) de la agencia
-        // compradora (Form_VERDES.bas: Pr_Base_PC = Texto91 - (Costos * Texto176)).
+        // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio maestro - (Costos * BaseCarga)
+        // (Form_VERDES.bas: Pr_Base_PC = Texto91 - (Costos * Texto176)). Desde el anuncio compartido
+        // entre agencias (ver docs/diseno-anuncios-compartidos.md), "Costos" ya NO viene congelado:
+        // announcement.costs() lo calcula AnnouncementServiceImpl.findLatest() con el ControlRecord
+        // VIVO de esta agencia (decision de negocio para el sistema nuevo, distinta del VBA legado).
         BigDecimal basePriceLoad = announcement.basePriceLoad()
-                .subtract(controlRecord.getCosts().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(2, java.math.RoundingMode.HALF_UP);
         return new AnnouncementInfoResponse(
                 fund.getId(),

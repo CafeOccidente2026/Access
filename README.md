@@ -75,7 +75,7 @@ proyectos que ya usen el 8080).
 **Cómo saber que quedó bien levantado** — en los logs deberías ver, en este orden:
 1. En el contenedor `postgres`: `database system is ready to accept connections`
 2. En el contenedor `backend`:
-   - Las migraciones de Flyway aplicándose (`Successfully applied 2 migrations...`)
+   - Las migraciones de Flyway aplicándose (`Successfully applied N migrations...`)
    - `Tomcat started on port 8080`
    - `Started BackendApplication in X seconds`
 
@@ -93,34 +93,52 @@ docker compose down -v
 
 ### Frontend
 Cubre el **diseño y la estructura** de todas las pantallas migradas desde Access
-(login, menús, los 4 formularios de compra, compras a futuro, inventarios,
-consulta). El login y la pantalla de Usuarios ya están conectados al backend real
-(autenticación JWT); el resto de pantallas sigue siendo maqueta sin conectar.
+(login, menús, los 5 formularios de compra, compras a futuro, inventarios,
+consulta). Conectadas al backend real: Login, Usuarios, Registro de Control,
+Actualizar Anuncio (Corriente y Pasilla), Compras Café Seco, Compras Café Verde,
+Compra Pasilla, Compras Cafés Otros, Compras a Futuro, Fertifuturo (pantalla
+nueva), Asignar Cupo por anuncio, Registrar Salidas/Remisión, Reporte de
+Inventario (consulta de solo lectura), y las dos variantes de cupo de Café Seco
+(Compra por Cupo / Facturación por Cupo). **Siguen sin conectar** (maqueta o
+placeholder): Consulta de Compras general, "Reimprimir Remisión" e "Ingresar
+Conductores" (esta última quedó obsoleta: `Driver` se eliminó en Fase 3, la
+opción del menú de Inventarios sigue apuntando a una pantalla vacía).
 
 ### Backend
-Es un **esqueleto por capas**: existen todos los paquetes, clases y endpoints
-planeados para cada módulo (`controller`, `service`, `service.impl`, `repository`,
-`entity`, `dto`, `mapper`), pero **todavía no tienen lógica de negocio real**. Las
-entidades solo tienen el campo `id`, los controllers/services están vacíos, y las
-tablas de la base de datos son placeholders (una tabla por entidad, sin columnas
-propias todavía).
+Los 5 módulos de compra (Café Seco, Café Verde, Pasilla, Cafés Otros,
+Fertifuturo) tienen lógica de negocio real y probada, con la cascada de cálculo
+migrada del VBA original (ver
+`docs/informe-formulas-compras-vs-vba.md`). También están implementados: Cupos
+por anuncio (`AnnouncementQuota`), anuncios compartidos entre agencias
+(`docs/diseno-anuncios-compartidos.md`), Compras a Futuro, e Inventarios
+(movimiento automático por compra + Remisiones/Salidas).
 
-El objetivo de este esqueleto es fijar la arquitectura y los nombres de paquetes
-antes de implementar la lógica, para que el equipo se reparta los módulos sin
-pisarse.
-
-| Módulo | Representa | Pendiente |
+| Módulo | Representa | Estado |
 | --- | --- | --- |
-| `controlrecord` | Registro de control (parámetros generales) | Campos, reglas de negocio, endpoints |
-| `purchases.drycoffee` | Compras de café seco | Implementado (cascada VBA, `createdByUserId`, `municipality`). Falta: generación del PDF del documento soporte y un módulo de reportes/auditoría que cruce `createdByUserId` con las compras (prompt futuro) |
-| `purchases.greencoffee` | Compras de café verde | Ídem |
-| `purchases.othercoffee` | Compras de otros cafés | Ídem |
-| `purchases.husk` | Compra de pasilla | Ídem |
-| `purchases.future` | Anuncios, cupos y compras a futuro | Relaciones entre entidades, reglas de cupos |
-| `purchases.shared` | Catálogos: Agencia, Fondo, Código de producto | Campos y uso desde los demás módulos |
-| `inventory` | Conductores, remisiones, movimientos | Relaciones con compras |
+| `controlrecord` | Registro de control (parámetros generales) | Implementado |
+| `purchases.drycoffee` | Compras de café seco | Implementado (cascada VBA completa, validación de negativos, tope de cupo). Falta: generación del PDF del documento soporte (si no está ya cubierta por el módulo de facturación) |
+| `purchases.greencoffee` | Compras de café verde | Implementado |
+| `purchases.othercoffee` | Compras de otros cafés | Implementado, frontend conectado |
+| `purchases.husk` | Compra de pasilla | Implementado |
+| `purchases.future` | Anuncios compartidos, Cupos por anuncio, Compras a Futuro, Fertifuturo | Implementado, frontend conectado. Sistema de "Obligación" de Fertifuturo dejado fuera a propósito (ver `docs/informe-formulas-compras-vs-vba.md`) |
+| `purchases.shared` | Catálogos: Agencia, Fondo, Código de producto, Caficultor (Grower) | Implementado |
+| `inventory` | Movimientos de inventario (automáticos por compra) y Remisiones/Salidas | Implementado, frontend conectado (consulta de movimientos + registrar salidas) |
 | `users` | Usuarios, roles, autenticación | Implementado: login/refresh JWT, alta/listado/baja de usuarios, bootstrap del admin inicial |
-| `common` | Seguridad, CORS, OpenAPI, manejo de errores | `SecurityConfig`, `JwtService` y CORS implementados; OpenAPI pendiente |
+| `common` | Seguridad, CORS, OpenAPI, manejo de errores, validación de negativos (`MoneyValidation`) | `SecurityConfig`, `JwtService`, CORS y `MoneyValidation` implementados; OpenAPI pendiente |
+
+### Tests
+- **Backend**: `cd cafeoccidente-backend && mvn test` (o vía Docker, ver
+  `docs/informe-formulas-compras-vs-vba.md` para el comando exacto). Cubre los 5
+  calculadores de compra (incluida la validación reproducible contra datos
+  históricos reales de Café Seco), Cupos, Inventarios/Remisiones, Compras a
+  Futuro y Anuncios compartidos.
+- **Frontend**: `cd cafe-occidente-frontend && npm test`. Cubre la lógica pura
+  compartida por los formularios de compra (formato/parseo de números, bloqueo
+  secuencial de captura) y, a nivel de componente, el gate de campos
+  requeridos que dispara la cascada de cálculo (Café Seco, Pasilla, Cafés
+  Otros, Fertifuturo) — donde vivía el bug del "celular bloqueado" corregido
+  el 2026-09-23 (ver `docs/informe-formulas-compras-vs-vba.md`) — además de
+  Compras a Futuro, Asignar Cupo, Reporte de Inventario y Registrar Salidas.
 
 ### Base de datos
 - **Desarrollo**: PostgreSQL en Docker, sin conexión a Aurora.
@@ -166,11 +184,14 @@ no se toca: la lógica (autollenado del anuncio, cascada, bloqueo secuencial,
 Escape, botón Imprimir, guardado y aviso al cerrar) se conecta con
 `@Input`/eventos añadidos a los componentes compartidos existentes.
 
-Pendientes del mismo formulario (no solicitados aún): generación del PDF del
-documento soporte, la búsqueda del caficultor vía DLL externa / `pcompras` (hoy
-los datos del caficultor son de captura manual), la numeración/aviso de
-resolución de facturación, el split de pago multi-instrumento, y la lógica de
-cupo/`EnProg` (ligada a `purchases.future.AnnouncementQuota`).
+Pendientes del mismo formulario (no solicitados aún): la búsqueda del
+caficultor vía DLL externa / `pcompras` (hoy los datos del caficultor viven en
+`Grower`, cargado por `scripts/migrate_eltambo.py`), y el split de pago
+multi-instrumento. El tope de cupo por caficultor (`GrowerService.checkQuota`)
+y el bloqueo de pertenencia a programa (`requireProgramMembership`, usado hoy
+por Compras a Futuro) ya están implementados — ver
+`docs/informe-formulas-compras-vs-vba.md` para el alcance real de datos
+(`staging_legacy_ness`, solo 3 de ~20 Especiales tienen cobertura migrada).
 
 ---
 

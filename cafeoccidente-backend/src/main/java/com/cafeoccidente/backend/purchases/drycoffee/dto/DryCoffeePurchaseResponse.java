@@ -49,5 +49,12 @@ public record DryCoffeePurchaseResponse(
         BigDecimal netToPay,
         String paymentMethod,
         String checkNumber,
-        Long createdByUserId) {
+        Long createdByUserId,
+        String purchasePoint,
+        String prefix,
+        String dianResolution,
+        LocalDate resolutionDate,
+        Integer resolutionFrom,
+        Integer resolutionTo,
+        Integer validity) {
 }

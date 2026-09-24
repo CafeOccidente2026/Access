@@ -1,3 +1,33 @@
 <div class="h-screen bg-white p-3">
-  <app-purchase-form-view *ngIf="data() as d" [content]="d"></app-purchase-form-view>
+  <app-purchase-form-view
+    *ngIf="viewContent() as d"
+    [content]="d"
+    (fieldValueChange)="onFieldValueChange($event)"
+    (fieldCommitted)="onFieldCommitted($event)"
+    (reprintPressed)="print()"
+    (closeRequested)="onClose()"
+  ></app-purchase-form-view>
+
+  <app-confirm-dialog
+    *ngIf="errorMessage() as msg"
+    [message]="msg"
+    [confirmLabel]="messages()?.acceptLabel ?? 'Aceptar'"
+    (confirmed)="dismissError()"
+  ></app-confirm-dialog>
+
+  <app-confirm-dialog
+    *ngIf="savedNoticeOpen() && messages() as m"
+    [message]="m.savedNotice"
+    [confirmLabel]="m.acceptLabel"
+    (confirmed)="savedNoticeOpen.set(false)"
+  ></app-confirm-dialog>
+
+  <app-confirm-dialog
+    *ngIf="pendingClose && messages() as m"
+    [message]="m.closeWarning"
+    [confirmLabel]="m.closeConfirm"
+    [cancelLabel]="m.closeCancel"
+    (confirmed)="confirmClose()"
+    (cancelled)="cancelClose()"
+  ></app-confirm-dialog>
 </div>

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { dryCoffeeUnsavedChangesGuard } from './features/purchase-forms/dry-coffee/unsaved-changes.guard';
 
 /** Mapa de rutas de la aplicacion; cada pantalla migrada tiene su propia ruta. */
@@ -19,19 +20,38 @@ export const routes: Routes = [
   },
   {
     path: 'registro-control',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/control-record/control-record').then((m) => m.ControlRecordComponent),
   },
   {
     path: 'usuarios',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
   },
   {
+    path: 'anuncios',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/announcements-menu/announcements-menu').then(
+        (m) => m.AnnouncementsMenuComponent,
+      ),
+  },
+  {
     path: 'anuncios/actualizar',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/announcement-update/announcement-update').then(
         (m) => m.AnnouncementUpdateComponent,
+      ),
+  },
+  {
+    path: 'anuncios/actualizar-pasilla',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./features/announcement-update-husk/announcement-update-husk').then(
+        (m) => m.AnnouncementUpdateHuskComponent,
       ),
   },
   {
@@ -51,6 +71,7 @@ export const routes: Routes = [
       import('./features/purchase-forms/other-coffee/other-coffee-form').then(
         (m) => m.OtherCoffeeFormComponent,
       ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/cafe-verde',
@@ -75,6 +96,7 @@ export const routes: Routes = [
   },
   {
     path: 'compras/futuro/asignar-cupo',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/quota-assignment/quota-assignment').then(
         (m) => m.QuotaAssignmentComponent,
@@ -86,9 +108,25 @@ export const routes: Routes = [
       import('./features/purchase-forms/future-purchase/future-purchase-form').then(
         (m) => m.FuturePurchaseFormComponent,
       ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
+  },
+  {
+    path: 'compras/futuro/fertifuturo',
+    loadComponent: () =>
+      import('./features/purchase-forms/ferti-futuro/ferti-futuro-form').then(
+        (m) => m.FertiFuturoFormComponent,
+      ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/futuro/facturar-cupos',
+    loadComponent: () =>
+      import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
+        (m) => m.QuotaPurchaseFormComponent,
+      ),
+  },
+  {
+    path: 'compras/futuro/facturar-anunciadas',
     loadComponent: () =>
       import('./features/purchase-forms/quota-billing/quota-billing-form').then(
         (m) => m.QuotaBillingFormComponent,
@@ -98,6 +136,26 @@ export const routes: Routes = [
     path: 'compras/inventarios',
     loadComponent: () =>
       import('./features/inventory-menu/inventory-menu').then((m) => m.InventoryMenuComponent),
+  },
+  {
+    path: 'compras/inventarios/consulta',
+    loadComponent: () =>
+      import('./features/inventory-consulta/inventory-consulta').then((m) => m.InventoryConsultaComponent),
+  },
+  {
+    path: 'compras/inventarios/salidas',
+    loadComponent: () =>
+      import('./features/remission-form/remission-form').then((m) => m.RemissionFormComponent),
+  },
+  {
+    path: 'compras/inventarios/reimprimir-remision',
+    loadComponent: () =>
+      import('./features/remission-reprint/remission-reprint').then((m) => m.RemissionReprintComponent),
+  },
+  {
+    path: 'compras/remesa',
+    loadComponent: () =>
+      import('./features/remesa-export/remesa-export').then((m) => m.RemesaExportComponent),
   },
   {
     path: 'compras/dialogo-fechas',

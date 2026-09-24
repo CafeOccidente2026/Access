@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.drycoffee.mapper;
 
+import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import org.springframework.stereotype.Component;
@@ -8,7 +9,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class DryCoffeePurchaseMapper {
 
-    public DryCoffeePurchaseResponse toResponse(DryCoffeePurchase purchase) {
+    /**
+     * @param controlRecord ControlRecord VIVO de la agencia de la compra (nunca congelado): trae los
+     *     datos de pie de factura (resolucion DIAN, punto de compra) que necesita el PDF.
+     */
+    public DryCoffeePurchaseResponse toResponse(DryCoffeePurchase purchase, ControlRecord controlRecord) {
         return new DryCoffeePurchaseResponse(
                 purchase.getId(),
                 purchase.getPurchaseDate(),
@@ -55,6 +60,13 @@ public class DryCoffeePurchaseMapper {
                 purchase.getNetToPay(),
                 purchase.getPaymentMethod(),
                 purchase.getCheckNumber(),
-                purchase.getCreatedByUserId());
+                purchase.getCreatedByUserId(),
+                controlRecord.getPurchasePoint(),
+                controlRecord.getPrefix(),
+                controlRecord.getDianResolution(),
+                controlRecord.getResolutionDate(),
+                controlRecord.getResolutionFrom(),
+                controlRecord.getResolutionTo(),
+                controlRecord.getValidity());
     }
 }

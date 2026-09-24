@@ -5,20 +5,24 @@
     { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" }
   ],
   "identificationFields": [
-    { "key": "invoice", "label": "Factura", "type": "text" },
-    { "key": "productCode", "label": "Cod Prod", "type": "text" },
+    { "key": "invoicePrefix", "label": "Factura", "type": "text", "inputWidthClass": "max-w-[70px]" },
+    { "key": "invoiceNumber", "label": "", "type": "text", "inputWidthClass": "max-w-[70px]" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "max-w-[110px]" },
     { "key": "basePriceDryLoad", "label": "Pr base carga perg seco", "type": "currency" }
   ],
   "federationHeading": "Información Federación:",
   "federationFields": [
-    { "key": "idNumber", "label": "Cédula", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[140px]", "inputWidthClass": "min-w-[90px]" },
-    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[420px] flex-[3]", "inputWidthClass": "min-w-[300px]" }
+    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true, "highlighted": true, "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" },
+    { "key": "firstName", "label": "Nombres", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "lastName", "label": "Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "idType", "label": "Tipo", "type": "text", "rowWidthClass": "min-w-[90px]", "inputWidthClass": "min-w-[50px]" },
+    { "key": "address", "label": "Dirección", "type": "text", "rowWidthClass": "min-w-[170px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" }
   ],
-  "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text", "value": "PASILLA" },
     { "key": "pointPrice", "label": "Pr Punto", "type": "currency" },
@@ -26,12 +30,12 @@
     { "key": "almondPercentage", "label": "% Almendra", "type": "percentage" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
-    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "netKg", "label": "Kilos Netos", "type": "count" }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],
@@ -39,15 +43,17 @@
     "totalValue": ""
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
-  "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
-  "settlementSecondaryFields": [
-    { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
   ],
+  "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia (Especial PASILLA / Fondo RP).",
     "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
     "saveError": "No se pudo registrar la compra. Verifique los datos.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",

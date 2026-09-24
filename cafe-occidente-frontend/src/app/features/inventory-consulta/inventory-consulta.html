@@ -1,0 +1,50 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window title="REPORTE INVENTARIO" bodyClass="bg-white">
+    <div class="flex flex-col gap-3 p-4">
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" [checked]="onlyWithBalance()" (change)="onlyWithBalance.set($any($event.target).checked)" />
+          Solo con saldo disponible
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-700">
+          <span>Cód. Producto:</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="codeFilter()" (input)="codeFilter.set($any($event.target).value)" />
+        </label>
+      </div>
+
+      <div class="max-h-[calc(100vh-140px)] overflow-auto rounded border border-slate-300">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-blue-900 text-white">
+            <tr>
+              <th class="p-2 text-left">Módulo</th>
+              <th class="p-2 text-left">Factura</th>
+              <th class="p-2 text-left">Fecha</th>
+              <th class="p-2 text-left">Cod Prod</th>
+              <th class="p-2 text-left">Especial</th>
+              <th class="p-2 text-right">Sacos</th>
+              <th class="p-2 text-right">Kilos Netos</th>
+              <th class="p-2 text-right">Saldo</th>
+              <th class="p-2 text-right">Vr. Inventario</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of visibleMovements()" class="border-t border-slate-200 odd:bg-slate-50">
+              <td class="p-2">{{ m.purchaseModule }}</td>
+              <td class="p-2">{{ m.invoiceNumber }}</td>
+              <td class="p-2">{{ m.purchaseDate }}</td>
+              <td class="p-2">{{ m.productCode }}</td>
+              <td class="p-2">{{ m.specialType }}</td>
+              <td class="p-2 text-right">{{ m.sacos }}</td>
+              <td class="p-2 text-right">{{ kg(m.netKg) }}</td>
+              <td class="p-2 text-right" [class.text-red-600]="m.remainingKg <= 0">{{ kg(m.remainingKg) }}</td>
+              <td class="p-2 text-right">{{ money(m.inventoryValue) }}</td>
+            </tr>
+            <tr *ngIf="visibleMovements().length === 0">
+              <td colspan="9" class="p-4 text-center text-slate-500">Sin movimientos de inventario todavía.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </app-access-window>
+</div>

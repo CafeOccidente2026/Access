@@ -1,6 +1,7 @@
 package com.cafeoccidente.backend.purchases.husk.service;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import java.math.BigDecimal;
@@ -31,54 +32,79 @@ public class HuskPurchaseCalculator {
             ControlRecord controlRecord,
             BigDecimal monthlyAccumulatedGrossValue,
             BigDecimal monthlyAccumulatedWithholding) {
-        // W_AlmSana_AfterUpdate: PorcAlmSana = (W_AlmSana * 100) / Muestra.
+        // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
+        // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
+        // directo (sin pasar por el bloqueo del frontend) para facturarle Pasilla a un caficultor
+        // fallecido.
+        if ("F".equalsIgnoreCase(request.growerType())) {
+            throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
+        }
+
+        // W_AlmSana_AfterUpdate: PorcAlmSana = (W_AlmSana * 100) / Muestra. Igual que en
+        // Form_COMPRAS.bas (Sacos_LostFocus), el VBA no redondea antes de usarla en Vr_Kilo, solo
+        // al mostrarla en pantalla (DecimalPlaces=2 es formato de display, no trunca el valor
+        // ligado) - el control tiene la misma firma que el "Factor"/PorcAlmSana de Cafe Seco, donde
+        // esto se confirmo contra compras_migrar.csv. Se guarda la version con precision completa
+        // para el calculo y se redondea solo la que se expone en la respuesta.
         BigDecimal sampleSize = sampleSize(controlRecord);
-        BigDecimal almondPercentage = request.almondWeight()
+        BigDecimal almondPercentageRaw = request.almondWeight()
                 .multiply(HUNDRED)
-                .divide(sampleSize, MathContext.DECIMAL64)
-                .setScale(SCALE, RoundingMode.HALF_UP);
+                .divide(sampleSize, MathContext.DECIMAL64);
+        BigDecimal almondPercentage = almondPercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
+
+        // Pr Sustentacion en Pasilla = Pr_AlmSana (Punto de Compra) tal cual, sin formula propia
+        // (ver docs/informe-auditoria-completa-2026-09-22.md seccion 2) - se valida igual porque
+        // alimenta Vr_Kilo mas abajo.
+        MoneyValidation.requireNonNegative(request.pointPrice(), "Pr Sustentación");
 
         // Destare_LostFocus: sin split Kilos_Verdes, resta directa.
         BigDecimal netKg = request.grossKg().subtract(request.tareKg()).setScale(SCALE, RoundingMode.HALF_UP);
 
         // Descuento_Fro_LostFocus: Vr_Kilo = (Pr_AlmSana * PorcAlmSana / BasePasilla) - Costos.
-        BigDecimal unitPrice = request.pointPrice()
-                .multiply(almondPercentage)
+        // Vr_Kilo, Vr_Bruto, Aporte_Socio/Descuento_Coop, Retefuente y Neto_a_Pagar son controles
+        // ligados a campos sin decimales (el COP no tiene centavos) igual que en Cafe Seco - mismo
+        // control Vr_Kilo (DecimalPlaces=0, Format=Standard) en Form_PASILLA.bas que en
+        // Form_COMPRAS.bas. No hay CSV historico de Pasilla para confirmarlo empiricamente (a
+        // diferencia de Seco, ver docs/informe-auditoria-completa-2026-09-22.md seccion 3), pero la
+        // firma del control es identica y la convencion de peso entero es del COP, no del formulario.
+        BigDecimal unitPrice = roundToWholePeso(request.pointPrice()
+                .multiply(almondPercentageRaw)
                 .divide(controlRecord.getBaseHusk(), MathContext.DECIMAL64)
-                .subtract(request.costs())
-                .setScale(SCALE, RoundingMode.HALF_UP);
+                .subtract(request.costs()));
+        MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
         BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
+        MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
         BigDecimal associateContribution = BigDecimal.ZERO;
         BigDecimal cooperativeDiscount = BigDecimal.ZERO;
         if ("S".equalsIgnoreCase(request.growerType())) {
-            associateContribution = grossValue.multiply(controlRecord.getAssociatePercentage())
-                    .divide(HUNDRED, MathContext.DECIMAL64)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+            associateContribution = roundToWholePeso(grossValue.multiply(controlRecord.getAssociatePercentage())
+                    .divide(HUNDRED, MathContext.DECIMAL64));
         } else if ("C".equalsIgnoreCase(request.growerType())) {
-            cooperativeDiscount = grossValue.multiply(controlRecord.getNonAssociateDiscount())
-                    .divide(HUNDRED, MathContext.DECIMAL64)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+            cooperativeDiscount = roundToWholePeso(grossValue.multiply(controlRecord.getNonAssociateDiscount())
+                    .divide(HUNDRED, MathContext.DECIMAL64));
         }
 
+        // SIN VERIFICAR: CalculoReteFteMesPas solo abre el reporte "ReteMesCursoPas" y copia
+        // TotalVrBruto/TotalRetefuente a Texto105/Texto107; el RecordSource del reporte no esta en
+        // el export de VBA disponible. sumMonthlyTotalsByIdNumber es el mejor esfuerzo hasta confirmarlo.
         BigDecimal var6 = grossValue.add(monthlyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
-            withholding = var6.multiply(controlRecord.getWithholdingPercentage())
+            withholding = roundToWholePeso(var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+                    .subtract(monthlyAccumulatedWithholding));
         }
 
-        BigDecimal netToPay = grossValue
+        BigDecimal netToPay = roundToWholePeso(grossValue
                 .subtract(associateContribution)
                 .subtract(cooperativeDiscount)
                 .subtract(withholding)
                 .subtract(request.shrinkageDiscount())
-                .subtract(request.otherDiscounts())
-                .setScale(SCALE, RoundingMode.HALF_UP);
+                .subtract(request.otherDiscounts()));
+        MoneyValidation.requireNonNegative(netToPay, "Neto a Pagar");
 
         return new HuskPurchaseCalculation(
                 netKg,
@@ -90,6 +116,12 @@ public class HuskPurchaseCalculator {
                 cooperativeDiscount,
                 withholding,
                 netToPay);
+    }
+
+    /** Redondea a peso entero (COP no tiene centavos) y vuelve a escalar a SCALE para poder operar
+     *  con el resto de la cascada, que siempre trabaja en BigDecimal de 2 decimales. */
+    private BigDecimal roundToWholePeso(BigDecimal value) {
+        return value.setScale(0, RoundingMode.HALF_UP).setScale(SCALE, RoundingMode.HALF_UP);
     }
 
     private BigDecimal sampleSize(ControlRecord controlRecord) {

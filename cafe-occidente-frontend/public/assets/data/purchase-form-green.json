@@ -4,13 +4,14 @@
   "topFields": [
     { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "date", "label": "Fecha", "type": "date", "value": "3/09/2026", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date" },
     { "key": "productCode", "label": "Cod Prod", "type": "text", "value": "0110002000004" }
   ],
   "identificationFields": [
     { "key": "fund", "label": "Fondo", "type": "text", "value": "RP" },
-    { "key": "invoice", "label": "Factura", "type": "text" },
+    { "key": "invoicePrefix", "label": "Factura", "type": "text", "inputWidthClass": "max-w-[70px]" },
+    { "key": "invoiceNumber", "label": "", "type": "text", "inputWidthClass": "max-w-[70px]" },
     { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency" }
   ],
   "federationHeading": "Información Federación:",
@@ -19,13 +20,20 @@
     { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[420px] flex-[3]", "inputWidthClass": "min-w-[300px]" },
     { "key": "program", "label": "Programa", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[140px]", "inputWidthClass": "min-w-[90px]" }
   ],
-  "contactFields": [{ "key": "idPart1", "label": "Cedula", "type": "text" }],
+  "contactFields": [
+    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true, "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" },
+    { "key": "firstName", "label": "Nombres", "type": "text", "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "lastName", "label": "Apellidos", "type": "text", "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "idType", "label": "Tipo", "type": "text", "rowWidthClass": "min-w-[90px]", "inputWidthClass": "min-w-[50px]" },
+    { "key": "address", "label": "Dirección", "type": "text", "rowWidthClass": "min-w-[170px]", "inputWidthClass": "min-w-[120px]" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" }
+  ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text", "value": "CV" },
     { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
     { "key": "defectStoredPrice", "label": "Pr_AlmDefec", "type": "currency" },
-    { "key": "bonus", "label": "Bonificación", "type": "currency" },
-    { "key": "costs", "label": "Costos", "type": "currency" }
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
+    { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
   ],
   "weightFields": [
     { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "count", "value": "140,00" },
@@ -36,17 +44,17 @@
     { "key": "factor", "label": "Factor", "type": "number", "value": "94,00" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "count" },
+    { "key": "bags", "label": "Sacos", "type": "count", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
-    { "key": "tare", "label": "Destare", "type": "count" },
+    { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "greenKg", "label": "Kilos Verdes", "type": "count" },
     { "key": "netKg", "label": "Kilos_Netos", "type": "count" }
   ],
   "priceFields": [
     { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency" },
-    { "key": "penalty", "label": "Castigo", "type": "currency" }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
     "methods": [{ "label": "Efectivo", "value": "" }],
@@ -54,15 +62,17 @@
     "totalValue": ""
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
-  "settlementFields": [{ "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" }],
-  "settlementSecondaryFields": [
-    { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
   ],
+  "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",
     "noAnnouncement": "No hay un anuncio activo para la agencia (Especial CV / Fondo RP).",
     "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
     "saveError": "No se pudo registrar la compra. Verifique los datos.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",

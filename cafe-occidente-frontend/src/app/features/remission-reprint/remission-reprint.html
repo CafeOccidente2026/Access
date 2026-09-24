@@ -1,0 +1,51 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window title="REIMPRIMIR REMISIÓN" bodyClass="bg-white">
+    <div class="flex flex-col gap-4 p-4">
+      <div class="flex items-end gap-3">
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">N° de Remisión</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="remissionNumber()" (input)="remissionNumber.set($any($event.target).value)" (keyup.enter)="search()" />
+        </label>
+        <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="search()">
+          Buscar
+        </button>
+      </div>
+
+      <p *ngIf="notFound()" class="text-sm text-red-600">No existe una remisión con ese número.</p>
+
+      <div *ngIf="remission() as r" class="flex flex-col gap-3">
+        <div class="grid grid-cols-2 gap-2 rounded border border-slate-300 p-3 text-sm">
+          <div><span class="font-medium">Fecha:</span> {{ r.remissionDate }}</div>
+          <div><span class="font-medium">Destino:</span> {{ r.destination || '—' }}</div>
+          <div><span class="font-medium">Conductor:</span> {{ r.conductorName || '—' }}</div>
+          <div><span class="font-medium">Placa:</span> {{ r.vehiclePlate || '—' }}</div>
+        </div>
+
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-300 text-left">
+              <th class="p-2">Movimiento</th>
+              <th class="p-2 text-right">Cantidad (kg)</th>
+              <th class="p-2 text-right">Vr. Unitario</th>
+              <th class="p-2 text-right">Vr. Salida</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let line of r.lines" class="border-b border-slate-100">
+              <td class="p-2">{{ line.inventoryMovementId }}</td>
+              <td class="p-2 text-right">{{ kg(line.quantity) }}</td>
+              <td class="p-2 text-right">{{ kg(line.unitValue) }}</td>
+              <td class="p-2 text-right">{{ kg(line.outputValue) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="flex justify-end">
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="print()">
+            Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+  </app-access-window>
+</div>
