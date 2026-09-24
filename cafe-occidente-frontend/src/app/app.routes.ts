@@ -63,6 +63,7 @@ export const routes: Routes = [
       import('./features/purchase-forms/other-coffee/other-coffee-form').then(
         (m) => m.OtherCoffeeFormComponent,
       ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/cafe-verde',
@@ -87,6 +88,7 @@ export const routes: Routes = [
   },
   {
     path: 'compras/futuro/asignar-cupo',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./features/quota-assignment/quota-assignment').then(
         (m) => m.QuotaAssignmentComponent,
@@ -98,6 +100,15 @@ export const routes: Routes = [
       import('./features/purchase-forms/future-purchase/future-purchase-form').then(
         (m) => m.FuturePurchaseFormComponent,
       ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
+  },
+  {
+    path: 'compras/futuro/fertifuturo',
+    loadComponent: () =>
+      import('./features/purchase-forms/ferti-futuro/ferti-futuro-form').then(
+        (m) => m.FertiFuturoFormComponent,
+      ),
+    canDeactivate: [dryCoffeeUnsavedChangesGuard],
   },
   {
     path: 'compras/futuro/facturar-cupos',
@@ -117,6 +128,16 @@ export const routes: Routes = [
     path: 'compras/inventarios',
     loadComponent: () =>
       import('./features/inventory-menu/inventory-menu').then((m) => m.InventoryMenuComponent),
+  },
+  {
+    path: 'compras/inventarios/consulta',
+    loadComponent: () =>
+      import('./features/inventory-consulta/inventory-consulta').then((m) => m.InventoryConsultaComponent),
+  },
+  {
+    path: 'compras/inventarios/salidas',
+    loadComponent: () =>
+      import('./features/remission-form/remission-form').then((m) => m.RemissionFormComponent),
   },
   {
     path: 'compras/dialogo-fechas',

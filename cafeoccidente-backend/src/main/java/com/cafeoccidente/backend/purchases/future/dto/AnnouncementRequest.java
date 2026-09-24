@@ -15,5 +15,7 @@ public record AnnouncementRequest(
         @NotNull @PositiveOrZero BigDecimal defectiveUnitPrice,
         @NotNull @PositiveOrZero BigDecimal specialSurcharge,
         @NotBlank String specialType,
-        @NotNull Long fundId) {
+        @NotNull Long fundId,
+        /** VrIncCalidad ("Pr IncCalidad") - opcional, 0 si no aplica para este anuncio. */
+        @PositiveOrZero BigDecimal qualityIncrement) {
 }

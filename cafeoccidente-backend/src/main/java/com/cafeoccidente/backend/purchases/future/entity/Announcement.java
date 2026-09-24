@@ -73,6 +73,17 @@ public class Announcement {
     @Column(name = "point_price", precision = 15, scale = 2)
     private BigDecimal pointPrice;
 
+    /**
+     * VrIncCalidad ("Pr IncCalidad"): columna real de ANUNCIOS en el legado (confirmada en
+     * anuncios_migrar.csv), propagada a Compras a Futuro/FERTIFUTURO via las macros "Asignar
+     * numero anuncio * PFuture Buys" y consumida en la cascada de FERTIFUTURO (var1 = var5 +
+     * IncCalidad + Bonificacion). No se encontro control para editarla en "ANUNCIOS CORRF" (la
+     * pantalla real de publicacion) - se expone igual en AnnouncementRequest por ser un dato real
+     * del maestro. Nullable: los anuncios existentes no lo tienen poblado.
+     */
+    @Column(name = "quality_increment", precision = 15, scale = 2)
+    private BigDecimal qualityIncrement;
+
     /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
     @Deprecated
     @Column(name = "healthy_unit_price", precision = 15, scale = 2)

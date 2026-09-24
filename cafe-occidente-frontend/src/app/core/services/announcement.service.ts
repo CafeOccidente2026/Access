@@ -31,4 +31,11 @@ export class AnnouncementService {
   history(): Observable<Announcement[]> {
     return this.http.get<Announcement[]>(`${API_BASE_URL}/announcements/history`);
   }
+
+  /** Anuncio vigente para Agencia+Fondo+Especial - mismo endpoint que ya consultan los 5 formularios
+   *  de compra internamente; reusado aca (Compras a Futuro) con Fondo fijo en RP. */
+  latest(agencyId: number, fundId: number, specialType: string): Observable<Announcement> {
+    const params = `agencyId=${agencyId}&fundId=${fundId}&specialType=${encodeURIComponent(specialType)}`;
+    return this.http.get<Announcement>(`${API_BASE_URL}/announcements/latest?${params}`);
+  }
 }

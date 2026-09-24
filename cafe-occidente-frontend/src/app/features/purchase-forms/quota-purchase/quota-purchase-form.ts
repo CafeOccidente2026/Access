@@ -221,9 +221,16 @@ export class QuotaPurchaseFormComponent {
         this.model['cellphone'] = grower.phone;
         this.model['idNumber'] = idNumber;
         this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
-        ['idPart1', 'firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'idNumber', 'fullName'].forEach(
-          (k) => this.locked.add(k),
-        );
+        this.locked.add('idPart1');
+        this.locked.add('idNumber');
+        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
+        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
+        // la cascada de calculo nunca llegaba a dispararse.
+        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'fullName'].forEach((k) => {
+          if ((this.model[k] ?? '').trim() !== '') {
+            this.locked.add(k);
+          }
+        });
         this.lookupProgram();
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');

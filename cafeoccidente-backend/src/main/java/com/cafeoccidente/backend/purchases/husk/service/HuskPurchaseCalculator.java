@@ -32,6 +32,14 @@ public class HuskPurchaseCalculator {
             ControlRecord controlRecord,
             BigDecimal monthlyAccumulatedGrossValue,
             BigDecimal monthlyAccumulatedWithholding) {
+        // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
+        // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
+        // directo (sin pasar por el bloqueo del frontend) para facturarle Pasilla a un caficultor
+        // fallecido.
+        if ("F".equalsIgnoreCase(request.growerType())) {
+            throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
+        }
+
         // W_AlmSana_AfterUpdate: PorcAlmSana = (W_AlmSana * 100) / Muestra. Igual que en
         // Form_COMPRAS.bas (Sacos_LostFocus), el VBA no redondea antes de usarla en Vr_Kilo, solo
         // al mostrarla en pantalla (DecimalPlaces=2 es formato de display, no trunca el valor

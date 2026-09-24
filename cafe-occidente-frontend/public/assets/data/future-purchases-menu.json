@@ -8,6 +8,7 @@
   "leftStandaloneOption": { "label": "Anunciadas Hoy", "route": "/compras/futuro" },
   "rightOptions": [
     { "label": "Ingresar Compras a Futuro", "route": "/compras/futuro/ingresar", "emphasis": true },
+    { "label": "Fertifuturo", "route": "/compras/futuro/fertifuturo", "emphasis": true },
     { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro/facturar-anunciadas" },
     { "label": "Restaurar Compras Anunciadas", "route": "/compras/futuro" },
     { "label": "Generar Informe Anuncios a Futuro", "route": "/compras/futuro" },

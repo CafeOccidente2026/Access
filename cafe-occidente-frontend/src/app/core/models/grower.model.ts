@@ -11,6 +11,8 @@ export interface Grower {
   readonly active: boolean;
   readonly deceased: boolean;
   readonly withdrawn: boolean;
+  readonly transportCompany: string | null;
+  readonly vehiclePlate: string | null;
 }
 
 /** Programa/Cupo informativos (staging_legacy_ness) - ver GrowerService.findProgram. */

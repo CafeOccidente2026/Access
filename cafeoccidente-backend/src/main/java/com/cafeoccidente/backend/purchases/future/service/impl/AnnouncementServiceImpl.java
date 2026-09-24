@@ -80,6 +80,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         master.setBasePriceLoad(request.basePriceLoad());
         master.setDefectiveUnitPrice(request.defectiveUnitPrice());
         master.setSpecialSurcharge(request.specialSurcharge());
+        master.setQualityIncrement(request.qualityIncrement());
         master.setFund(fund);
         master.setSpecialType(request.specialType());
         master.setActive(true);
@@ -142,7 +143,8 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             // que mostrarle en la confirmacion todavia.
             return new AnnouncementResponse(
                     master.getId(), null, master.getAnnouncementDate(), master.getBasePriceLoad(),
-                    master.getDefectiveUnitPrice(), null, null, null, null, fund.getId(), master.getSpecialType());
+                    master.getDefectiveUnitPrice(), null, null, null, null, fund.getId(), master.getSpecialType(),
+                    master.getQualityIncrement());
         }
         return toResponse(callerNumbering, callerControlRecord);
     }
@@ -188,6 +190,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                 controlRecord.getCosts(),
                 numbering.getAgency().getId(),
                 master.getFund().getId(),
-                master.getSpecialType());
+                master.getSpecialType(),
+                master.getQualityIncrement());
     }
 }

@@ -1,0 +1,84 @@
+{
+  "windowTitle": "FERTIFUTURO",
+  "theme": "teal",
+  "compactFields": true,
+  "topFields": [
+    { "key": "agency", "label": "Agencia", "type": "text", "inputWidthClass": "max-w-[140px]" },
+    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true, "inputWidthClass": "max-w-[135px]" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "rawDisplay": true },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "inputWidthClass": "max-w-[135px]" },
+    { "key": "associated", "label": "", "type": "text", "inputWidthClass": "max-w-[90px]" }
+  ],
+  "identificationFields": [
+    { "key": "invoicePrefix", "label": "Factura", "type": "text" },
+    { "key": "invoiceNumber", "label": "", "type": "text" }
+  ],
+  "federationHeading": "Información Federación:",
+  "federationFields": [
+    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true, "highlighted": true },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "highlighted": true, "highlightClass": "bg-orange-200" },
+    { "key": "idType", "label": "Tipo", "type": "text", "highlighted": true }
+  ],
+  "federationHighlightClass": "bg-teal-200",
+  "contactFields": [
+    { "key": "address", "label": "Direccion", "type": "text" },
+    { "key": "futurePurchaseId", "label": "N° Compromiso (opcional)", "type": "text" },
+    { "key": "futurePurchaseBalance", "label": "Saldo Compromiso", "type": "number" }
+  ],
+  "qualityFields": [
+    {
+      "key": "special",
+      "label": "Especial",
+      "type": "select",
+      "inputWidthClass": "max-w-[200px]",
+      "options": ["EN", "NESS", "TE", "RN", "ILLY", "CORR", "AA"]
+    },
+    { "key": "sustentationPrice", "label": "Pr Sustentación", "type": "currency" },
+    { "key": "huskPrice", "label": "Pr Almendra Defec", "type": "currency" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true }
+  ],
+  "weightFields": [
+    { "key": "sacos", "label": "Sacos", "type": "count", "integer": true },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "count" },
+    { "key": "tareKg", "label": "Destare", "type": "count" }
+  ],
+  "netWeightFields": [
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "count" },
+    { "key": "healthyPercentage", "label": "Porc Alm Sana %", "type": "percentage" },
+    { "key": "defectiveStoredWeight", "label": "Peso Alm Defec", "type": "count" },
+    { "key": "defectivePercentage", "label": "Porc Alm Defec %", "type": "percentage" },
+    { "key": "qualityIncrementAmount", "label": "Incremento Calidad", "type": "currency" },
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
+  ],
+  "discountField": { "key": "freightDiscount", "label": "Descuento Fro", "type": "currency", "integer": true },
+  "paymentPanel": {
+    "heading": "FORMAS\nDE\nPAGO",
+    "methods": [{ "label": "Efectivo", "value": "" }],
+    "totalLabel": "Tot F de Pago",
+    "totalValue": ""
+  },
+  "settlementHeading": "LIQUIDACION FERTIFUTURO",
+  "settlementFields": [
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
+  ],
+  "additionalDiscountFields": [
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
+  ],
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true },
+  "messages": {
+    "acceptLabel": "Aceptar",
+    "noAnnouncement": "No hay un anuncio activo para la agencia, fondo y especial seleccionados.",
+    "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
+    "futurePurchaseNotFound": "Ese número de compromiso no existe.",
+    "saveError": "No se pudo registrar la liquidación. Verifique los datos.",
+    "savedNotice": "Liquidación registrada. Documento soporte generado.",
+    "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "closeConfirm": "Cerrar sin guardar",
+    "closeCancel": "Seguir en el formulario"
+  }
+}

@@ -67,7 +67,9 @@ public class GrowerServiceImpl implements GrowerService {
                 grower.getGrowerType(),
                 grower.isActive(),
                 grower.isDeceased(),
-                grower.isWithdrawn());
+                grower.isWithdrawn(),
+                grower.getTransportCompany(),
+                grower.getVehiclePlate());
     }
 
     @Override
@@ -92,6 +94,19 @@ public class GrowerServiceImpl implements GrowerService {
             throw new BusinessRuleException(
                     "CAFICULTOR EXCEDE CUPO ASIGNADO, NO LE PUEDE FACTURAR (cupo: " + normalizeCupo(match.getCupo())
                             + " kg, esta compra: " + netKg + " kg)");
+        }
+    }
+
+    @Override
+    public void requireProgramMembership(String idNumber, String specialType) {
+        if (!SPECIAL_TO_PROGRAMA.containsKey(specialType)) {
+            // Sin cobertura de datos confirmada para este Especial - no se puede distinguir "no
+            // pertenece" de "dato no migrado" (ver Javadoc de la interfaz), no se bloquea.
+            return;
+        }
+        if (findMatch(idNumber, specialType) == null) {
+            throw new BusinessRuleException(
+                    "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE");
         }
     }
 

@@ -12,5 +12,7 @@ public record GrowerResponse(
         String growerType,
         boolean active,
         boolean deceased,
-        boolean withdrawn) {
+        boolean withdrawn,
+        String transportCompany,
+        String vehiclePlate) {
 }

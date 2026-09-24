@@ -68,4 +68,12 @@ public class Grower {
 
     @Column(nullable = false)
     private boolean withdrawn = false;
+
+    /** "Conductor" en el VBA (Form_Conductores.bas) es este mismo Asociado, no una entidad aparte -
+     *  ver migración V26. Ambos nullable: la mayoría de los caficultores no son conductores. */
+    @Column(name = "transport_company")
+    private String transportCompany;
+
+    @Column(name = "vehicle_plate")
+    private String vehiclePlate;
 }

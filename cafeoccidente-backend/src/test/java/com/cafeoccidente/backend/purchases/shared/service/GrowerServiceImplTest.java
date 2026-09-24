@@ -71,4 +71,33 @@ class GrowerServiceImplTest {
         growerService.checkQuota("123456", "ESTANDAR", new BigDecimal("999999"));
         assertThat(true).isTrue();
     }
+
+    @Test
+    void requireProgramMembershipRejectsGrowerNotInAMappedProgram() {
+        // Form_COMPRAS A FUTURO.bas, Texto34_AfterUpdate: Id_NessOcci=0 bloquea.
+        when(legacyNessProgramRepository.findByNormalizedCedula(anyString())).thenReturn(List.of());
+
+        assertThatThrownBy(() -> growerService.requireProgramMembership("123456", "REGIONAL NARIÑO 4C"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("NO PERTENECE A NINGUN PROGRAMA");
+    }
+
+    @Test
+    void requireProgramMembershipAllowsGrowerInTheMatchingProgram() {
+        when(legacyNessProgramRepository.findByNormalizedCedula(anyString()))
+                .thenReturn(List.of(program("REGIONAL NARIÑO 4C", "500.0")));
+
+        growerService.requireProgramMembership("123456", "REGIONAL NARIÑO 4C");
+        assertThat(true).isTrue();
+    }
+
+    @Test
+    void requireProgramMembershipDoesNotBlockSpecialTypesOutsideTheMigratedCoverage() {
+        // "rain"/"te"/etc del VBA real de Compras a Futuro no estan en SPECIAL_TO_PROGRAMA todavia
+        // (sin tabla de programa migrada) - no se puede bloquear sin evidencia real.
+        when(legacyNessProgramRepository.findByNormalizedCedula(anyString())).thenReturn(List.of());
+
+        growerService.requireProgramMembership("123456", "rain");
+        assertThat(true).isTrue();
+    }
 }

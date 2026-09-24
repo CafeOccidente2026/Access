@@ -24,9 +24,11 @@
       "label": "Especial",
       "type": "select",
       "options": [
-        "RN", "NESPRESSO - FTUSA", "NESS TE", "NESPRESSO CON TAZA - FTUSA", "TE",
-        "NESPRESSO LATE HARVEST - FTUSA", "NESPRESSO LATE HARVEST CON TAZA - FTUSA",
-        "EXPON", "EXPOR", "REGIONAL NARIÑO 4C"
+        "NESPRESSO - FTUSA",
+        "NESPRESSO LATE HARVEST - FTUSA",
+        "NESPRESSO CON TAZA - FTUSA",
+        "NESPRESSO LATE HARVEST CON TAZA - FTUSA",
+        "REGIONAL NARIÑO 4C"
       ]
     },
     { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
@@ -41,9 +43,23 @@
   ],
   "weightFields": [
     { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency" },
+    { "key": "finca", "label": "Finca", "type": "text" },
+    { "key": "municipality", "label": "Mpio", "type": "text" },
+    { "key": "vereda", "label": "Vereda", "type": "text" },
     { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date" },
     { "key": "kilos", "label": "Kilos", "type": "number" },
     { "key": "balance", "label": "Saldo", "type": "number", "readonly": true }
   ],
-  "reprintButtonLabel": "Imprimir Manifiesto"
+  "reprintButtonLabel": "Imprimir Manifiesto",
+  "messages": {
+    "acceptLabel": "Aceptar",
+    "noAnnouncement": "No hay un anuncio activo para ese Especial.",
+    "deceasedBlocked": "No se le puede anunciar una entrega futura a un caficultor fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
+    "saveError": "No se pudo registrar el compromiso. Verifique los datos.",
+    "savedNotice": "Compromiso registrado. Manifiesto generado.",
+    "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "closeConfirm": "Cerrar sin guardar",
+    "closeCancel": "Seguir en el formulario"
+  }
 }

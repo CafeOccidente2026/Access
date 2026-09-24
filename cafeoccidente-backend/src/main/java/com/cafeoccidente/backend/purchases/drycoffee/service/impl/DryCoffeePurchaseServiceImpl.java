@@ -5,6 +5,8 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
@@ -26,6 +28,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -46,6 +49,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final DryCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
     private final GrowerService growerService;
+    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InventoryMovementService inventoryMovementService;
 
     public DryCoffeePurchaseServiceImpl(
             DryCoffeePurchaseRepository dryCoffeePurchaseRepository,
@@ -57,7 +62,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             DryCoffeePurchaseCalculator calculator,
             DryCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils,
-            GrowerService growerService) {
+            GrowerService growerService,
+            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InventoryMovementService inventoryMovementService) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -68,6 +75,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.mapper = mapper;
         this.securityUtils = securityUtils;
         this.growerService = growerService;
+        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.inventoryMovementService = inventoryMovementService;
     }
 
     @Override
@@ -131,7 +140,15 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
-        return mapper.toResponse(dryCoffeePurchaseRepository.save(purchase), controlRecord);
+        DryCoffeePurchase savedPurchase = dryCoffeePurchaseRepository.save(purchase);
+
+        inventoryMovementService.recordFromPurchaseSafely(
+                InventoryMovement.PurchaseModule.DRY_COFFEE, savedPurchase.getId(),
+                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
+                purchase.getHealthyPercentage(), purchase.getInventoryValue());
+
+        return mapper.toResponse(savedPurchase, controlRecord);
     }
 
     @Override
@@ -173,7 +190,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = securityUtils.getCurrentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = dryCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId);
+        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(

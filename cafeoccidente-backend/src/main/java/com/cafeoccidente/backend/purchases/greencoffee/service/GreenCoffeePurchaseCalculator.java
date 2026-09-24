@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.greencoffee.service;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
@@ -33,6 +34,14 @@ public class GreenCoffeePurchaseCalculator {
             BigDecimal announcementBasePriceLoad,
             BigDecimal monthlyAccumulatedGrossValue,
             BigDecimal monthlyAccumulatedWithholding) {
+        // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
+        // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
+        // directo (sin pasar por el bloqueo del frontend) para facturarle Verde a un caficultor
+        // fallecido.
+        if ("F".equalsIgnoreCase(request.growerType())) {
+            throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
+        }
+
         // Cedula_AfterUpdate (Form_VERDES.bas linea 56): Pr_Base_PC = Texto91 - (Costos * Texto176).
         // Misma formula que Cafe Seco; "Costos" es el valor CONGELADO que la macro de anuncio escribe
         // en el textbox al elegir el producto (en todo Form_VERDES.bas es la unica escritura de

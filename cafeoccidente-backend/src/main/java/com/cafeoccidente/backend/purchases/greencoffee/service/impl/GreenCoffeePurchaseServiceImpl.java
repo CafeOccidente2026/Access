@@ -5,6 +5,8 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
@@ -26,6 +28,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -50,6 +53,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final GreenCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
     private final GrowerService growerService;
+    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InventoryMovementService inventoryMovementService;
 
     public GreenCoffeePurchaseServiceImpl(
             GreenCoffeePurchaseRepository greenCoffeePurchaseRepository,
@@ -61,7 +66,9 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             GreenCoffeePurchaseCalculator calculator,
             GreenCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils,
-            GrowerService growerService) {
+            GrowerService growerService,
+            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InventoryMovementService inventoryMovementService) {
         this.greenCoffeePurchaseRepository = greenCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -72,6 +79,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         this.mapper = mapper;
         this.securityUtils = securityUtils;
         this.growerService = growerService;
+        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.inventoryMovementService = inventoryMovementService;
     }
 
     @Override
@@ -129,7 +138,15 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
-        return mapper.toResponse(greenCoffeePurchaseRepository.save(purchase));
+        GreenCoffeePurchase savedPurchase = greenCoffeePurchaseRepository.save(purchase);
+
+        inventoryMovementService.recordFromPurchaseSafely(
+                InventoryMovement.PurchaseModule.GREEN_COFFEE, savedPurchase.getId(),
+                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
+                null, purchase.getInventoryValue());
+
+        return mapper.toResponse(savedPurchase);
     }
 
     @Override
@@ -170,7 +187,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = securityUtils.getCurrentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = greenCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId);
+        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
         if (next > controlRecord.getResolutionTo()) {
             throw new BusinessRuleException(

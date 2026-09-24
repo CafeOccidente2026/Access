@@ -28,4 +28,17 @@ public interface GrowerService {
      * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si excede el cupo.
      */
     void checkQuota(String idNumber, String specialType, BigDecimal netKg);
+
+    /**
+     * Bloqueo de pertenencia a programa (EnProg/Id_NessOcci): usado hoy por Compras a Futuro
+     * (Form_COMPRAS A FUTURO.bas, Texto34_AfterUpdate - "CAFICULTOR NO PERTENECE A NINGUN
+     * PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE"). Solo bloquea para los Especiales con
+     * cobertura de datos confirmada (staging_legacy_ness/SPECIAL_TO_PROGRAMA) - para el resto no
+     * hay forma de distinguir "no pertenece" de "dato no migrado", mismo criterio que
+     * {@link #checkQuota}. NO esta activado para Cafe Seco/Verde/Pasilla/Otros (ver TODO(EnProg)
+     * en la implementacion) - esa es una decision de negocio pendiente, distinta de esta.
+     *
+     * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si no pertenece.
+     */
+    void requireProgramMembership(String idNumber, String specialType);
 }

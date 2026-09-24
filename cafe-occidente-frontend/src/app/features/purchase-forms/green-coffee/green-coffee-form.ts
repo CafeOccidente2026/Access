@@ -241,9 +241,15 @@ export class GreenCoffeeFormComponent {
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        ['idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) =>
-          this.locked.add(k),
-        );
+        this.locked.add('idPart1');
+        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
+        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
+        // la cascada de calculo nunca llegaba a dispararse.
+        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
+          if ((this.model[k] ?? '').trim() !== '') {
+            this.locked.add(k);
+          }
+        });
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
