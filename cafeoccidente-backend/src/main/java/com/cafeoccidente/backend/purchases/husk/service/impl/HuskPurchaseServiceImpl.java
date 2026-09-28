@@ -141,13 +141,13 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 purchase.getAlmondPercentage(), purchase.getInventoryValue());
 
-        return mapper.toResponse(savedPurchase);
+        return mapper.toResponse(savedPurchase, controlRecordService.getActive(agency.getId()));
     }
 
     @Override
     public HuskPurchaseResponse findById(Long id) {
         return huskPurchaseRepository.findById(id)
-                .map(mapper::toResponse)
+                .map(p -> mapper.toResponse(p, controlRecordService.getActive(p.getAgency().getId())))
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de pasilla no encontrada"));
     }
 

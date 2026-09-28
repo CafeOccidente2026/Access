@@ -51,6 +51,11 @@ export function weightedFactor(rows: Purchase[]): number {
 // El modulo Seco no guarda Kilos_Verdes (la captura de Access muestra 0 en todas las filas).
 const KV = 0;
 
+/** Encabezado de grupo de Access: Cod_Prod y a su lado Nom (Texto65). */
+function groupTitle(group: ProductGroup): string {
+  return `${group.productCode} ${group.rows[0].productName ?? ''}`.trimEnd();
+}
+
 /** Un bloque por anuncio usado en el dia, grupos por Cod_Prod, filas por factura ascendente. */
 export function groupByAnnouncement(purchases: Purchase[]): AnnouncementBlock[] {
   const blocks = new Map<string, Purchase[]>();
@@ -162,7 +167,7 @@ export function buildAnnouncementDetailDoc(purchases: Purchase[], date: string):
   const content = groupByAnnouncement(purchases).flatMap((block, i): Content[] => {
     const body: TableCell[][] = [head];
     for (const group of block.groups) {
-      body.push([{ text: group.productCode, bold: true, fontSize: 9, colSpan: 18, margin: [0, 3, 0, 0] }, ...Array(17).fill('')]);
+      body.push([{ text: groupTitle(group), bold: true, fontSize: 9, colSpan: 18, margin: [0, 3, 0, 0] }, ...Array(17).fill('')]);
       for (const p of group.rows) {
         body.push([
           r(String(p.invoiceNumber)), r(/^\d+$/.test(p.idNumber) ? formatThousands(p.idNumber) : p.idNumber),
@@ -210,7 +215,7 @@ export function buildAnnouncementSummaryDoc(purchases: Purchase[], date: string)
   const content = groupByAnnouncement(purchases).flatMap((block, i): Content[] => {
     const body: TableCell[][] = [head];
     for (const group of block.groups) {
-      body.push([{ text: group.productCode, bold: true, fontSize: 9, colSpan: 10, margin: [0, 3, 0, 0] }, ...Array(9).fill('')]);
+      body.push([{ text: groupTitle(group), bold: true, fontSize: 9, colSpan: 10, margin: [0, 3, 0, 0] }, ...Array(9).fill('')]);
       body.push(['', ...sums(group.rows)]);
     }
     // En Access el "SUMA TOTAL" no trae Porcent Ponderado (no hay control en esa posicion).

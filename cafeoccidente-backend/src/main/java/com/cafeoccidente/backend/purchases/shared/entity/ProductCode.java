@@ -32,4 +32,7 @@ public class ProductCode {
 
     @Column(nullable = false, unique = true)
     private String code;
+
+    /** "Nom" de Access (V28); NULL si el codigo no estaba en producto_migrar.csv. */
+    private String name;
 }

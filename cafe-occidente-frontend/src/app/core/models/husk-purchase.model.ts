@@ -86,4 +86,15 @@ export interface HuskPurchaseResponse {
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
   readonly netToPay: number;
+  readonly address: string;
+  readonly cellphone: string;
+  readonly paymentMethod: string;
+  /** Pie de factura: ControlRecord vivo de la agencia (igual que Cafe Seco). */
+  readonly purchasePoint: string;
+  readonly prefix: string;
+  readonly dianResolution: string;
+  readonly resolutionDate: string;
+  readonly resolutionFrom: number;
+  readonly resolutionTo: number;
+  readonly validity: number;
 }

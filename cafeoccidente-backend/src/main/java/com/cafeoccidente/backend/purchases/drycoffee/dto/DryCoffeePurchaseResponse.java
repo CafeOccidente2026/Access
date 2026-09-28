@@ -56,5 +56,6 @@ public record DryCoffeePurchaseResponse(
         LocalDate resolutionDate,
         Integer resolutionFrom,
         Integer resolutionTo,
-        Integer validity) {
+        Integer validity,
+        String productName) {
 }

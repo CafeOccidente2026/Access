@@ -1,6 +1,8 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
 import {
@@ -14,6 +16,8 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
+import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
+import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
@@ -116,10 +120,15 @@ export class HuskFormComponent {
     return this.buildContent(base);
   });
 
+  private readonly logoDataUrlPromise: Promise<string | null>;
+
   constructor() {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
+    // Precargado ya (no en print()) - ver mismo motivo en dry-coffee-form.ts: open() necesita el
+    // gesto del click todavia vigente o el navegador lo bloquea como pop-up.
+    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
@@ -327,6 +336,7 @@ export class HuskFormComponent {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
+        this.printInvoice(res);
         this.tick.update((n) => n + 1);
       },
       error: (err) => {
@@ -334,6 +344,13 @@ export class HuskFormComponent {
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
+    });
+  }
+
+  private printInvoice(purchase: HuskPurchaseResponse): void {
+    this.logoDataUrlPromise.then((logoDataUrl) => {
+      pdfMake.vfs = pdfFonts;
+      pdfMake.createPdf(buildHuskInvoiceDocDefinition(purchase, logoDataUrl)).open();
     });
   }
 

@@ -155,4 +155,6 @@ export interface DryCoffeePurchaseResponse {
   readonly resolutionFrom: number;
   readonly resolutionTo: number;
   readonly validity: number;
+  /** "Nom" del Cod_Prod (null si no vino en producto_migrar.csv). */
+  readonly productName: string | null;
 }

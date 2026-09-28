@@ -3,13 +3,13 @@ import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
 
 /** Formato colombiano con 2 decimales (Valor Bruto, Aporte Socio, Retefuente, Neto a Pagar, pesos/kilos...). */
-function money(value: number): string {
+export function money(value: number): string {
   return value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /** Formato colombiano sin decimales (precios por unidad: Precio Carga, Sustentación, Pasilla, Sobreprecio,
  *  Merma por defecto, Vr. Kilo) - igual que en el PDF de referencia, esos campos no llevan centavos. */
-function wholePeso(value: number): string {
+export function wholePeso(value: number): string {
   return Math.round(value).toLocaleString('es-CO');
 }
 
@@ -27,9 +27,9 @@ function shortDate(isoDate: string): string {
   return `${d.getDate()}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-const CELL = { fontSize: 8, margin: [2, 2, 2, 2] as [number, number, number, number] };
-const LABEL_CELL = { ...CELL };
-const HEADER_CELL = { fontSize: 8, bold: true, alignment: 'center' as const, margin: [2, 2, 2, 2] as [number, number, number, number] };
+export const CELL = { fontSize: 8, margin: [2, 2, 2, 2] as [number, number, number, number] };
+export const LABEL_CELL = { ...CELL };
+export const HEADER_CELL = { fontSize: 8, bold: true, alignment: 'center' as const, margin: [2, 2, 2, 2] as [number, number, number, number] };
 
 /**
  * Documento Soporte de compra de café pergamino seco - mismo layout y campos que el PDF de
@@ -42,16 +42,48 @@ export function buildDryCoffeeInvoiceDocDefinition(
   purchase: DryCoffeePurchaseResponse,
   logoDataUrl: string | null,
 ): TDocumentDefinitions {
-  const documentNumber = `${purchase.prefix} - ${purchase.invoiceNumber.toLocaleString('es-CO')}`;
-  const title = `Documento Soporte de compra de café pergamino seco tipo ${purchase.specialType}`;
-  const associated = purchase.growerType === 'S' ? 'ASOCIADO' : 'NO ASOCIADO';
-  const nit = /^\d+$/.test(purchase.idNumber) ? Number(purchase.idNumber).toLocaleString('es-CO') : purchase.idNumber;
+  const [cashRow, checkRow, transferRow, cardTerminalRow] = paymentCells(purchase);
+  return buildInvoiceDoc(purchase, logoDataUrl, dryCoffeeMainTable(purchase, cashRow, checkRow, transferRow, cardTerminalRow));
+}
 
+/** Campos que usan el encabezado, la identificacion, las formas de pago y el pie de la factura:
+ *  identicos en los reportes "Factura" (Seco) y "Factura Pasilla" del export de Access. */
+export type InvoiceParty = Pick<
+  DryCoffeePurchaseResponse,
+  | 'prefix' | 'invoiceNumber' | 'specialType' | 'growerType' | 'idNumber' | 'firstName' | 'lastName'
+  | 'address' | 'cellphone' | 'purchasePoint' | 'purchaseDate' | 'fundCode' | 'paymentMethod' | 'netToPay'
+  | 'dianResolution' | 'resolutionDate' | 'validity' | 'resolutionFrom' | 'resolutionTo'
+>;
+
+const paymentRow = (label: string, value: string): Content[] => [
+  { text: label, ...CELL, alignment: 'right' },
+  { text: value, ...CELL, alignment: 'right', bold: true },
+];
+
+/** Las 4 celdas EFECTIVO / CHEQUE / TRANSFER / DATAFONO de "FORMAS DE PAGO" (Fpef/Fpch/FpTx/FpDat). */
+export function paymentCells(purchase: InvoiceParty): Content[] {
   const paymentMethod = (purchase.paymentMethod ?? '').toUpperCase();
   const cash = paymentMethod === 'EFECTIVO' ? purchase.netToPay : 0;
   const check = paymentMethod === 'CHEQUE' ? purchase.netToPay : 0;
   const transfer = paymentMethod === 'TRANSFERENCIA' || paymentMethod === 'TRANSFER' ? purchase.netToPay : 0;
   const cardTerminal = paymentMethod === 'DATAFONO' ? purchase.netToPay : 0;
+  return (
+    [['EFECTIVO $', cash], ['CHEQUE $', check], ['TRANSFER $', transfer], ['DATAFONO $', cardTerminal]] as const
+  ).map(([label, value]) => ({
+    table: { widths: ['*', 70], body: [paymentRow(label, money(value))] },
+    layout: 'noBorders',
+  }));
+}
+
+export function buildInvoiceDoc(
+  purchase: InvoiceParty,
+  logoDataUrl: string | null,
+  mainTable: Content,
+): TDocumentDefinitions {
+  const documentNumber = `${purchase.prefix} - ${purchase.invoiceNumber.toLocaleString('es-CO')}`;
+  const title = `Documento Soporte de compra de café pergamino seco tipo ${purchase.specialType}`;
+  const associated = purchase.growerType === 'S' ? 'ASOCIADO' : 'NO ASOCIADO';
+  const nit = /^\d+$/.test(purchase.idNumber) ? Number(purchase.idNumber).toLocaleString('es-CO') : purchase.idNumber;
 
   const headerBlock: Content = {
     table: {
@@ -128,6 +160,47 @@ export function buildDryCoffeeInvoiceDocDefinition(
     layout: { defaultBorder: true },
   };
 
+  const legal =
+    'Este documento es un soporte en adquisición de bienes o servicios a sujetos no obligados a expedir ' +
+    `facturas de venta. Autorización de facturación No.${purchase.dianResolution} aprobado en ` +
+    `${shortDate(purchase.resolutionDate)} vigente ${purchase.validity} meses, prefijo ${purchase.prefix} ` +
+    `desde el número ${purchase.resolutionFrom} al ${purchase.resolutionTo}.`;
+
+  const signatures: Content = {
+    columns: [
+      { text: 'FIRMA VENDEDOR', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
+      { text: 'COMPRADO POR:', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
+      { text: 'REVISADO POR:', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
+    ],
+  };
+
+  const copy: Content[] = [
+    headerBlock,
+    { text: '', margin: [0, 4, 0, 0] },
+    identificationBlock,
+    mainTable,
+    signatures,
+    { text: legal, fontSize: 7, alignment: 'center', margin: [0, 20, 0, 0] },
+  ];
+
+  // Macro "Imprime Factura" abre el reporte "Factura" dos veces (comprador y vendedor), sin rotulo
+  // de Original/Copia -> dos paginas identicas. structuredClone porque pdfmake muta los nodos al
+  // maquetar y no admite reusar las mismas referencias en dos paginas.
+  return {
+    pageSize: 'LETTER',
+    pageMargins: [30, 30, 30, 30],
+    content: [...copy, { stack: structuredClone(copy), pageBreak: 'before' }],
+    defaultStyle: { font: 'Roboto' },
+  };
+}
+
+function dryCoffeeMainTable(
+  purchase: DryCoffeePurchaseResponse,
+  cashRow: Content,
+  checkRow: Content,
+  transferRow: Content,
+  cardTerminalRow: Content,
+): Content {
   const dataRow = (
     label: string,
     value: string,
@@ -149,12 +222,7 @@ export function buildDryCoffeeInvoiceDocDefinition(
     { text: value, ...CELL, alignment: 'right', bold },
   ];
 
-  const paymentRow = (label: string, value: string): Content[] => [
-    { text: label, ...CELL, alignment: 'right' },
-    { text: value, ...CELL, alignment: 'right', bold: true },
-  ];
-
-  const mainTable: Content = {
+  return {
     table: {
       widths: [125, 55, 35, 28, 35, 85, 130],
       body: [
@@ -214,71 +282,26 @@ export function buildDryCoffeeInvoiceDocDefinition(
             money(purchase.defectivePercentage),
           ),
           { text: 'FORMAS\nDE\nPAGO', rowSpan: 4, ...CELL, bold: true, alignment: 'center' },
-          {
-            table: { widths: ['*', 70], body: [paymentRow('EFECTIVO $', money(cash))] },
-            layout: 'noBorders',
-          },
+          cashRow,
         ],
         [
           ...dataRow('Sobrepr Cafés Esp por Kg $:', wholePeso(purchase.bonus)),
           {},
-          {
-            table: { widths: ['*', 70], body: [paymentRow('CHEQUE $', money(check))] },
-            layout: 'noBorders',
-          },
+          checkRow,
         ],
         [
           ...dataRow('Merma por defecto en tasa $:', wholePeso(purchase.penalty)),
           {},
-          {
-            table: { widths: ['*', 70], body: [paymentRow('TRANSFER $', money(transfer))] },
-            layout: 'noBorders',
-          },
+          transferRow,
         ],
         [
           ...dataRow('VALOR KILO PERGAMINO $:', wholePeso(purchase.unitPrice)),
           {},
-          {
-            table: { widths: ['*', 70], body: [paymentRow('DATAFONO $', money(cardTerminal))] },
-            layout: 'noBorders',
-          },
+          cardTerminalRow,
         ],
       ],
     },
     layout: { defaultBorder: true },
-  };
-
-  const legal =
-    'Este documento es un soporte en adquisición de bienes o servicios a sujetos no obligados a expedir ' +
-    `facturas de venta. Autorización de facturación No.${purchase.dianResolution} aprobado en ` +
-    `${shortDate(purchase.resolutionDate)} vigente ${purchase.validity} meses, prefijo ${purchase.prefix} ` +
-    `desde el número ${purchase.resolutionFrom} al ${purchase.resolutionTo}.`;
-
-  const signatures: Content = {
-    columns: [
-      { text: 'FIRMA VENDEDOR', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
-      { text: 'COMPRADO POR:', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
-      { text: 'REVISADO POR:', bold: true, alignment: 'center', fontSize: 8, margin: [0, 30, 0, 0] },
-    ],
-  };
-
-  const copy: Content[] = [
-    headerBlock,
-    { text: '', margin: [0, 4, 0, 0] },
-    identificationBlock,
-    mainTable,
-    signatures,
-    { text: legal, fontSize: 7, alignment: 'center', margin: [0, 20, 0, 0] },
-  ];
-
-  // Macro "Imprime Factura" abre el reporte "Factura" dos veces (comprador y vendedor), sin rotulo
-  // de Original/Copia -> dos paginas identicas. structuredClone porque pdfmake muta los nodos al
-  // maquetar y no admite reusar las mismas referencias en dos paginas.
-  return {
-    pageSize: 'LETTER',
-    pageMargins: [30, 30, 30, 30],
-    content: [...copy, { stack: structuredClone(copy), pageBreak: 'before' }],
-    defaultStyle: { font: 'Roboto' },
   };
 }
 

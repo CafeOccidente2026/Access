@@ -44,6 +44,15 @@ describe('announcement report', () => {
     expect(shortDate('2026-05-09')).toBe('9/05/2026');
   });
 
+  it('titles each Cod_Prod group with the code and its Nom, like Access', () => {
+    const named = [purchase({ productName: 'CAFÉ LFTO NESS - FTUSA' })];
+    const unnamed = [purchase({ productCode: '999', productName: null })];
+    for (const build of [buildAnnouncementDetailDoc, buildAnnouncementSummaryDoc]) {
+      expect(JSON.stringify(build(named, '9/05/2026').content)).toContain('"0110001000007 CAFÉ LFTO NESS - FTUSA"');
+      expect(JSON.stringify(build(unnamed, '9/05/2026').content)).toContain('"999"');
+    }
+  });
+
   it('breaks the page between announcement blocks in both reports', () => {
     const purchases = [purchase({}), purchase({ invoiceNumber: 2, announcementNumber: 'SDTA-3444' })];
     for (const doc of [buildAnnouncementDetailDoc(purchases, '9/05/2026'), buildAnnouncementSummaryDoc(purchases, '9/05/2026')]) {
