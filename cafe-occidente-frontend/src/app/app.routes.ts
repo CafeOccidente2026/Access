@@ -158,6 +158,11 @@ export const routes: Routes = [
       import('./features/remesa-export/remesa-export').then((m) => m.RemesaExportComponent),
   },
   {
+    path: 'compras/reporte-anuncio',
+    loadComponent: () =>
+      import('./features/announcement-report/announcement-report').then((m) => m.AnnouncementReportComponent),
+  },
+  {
     path: 'compras/dialogo-fechas',
     loadComponent: () =>
       import('./features/date-range-dialog/date-range-dialog').then(

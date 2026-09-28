@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.purchases.drycoffee.repository;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -48,4 +49,7 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
             """)
     BigDecimal sumNetKgByAgencyAndAnnouncementNumber(
             @Param("agencyId") Long agencyId, @Param("displayAnnouncementNumber") String displayAnnouncementNumber);
+
+    /** Reportes ANUNCIO / RESUMEN ANUNCIO: compras de una agencia en una fecha, por factura. */
+    List<DryCoffeePurchase> findByAgencyIdAndPurchaseDateOrderByInvoiceNumberAsc(Long agencyId, LocalDate purchaseDate);
 }

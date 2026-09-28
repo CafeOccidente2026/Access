@@ -32,6 +32,7 @@ import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberS
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -156,6 +157,18 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de cafe seco no encontrada"));
         ControlRecord controlRecord = controlRecordService.getActive(purchase.getAgency().getId());
         return mapper.toResponse(purchase, controlRecord);
+    }
+
+    @Override
+    public List<DryCoffeePurchaseResponse> findByDate(LocalDate purchaseDate) {
+        Long agencyId = securityUtils.getCurrentAgencyId();
+        List<DryCoffeePurchase> purchases =
+                dryCoffeePurchaseRepository.findByAgencyIdAndPurchaseDateOrderByInvoiceNumberAsc(agencyId, purchaseDate);
+        if (purchases.isEmpty()) {
+            return List.of();
+        }
+        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        return purchases.stream().map(p -> mapper.toResponse(p, controlRecord)).toList();
     }
 
     @Override

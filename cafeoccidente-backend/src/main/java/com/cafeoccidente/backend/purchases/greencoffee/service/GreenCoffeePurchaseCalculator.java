@@ -62,7 +62,9 @@ public class GreenCoffeePurchaseCalculator {
                 .setScale(SCALE, RoundingMode.HALF_UP);
 
         // Vr_Kilo_Comp_AfterUpdate: Vr_Kilo = Vr_Kilo_Comp (digitado a mano, sin formula de calidad).
-        BigDecimal unitPrice = request.compKgPrice().setScale(SCALE, RoundingMode.HALF_UP);
+        // Vr_Kilo, Aporte_Socio/Descuento_Coop, Retefuente y Neto_a_Pagar son DecimalPlaces=0 en
+        // VERDES.txt (como Vr_Bruto): peso entero.
+        BigDecimal unitPrice = request.compKgPrice().setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
         // Castigo_lostFocus: Vr_Bruto = Vr_Kilo_Comp * Kilos_Verdes (no Kilos_Netos).
@@ -76,11 +78,11 @@ public class GreenCoffeePurchaseCalculator {
         if ("S".equalsIgnoreCase(request.growerType())) {
             associateContribution = grossValue.multiply(controlRecord.getAssociatePercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+                    .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         } else if ("C".equalsIgnoreCase(request.growerType())) {
             cooperativeDiscount = grossValue.multiply(controlRecord.getNonAssociateDiscount())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+                    .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         }
 
         // Retefuente incremental sobre el acumulado diario del caficultor en VERDES (var6).
@@ -94,7 +96,7 @@ public class GreenCoffeePurchaseCalculator {
             withholding = var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .subtract(dailyAccumulatedWithholding)
-                    .setScale(SCALE, RoundingMode.HALF_UP);
+                    .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         }
 
         // Descuento_Fro_LostFocus / OtrosDescuentos_AfterUpdate.
@@ -104,7 +106,7 @@ public class GreenCoffeePurchaseCalculator {
                 .subtract(withholding)
                 .subtract(request.shrinkageDiscount())
                 .subtract(request.otherDiscounts())
-                .setScale(SCALE, RoundingMode.HALF_UP);
+                .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         MoneyValidation.requireNonNegative(netToPay, "Neto a Pagar");
 
         return new GreenCoffeePurchaseCalculation(

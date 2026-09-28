@@ -34,6 +34,11 @@ export class DryCoffeePurchaseService {
     );
   }
 
+  /** Compras de la agencia de la sesion en una fecha (reportes ANUNCIO / RESUMEN ANUNCIO). */
+  findByDate(date: string): Observable<DryCoffeePurchaseResponse[]> {
+    return this.http.get<DryCoffeePurchaseResponse[]>(`${API_BASE_URL}/purchases/dry-coffee/by-date?date=${date}`);
+  }
+
   /** Factura: siguiente consecutivo dentro del rango autorizado (paso "Fondo"). */
   nextInvoiceNumber(): Observable<NextInvoiceNumber> {
     return this.http.get<NextInvoiceNumber>(`${API_BASE_URL}/purchases/dry-coffee/next-invoice-number`);

@@ -52,6 +52,38 @@ class GreenCoffeePurchaseCalculatorTest {
         assertThat(result.basePriceLoad()).isEqualByComparingTo("1112500.00");
     }
 
+    private GreenCoffeePurchaseRequest fractionalRequest(String growerType) {
+        return new GreenCoffeePurchaseRequest(
+                1L, 1L, 1, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                10, new BigDecimal("1250.3"), new BigDecimal("50"),
+                new BigDecimal("1200"), BigDecimal.ZERO, new BigDecimal("692"), BigDecimal.ZERO,
+                new BigDecimal("1300.6"), false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+    }
+
+    @Test
+    void wholePesoControlsAreRoundedLikeAccess() {
+        // Vr_Kilo, Aporte_Socio, Retefuente y Neto_a_Pagar son DecimalPlaces=0 en VERDES.txt.
+        GreenCoffeePurchaseCalculation result = calculator.calculate(
+                fractionalRequest("S"), controlRecord(new BigDecimal("692.00")),
+                new BigDecimal("1200000.00"), new BigDecimal("8000000"), BigDecimal.ZERO);
+
+        assertThat(result.unitPrice()).isEqualByComparingTo("1301");               // 1300.6
+        assertThat(result.grossValue()).isEqualByComparingTo("1561590");           // 1301 * 1200.3
+        assertThat(result.associateContribution()).isEqualByComparingTo("31232");  // 31231.8
+        assertThat(result.withholding()).isEqualByComparingTo("47808");            // 9561590 * 0.5% = 47807.95
+        assertThat(result.netToPay()).isEqualByComparingTo("1482550");
+    }
+
+    @Test
+    void cooperativeDiscountIsRoundedToWholePeso() {
+        GreenCoffeePurchaseCalculation result = calculator.calculate(
+                fractionalRequest("C"), controlRecord(new BigDecimal("692.00")),
+                new BigDecimal("1200000.00"), BigDecimal.ZERO, BigDecimal.ZERO);
+
+        assertThat(result.cooperativeDiscount()).isEqualByComparingTo("12493");    // 1561590 * 0.8% = 12492.72
+        assertThat(result.netToPay()).isEqualByComparingTo("1549097");
+    }
+
     @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(
