@@ -8,19 +8,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface GreenCoffeePurchaseRepository extends JpaRepository<GreenCoffeePurchase, Long> {
 
-    /** Ver DryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber - mismo mecanismo, propio de VERDES. */
+    /** Ver DryCoffeePurchaseRepository.sumDailyTotalsByIdNumber - mismo mecanismo, propio de VERDES. */
     @Query("""
             SELECT new com.cafeoccidente.backend.purchases.greencoffee.repository.MonthlyGrowerTotals(
                 COALESCE(SUM(p.grossValue), 0),
                 COALESCE(SUM(p.withholding), 0))
             FROM GreenCoffeePurchase p
             WHERE p.idNumber = :idNumber
-              AND p.purchaseDate BETWEEN :monthStart AND :monthEnd
+              AND p.purchaseDate = :purchaseDate
             """)
-    MonthlyGrowerTotals sumMonthlyTotalsByIdNumber(
-            @Param("idNumber") String idNumber,
-            @Param("monthStart") LocalDate monthStart,
-            @Param("monthEnd") LocalDate monthEnd);
+    MonthlyGrowerTotals sumDailyTotalsByIdNumber(
+            @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
     /**
      * Ultima factura ya usada en este modulo por esta agencia ("Para asignar # factura verdes").

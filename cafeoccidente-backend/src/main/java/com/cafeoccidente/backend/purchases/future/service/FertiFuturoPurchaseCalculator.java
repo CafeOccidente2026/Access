@@ -33,8 +33,8 @@ public class FertiFuturoPurchaseCalculator {
 
     /**
      * @param announcementQualityIncrementRate VrIncCalidad crudo del anuncio (0 si no aplica).
-     * @param monthlyAccumulatedGrossValue Texto105 (ReteMesCursoFerti) - acumulado propio del modulo.
-     * @param monthlyAccumulatedWithholding Texto107 (ReteMesCursoFerti).
+     * @param dailyAccumulatedGrossValue Texto105 (ReteMesCursoFerti) - acumulado propio del modulo.
+     * @param dailyAccumulatedWithholding Texto107 (ReteMesCursoFerti).
      */
     public FertiFuturoPurchaseCalculation calculate(
             FertiFuturoPurchaseRequest request,
@@ -43,8 +43,8 @@ public class FertiFuturoPurchaseCalculator {
             BigDecimal announcementBonus,
             BigDecimal announcementCosts,
             BigDecimal announcementQualityIncrementRate,
-            BigDecimal monthlyAccumulatedGrossValue,
-            BigDecimal monthlyAccumulatedWithholding) {
+            BigDecimal dailyAccumulatedGrossValue,
+            BigDecimal dailyAccumulatedWithholding) {
         if ("F".equalsIgnoreCase(request.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
@@ -78,7 +78,7 @@ public class FertiFuturoPurchaseCalculator {
         // esta explicito en este VBA como si lo esta en Form_COMPRAS.bas, pero es la misma moneda.
         BigDecimal unitPrice = roundToWholePeso(var4.subtract(announcementCosts));
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
-        BigDecimal grossValue = unitPrice.multiply(request.netKg()).setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal grossValue = roundToWholePeso(unitPrice.multiply(request.netKg()));
         MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
@@ -90,11 +90,11 @@ public class FertiFuturoPurchaseCalculator {
             cooperativeDiscount = roundToWholePeso(grossValue.multiply(COOPERATIVE_DISCOUNT_PERCENTAGE));
         }
 
-        BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
+        BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && thresholdBase.compareTo(WITHHOLDING_BASE_THRESHOLD) > 0) {
             withholding = roundToWholePeso(
-                    thresholdBase.multiply(WITHHOLDING_PERCENTAGE).subtract(monthlyAccumulatedWithholding));
+                    thresholdBase.multiply(WITHHOLDING_PERCENTAGE).subtract(dailyAccumulatedWithholding));
         }
 
         BigDecimal netToPay = roundToWholePeso(grossValue

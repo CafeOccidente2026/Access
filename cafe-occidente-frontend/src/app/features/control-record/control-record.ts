@@ -7,13 +7,16 @@ import { FormFieldDefinition } from '../../core/models';
 import { Agency } from '../../core/models/agency.model';
 import { ControlRecordRequest, ControlRecordResponse } from '../../core/models/control-record.model';
 import { AgencyService } from '../../core/services/agency.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { ControlRecordService } from '../../core/services/control-record.service';
 import { AccessWindowComponent, FormFieldComponent } from '../../shared/ui';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
 import { ControlRecordContent } from './control-record.model';
 
-/** Pantalla ADMIN "Registro de Control": ver/crear/editar el ControlRecord de una agencia. */
+/** Pantalla ADMIN "Registro de Control": ver/crear/editar el ControlRecord de una agencia. Como en
+ *  Access, abre ya con el registro de la agencia de la sesion cargado; el selector queda para
+ *  crear/editar el de otra agencia. */
 @Component({
   selector: 'app-control-record',
   standalone: true,
@@ -25,6 +28,7 @@ export class ControlRecordComponent {
   private readonly content = inject(ContentService);
   private readonly agencyService = inject(AgencyService);
   private readonly controlRecordService = inject(ControlRecordService);
+  private readonly authService = inject(AuthService);
 
   readonly page = toSignal(this.content.loadJson<ControlRecordContent>('control-record'));
   readonly agencies = signal<Agency[]>([]);
@@ -41,6 +45,10 @@ export class ControlRecordComponent {
 
   constructor() {
     this.agencyService.list().subscribe((agencies) => this.agencies.set(agencies));
+    const sessionAgencyId = this.authService.agencyId();
+    if (sessionAgencyId !== null) {
+      this.onAgencyChange(String(sessionAgencyId));
+    }
   }
 
   onAgencyChange(value: string): void {

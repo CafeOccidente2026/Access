@@ -10,8 +10,9 @@ import org.springframework.data.repository.query.Param;
 public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurchase, Long> {
 
     /**
-     * Suma el Vr_Bruto y la Retefuente de todas las compras ya registradas para una cedula dentro
-     * del rango de fechas dado. Se llama antes de guardar la compra en curso, asi que esta
+     * Suma el Vr_Bruto y la Retefuente de todas las compras ya registradas para una cedula en el
+     * dia de la compra (ventana diaria, ver docs/informe-formulas-compras-vs-vba.md, Retefuente).
+     * Se llama antes de guardar la compra en curso, asi que esta
      * naturalmente excluida (todavia no tiene fila). COALESCE devuelve 0 cuando no hay compras.
      */
     @Query("""
@@ -20,12 +21,10 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
                 COALESCE(SUM(p.withholding), 0))
             FROM DryCoffeePurchase p
             WHERE p.idNumber = :idNumber
-              AND p.purchaseDate BETWEEN :monthStart AND :monthEnd
+              AND p.purchaseDate = :purchaseDate
             """)
-    MonthlyGrowerTotals sumMonthlyTotalsByIdNumber(
-            @Param("idNumber") String idNumber,
-            @Param("monthStart") LocalDate monthStart,
-            @Param("monthEnd") LocalDate monthEnd);
+    MonthlyGrowerTotals sumDailyTotalsByIdNumber(
+            @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
     /**
      * Ultima factura ya usada por esta agencia, para reservar la siguiente (paso "Fondo"). Null si

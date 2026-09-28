@@ -262,17 +262,22 @@ export function buildDryCoffeeInvoiceDocDefinition(
     ],
   };
 
+  const copy: Content[] = [
+    headerBlock,
+    { text: '', margin: [0, 4, 0, 0] },
+    identificationBlock,
+    mainTable,
+    signatures,
+    { text: legal, fontSize: 7, alignment: 'center', margin: [0, 20, 0, 0] },
+  ];
+
+  // Macro "Imprime Factura" abre el reporte "Factura" dos veces (comprador y vendedor), sin rotulo
+  // de Original/Copia -> dos paginas identicas. structuredClone porque pdfmake muta los nodos al
+  // maquetar y no admite reusar las mismas referencias en dos paginas.
   return {
     pageSize: 'LETTER',
     pageMargins: [30, 30, 30, 30],
-    content: [
-      headerBlock,
-      { text: '', margin: [0, 4, 0, 0] },
-      identificationBlock,
-      mainTable,
-      signatures,
-      { text: legal, fontSize: 7, alignment: 'center', margin: [0, 20, 0, 0] },
-    ],
+    content: [...copy, { stack: structuredClone(copy), pageBreak: 'before' }],
     defaultStyle: { font: 'Roboto' },
   };
 }

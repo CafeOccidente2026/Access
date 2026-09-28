@@ -27,18 +27,18 @@ public class OtherCoffeePurchaseCalculator {
 
     /**
      * @param announcementBasePriceLoad valor crudo del anuncio (vrcps en el VBA)
-     * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el mes
-     *     actual EN ESTE MODULO (CalculoReteFteMesEsp/ReteMesCursoEsp - acumulado independiente del
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el dia
+     *     de la compra EN ESTE MODULO (CalculoReteFteMesEsp/ReteMesCursoEsp - acumulado independiente del
      *     de Cafe Seco, confirmado por reporte propio en el VBA)
-     * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el mes
-     *     actual EN ESTE MODULO
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el dia
+     *     de la compra EN ESTE MODULO
      */
     public OtherCoffeePurchaseCalculation calculate(
             OtherCoffeePurchaseRequest request,
             ControlRecord controlRecord,
             BigDecimal announcementBasePriceLoad,
-            BigDecimal monthlyAccumulatedGrossValue,
-            BigDecimal monthlyAccumulatedWithholding) {
+            BigDecimal dailyAccumulatedGrossValue,
+            BigDecimal dailyAccumulatedWithholding) {
         if ("F".equalsIgnoreCase(request.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
@@ -78,7 +78,7 @@ public class OtherCoffeePurchaseCalculator {
 
         BigDecimal unitPrice = roundToWholePeso(qualityUnitPrice);
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
-        BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal grossValue = roundToWholePeso(unitPrice.multiply(netKg));
         MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
@@ -92,12 +92,12 @@ public class OtherCoffeePurchaseCalculator {
                     .divide(HUNDRED, MathContext.DECIMAL64));
         }
 
-        BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
+        BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding));
+                    .subtract(dailyAccumulatedWithholding));
         }
 
         BigDecimal netToPay = roundToWholePeso(grossValue

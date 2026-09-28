@@ -6,7 +6,7 @@
     "alt": "CaféOccidente - Cooperativa de caficultores de occidente de Nariño Ltda."
   },
   "options": [
-    { "label": "Registro de Control", "route": "/registro-control" },
+    { "label": "Registro de Control", "route": "/registro-control", "adminOnly": true },
     { "label": "Usuarios", "route": "/usuarios", "adminOnly": true },
     { "label": "Actualizar Anuncios", "route": "/anuncios", "adminOnly": true },
     { "label": "Compras", "route": "/compras", "emphasis": true },

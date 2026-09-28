@@ -10,7 +10,9 @@
           (change)="onAgencyChange($any($event.target).value)"
         >
           <option value=""></option>
-          <option *ngFor="let agency of agencies()" [value]="agency.id">{{ agency.name }}</option>
+          <option *ngFor="let agency of agencies()" [value]="agency.id" [selected]="agency.id === agencyId()">
+            {{ agency.name }}
+          </option>
         </select>
       </label>
 

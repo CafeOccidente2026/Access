@@ -22,16 +22,16 @@ public class HuskPurchaseCalculator {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     /**
-     * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado en PASILLA para esta cedula
-     *     en el mes actual (Texto105 / macro CalculoReteFteMesPas)
-     * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada en PASILLA a esta cedula en
-     *     el mes actual (Texto107 / macro CalculoReteFteMesPas)
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado en PASILLA para esta cedula
+     *     en el dia de la compra (Texto105 / macro CalculoReteFteMesPas)
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada en PASILLA a esta cedula en
+     *     el dia de la compra (Texto107 / macro CalculoReteFteMesPas)
      */
     public HuskPurchaseCalculation calculate(
             HuskPurchaseRequest request,
             ControlRecord controlRecord,
-            BigDecimal monthlyAccumulatedGrossValue,
-            BigDecimal monthlyAccumulatedWithholding) {
+            BigDecimal dailyAccumulatedGrossValue,
+            BigDecimal dailyAccumulatedWithholding) {
         // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
         // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
         // directo (sin pasar por el bloqueo del frontend) para facturarle Pasilla a un caficultor
@@ -73,7 +73,7 @@ public class HuskPurchaseCalculator {
                 .subtract(request.costs()));
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
-        BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal grossValue = roundToWholePeso(unitPrice.multiply(netKg));
         MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
@@ -89,13 +89,14 @@ public class HuskPurchaseCalculator {
 
         // SIN VERIFICAR: CalculoReteFteMesPas solo abre el reporte "ReteMesCursoPas" y copia
         // TotalVrBruto/TotalRetefuente a Texto105/Texto107; el RecordSource del reporte no esta en
-        // el export de VBA disponible. sumMonthlyTotalsByIdNumber es el mejor esfuerzo hasta confirmarlo.
-        BigDecimal var6 = grossValue.add(monthlyAccumulatedGrossValue);
+        // el export de VBA disponible. sumDailyTotalsByIdNumber usa ventana diaria
+        // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
+        BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding));
+                    .subtract(dailyAccumulatedWithholding));
         }
 
         BigDecimal netToPay = roundToWholePeso(grossValue

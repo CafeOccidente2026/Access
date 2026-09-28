@@ -90,7 +90,7 @@ class FertiFuturoPurchaseServiceImplTest {
         when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency()));
         when(fundRepository.findById(1L)).thenReturn(Optional.of(fund()));
         when(announcementService.findLatest(1L, 1L, "RN")).thenReturn(announcement());
-        when(fertiFuturoPurchaseRepository.sumMonthlyTotalsByIdNumber(any(), any(), any()))
+        when(fertiFuturoPurchaseRepository.sumDailyTotalsByIdNumber(any(), any()))
                 .thenReturn(new FertiFuturoMonthlyTotals(BigDecimal.ZERO, BigDecimal.ZERO));
     }
 
@@ -104,6 +104,16 @@ class FertiFuturoPurchaseServiceImplTest {
         verify(fertiFuturoPurchaseRepository, never()).save(any());
         verify(inventoryMovementService, never()).recordFromPurchaseSafely(
                 any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void withholdingAccumulatesOnlyTheGrowersPurchasesOfTheSameDay() {
+        // Ventana diaria de Retefuente (ver docs/informe-formulas-compras-vs-vba.md, seccion Retefuente).
+        mockAnnouncementLookup();
+
+        service.preview(request(null));
+
+        verify(fertiFuturoPurchaseRepository).sumDailyTotalsByIdNumber("123456", java.time.LocalDate.now());
     }
 
     @Test

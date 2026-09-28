@@ -32,7 +32,6 @@ import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberS
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -170,17 +169,16 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
     private DryCoffeePurchaseCalculation runCalculation(
             DryCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord) {
-        YearMonth currentMonth = YearMonth.now();
-        MonthlyGrowerTotals monthlyTotals = dryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
-                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
+        MonthlyGrowerTotals dailyTotals = dryCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
+                request.idNumber(), LocalDate.now());
 
         DryCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
                 announcement.defectiveUnitPrice(),
-                monthlyTotals.grossValue(),
-                monthlyTotals.withholding());
+                dailyTotals.grossValue(),
+                dailyTotals.withholding());
         // Item C (cupo, Form_COMPRAS.bas lineas 412/465/518/571/624) - ver GrowerService.checkQuota.
         growerService.checkQuota(request.idNumber(), request.specialType(), calculation.netKg());
         return calculation;

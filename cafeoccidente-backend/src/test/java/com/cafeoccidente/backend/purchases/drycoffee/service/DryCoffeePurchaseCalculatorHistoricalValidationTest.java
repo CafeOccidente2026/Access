@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.YearMonth;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -58,9 +58,9 @@ import org.springframework.boot.test.context.SpringBootTest;
  *       asociados_migrar.csv, y withholding_exempt = retefuente historico == 0) al insertar en
  *       dry_coffee_purchase - este test lee esos campos YA resueltos de la fila persistida, no los
  *       vuelve a inferir.</li>
- *   <li>El acumulado mensual (Texto105/Texto107) se reconstruye ordenando las compras de cada
+ *   <li>El acumulado diario (Texto105/Texto107) se reconstruye ordenando las compras de cada
  *       cedula por fecha+factura y sumando el Vr_Bruto/Retefuente HISTORICO (no el recalculado) de
- *       las compras anteriores del mismo mes calendario - asi es como el sistema real lo habria
+ *       las compras anteriores del mismo dia - asi es como el sistema real lo habria
  *       visto en su momento. La formula de origen de ese acumulado sigue sin confirmar contra el
  *       VBA (ver informe de formulas); este test no resuelve esa limitacion, solo la reproduce.</li>
  *   <li>Filas con {@code forma_de_pago = ANULADA} ya fueron excluidas por el script de migracion,
@@ -115,7 +115,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                         + "'python scripts/migrate_eltambo.py' contra la base de este entorno primero.");
 
         Map<Long, ControlRecord> controlRecordByAgencyId = new HashMap<>();
-        Map<String, List<MonthlyEntry>> historyByIdNumber = new HashMap<>();
+        Map<String, List<DailyEntry>> historyByIdNumber = new HashMap<>();
 
         int rowsCompared = 0;
         int allFieldsMatch = 0;
@@ -133,8 +133,8 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 continue;
             }
 
-            YearMonth yearMonth = YearMonth.from(historical.getPurchaseDate());
-            BigDecimal[] accumulated = priorMonthlyTotals(historyByIdNumber, historical.getIdNumber(), yearMonth);
+            LocalDate purchaseDate = historical.getPurchaseDate();
+            BigDecimal[] accumulated = priorDailyTotals(historyByIdNumber, historical.getIdNumber(), purchaseDate);
 
             DryCoffeePurchaseCalculation recalculated;
             try {
@@ -146,7 +146,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 continue;
             } finally {
                 historyByIdNumber.computeIfAbsent(historical.getIdNumber(), id -> new ArrayList<>())
-                        .add(new MonthlyEntry(yearMonth, historical.getGrossValue(), historical.getWithholding()));
+                        .add(new DailyEntry(purchaseDate, historical.getGrossValue(), historical.getWithholding()));
             }
 
             rowsCompared++;
@@ -205,14 +205,14 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
     }
 
     /** Suma el Vr_Bruto/Retefuente HISTORICO de las compras ya registradas para esta cedula en el
-     *  mismo mes calendario, en el orden en que realmente ocurrieron - ver limitaciones en el
+     *  mismo dia, en el orden en que realmente ocurrieron - ver limitaciones en el
      *  Javadoc de la clase. */
-    private static BigDecimal[] priorMonthlyTotals(
-            Map<String, List<MonthlyEntry>> historyByIdNumber, String idNumber, YearMonth yearMonth) {
+    private static BigDecimal[] priorDailyTotals(
+            Map<String, List<DailyEntry>> historyByIdNumber, String idNumber, LocalDate purchaseDate) {
         BigDecimal grossValue = BigDecimal.ZERO;
         BigDecimal withholding = BigDecimal.ZERO;
-        for (MonthlyEntry entry : historyByIdNumber.getOrDefault(idNumber, List.of())) {
-            if (entry.yearMonth().equals(yearMonth)) {
+        for (DailyEntry entry : historyByIdNumber.getOrDefault(idNumber, List.of())) {
+            if (entry.purchaseDate().equals(purchaseDate)) {
                 grossValue = grossValue.add(entry.grossValue());
                 withholding = withholding.add(entry.withholding());
             }
@@ -220,7 +220,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
         return new BigDecimal[] {grossValue, withholding};
     }
 
-    private record MonthlyEntry(YearMonth yearMonth, BigDecimal grossValue, BigDecimal withholding) {
+    private record DailyEntry(LocalDate purchaseDate, BigDecimal grossValue, BigDecimal withholding) {
     }
 
     private static List<String> fieldMismatches(DryCoffeePurchase historical, DryCoffeePurchaseCalculation r) {

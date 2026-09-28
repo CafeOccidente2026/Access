@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Unica responsabilidad: reproducir la cascada de calculo del formulario Access original
  * (Destare -> Kilos_Netos -> W_TotAlm/W_AlmSana/W_AlmDefec -> PorcMerma/PorcAlmSana/PorcAlmDefec
  * -> Sacos -> Castigo -> Vr_Kilo -> Vr_Bruto -> Aporte_Socio/Descuento_Coop -> Retefuente ->
- * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica; el acumulado mensual
+ * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica; el acumulado diario
  * del caficultor y los valores del anuncio los consulta el servicio y se pasan como parametro.
  */
 @Component
@@ -26,18 +26,18 @@ public class DryCoffeePurchaseCalculator {
      * @param announcementBasePriceLoad valor crudo del anuncio (vrcps en el VBA)
      * @param announcementDefectiveUnitPrice Pr_AlmDefec vigente en el anuncio (ver
      *     Announcement.defectiveUnitPrice)
-     * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
-     *     mes actual (Texto105 en el VBA / macro CalculoReteFteMes)
-     * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el mes
-     *     actual (Texto107 en el VBA / macro CalculoReteFteMes)
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
+     *     dia de la compra (Texto105 en el VBA / macro CalculoReteFteMes)
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el dia
+     *     de la compra (Texto107 en el VBA / macro CalculoReteFteMes)
      */
     public DryCoffeePurchaseCalculation calculate(
             DryCoffeePurchaseRequest request,
             ControlRecord controlRecord,
             BigDecimal announcementBasePriceLoad,
             BigDecimal announcementDefectiveUnitPrice,
-            BigDecimal monthlyAccumulatedGrossValue,
-            BigDecimal monthlyAccumulatedWithholding) {
+            BigDecimal dailyAccumulatedGrossValue,
+            BigDecimal dailyAccumulatedWithholding) {
         if ("F".equalsIgnoreCase(request.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
@@ -101,7 +101,7 @@ public class DryCoffeePurchaseCalculator {
         // decimales en ninguna de las 904 filas historicas.
         BigDecimal unitPrice = roundToWholePeso(qualityUnitPrice);
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
-        BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal grossValue = roundToWholePeso(unitPrice.multiply(netKg));
         MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
@@ -115,22 +115,21 @@ public class DryCoffeePurchaseCalculator {
                     .divide(HUNDRED, MathContext.DECIMAL64));
         }
 
-        // Retefuente incremental sobre el acumulado mensual del caficultor (macro CalculoReteFteMes):
-        // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado este
-        // mes), y se descuenta la Retefuente ya practicada este mes, dejando solo el diferencial.
+        // Retefuente incremental sobre el acumulado DIARIO del caficultor (macro CalculoReteFteMes):
+        // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado hoy),
+        // y se descuenta la Retefuente ya practicada hoy, dejando solo el diferencial.
         // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
         // Cuando existan othercoffee/greencoffee/husk habra que decidir si tambien deben sumar.
-        // SIN VERIFICAR: CalculoReteFteMes solo abre el reporte "ReteMesCurso" y copia sus totales
-        // (TotalVrBruto/TotalRetefuente) a Texto105/Texto107; el RecordSource real de ese reporte
-        // (filtro de mes, agrupacion por cedula/agencia) no esta en el export de VBA disponible
-        // (docs/legacy-vba-export/eltambo/ solo trae modulos y macros, no reportes). La query
-        // sumMonthlyTotalsByIdNumber de abajo es el mejor esfuerzo hasta poder confirmarlo.
-        BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
+        // Ventana: CalculoReteFteMes copia TotalVrBruto/TotalRetefuente del reporte "ReteMesCurso",
+        // cuyo RecordSource es una consulta guardada que no esta en el export. Pese al nombre "Mes",
+        // la ventana diaria reproduce mejor la Retefuente historica de compras_migrar.csv (750/844
+        // vs 673/844 mensual) - ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente.
+        BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding));
+                    .subtract(dailyAccumulatedWithholding));
         }
 
         BigDecimal netToPay = roundToWholePeso(grossValue

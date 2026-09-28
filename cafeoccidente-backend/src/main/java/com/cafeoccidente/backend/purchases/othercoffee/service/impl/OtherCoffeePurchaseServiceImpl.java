@@ -33,7 +33,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -172,16 +171,15 @@ public class OtherCoffeePurchaseServiceImpl implements OtherCoffeePurchaseServic
 
     private OtherCoffeePurchaseCalculation runCalculation(
             OtherCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord) {
-        YearMonth currentMonth = YearMonth.now();
-        MonthlyGrowerTotals monthlyTotals = otherCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber(
-                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
+        MonthlyGrowerTotals dailyTotals = otherCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
+                request.idNumber(), LocalDate.now());
 
         OtherCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
                 announcement.basePriceLoad(),
-                monthlyTotals.grossValue(),
-                monthlyTotals.withholding());
+                dailyTotals.grossValue(),
+                dailyTotals.withholding());
         // Item C (cupo) - mismos Especiales/fuente que Cafe Seco, ver GrowerService.checkQuota.
         growerService.checkQuota(request.idNumber(), request.specialType(), calculation.netKg());
         return calculation;

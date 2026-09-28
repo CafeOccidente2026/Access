@@ -14,12 +14,10 @@ public interface FertiFuturoPurchaseRepository extends JpaRepository<FertiFuturo
                 COALESCE(SUM(p.withholding), 0))
             FROM FertiFuturoPurchase p
             WHERE p.idNumber = :idNumber
-              AND p.purchaseDate BETWEEN :monthStart AND :monthEnd
+              AND p.purchaseDate = :purchaseDate
             """)
-    FertiFuturoMonthlyTotals sumMonthlyTotalsByIdNumber(
-            @Param("idNumber") String idNumber,
-            @Param("monthStart") LocalDate monthStart,
-            @Param("monthEnd") LocalDate monthEnd);
+    FertiFuturoMonthlyTotals sumDailyTotalsByIdNumber(
+            @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
     /** Ver PurchaseInvoiceNumberService - la resolucion DIAN es por agencia, no por modulo. */
     @Query("SELECT MAX(p.invoiceNumber) FROM FertiFuturoPurchase p WHERE p.agency.id = :agencyId")

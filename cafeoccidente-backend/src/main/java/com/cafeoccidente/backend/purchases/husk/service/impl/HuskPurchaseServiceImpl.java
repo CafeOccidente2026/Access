@@ -30,7 +30,6 @@ import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -162,12 +161,11 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private HuskPurchaseCalculation runCalculation(HuskPurchaseRequest request, AnnouncementResponse announcement) {
         ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
 
-        YearMonth currentMonth = YearMonth.now();
-        MonthlyGrowerTotals monthlyTotals = huskPurchaseRepository.sumMonthlyTotalsByIdNumber(
-                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
+        MonthlyGrowerTotals dailyTotals = huskPurchaseRepository.sumDailyTotalsByIdNumber(
+                request.idNumber(), LocalDate.now());
 
         HuskPurchaseCalculation calculation =
-                calculator.calculate(request, controlRecord, monthlyTotals.grossValue(), monthlyTotals.withholding());
+                calculator.calculate(request, controlRecord, dailyTotals.grossValue(), dailyTotals.withholding());
         // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("PASILLA") nunca matchea
         // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
         growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());

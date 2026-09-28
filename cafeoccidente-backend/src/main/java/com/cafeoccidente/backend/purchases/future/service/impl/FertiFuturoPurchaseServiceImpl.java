@@ -30,7 +30,6 @@ import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberS
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -193,9 +192,8 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
 
     private FertiFuturoPurchaseCalculation runCalculation(
             FertiFuturoPurchaseRequest request, AnnouncementResponse announcement, BigDecimal qualityIncrementRate) {
-        YearMonth currentMonth = YearMonth.now();
-        FertiFuturoMonthlyTotals monthlyTotals = fertiFuturoPurchaseRepository.sumMonthlyTotalsByIdNumber(
-                request.idNumber(), currentMonth.atDay(1), currentMonth.atEndOfMonth());
+        FertiFuturoMonthlyTotals dailyTotals = fertiFuturoPurchaseRepository.sumDailyTotalsByIdNumber(
+                request.idNumber(), LocalDate.now());
 
         return calculator.calculate(
                 request,
@@ -204,8 +202,8 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
                 announcement.bonus(),
                 announcement.costs(),
                 qualityIncrementRate,
-                monthlyTotals.grossValue(),
-                monthlyTotals.withholding());
+                dailyTotals.grossValue(),
+                dailyTotals.withholding());
     }
 
     @Override

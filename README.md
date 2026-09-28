@@ -34,6 +34,7 @@ No necesitas instalar PostgreSQL en tu PC — corre dentro de un contenedor Dock
 ```bash
 git clone https://github.com/CafeOccidente2026/Access.git
 cd Access
+git checkout feature/tu-rama   # feature/daniers o feature/juan, segun corresponda
 ```
 
 ## 2. Levantar el **frontend**
@@ -60,22 +61,52 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Abre `.env` y revisa los valores (para desarrollo local, los de `.env.example` sirven
-tal cual; puedes cambiar `DB_PASSWORD` si quieres). Revisa también `ADMIN_USERNAME`
-y `ADMIN_PASSWORD`: son las credenciales del primer usuario administrador, que se
-crea automáticamente la primera vez que arranca el backend (tabla `users` vacía).
-**Cambia esa contraseña desde la pantalla de Usuarios apenas entres por primera
-vez** — el arranque solo la usa una vez, no la vuelve a pedir en arranques
-siguientes.
+Abre tu `.env` recién creado y revisa los valores. Para desarrollo local, los de
+`.env.example` sirven tal cual, pero puedes cambiar `DB_PASSWORD` si quieres.
 
 El backend queda disponible en **http://localhost:8090** (el contenedor escucha
 internamente en el 8080, pero se mapea al 8090 en tu PC para no chocar con otros
 proyectos que ya usen el 8080).
 
-**Cómo saber que quedó bien levantado** — en los logs deberías ver, en este orden:
+### Usuario administrador inicial (bootstrap admin)
+
+`ADMIN_USERNAME` y `ADMIN_PASSWORD` (en tu `.env`) son **las credenciales con las
+que vas a entrar por primera vez** a `http://localhost:4200/login`. Son valores
+que **cada persona define en su propio `.env`** — nunca se comparten ni se suben
+a Git, y no tienen que coincidir entre los miembros del equipo.
+
+Cómo funciona: la primera vez que el backend arranca con la tabla `users`
+completamente vacía, crea automáticamente un usuario con rol `ADMIN` usando esos
+dos valores (lo hace `AdminUserInitializer`). No hay que registrar nada a mano.
+
+**Cada persona del equipo tiene su propia base de datos local** (su propio
+Docker) — el admin de una persona no tiene ninguna relación con el admin de
+otra. No hace falta coordinar ni compartir estos valores, salvo que quieran
+hacerlo por comodidad propia.
+
+⚠️ **Importante**: si cambias `ADMIN_PASSWORD` en tu `.env` **después** de que el
+backend ya arrancó una vez (es decir, la tabla `users` ya no está vacía), ese
+cambio **no se aplica solo**. Para que tome el valor nuevo hay que recrear la
+base de datos:
+```bash
+docker compose down -v
+docker compose up --build
+```
+El `-v` borra el volumen de Postgres y fuerza que todo se cree desde cero,
+incluido el admin con el valor nuevo.
+
+> **Nota**: hoy en día no existe todavía una pantalla para cambiar la
+> contraseña del admin desde la propia interfaz — el único mecanismo para
+> rotarla es el que se describe arriba (variable de entorno + recrear la base
+> de datos). Cambiar la contraseña desde la interfaz queda pendiente de
+> implementar.
+
+### Cómo saber que quedó bien levantado
+
+En los logs deberías ver, en este orden:
 1. En el contenedor `postgres`: `database system is ready to accept connections`
 2. En el contenedor `backend`:
-   - Las migraciones de Flyway aplicándose (`Successfully applied N migrations...`)
+   - Las migraciones de Flyway aplicándose (`Successfully applied 2 migrations...`)
    - `Tomcat started on port 8080`
    - `Started BackendApplication in X seconds`
 
@@ -93,52 +124,34 @@ docker compose down -v
 
 ### Frontend
 Cubre el **diseño y la estructura** de todas las pantallas migradas desde Access
-(login, menús, los 5 formularios de compra, compras a futuro, inventarios,
-consulta). Conectadas al backend real: Login, Usuarios, Registro de Control,
-Actualizar Anuncio (Corriente y Pasilla), Compras Café Seco, Compras Café Verde,
-Compra Pasilla, Compras Cafés Otros, Compras a Futuro, Fertifuturo (pantalla
-nueva), Asignar Cupo por anuncio, Registrar Salidas/Remisión, Reporte de
-Inventario (consulta de solo lectura), y las dos variantes de cupo de Café Seco
-(Compra por Cupo / Facturación por Cupo). **Siguen sin conectar** (maqueta o
-placeholder): Consulta de Compras general, "Reimprimir Remisión" e "Ingresar
-Conductores" (esta última quedó obsoleta: `Driver` se eliminó en Fase 3, la
-opción del menú de Inventarios sigue apuntando a una pantalla vacía).
+(login, menús, los 4 formularios de compra, compras a futuro, inventarios,
+consulta). El login y la pantalla de Usuarios ya están conectados al backend real
+(autenticación JWT); el resto de pantallas sigue siendo maqueta sin conectar.
 
 ### Backend
-Los 5 módulos de compra (Café Seco, Café Verde, Pasilla, Cafés Otros,
-Fertifuturo) tienen lógica de negocio real y probada, con la cascada de cálculo
-migrada del VBA original (ver
-`docs/informe-formulas-compras-vs-vba.md`). También están implementados: Cupos
-por anuncio (`AnnouncementQuota`), anuncios compartidos entre agencias
-(`docs/diseno-anuncios-compartidos.md`), Compras a Futuro, e Inventarios
-(movimiento automático por compra + Remisiones/Salidas).
+Es un **esqueleto por capas**: existen todos los paquetes, clases y endpoints
+planeados para cada módulo (`controller`, `service`, `service.impl`, `repository`,
+`entity`, `dto`, `mapper`), pero **todavía no tienen lógica de negocio real** salvo
+el módulo `users` (ver tabla abajo). Las demás entidades solo tienen el campo `id`,
+los controllers/services están vacíos, y las tablas de la base de datos son
+placeholders (una tabla por entidad, sin columnas propias todavía).
 
-| Módulo | Representa | Estado |
+El objetivo de este esqueleto es fijar la arquitectura y los nombres de paquetes
+antes de implementar la lógica, para que el equipo se reparta los módulos sin
+pisarse.
+
+| Módulo | Representa | Pendiente |
 | --- | --- | --- |
-| `controlrecord` | Registro de control (parámetros generales) | Implementado |
-| `purchases.drycoffee` | Compras de café seco | Implementado (cascada VBA completa, validación de negativos, tope de cupo). Falta: generación del PDF del documento soporte (si no está ya cubierta por el módulo de facturación) |
-| `purchases.greencoffee` | Compras de café verde | Implementado |
-| `purchases.othercoffee` | Compras de otros cafés | Implementado, frontend conectado |
-| `purchases.husk` | Compra de pasilla | Implementado |
-| `purchases.future` | Anuncios compartidos, Cupos por anuncio, Compras a Futuro, Fertifuturo | Implementado, frontend conectado. Sistema de "Obligación" de Fertifuturo dejado fuera a propósito (ver `docs/informe-formulas-compras-vs-vba.md`) |
-| `purchases.shared` | Catálogos: Agencia, Fondo, Código de producto, Caficultor (Grower) | Implementado |
-| `inventory` | Movimientos de inventario (automáticos por compra) y Remisiones/Salidas | Implementado, frontend conectado (consulta de movimientos + registrar salidas) |
-| `users` | Usuarios, roles, autenticación | Implementado: login/refresh JWT, alta/listado/baja de usuarios, bootstrap del admin inicial |
-| `common` | Seguridad, CORS, OpenAPI, manejo de errores, validación de negativos (`MoneyValidation`) | `SecurityConfig`, `JwtService`, CORS y `MoneyValidation` implementados; OpenAPI pendiente |
-
-### Tests
-- **Backend**: `cd cafeoccidente-backend && mvn test` (o vía Docker, ver
-  `docs/informe-formulas-compras-vs-vba.md` para el comando exacto). Cubre los 5
-  calculadores de compra (incluida la validación reproducible contra datos
-  históricos reales de Café Seco), Cupos, Inventarios/Remisiones, Compras a
-  Futuro y Anuncios compartidos.
-- **Frontend**: `cd cafe-occidente-frontend && npm test`. Cubre la lógica pura
-  compartida por los formularios de compra (formato/parseo de números, bloqueo
-  secuencial de captura) y, a nivel de componente, el gate de campos
-  requeridos que dispara la cascada de cálculo (Café Seco, Pasilla, Cafés
-  Otros, Fertifuturo) — donde vivía el bug del "celular bloqueado" corregido
-  el 2026-09-23 (ver `docs/informe-formulas-compras-vs-vba.md`) — además de
-  Compras a Futuro, Asignar Cupo, Reporte de Inventario y Registrar Salidas.
+| `controlrecord` | Registro de control (parámetros generales) | Campos, reglas de negocio, endpoints |
+| `purchases.drycoffee` | Compras de café seco | Campos de la entidad, validaciones, DTOs |
+| `purchases.greencoffee` | Compras de café verde | Ídem |
+| `purchases.othercoffee` | Compras de otros cafés | Ídem |
+| `purchases.husk` | Compra de pasilla | Ídem |
+| `purchases.future` | Anuncios, cupos y compras a futuro | Relaciones entre entidades, reglas de cupos |
+| `purchases.shared` | Catálogos: Agencia, Fondo, Código de producto | Campos y uso desde los demás módulos |
+| `inventory` | Conductores, remisiones, movimientos | Relaciones con compras |
+| `users` | Usuarios, roles, autenticación | Implementado: login/refresh JWT, alta/listado/baja de usuarios, bootstrap del admin inicial. Pendiente: cambio de contraseña desde la interfaz |
+| `common` | Seguridad, CORS, OpenAPI, manejo de errores | `SecurityConfig`, `JwtService` y CORS implementados; OpenAPI pendiente |
 
 ### Base de datos
 - **Desarrollo**: PostgreSQL en Docker, sin conexión a Aurora.
@@ -153,45 +166,6 @@ por anuncio (`AnnouncementQuota`), anuncios compartidos entre agencias
 - Nota técnica: Spring Boot 4.1.1 no trae autoconfiguración propia de Flyway,
   así que las migraciones se disparan manualmente en
   `BackendApplication.main()` antes de que arranque el contexto de Spring.
-
-### Migración del formulario "Compras Café Seco"
-
-Las 4 variables del VBA original que estaban sin mapear ya están resueltas en
-`DryCoffeePurchaseCalculator` (confirmadas contra las propiedades del formulario
-Access):
-
-- `Texto164` = `PorcKgPasProm` de RegControl → `ControlRecord.avgHuskPercentage`
-  (fórmula `var4` del precio unitario en `Sacos_LostFocus`).
-- `Texto176` = `BaseCarga` de RegControl → `ControlRecord.baseLoad`
-  (`Pr_Base_PC = vrcps - (Costos * BaseCarga)`, calculado ahora en el servidor).
-- `Texto105` / `Texto107` = acumulado mensual del caficultor (por cédula) que en
-  Access calculaba la macro `CalculoReteFteMes`: suma de `Vr_Bruto` y de
-  `Retefuente` de las compras del mes en curso, antes de esta transacción
-  (`DryCoffeePurchaseRepository.sumMonthlyTotalsByIdNumber`). La Retefuente de la
-  compra nueva se calcula sobre ese acumulado y se le descuenta lo ya practicado
-  en el mes.
-  - **A revisar con el negocio:** hoy el acumulado solo suma compras del módulo
-    `drycoffee`. Cuando existan `othercoffee` / `greencoffee` / `husk` habrá que
-    decidir si el acumulado mensual debe incluirlas también.
-- `Pr_AlmDefec` (precio almendra defectuosa, factor `var4` de `Sacos_LostFocus`):
-  el VBA nunca le asigna un valor real (solo `= 0` en los resets) y la pantalla
-  migrada no tiene campo para capturarlo. Se guarda como
-  `ControlRecord.defectiveAlmondUnitPrice`, sembrado en **0** y marcado `TODO`
-  (migración `V6`). Con 0, `var4 = 0`, igual que hoy en Access.
-
-El diseño de la pantalla (`shared/ui/purchase-form-view` + `purchase-form-dry.json`)
-no se toca: la lógica (autollenado del anuncio, cascada, bloqueo secuencial,
-Escape, botón Imprimir, guardado y aviso al cerrar) se conecta con
-`@Input`/eventos añadidos a los componentes compartidos existentes.
-
-Pendientes del mismo formulario (no solicitados aún): la búsqueda del
-caficultor vía DLL externa / `pcompras` (hoy los datos del caficultor viven en
-`Grower`, cargado por `scripts/migrate_eltambo.py`), y el split de pago
-multi-instrumento. El tope de cupo por caficultor (`GrowerService.checkQuota`)
-y el bloqueo de pertenencia a programa (`requireProgramMembership`, usado hoy
-por Compras a Futuro) ya están implementados — ver
-`docs/informe-formulas-compras-vs-vba.md` para el alcance real de datos
-(`staging_legacy_ness`, solo 3 de ~20 Especiales tienen cobertura migrada).
 
 ---
 
@@ -232,6 +206,27 @@ por Compras a Futuro) ya están implementados — ver
   `.claude/`, `capturas/`. Ya están todos en el `.gitignore`.
 - Cada quien crea su propio `.env` local a partir de `.env.example` (dentro de
   `cafeoccidente-backend/`) — nunca se sube el `.env` real.
+- **`main` está protegida** mediante un Ruleset de GitHub: no se permite push
+  directo, todo cambio entra vía Pull Request, y requiere que pasen los checks
+  automáticos de CI (frontend y backend, ver abajo) antes de poder mezclar.
+- **Ramas de trabajo**: `feature/daniers` y `feature/juan`. Cada quien trabaja
+  en la suya, y cuando tiene un avance listo:
+  ```bash
+  git add -A
+  git commit -m "feat: descripcion del cambio"
+  git push
+  ```
+  y abre el Pull Request hacia `main` desde GitHub.
+
+### CI (verificación automática)
+En cada Pull Request corren dos workflows de GitHub Actions
+(`.github/workflows/`):
+- **Frontend CI**: instala dependencias y compila el frontend (`npm ci && npm run build`).
+- **Backend CI**: levanta un Postgres real como servicio y arranca el backend
+  completo contra él (igual que en local con Docker), validando que las
+  entidades, migraciones de Flyway y el contexto de Spring carguen sin errores.
+
+Si alguno falla, el botón de mezclar el PR queda bloqueado automáticamente.
 
 ---
 
@@ -278,7 +273,8 @@ cafeoccidente-backend/
     │   │   ├── future/        Anuncios, cupos, compras a futuro
     │   │   └── shared/        Agencia, Fondo, Código de producto
     │   ├── inventory/         Conductores, remisiones, movimientos
-    │   └── users/             Usuarios, roles, permisos, auth
+    │   └── users/             Usuarios, roles, autenticación
     └── resources/
         ├── application.yml / application-dev.yml / application-prod.yml
         └── db/migration/      Migraciones versionadas de Flyway
+```

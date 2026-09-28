@@ -89,7 +89,7 @@ class HuskPurchaseCalculatorTest {
     }
 
     @Test
-    void firstPurchaseOfMonthWithholdsOnItsOwnGrossValue() {
+    void firstPurchaseOfDayWithholdsOnItsOwnGrossValue() {
         HuskPurchaseCalculation result = calculator.calculate(
                 request("S", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
 

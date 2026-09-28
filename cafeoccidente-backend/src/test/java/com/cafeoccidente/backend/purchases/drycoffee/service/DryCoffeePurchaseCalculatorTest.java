@@ -94,7 +94,29 @@ class DryCoffeePurchaseCalculatorTest {
     }
 
     @Test
-    void firstPurchaseOfMonthWithholdsOnItsOwnGrossValue() {
+    void grossValueIsRoundedToWholePesoLikeAccess() {
+        // Kilos_Netos con decimales (1250.3 - 50 = 1200.3): Vr_Bruto es DecimalPlaces=0 en
+        // COMPRAS.txt -> Access lo muestra/guarda entero, no 2.233.473,6.
+        DryCoffeePurchaseRequest fractionalKg = new DryCoffeePurchaseRequest(
+                1L, 1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
+                10, new BigDecimal("1250.3"), new BigDecimal("50"),
+                new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
+                new BigDecimal("12000"),
+                new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("692"),
+                false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+
+        DryCoffeePurchaseCalculation result = calculator.calculate(
+                fractionalKg, controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
+                BigDecimal.ZERO, BigDecimal.ZERO);
+
+        BigDecimal expected = result.unitPrice().multiply(new BigDecimal("1200.3"))
+                .setScale(0, java.math.RoundingMode.HALF_UP);
+        assertThat(result.grossValue()).isEqualByComparingTo(expected);
+        assertThat(result.grossValue().stripTrailingZeros().scale()).isLessThanOrEqualTo(0);
+    }
+
+    @Test
+    void firstPurchaseOfDayWithholdsOnItsOwnGrossValue() {
         DryCoffeePurchaseCalculation result = calculator.calculate(
                 request("S", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
                 BigDecimal.ZERO, BigDecimal.ZERO);
@@ -108,7 +130,7 @@ class DryCoffeePurchaseCalculatorTest {
     }
 
     @Test
-    void secondPurchaseOfMonthWithholdsOnlyTheIncrementOverTheAccumulatedTotal() {
+    void secondPurchaseOfDayWithholdsOnlyTheIncrementOverTheAccumulatedTotal() {
         DryCoffeePurchaseCalculation first = calculator.calculate(
                 request("S", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
                 BigDecimal.ZERO, BigDecimal.ZERO);

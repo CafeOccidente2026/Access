@@ -8,19 +8,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface OtherCoffeePurchaseRepository extends JpaRepository<OtherCoffeePurchase, Long> {
 
-    /** Acumulado mensual PROPIO de este modulo (ReteMesCursoEsp, independiente del de Cafe Seco). */
+    /** Acumulado diario PROPIO de este modulo (ReteMesCursoEsp, independiente del de Cafe Seco). */
     @Query("""
             SELECT new com.cafeoccidente.backend.purchases.othercoffee.repository.MonthlyGrowerTotals(
                 COALESCE(SUM(p.grossValue), 0),
                 COALESCE(SUM(p.withholding), 0))
             FROM OtherCoffeePurchase p
             WHERE p.idNumber = :idNumber
-              AND p.purchaseDate BETWEEN :monthStart AND :monthEnd
+              AND p.purchaseDate = :purchaseDate
             """)
-    MonthlyGrowerTotals sumMonthlyTotalsByIdNumber(
-            @Param("idNumber") String idNumber,
-            @Param("monthStart") LocalDate monthStart,
-            @Param("monthEnd") LocalDate monthEnd);
+    MonthlyGrowerTotals sumDailyTotalsByIdNumber(
+            @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
     /** Ver PurchaseInvoiceNumberService - la resolucion DIAN es por agencia, no por modulo. */
     @Query("SELECT MAX(p.invoiceNumber) FROM OtherCoffeePurchase p WHERE p.agency.id = :agencyId")

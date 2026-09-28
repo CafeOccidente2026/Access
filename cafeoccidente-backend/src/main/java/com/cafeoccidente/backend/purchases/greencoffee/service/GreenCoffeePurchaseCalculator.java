@@ -23,17 +23,17 @@ public class GreenCoffeePurchaseCalculator {
 
     /**
      * @param announcementBasePriceLoad Pr_Base_CPS del anuncio vigente (Texto91 en el VBA)
-     * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado en VERDES para esta cedula
-     *     en el mes actual (Texto105 / macro CalculoReteFteMesVerdes)
-     * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada en VERDES a esta cedula en
-     *     el mes actual (Texto107 / macro CalculoReteFteMesVerdes)
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado en VERDES para esta cedula
+     *     en el dia de la compra (Texto105 / macro CalculoReteFteMesVerdes)
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada en VERDES a esta cedula en
+     *     el dia de la compra (Texto107 / macro CalculoReteFteMesVerdes)
      */
     public GreenCoffeePurchaseCalculation calculate(
             GreenCoffeePurchaseRequest request,
             ControlRecord controlRecord,
             BigDecimal announcementBasePriceLoad,
-            BigDecimal monthlyAccumulatedGrossValue,
-            BigDecimal monthlyAccumulatedWithholding) {
+            BigDecimal dailyAccumulatedGrossValue,
+            BigDecimal dailyAccumulatedWithholding) {
         // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
         // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
         // directo (sin pasar por el bloqueo del frontend) para facturarle Verde a un caficultor
@@ -66,7 +66,8 @@ public class GreenCoffeePurchaseCalculator {
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
         // Castigo_lostFocus: Vr_Bruto = Vr_Kilo_Comp * Kilos_Verdes (no Kilos_Netos).
-        BigDecimal grossValue = unitPrice.multiply(greenKg).setScale(SCALE, RoundingMode.HALF_UP);
+        // Vr_Bruto es DecimalPlaces=0 en VERDES.txt (igual que COMPRAS/PASILLA): peso entero.
+        BigDecimal grossValue = unitPrice.multiply(greenKg).setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
@@ -82,16 +83,17 @@ public class GreenCoffeePurchaseCalculator {
                     .setScale(SCALE, RoundingMode.HALF_UP);
         }
 
-        // Retefuente incremental sobre el acumulado mensual del caficultor en VERDES (var6).
+        // Retefuente incremental sobre el acumulado diario del caficultor en VERDES (var6).
         // SIN VERIFICAR: CalculoReteFteMesVerdes solo abre el reporte "ReteMesCursoVerdes" y copia
         // TotalVrBruto/TotalRetefuente a Texto105/Texto107; el RecordSource del reporte no esta en
-        // el export de VBA disponible. sumMonthlyTotalsByIdNumber es el mejor esfuerzo hasta confirmarlo.
-        BigDecimal var6 = grossValue.add(monthlyAccumulatedGrossValue);
+        // el export de VBA disponible. sumDailyTotalsByIdNumber usa ventana diaria
+        // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
+        BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
         if (!request.withholdingExempt() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding)
+                    .subtract(dailyAccumulatedWithholding)
                     .setScale(SCALE, RoundingMode.HALF_UP);
         }
 
