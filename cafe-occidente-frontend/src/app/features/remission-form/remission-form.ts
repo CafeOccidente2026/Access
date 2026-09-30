@@ -17,6 +17,8 @@ interface DraftLine {
   readonly inventoryMovementId: number;
   readonly label: string;
   readonly quantity: number;
+  readonly sacos: number;
+  readonly grossKg: number;
 }
 
 /**
@@ -55,6 +57,9 @@ export class RemissionFormComponent {
 
   readonly selectedMovementId = signal<number | null>(null);
   readonly draftQuantity = signal('');
+  /** Sacos y Kilos Brutos de esta salida (Form_EXITS: Sacos / Kilos_Brutos), por linea. */
+  readonly draftSacos = signal('');
+  readonly draftGrossKg = signal('');
   readonly lines = signal<DraftLine[]>([]);
 
   readonly result = signal<RemissionResponse | null>(null);
@@ -144,7 +149,9 @@ export class RemissionFormComponent {
   addLine(): void {
     const movementId = this.selectedMovementId();
     const quantity = parseDisplayNumber(this.draftQuantity());
-    if (!movementId || quantity <= 0) {
+    const sacos = parseDisplayNumber(this.draftSacos());
+    const grossKg = parseDisplayNumber(this.draftGrossKg());
+    if (!movementId || quantity <= 0 || sacos <= 0 || grossKg <= 0) {
       return;
     }
     const movement = this.movements().find((m) => m.id === movementId);
@@ -153,10 +160,12 @@ export class RemissionFormComponent {
     }
     this.lines.update((list) => [
       ...list,
-      { inventoryMovementId: movementId, label: `Factura ${movement.invoiceNumber} - ${movement.specialType}`, quantity },
+      { inventoryMovementId: movementId, label: `Factura ${movement.invoiceNumber} - ${movement.specialType}`, quantity, sacos, grossKg },
     ]);
     this.selectedMovementId.set(null);
     this.draftQuantity.set('');
+    this.draftSacos.set('');
+    this.draftGrossKg.set('');
   }
 
   removeLine(index: number): void {
@@ -176,6 +185,8 @@ export class RemissionFormComponent {
     const lineRequests: RemissionLineRequest[] = this.lines().map((l) => ({
       inventoryMovementId: l.inventoryMovementId,
       quantity: l.quantity,
+      sacos: l.sacos,
+      grossKg: l.grossKg,
     }));
     this.inventoryService
       .createRemission({

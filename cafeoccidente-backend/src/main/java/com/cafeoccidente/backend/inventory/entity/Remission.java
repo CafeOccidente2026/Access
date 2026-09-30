@@ -1,6 +1,7 @@
 package com.cafeoccidente.backend.inventory.entity;
 
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
+import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -54,4 +55,17 @@ public class Remission {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /** Fondo (LF/RP) de todas sus lineas (V30). */
+    @ManyToOne
+    @JoinColumn(name = "fund_id")
+    private Fund fund;
+
+    /** Consecutivo por agencia + fondo; NULL en las remisiones anteriores a V30. */
+    @Column(name = "sequence_number")
+    private Integer sequenceNumber;
+
+    /** Numero impreso: {prefijo}-{LF|RP}-{0000}; en las viejas, su remission_number tal cual. */
+    @Column(name = "display_number", nullable = false)
+    private String displayNumber;
 }

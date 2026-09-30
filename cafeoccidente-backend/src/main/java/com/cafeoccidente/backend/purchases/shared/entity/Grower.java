@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import java.time.Instant;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -76,4 +77,8 @@ public class Grower {
 
     @Column(name = "vehicle_plate")
     private String vehiclePlate;
+
+    /** Ultima actualizacion de Emp. Transp./Vehiculo desde "Ingresar Conductores" (V29). */
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 }

@@ -20,7 +20,7 @@
           <tbody>
             <tr *ngFor="let r of remissions()" class="border-t border-slate-200 odd:bg-slate-50">
               <td class="p-2"><input type="checkbox" [checked]="isSelected(r.id)" (change)="toggle(r.id)" /></td>
-              <td class="p-2">{{ r.remissionNumber }}</td>
+              <td class="p-2">{{ r.displayNumber }}</td>
               <td class="p-2">{{ r.remissionDate }}</td>
               <td class="p-2">{{ r.destination || '—' }}</td>
               <td class="p-2">{{ r.conductorName || '—' }}</td>

@@ -14,7 +14,8 @@ public interface RemissionService {
     List<RemissionResponse> listByAgency(Long agencyId);
 
     /** "Reimprimir Remision": busca por numero correlativo dentro de la agencia. */
-    Optional<RemissionResponse> findByNumber(Long agencyId, Integer remissionNumber);
+    /** Por numero impreso: el nuevo (SDTA-RP-0001) o el de las remisiones viejas ("1", "2"...). */
+    Optional<RemissionResponse> findByNumber(Long agencyId, String displayNumber);
 
     /** Remisiones aun no incluidas en una remesa (Access "Genera Remesa"/"Genera Remesa Otros"). */
     List<RemissionResponse> listPendingExport(Long agencyId);

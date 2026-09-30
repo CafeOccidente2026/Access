@@ -27,7 +27,7 @@ describe('RemissionFormComponent', () => {
   let component: RemissionFormComponent;
 
   function setup() {
-    createSpy = vi.fn(() => of({ id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central', conductorIdNumber: null, conductorName: null, transportCompany: null, vehiclePlate: null, exported: false, lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }] }));
+    createSpy = vi.fn(() => of({ id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central', conductorIdNumber: null, conductorName: null, transportCompany: null, vehiclePlate: null, exported: false, displayNumber: 'SDBU-RP-0001', lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }] }));
     localStorage.setItem('cafeoccidente.agencyId', '1');
     TestBed.configureTestingModule({
       providers: [
@@ -55,24 +55,41 @@ describe('RemissionFormComponent', () => {
     setup();
     component.selectedMovementId.set(10);
     component.draftQuantity.set('300');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
     component.addLine();
 
     expect(component.lines()).toHaveLength(1);
     expect(component.canSave()).toBe(true);
   });
 
+  it('addLine() requires Sacos and Kilos Brutos of the dispatch', () => {
+    setup();
+    component.selectedMovementId.set(10);
+    component.draftQuantity.set('300');
+    component.addLine();
+    expect(component.lines()).toHaveLength(0);
+
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
+    component.addLine();
+    expect(component.lines()).toHaveLength(1);
+  });
+
   it('save() sends the accumulated lines and shows the saved remission', () => {
     setup();
     component.selectedMovementId.set(10);
     component.draftQuantity.set('300');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
     component.addLine();
 
     component.save();
 
     expect(createSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ agencyId: 1, lines: [{ inventoryMovementId: 10, quantity: 300 }] }),
+      expect.objectContaining({ agencyId: 1, lines: [{ inventoryMovementId: 10, quantity: 300, sacos: 8, grossKg: 305 }] }),
     );
-    expect(component.result()?.remissionNumber).toBe(1);
+    expect(component.result()?.displayNumber).toBe('SDBU-RP-0001');
   });
 
   it('shows the real backend error (e.g. saldo excedido) instead of a generic one', () => {
@@ -82,6 +99,8 @@ describe('RemissionFormComponent', () => {
     );
     component.selectedMovementId.set(10);
     component.draftQuantity.set('9999');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
     component.addLine();
 
     component.save();

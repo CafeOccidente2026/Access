@@ -1,9 +1,12 @@
 package com.cafeoccidente.backend.purchases.shared.service;
 
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface GrowerService {
@@ -20,6 +23,15 @@ public interface GrowerService {
      * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si la cédula ya existe.
      */
     GrowerResponse createConductor(GrowerCreateRequest request);
+
+    /** "Actualizar uno ya existente": conductores cuya cedula empieza por el texto (max 10). */
+    List<ConductorResponse> searchConductors(String idNumberPrefix);
+
+    ConductorResponse findConductor(String idNumber);
+
+    /** Form_Conductores Actualizacion: cambia SOLO Emp. Transp. y Vehiculo y marca updatedAt. Nunca
+     *  toca la fecha de afiliacion ni el resto de datos del caficultor. */
+    ConductorResponse updateConductor(String idNumber, ConductorUpdateRequest request);
 
     /**
      * Programa/Cupo informativos desde staging_legacy_ness (Compras Cafe Seco). Vacio si no hay

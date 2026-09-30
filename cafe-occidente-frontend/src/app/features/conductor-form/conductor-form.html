@@ -1,0 +1,76 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window title="CONDUCTORES" bodyClass="bg-white">
+    <div class="flex flex-col gap-4 p-4">
+      <ng-container *ngIf="mode() === 'choose'">
+        <p class="text-sm font-medium text-blue-900">¿Va a ingresar un nuevo conductor?</p>
+        <div class="flex gap-3">
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="choose('new')">
+            Ingresar nuevo conductor
+          </button>
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="choose('update')">
+            Actualizar uno ya existente
+          </button>
+        </div>
+      </ng-container>
+
+      <div *ngIf="mode() === 'new'" class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
+        <span>Fecha</span>
+        <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(today)" />
+        <span>Cédula</span>
+        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.idNumber" />
+        <span>Nombre</span>
+        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.firstName" />
+        <span>Apellidos</span>
+        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.lastName" />
+        <span>Agencia</span>
+        <app-agency-picker (agencyChange)="agencyId.set($event)"></app-agency-picker>
+        <span>Dirección</span>
+        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.address" />
+        <span>Emp. Transp.</span>
+        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.transportCompany" />
+        <span>Vehículo</span>
+        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.vehiclePlate" />
+        <span></span>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 hover:bg-slate-100" (click)="choose('choose')">Cancelar</button>
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-medium hover:bg-slate-200" (click)="create()">Ingresar Conductor</button>
+        </div>
+      </div>
+
+      <div *ngIf="mode() === 'update'" class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
+        <span>Cédula</span>
+        <app-combobox
+          [options]="matchLabels()"
+          inputClass="w-full rounded border border-slate-300 px-2 py-1"
+          (valueChange)="onIdNumberTyped($event)"
+        ></app-combobox>
+        <ng-container *ngIf="selected() as c">
+          <span>Fecha</span>
+          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(c.affiliationDate)" />
+          <span>Nombre</span>
+          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.firstName" />
+          <span>Apellidos</span>
+          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.lastName" />
+          <span>Agencia</span>
+          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.agencyName" />
+          <span>Dirección</span>
+          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.address" />
+          <span>Emp. Transp.</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="transportCompany" />
+          <span>Vehículo</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="vehiclePlate" />
+          <span></span>
+          <span class="text-xs text-slate-600">Actualizado: {{ c.updatedAt ? dateTime(c.updatedAt) : '—' }}</span>
+        </ng-container>
+        <span></span>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 hover:bg-slate-100" (click)="choose('choose')">Cancelar</button>
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-medium hover:bg-slate-200 disabled:opacity-50" [disabled]="!selected()" (click)="save()">Actualiza Conductor</button>
+        </div>
+      </div>
+
+      <p *ngIf="message() as m" class="text-sm text-green-700">{{ m }}</p>
+      <p *ngIf="error() as e" class="text-sm text-red-600">{{ e }}</p>
+    </div>
+  </app-access-window>
+</div>

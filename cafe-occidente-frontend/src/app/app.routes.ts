@@ -148,6 +148,23 @@ export const routes: Routes = [
       import('./features/remission-form/remission-form').then((m) => m.RemissionFormComponent),
   },
   {
+    path: 'compras/inventarios/conductores',
+    loadComponent: () =>
+      import('./features/conductor-form/conductor-form').then((m) => m.ConductorFormComponent),
+  },
+  {
+    path: 'compras/inventarios/reporte-cod',
+    loadComponent: () =>
+      import('./features/inventory-report/inventory-report').then((m) => m.InventoryReportComponent),
+    data: { mode: 'code' },
+  },
+  {
+    path: 'compras/inventarios/reporte-esp',
+    loadComponent: () =>
+      import('./features/inventory-report/inventory-report').then((m) => m.InventoryReportComponent),
+    data: { mode: 'special' },
+  },
+  {
     path: 'compras/inventarios/reimprimir-remision',
     loadComponent: () =>
       import('./features/remission-reprint/remission-reprint').then((m) => m.RemissionReprintComponent),

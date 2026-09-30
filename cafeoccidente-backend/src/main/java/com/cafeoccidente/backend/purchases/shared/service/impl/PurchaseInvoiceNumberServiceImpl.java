@@ -6,9 +6,7 @@ import com.cafeoccidente.backend.purchases.greencoffee.repository.GreenCoffeePur
 import com.cafeoccidente.backend.purchases.husk.repository.HuskPurchaseRepository;
 import com.cafeoccidente.backend.purchases.othercoffee.repository.OtherCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
-import java.util.Comparator;
-import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.Arrays;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,19 +31,22 @@ public class PurchaseInvoiceNumberServiceImpl implements PurchaseInvoiceNumberSe
         this.fertiFuturoPurchaseRepository = fertiFuturoPurchaseRepository;
     }
 
-    // El analisis de null de JDT no logra propagar el filter(Objects::nonNull) de abajo al tipo
-    // del Stream, y marca el Comparator de mas() como advertencia aunque no puede llegar null ahi.
-    @SuppressWarnings("null")
+    /** El mayor numero usado en los 5 modulos de compra; null si la agencia aun no facturo nada.
+     *  Bucle explicito (en vez de Stream + Comparator) para que el analisis de null de JDT lo
+     *  entienda sin @SuppressWarnings: mismo resultado. */
     @Override
     public Integer findMaxUsed(Long agencyId) {
-        return Stream.of(
-                        dryCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
-                        greenCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
-                        huskPurchaseRepository.findMaxInvoiceNumber(agencyId),
-                        otherCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
-                        fertiFuturoPurchaseRepository.findMaxInvoiceNumber(agencyId))
-                .filter(Objects::nonNull)
-                .max(Comparator.naturalOrder())
-                .orElse(null);
+        Integer max = null;
+        for (Integer used : Arrays.asList(
+                dryCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
+                greenCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
+                huskPurchaseRepository.findMaxInvoiceNumber(agencyId),
+                otherCoffeePurchaseRepository.findMaxInvoiceNumber(agencyId),
+                fertiFuturoPurchaseRepository.findMaxInvoiceNumber(agencyId))) {
+            if (used != null && (max == null || used > max)) {
+                max = used;
+            }
+        }
+        return max;
     }
 }

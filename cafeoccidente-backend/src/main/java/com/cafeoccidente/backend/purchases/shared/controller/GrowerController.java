@@ -1,16 +1,21 @@
 package com.cafeoccidente.backend.purchases.shared.controller;
 
+import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,9 +28,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class GrowerController {
 
     private final GrowerService growerService;
+    private final SecurityUtils securityUtils;
 
-    public GrowerController(GrowerService growerService) {
+    public GrowerController(GrowerService growerService, SecurityUtils securityUtils) {
         this.growerService = growerService;
+        this.securityUtils = securityUtils;
+    }
+
+    /** "Actualizar uno ya existente": busqueda global (una sola base), solo conductores. La ruta
+     *  literal tiene prioridad sobre /{idNumber} en Spring. */
+    @GetMapping("/conductors")
+    public List<ConductorResponse> searchConductors(@RequestParam String idNumber) {
+        return growerService.searchConductors(idNumber);
+    }
+
+    @GetMapping("/conductors/{idNumber}")
+    public ConductorResponse findConductor(@PathVariable String idNumber) {
+        return growerService.findConductor(idNumber);
+    }
+
+    @PutMapping("/conductors/{idNumber}")
+    public ConductorResponse updateConductor(
+            @PathVariable String idNumber, @RequestBody ConductorUpdateRequest request) {
+        return growerService.updateConductor(idNumber, request);
     }
 
     @GetMapping("/{idNumber}")
@@ -45,6 +70,11 @@ public class GrowerController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public GrowerResponse createConductor(@Valid @RequestBody GrowerCreateRequest request) {
-        return growerService.createConductor(request);
+        // USER: la agencia siempre es la de su sesion (ADMIN puede elegir otra).
+        Long agencyId = securityUtils.resolveAgencyId(request.agencyId());
+        return growerService.createConductor(new GrowerCreateRequest(
+                request.idNumber(), request.firstName(), request.secondName(), request.lastName(),
+                request.secondLastName(), agencyId, request.transportCompany(), request.vehiclePlate(),
+                request.address()));
     }
 }

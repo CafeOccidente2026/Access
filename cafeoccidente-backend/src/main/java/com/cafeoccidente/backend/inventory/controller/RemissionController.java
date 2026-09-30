@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
 import com.cafeoccidente.backend.inventory.dto.RemissionResponse;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class RemissionController {
 
     private final RemissionService remissionService;
+    private final SecurityUtils securityUtils;
 
-    public RemissionController(RemissionService remissionService) {
+    public RemissionController(RemissionService remissionService, SecurityUtils securityUtils) {
         this.remissionService = remissionService;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping
@@ -36,13 +39,15 @@ public class RemissionController {
         return remissionService.findById(id);
     }
 
-    /** "Reimprimir Remision" busca por numero+agencia; sin numero, lista todas (mas nueva primero). */
+    /** "Reimprimir Remision" busca por numero+agencia; sin numero, lista todas (mas nueva primero).
+     *  USER: siempre su agencia de sesion (ver SecurityUtils.resolveAgencyId). */
     @GetMapping
     public List<RemissionResponse> list(
             @RequestParam Long agencyId,
-            @RequestParam(required = false) Integer remissionNumber,
+            @RequestParam(required = false) String remissionNumber,
             @RequestParam(required = false, defaultValue = "false") boolean pendingExport) {
-        if (remissionNumber != null) {
+        agencyId = securityUtils.resolveAgencyId(agencyId);
+        if (remissionNumber != null && !remissionNumber.isBlank()) {
             return remissionService.findByNumber(agencyId, remissionNumber).map(List::of).orElseGet(List::of);
         }
         return pendingExport ? remissionService.listPendingExport(agencyId) : remissionService.listByAgency(agencyId);

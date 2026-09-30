@@ -62,6 +62,11 @@ export class ComboboxComponent implements OnChanges {
     }
     if (changes['options']) {
       this.filteredOptions = this.options;
+      // Opciones que llegan despues de escribir (busqueda en el backend, ej. cedula del conductor):
+      // resaltar la primera para que Enter la confirme. Con listas fijas nunca pasa con la lista abierta.
+      if (this.isOpen) {
+        this.highlightedIndex = this.options.length ? 0 : -1;
+      }
     }
   }
 

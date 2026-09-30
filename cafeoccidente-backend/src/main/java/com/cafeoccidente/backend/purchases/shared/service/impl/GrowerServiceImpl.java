@@ -2,6 +2,8 @@ package com.cafeoccidente.backend.purchases.shared.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
@@ -13,9 +15,12 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -94,9 +99,11 @@ public class GrowerServiceImpl implements GrowerService {
         grower.setLastName(request.lastName());
         grower.setSecondLastName(request.secondLastName());
         grower.setAgency(agency);
-        grower.setAddress("");
+        grower.setAddress(request.address() == null ? "" : request.address().trim());
         grower.setPhone("");
         grower.setGrowerType("C");
+        // FechaAfiliacion: DefaultValue "Date()" en Form_Conductores.txt.
+        grower.setAffiliationDate(LocalDate.now());
         grower.setTransportCompany(request.transportCompany());
         grower.setVehiclePlate(request.vehiclePlate());
         Grower saved = growerRepository.save(grower);
@@ -116,6 +123,58 @@ public class GrowerServiceImpl implements GrowerService {
                 saved.isWithdrawn(),
                 saved.getTransportCompany(),
                 saved.getVehiclePlate());
+    }
+
+    /** Minimo de digitos antes de buscar y tope de resultados: la tabla tiene ~27.000 caficultores. */
+    private static final int CONDUCTOR_SEARCH_MIN_DIGITS = 3;
+    private static final int CONDUCTOR_SEARCH_LIMIT = 10;
+
+    @Override
+    public List<ConductorResponse> searchConductors(String idNumberPrefix) {
+        String prefix = idNumberPrefix == null ? "" : idNumberPrefix.trim();
+        if (prefix.length() < CONDUCTOR_SEARCH_MIN_DIGITS) {
+            return List.of();
+        }
+        return growerRepository.findConductorsByIdNumberPrefix(prefix, PageRequest.of(0, CONDUCTOR_SEARCH_LIMIT))
+                .stream()
+                .map(GrowerServiceImpl::toConductorResponse)
+                .toList();
+    }
+
+    @Override
+    public ConductorResponse findConductor(String idNumber) {
+        return toConductorResponse(requireGrower(idNumber));
+    }
+
+    @Override
+    public ConductorResponse updateConductor(String idNumber, ConductorUpdateRequest request) {
+        Grower grower = requireGrower(idNumber);
+        grower.setTransportCompany(blankToNull(request.transportCompany()));
+        grower.setVehiclePlate(blankToNull(request.vehiclePlate()));
+        grower.setUpdatedAt(Instant.now());
+        return toConductorResponse(growerRepository.save(grower));
+    }
+
+    private Grower requireGrower(String idNumber) {
+        return growerRepository.findByIdNumber(idNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe un conductor con esa cedula"));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static ConductorResponse toConductorResponse(Grower grower) {
+        return new ConductorResponse(
+                grower.getIdNumber(),
+                grower.getFirstName(),
+                grower.getLastName(),
+                grower.getAgency().getName(),
+                grower.getAddress(),
+                grower.getAffiliationDate(),
+                grower.getUpdatedAt(),
+                grower.getTransportCompany(),
+                grower.getVehiclePlate());
     }
 
     @Override

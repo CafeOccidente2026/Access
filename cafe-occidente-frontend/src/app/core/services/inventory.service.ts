@@ -1,9 +1,15 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { InventoryMovementResponse, RemissionRequest, RemissionResponse } from '../models/inventory.model';
+import {
+  InventoryMovementResponse,
+  InventoryReportRow,
+  ProductCodeOption,
+  RemissionRequest,
+  RemissionResponse,
+} from '../models/inventory.model';
 
 /** Unica responsabilidad: llamadas HTTP para Inventarios (movimientos, solo lectura) y Remisiones
  *  (Salidas). */
@@ -20,10 +26,10 @@ export class InventoryService {
   }
 
   /** "Reimprimir Remision": busca por numero correlativo (0 o 1 resultado). */
-  findRemissionByNumber(agencyId: number, remissionNumber: number): Observable<RemissionResponse[]> {
-    return this.http.get<RemissionResponse[]>(
-      `${API_BASE_URL}/remissions?agencyId=${agencyId}&remissionNumber=${remissionNumber}`,
-    );
+  findRemissionByNumber(agencyId: number, remissionNumber: string): Observable<RemissionResponse[]> {
+    return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions`, {
+      params: new HttpParams().set('agencyId', agencyId).set('remissionNumber', remissionNumber),
+    });
   }
 
   /** "Genera Remesa"/"Genera Remesa Otros": remisiones aun no incluidas en una remesa. */
@@ -33,5 +39,18 @@ export class InventoryService {
 
   markRemissionsExported(remissionIds: number[]): Observable<RemissionResponse[]> {
     return this.http.post<RemissionResponse[]>(`${API_BASE_URL}/remissions/mark-exported`, remissionIds);
+  }
+
+  /** Reporte Inventario por Cod. (productCode) o por Esp. (specialType); año en curso. */
+  inventoryReport(agencyId: number, filter: { productCode: string } | { specialType: string }): Observable<InventoryReportRow[]> {
+    let params = new HttpParams().set('agencyId', agencyId);
+    for (const [key, value] of Object.entries(filter)) {
+      params = params.set(key, value);
+    }
+    return this.http.get<InventoryReportRow[]>(`${API_BASE_URL}/inventory-report`, { params });
+  }
+
+  productCodes(): Observable<ProductCodeOption[]> {
+    return this.http.get<ProductCodeOption[]>(`${API_BASE_URL}/inventory-report/product-codes`);
   }
 }

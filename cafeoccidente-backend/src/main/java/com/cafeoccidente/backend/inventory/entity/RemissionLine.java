@@ -45,4 +45,15 @@ public class RemissionLine {
     /** Vr_Salida = Valor_unitario * Cantidad. */
     @Column(name = "output_value", nullable = false, precision = 15, scale = 2)
     private BigDecimal outputValue;
+
+    /** Sacos y Kilos_Brutos de la salida (Form_EXITS); NULL en lineas anteriores a V31. */
+    @Column
+    private Integer sacos;
+
+    @Column(name = "gross_kg", precision = 10, scale = 2)
+    private BigDecimal grossKg;
+
+    /** PorcAlmSanaSl = frpond de Sld3 (factor ponderado del Cod_Prod al salir); NULL antes de V32. */
+    @Column(name = "exit_percentage", precision = 12, scale = 6)
+    private BigDecimal exitPercentage;
 }

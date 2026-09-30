@@ -60,12 +60,21 @@ export class ControlRecordComponent {
     if (id === null) {
       return;
     }
+    // Si se cambia de agencia antes de que llegue la respuesta, la respuesta vieja se descarta: si
+    // no, los valores de la agencia anterior quedaban en el formulario de la nueva (y al guardar se
+    // escribian sobre ella).
     this.controlRecordService.getByAgency(id).subscribe({
       next: (record) => {
+        if (this.agencyId() !== id) {
+          return;
+        }
         this.isCreate.set(false);
         this.model.set(this.toModel(record));
       },
       error: (err: HttpErrorResponse) => {
+        if (this.agencyId() !== id) {
+          return;
+        }
         if (err.status === 404) {
           this.isCreate.set(true);
           this.model.set({});
@@ -93,6 +102,9 @@ export class ControlRecordComponent {
       : this.controlRecordService.update(id, request);
     call.subscribe({
       next: (record) => {
+        if (this.agencyId() !== id) {
+          return; // ya se guardo contra su agencia; no pintarlo sobre la que se eligio despues
+        }
         this.isCreate.set(false);
         this.model.set(this.toModel(record));
         this.savedMessage.set(this.page()?.savedMessage ?? null);
@@ -109,7 +121,12 @@ export class ControlRecordComponent {
     const model: Record<string, string> = {};
     (Object.keys(record) as (keyof ControlRecordResponse)[])
       .filter((key) => !['id', 'agencyId', 'agencyName', 'active'].includes(key))
-      .forEach((key) => (model[key] = String(record[key] ?? '')));
+      .forEach((key) => {
+        const value = record[key];
+        // Decimales con coma, como los escribe el usuario: con punto ("0.5"), el campo numerico lo
+        // toma como separador de miles al editar y "0.6" terminaba guardandose como 6.
+        model[key] = typeof value === 'number' ? String(value).replace('.', ',') : String(value ?? '');
+      });
     return model;
   }
 

@@ -99,7 +99,7 @@ export class RemesaExportComponent {
     ];
     const rows = remissions.flatMap((r) =>
       r.lines.map((line) => [
-        r.remissionNumber,
+        r.displayNumber, // mismo numero impreso en el PDF de la remision
         r.remissionDate,
         r.destination ?? '',
         r.conductorName ?? '',
