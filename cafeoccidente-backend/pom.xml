@@ -81,6 +81,13 @@
       <version>2.8.5</version>
     </dependency>
 
+    <!-- "Exportar Informacion": .xls Excel 97-2003 (HSSF), el mismo formato de TransferSpreadsheet de Access -->
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi</artifactId>
+      <version>5.4.1</version>
+    </dependency>
+
     <!-- Reduce codigo repetitivo en entidades/DTOs (opcional, quitar si el equipo prefiere no usarlo) -->
     <dependency>
       <groupId>org.projectlombok</groupId>
