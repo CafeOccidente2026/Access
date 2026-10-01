@@ -12,6 +12,9 @@ public interface GrowerRepository extends JpaRepository<Grower, Long> {
 
     Optional<Grower> findByIdNumber(String idNumber);
 
+    /** Posicion de un asociado en "Consultar Asociados" (orden de la tabla). */
+    long countByIdLessThan(Long id);
+
     /** Solo conductores (tienen Emp. Transp. o Vehiculo): en Access no hay tabla/consulta aparte de
      *  conductores, es el mismo Asociados - criterio provisional acordado. */
     @Query("SELECT g FROM Grower g WHERE g.idNumber LIKE CONCAT(:prefix, '%')"
