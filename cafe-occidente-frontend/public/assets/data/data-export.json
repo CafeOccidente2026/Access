@@ -1,0 +1,31 @@
+{
+  "scopeLabel": "¿Qué desea exportar?",
+  "allAgencies": "Todas las agencias de una vez",
+  "oneAgency": "Una agencia puntual",
+  "agencyLabel": "Agencia",
+  "fromLabel": "Desde Fecha",
+  "toLabel": "Hasta Fecha",
+  "acceptLabel": "Exportar",
+  "cancelLabel": "Cancelar",
+  "backRoute": "/menu-principal",
+  "files": "Se descarga un .zip con compras, anuncioresumen, comprastotal, Socios, FutureBuys, Inventario y Anuncios (.xls). Lo exportado queda marcado como Exportado.",
+  "screens": {
+    "export": {
+      "windowTitle": "Exportar Informacion",
+      "endpoint": "",
+      "dates": false
+    },
+    "special": {
+      "windowTitle": "Exportado Especial",
+      "endpoint": "special",
+      "dates": true,
+      "note": "Primero vuelve a marcar como no exportado todo lo del rango de fechas (compras, socios por fecha de afiliación, compras a futuro, inventario y anuncios) y después exporta."
+    }
+  },
+  "messages": {
+    "chooseAgency": "Elija una agencia de la lista",
+    "dates": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)",
+    "done": "Exportación lista: {file}",
+    "error": "No se pudo exportar la información"
+  }
+}

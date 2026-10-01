@@ -1,0 +1,39 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window *ngIf="screen() as s" [title]="s.windowTitle" bodyClass="bg-white">
+    <form class="flex w-[34rem] flex-col gap-4 p-6 text-sm" (submit)="accept($event)">
+      <p class="font-medium text-blue-900">{{ c.scopeLabel }}</p>
+      <label class="flex items-center gap-2">
+        <input type="radio" name="scope" [checked]="allAgencies()" (change)="allAgencies.set(true)" />
+        {{ c.allAgencies }}
+      </label>
+      <label class="flex items-center gap-2">
+        <input type="radio" name="scope" [checked]="!allAgencies()" (change)="allAgencies.set(false)" />
+        {{ c.oneAgency }}
+      </label>
+      <label *ngIf="!allAgencies()" class="ml-6 flex items-center gap-2">
+        <span class="w-24 font-bold text-blue-900">{{ c.agencyLabel }}:</span>
+        <app-agency-picker class="w-56" (agencyChange)="agencyId.set($event)"></app-agency-picker>
+      </label>
+
+      <div *ngIf="s.dates" class="flex gap-4">
+        <label class="flex flex-col gap-1">
+          <span class="font-bold text-blue-900">{{ c.fromLabel }}:</span>
+          <input type="date" data-field-key="from" class="rounded border border-slate-300 px-2 py-1" (input)="from.set($any($event.target).value)" />
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="font-bold text-blue-900">{{ c.toLabel }}:</span>
+          <input type="date" data-field-key="to" class="rounded border border-slate-300 px-2 py-1" (input)="to.set($any($event.target).value)" />
+        </label>
+      </div>
+
+      <p *ngIf="s.note" class="text-xs text-amber-800">{{ s.note }}</p>
+      <p class="text-xs text-slate-500">{{ c.files }}</p>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="cancel()">{{ c.cancelLabel }}</button>
+        <button type="submit" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="running()">{{ c.acceptLabel }}</button>
+      </div>
+      <p *ngIf="message() as m" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
+    </form>
+  </app-access-window>
+</div>

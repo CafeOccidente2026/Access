@@ -36,6 +36,25 @@ function suppliesRoutes(): Routes {
   ];
 }
 
+/** "MENUS VENDEDORES": el menu reutiliza el panel de Suministros (columnas + Volver). */
+function vendorsRoutes(): Routes {
+  const report = () => import('./features/beneficiary-report/beneficiary-report').then((m) => m.BeneficiaryReportComponent);
+  const ness = () => import('./features/ness-quotas/ness-quotas').then((m) => m.NessQuotasComponent);
+  return [
+    {
+      path: 'vendedores',
+      loadComponent: () => import('./features/supplies-menu/supplies-menu').then((m) => m.SuppliesMenuComponent),
+      data: { content: 'vendors-menu' },
+    },
+    { path: 'vendedores/ingresar', loadComponent: () => import('./features/vendor-entry/vendor-entry').then((m) => m.VendorEntryComponent) },
+    { path: 'vendedores/beneficiario', loadComponent: report, data: { report: 'beneficiary' } },
+    { path: 'vendedores/beneficiario-fechas', loadComponent: report, data: { report: 'summary' } },
+    { path: 'vendedores/asociados', loadComponent: () => import('./features/associates/associates').then((m) => m.AssociatesComponent) },
+    { path: 'vendedores/cupos-ness', loadComponent: ness, data: { view: 'quotas' } },
+    { path: 'vendedores/saldos-cupos-ness', loadComponent: ness, data: { view: 'balances' } },
+  ];
+}
+
 /** Mapa de rutas de la aplicacion; cada pantalla migrada tiene su propia ruta. */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -225,5 +244,18 @@ export const routes: Routes = [
       import('./features/purchase-query/purchase-query').then((m) => m.PurchaseQueryComponent),
   },
   ...suppliesRoutes(),
+  ...vendorsRoutes(),
+  {
+    path: 'exportar-informacion',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
+    data: { screen: 'export' },
+  },
+  {
+    path: 'exportado-especial',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
+    data: { screen: 'special' },
+  },
   { path: '**', redirectTo: 'login' },
 ];

@@ -12,9 +12,9 @@
     { "label": "Compras", "route": "/compras", "emphasis": true },
     { "label": "Suministros", "route": "/suministros" },
     { "label": "Vendedores", "route": "/vendedores" },
-    { "label": "Exportar Informacion", "route": "/exportar-informacion" },
+    { "label": "Exportar Informacion", "route": "/exportar-informacion", "adminOnly": true },
     { "label": "Importar Información", "route": "/importar-informacion" },
-    { "label": "Exportado Especial", "route": "/exportado-especial" },
+    { "label": "Exportado Especial", "route": "/exportado-especial", "adminOnly": true },
     { "label": "Volver Acceso Principal", "route": "/acceso-principal" },
     { "label": "Salir de la aplicación", "route": "/login" }
   ]
