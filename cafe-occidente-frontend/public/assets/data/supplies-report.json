@@ -1,0 +1,110 @@
+{
+  "acceptLabel": "Aceptar",
+  "cancelLabel": "Cancelar",
+  "downloadLabel": "Descargar Excel",
+  "agencyLabel": "Pto Compra",
+  "allAgenciesHint": "Deje la agencia vacía para ver todas",
+  "messages": {
+    "empty": "No hay movimientos para mostrar",
+    "error": "No se pudo generar el informe",
+    "required": "Falta: {label}"
+  },
+  "text": {
+    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.  NIT. 891,200,986-8",
+    "checksTitle": "RELACION CHEQUES",
+    "agencyGroup": "Agencia:",
+    "checksGroupSummary": "Resumir por 'Agencia' = {agency} ({count} registros de detalle)",
+    "paymentTitle": "Reporte por Forma de Pago",
+    "paymentAgency": "Punto de Compra:",
+    "paymentGroupSummary": "Resumido por punto de compra {agency} ({count} registros de detalle)",
+    "sum": "Suma",
+    "grandTotal": "Suma total",
+    "page": "Página {page} de {pages}"
+  },
+  "reports": {
+    "cash": {
+      "windowTitle": "Informe Caja",
+      "endpoint": "cash",
+      "layout": "movement",
+      "pdfTitle": "MOVIMIENTO CAJA",
+      "filters": [{ "key": "fund", "label": "Fondo", "options": ["LF", "RP"], "required": true }],
+      "columns": ["Trans", "Fd", "Fecha", "Detalle", "Entradas", "Salidas", "Saldo"],
+      "backRoute": "/suministros"
+    },
+    "pettyCash": {
+      "windowTitle": "Informe Caja Menor",
+      "endpoint": "petty-cash",
+      "layout": "movement",
+      "pdfTitle": "MOVIMIENTO CAJA MENOR",
+      "filters": [],
+      "columns": ["Trans", "Fd", "Fecha", "Detalle", "Entradas", "Salidas", "Saldo"],
+      "backRoute": "/suministros/caja-menor"
+    },
+    "suppliesRp": {
+      "windowTitle": "Informe Suministros RP",
+      "endpoint": "supplies",
+      "layout": "supplies",
+      "pdfTitle": "Suministros RP",
+      "fixedParams": { "fund": "RP" },
+      "filters": [],
+      "columns": ["Transacción", "Fondo", "Fecha", "Detalle", "Vr Suministro", "Gastos o Comp", "Saldo"],
+      "backRoute": "/suministros"
+    },
+    "suppliesLf": {
+      "windowTitle": "Informe Suministros LF",
+      "endpoint": "supplies",
+      "layout": "supplies",
+      "pdfTitle": "Suministros LF",
+      "fixedParams": { "fund": "LF" },
+      "filters": [],
+      "columns": ["Transacción", "Fondo", "Fecha", "Detalle", "Vr Suministro", "Gastos o Comp", "Saldo"],
+      "backRoute": "/suministros"
+    },
+    "packaging": {
+      "windowTitle": "Informe Empaques",
+      "endpoint": "packaging",
+      "layout": "packaging",
+      "pdfTitle": "Empaque",
+      "filters": [{ "key": "type", "label": "Tipo", "options": ["NUEVO", "USADO"], "required": true }],
+      "columns": ["Transac", "Fecha", "Detalle", "Entradas", "Salidas", "Saldo"],
+      "backRoute": "/suministros"
+    },
+    "checks": {
+      "windowTitle": "Relación Cheques",
+      "endpoint": "checks",
+      "post": true,
+      "layout": "checks",
+      "filters": [],
+      "columns": ["Fecha", "Cédula", "Nombre", "Apellidos", "Cheque", "Por Sum", "Por Comp"],
+      "backRoute": "/suministros"
+    },
+    "checksSpecial": {
+      "windowTitle": "Cheq Dialog",
+      "endpoint": "checks",
+      "post": true,
+      "layout": "checks",
+      "filters": [
+        { "key": "from", "label": "Desde Fecha", "type": "date", "required": true },
+        { "key": "to", "label": "Hasta Fecha", "type": "date", "required": true }
+      ],
+      "columns": ["Fecha", "Cédula", "Nombre", "Apellidos", "Cheque", "Por Sum", "Por Comp"],
+      "backRoute": "/suministros"
+    },
+    "paymentMethods": {
+      "windowTitle": "Dialogo FormaPago",
+      "endpoint": "payment-methods",
+      "layout": "paymentMethods",
+      "filters": [
+        { "key": "from", "label": "Desde Fecha", "type": "date", "required": true },
+        { "key": "to", "label": "Hasta Fecha", "type": "date", "required": true },
+        { "key": "method", "label": "Forma Pago", "options": ["*", "EFECTIVO", "CHEQUE", "TRANSFERENCIA", "DATAFONO"], "required": true }
+      ],
+      "columns": ["Transaccion", "Fdo", "Fecha", "Cedula", "Detalle", "Entradas", "Salidas", "Forma de Pago"],
+      "excel": {
+        "fileName": "formas de pago",
+        "columns": ["Id_Transaccion", "Agencia", "Fondo", "Fecha", "Cedula", "Detalle", "Entradas", "Salidas", "Forma_de_Pago", "Cheque"]
+      },
+      "backRoute": "/suministros"
+    }
+  }
+}

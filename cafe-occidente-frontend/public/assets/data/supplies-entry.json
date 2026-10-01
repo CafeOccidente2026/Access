@@ -1,0 +1,148 @@
+{
+  "saveLabel": "Guardar",
+  "backLabel": "Volver",
+  "printLoanLabel": "Imprimir Préstamo",
+  "newLoanLabel": "Nuevo Préstamo",
+  "messages": {
+    "saved": "Registro guardado: transacción {id}",
+    "saveError": "No se pudo guardar el registro",
+    "required": "Falta: {label}",
+    "chooseAgency": "Elija una agencia de la lista",
+    "growerNotFound": "La cédula no está registrada como asociado"
+  },
+  "screens": {
+    "cash": {
+      "windowTitle": "Caja suministros",
+      "endpoint": "cash",
+      "kind": "ledger",
+      "backRoute": "/suministros",
+      "fields": [
+        { "key": "transactionId", "label": "Transacción", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "amount", "label": "Vr. Suministro", "type": "currency", "required": true },
+        { "key": "paymentMethod", "label": "Forma de Pago", "type": "select", "options": ["EFECTIVO", "CHEQUE"], "required": true },
+        { "key": "checkNumber", "label": "Cheque", "type": "count", "integer": true }
+      ]
+    },
+    "adjustment": {
+      "windowTitle": "Ajustes Caja",
+      "endpoint": "cash-adjustments",
+      "kind": "ledger",
+      "backRoute": "/suministros",
+      "fields": [
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
+        { "key": "amount", "label": "Valor", "type": "currency", "required": true }
+      ]
+    },
+    "pettyCash": {
+      "windowTitle": "Caja Menor Suministros",
+      "endpoint": "petty-cash",
+      "kind": "ledger",
+      "backRoute": "/suministros/caja-menor",
+      "fields": [
+        { "key": "transactionId", "label": "Transacción", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "amount", "label": "Vr. Suministro", "type": "currency", "required": true },
+        { "key": "paymentMethod", "label": "Forma de Pago", "type": "text", "readonly": true, "value": "EFECTIVO" }
+      ]
+    },
+    "pettyCashExpense": {
+      "windowTitle": "Gastos",
+      "endpoint": "petty-cash-expenses",
+      "kind": "ledger",
+      "backRoute": "/suministros/caja-menor",
+      "fields": [
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
+        { "key": "amount", "label": "Valor", "type": "currency", "required": true }
+      ]
+    },
+    "supply": {
+      "windowTitle": "SUMINISTROS",
+      "endpoint": "supplies",
+      "kind": "ledger",
+      "backRoute": "/suministros",
+      "fields": [
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "required": true },
+        { "key": "amount", "label": "Valor Suministro", "type": "currency", "required": true }
+      ]
+    },
+    "issuedCheck": {
+      "windowTitle": "Cheques Girados",
+      "endpoint": "issued-checks",
+      "kind": "ledger",
+      "backRoute": "/suministros",
+      "fields": [
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
+        { "key": "amount", "label": "Valor Cheque", "type": "currency", "required": true },
+        { "key": "checkNumber", "label": "Cheque", "type": "count", "integer": true, "required": true }
+      ]
+    },
+    "packaging": {
+      "windowTitle": "Empaque Suministros",
+      "endpoint": "packaging",
+      "kind": "packaging",
+      "backRoute": "/suministros",
+      "fields": [
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "packagingType", "label": "Tipo", "type": "select", "options": ["NUEVO", "USADO"], "required": true },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "defaultToday": true, "required": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "quantity", "label": "Entradas", "type": "count", "integer": true, "required": true }
+      ]
+    },
+    "packagingLoan": {
+      "windowTitle": "Prestamo Empaques",
+      "endpoint": "packaging-loans",
+      "kind": "packaging",
+      "backRoute": "/suministros",
+      "lookupGrower": true,
+      "printLoan": true,
+      "fields": [
+        { "key": "transactionId", "label": "Préstamo No.", "type": "text", "required": true },
+        { "key": "agency", "label": "Agencia", "type": "text" },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "packagingType", "label": "Tipo Empaque", "type": "select", "options": ["NUEVO", "USADO"], "required": true },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
+        { "key": "detail", "label": "Detalle", "type": "text" },
+        { "key": "quantity", "label": "Salidas", "type": "count", "integer": true, "required": true }
+      ]
+    }
+  },
+  "loanReceipt": {
+    "salutation": "Señores",
+    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "department": "NARIÑO",
+    "body": "Mediante la presente, yo, {name} identificado con C.C. No. {idNumber}, me comprometo para con la Cooperativa de Caficultores de Occidente de Nariño Ltda., a devolver la cantidad de {quantity} Empaques {type} en la próxima venta de café que haga a la Cooperativa.",
+    "idPrefix": "C.C. No. "
+  }
+}

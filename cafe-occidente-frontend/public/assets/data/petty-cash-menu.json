@@ -1,0 +1,11 @@
+{
+  "windowTitle": "CAJA MENOR",
+  "columns": [
+    [
+      { "label": "Ingresar Suministros Caja Menor", "route": "/suministros/caja-menor/ingresar", "emphasis": true },
+      { "label": "Registrar Gastos Caja Menor", "route": "/suministros/caja-menor/gastos" },
+      { "label": "Informe Caja Menor", "route": "/suministros/caja-menor/informe" }
+    ]
+  ],
+  "back": { "label": "Volver al Panel de Control Suministros", "route": "/suministros" }
+}

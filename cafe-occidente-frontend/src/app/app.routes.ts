@@ -3,6 +3,39 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/guards/admin.guard';
 import { dryCoffeeUnsavedChangesGuard } from './features/purchase-forms/dry-coffee/unsaved-changes.guard';
 
+/** "MENUS SUMINISTROS": los menus, altas e informes comparten componente; data elige el JSON. */
+function suppliesRoutes(): Routes {
+  const menu = () => import('./features/supplies-menu/supplies-menu').then((m) => m.SuppliesMenuComponent);
+  const entry = () => import('./features/supplies-entry/supplies-entry').then((m) => m.SuppliesEntryComponent);
+  const report = () => import('./features/supplies-report/supplies-report').then((m) => m.SuppliesReportComponent);
+  const entries: Record<string, string> = {
+    caja: 'cash',
+    'ajustes-caja': 'adjustment',
+    ingresar: 'supply',
+    'cheques-girados': 'issuedCheck',
+    empaques: 'packaging',
+    'prestamo-empaques': 'packagingLoan',
+    'caja-menor/ingresar': 'pettyCash',
+    'caja-menor/gastos': 'pettyCashExpense',
+  };
+  const reports: Record<string, string> = {
+    'informe-caja': 'cash',
+    'informe-rp': 'suppliesRp',
+    'informe-lf': 'suppliesLf',
+    'informe-empaques': 'packaging',
+    'relacion-cheques': 'checks',
+    'relacion-cheques-especial': 'checksSpecial',
+    'formas-de-pago': 'paymentMethods',
+    'caja-menor/informe': 'pettyCash',
+  };
+  return [
+    { path: 'suministros', loadComponent: menu, data: { content: 'supplies-menu' } },
+    { path: 'suministros/caja-menor', loadComponent: menu, data: { content: 'petty-cash-menu' } },
+    ...Object.entries(entries).map(([path, screen]) => ({ path: `suministros/${path}`, loadComponent: entry, data: { screen } })),
+    ...Object.entries(reports).map(([path, key]) => ({ path: `suministros/${path}`, loadComponent: report, data: { report: key } })),
+  ];
+}
+
 /** Mapa de rutas de la aplicacion; cada pantalla migrada tiene su propia ruta. */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -191,5 +224,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/purchase-query/purchase-query').then((m) => m.PurchaseQueryComponent),
   },
+  ...suppliesRoutes(),
   { path: '**', redirectTo: 'login' },
 ];

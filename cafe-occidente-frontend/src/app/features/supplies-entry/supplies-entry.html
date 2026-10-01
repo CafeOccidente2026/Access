@@ -1,0 +1,51 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window *ngIf="screen() as s" [title]="s.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
+    <div class="flex flex-1 flex-col gap-3 p-4">
+      <div class="flex w-[40rem] flex-col gap-2">
+        <ng-container *ngFor="let field of s.fields">
+          <label *ngIf="field.key === 'agency'" class="flex items-center gap-2 text-sm">
+            <span class="w-32 shrink-0 font-medium text-blue-900">{{ field.label }}:</span>
+            <app-agency-picker class="w-56" (agencyChange)="agencyId.set($event)"></app-agency-picker>
+          </label>
+
+          <label *ngIf="field.key === 'idNumber'" class="flex items-center gap-2 text-sm">
+            <span class="w-32 shrink-0 font-medium text-blue-900">{{ field.label }}:</span>
+            <input
+              #idInput
+              type="text"
+              inputmode="numeric"
+              data-field-key="idNumber"
+              class="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
+              [readonly]="!!saved()"
+              [value]="idNumberDisplay()"
+              (input)="onIdNumber(idInput)"
+              (blur)="lookupGrower()"
+            />
+            <ng-container *ngIf="s.lookupGrower">
+              <input type="text" readonly class="w-40 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-sm" [value]="growerNames()?.first ?? ''" />
+              <input type="text" readonly class="w-40 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-sm" [value]="growerNames()?.last ?? ''" />
+            </ng-container>
+          </label>
+
+          <app-form-field
+            *ngIf="field.key !== 'agency' && field.key !== 'idNumber'"
+            [field]="fieldWithValue(field)"
+            labelClass="text-blue-900"
+            inputWidthClass="w-56"
+            [formatWhenIdle]="true"
+            (valueChange)="set(field.key, $event)"
+          ></app-form-field>
+        </ng-container>
+      </div>
+
+      <div class="flex gap-2">
+        <button *ngIf="!saved()" type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="saving()" (click)="save()">{{ c.saveLabel }}</button>
+        <button *ngIf="saved()" type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700" (click)="printLoan()">{{ c.printLoanLabel }}</button>
+        <button *ngIf="saved()" type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200" (click)="reset()">{{ c.newLoanLabel }}</button>
+        <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
+      </div>
+      <p *ngIf="message() as m" class="text-sm" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
+      <iframe *ngIf="pdfUrl() as url" [title]="s.windowTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
+    </div>
+  </app-access-window>
+</div>
