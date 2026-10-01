@@ -1,0 +1,53 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window *ngIf="view() as v" [title]="v.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
+    <div class="flex flex-1 flex-col gap-3 p-4">
+      <h2 class="text-lg font-bold text-slate-600">{{ v.heading }}</h2>
+
+      <form *ngIf="viewKey === 'quotas'" class="flex items-end gap-2 text-sm" (submit)="search($event, idInput.value)">
+        <label class="flex flex-col gap-1">
+          <span class="font-bold text-blue-900">{{ c.searchLabel }}:</span>
+          <input #idInput type="text" inputmode="numeric" class="w-40 rounded border border-slate-300 px-2 py-1" />
+        </label>
+        <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
+      </form>
+
+      <div *ngIf="viewKey === 'balances'" class="flex flex-col gap-1 text-sm">
+        <div class="flex items-end gap-2">
+          <label class="flex w-56 flex-col gap-1">
+            <span class="font-bold text-blue-900">{{ c.agencyLabel }}:</span>
+            <app-agency-picker (agencyChange)="agencyId.set($event)"></app-agency-picker>
+          </label>
+          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200" (click)="load()">{{ c.acceptLabel }}</button>
+        </div>
+        <p *ngIf="admin" class="text-xs text-slate-500">{{ c.allAgenciesHint }}</p>
+        <p class="max-w-4xl text-xs text-amber-800">{{ v.note }}</p>
+      </div>
+
+      <div class="flex-1 overflow-auto">
+        <table class="text-sm">
+          <thead>
+            <tr class="bg-slate-100">
+              <th *ngFor="let col of v.columns; let i = index" class="border border-slate-300 px-2 py-1" [class.text-right]="i >= 3">{{ col }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows()" class="odd:bg-white even:bg-slate-50">
+              <td *ngFor="let cell of row; let i = index" class="border border-slate-200 px-2 py-0.5" [class.text-right]="i >= 3">{{ cell }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center gap-3 text-sm">
+        <span>{{ c.recordLabel }}: {{ total() }}</span>
+        <ng-container *ngIf="viewKey === 'quotas'">
+          <button type="button" class="rounded border border-slate-300 px-2 disabled:opacity-40" [disabled]="page() === 0" (click)="goPage(page() - 1)">{{ c.previousLabel }}</button>
+          <button type="button" class="rounded border border-slate-300 px-2 disabled:opacity-40" [disabled]="(page() + 1) * pageSize >= total()" (click)="goPage(page() + 1)">{{ c.nextLabel }}</button>
+        </ng-container>
+        <button type="button" class="ml-auto rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
+      </div>
+      <p *ngIf="loaded() && total() === 0" class="text-sm text-slate-600">{{ c.messages.empty }}</p>
+      <p *ngIf="error()" class="text-sm text-red-600">{{ c.messages.error }}</p>
+    </div>
+  </app-access-window>
+</div>

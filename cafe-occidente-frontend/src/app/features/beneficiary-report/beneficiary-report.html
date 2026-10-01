@@ -1,0 +1,32 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window *ngIf="report() as r" [title]="r.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
+    <div class="flex flex-1 flex-col gap-3 p-4">
+      <p *ngIf="r.prompt" class="text-sm font-medium text-blue-900">{{ r.prompt }}</p>
+      <form class="flex flex-wrap items-end gap-3" (submit)="accept($event)">
+        <label class="flex w-56 flex-col gap-1 text-sm">
+          <span class="font-bold text-blue-900">{{ c.agencyLabel }}:</span>
+          <app-agency-picker (agencyChange)="agencyId.set($event)"></app-agency-picker>
+        </label>
+        <label class="flex w-44 flex-col gap-1 text-sm">
+          <span class="font-bold text-blue-900">{{ c.idNumberLabel }}:</span>
+          <input type="text" inputmode="numeric" data-field-key="idNumber" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" (input)="idNumber.set($any($event.target).value)" />
+        </label>
+        <ng-container *ngIf="r.dates">
+          <label class="flex w-44 flex-col gap-1 text-sm">
+            <span class="font-bold text-blue-900">{{ c.fromLabel }}:</span>
+            <input type="date" data-field-key="from" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" (input)="from.set($any($event.target).value)" />
+          </label>
+          <label class="flex w-44 flex-col gap-1 text-sm">
+            <span class="font-bold text-blue-900">{{ c.toLabel }}:</span>
+            <input type="date" data-field-key="to" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" (input)="to.set($any($event.target).value)" />
+          </label>
+        </ng-container>
+        <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200">{{ c.acceptLabel }}</button>
+        <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="cancel()">{{ c.cancelLabel }}</button>
+      </form>
+      <p *ngIf="admin" class="text-xs text-slate-500">{{ c.allAgenciesHint }}</p>
+      <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>
+      <iframe *ngIf="pdfUrl() as url" [title]="r.pdfTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
+    </div>
+  </app-access-window>
+</div>

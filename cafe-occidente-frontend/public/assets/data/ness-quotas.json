@@ -1,0 +1,26 @@
+{
+  "backLabel": "Volver",
+  "backRoute": "/vendedores",
+  "searchLabel": "Cédula",
+  "searchButton": "Buscar",
+  "agencyLabel": "Pto Compra",
+  "acceptLabel": "Aceptar",
+  "allAgenciesHint": "Deje la agencia vacía para ver todas",
+  "recordLabel": "Registros",
+  "previousLabel": "◀ Anteriores",
+  "nextLabel": "Siguientes ▶",
+  "messages": { "empty": "No hay registros para mostrar", "error": "No se pudo cargar la consulta" },
+  "views": {
+    "quotas": {
+      "windowTitle": "CuposNess",
+      "heading": "CuposNess",
+      "columns": ["CEDULA", "NOMBRES", "PROGRAMA", "CUPO"]
+    },
+    "balances": {
+      "windowTitle": "NESSYRAINSALDO",
+      "heading": "CONSULTA SALDOS CUPOS NESS Y RAIN",
+      "columns": ["CEDULA", "NOMBRES", "PROGRAMA", "CUPO", "FACTURADOS", "SALDO"],
+      "note": "Igual que en Access, solo cuenta compras cuyo Especial es exactamente NESPRESSO, RAINFOREST, NESPRESSO LATE HARVEST o REGIONAL NARIÑO 4C; variantes como \"NESPRESSO - FTUSA\" o \"CON TAZA\" no aparecen. Facturados suma todas esas compras de la cédula y se repite en cada programa de la cédula (consulta NESSYRAINSALDO)."
+    }
+  }
+}

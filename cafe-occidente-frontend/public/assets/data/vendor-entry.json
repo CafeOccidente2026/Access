@@ -1,0 +1,49 @@
+{
+  "dialog": {
+    "windowTitle": "Responda a la Pregunta",
+    "question": "¿Qué tipo de vendedor va a ingresar?",
+    "options": [
+      { "value": "association", "label": "Asociación o Fundación" },
+      { "value": "person", "label": "Persona" }
+    ],
+    "defaultOption": "person"
+  },
+  "windowTitle": "Vendedores",
+  "affiliationDateLabel": "Fecha Afiliación",
+  "typeLabel": "Tipo",
+  "typeValue": "C",
+  "sexOptions": ["F", "M", "E"],
+  "acceptLabel": "Aceptar",
+  "cancelLabel": "Cancelar",
+  "saveLabel": "Guardar",
+  "backLabel": "Volver",
+  "backRoute": "/vendedores",
+  "forms": {
+    "association": [
+      { "key": "idNumber", "label": "Id Asociación", "required": true },
+      { "key": "firstName", "label": "Nombre", "required": true, "wide": true },
+      { "key": "agency", "label": "Agencia" },
+      { "key": "address", "label": "Dirección", "wide": true }
+    ],
+    "person": [
+      { "key": "idNumber", "label": "Id Vendedor", "required": true },
+      { "key": "firstName", "label": "1er Nombre", "required": true, "wide": true },
+      { "key": "secondName", "label": "2o Nombre", "wide": true },
+      { "key": "lastName", "label": "1er Apellido", "wide": true },
+      { "key": "secondLastName", "label": "2o Apellido", "wide": true },
+      { "key": "agency", "label": "Agencia", "besideSex": "Sexo" },
+      { "key": "phone", "label": "Tel / Cel" },
+      { "key": "address", "label": "Dirección", "wide": true },
+      { "key": "postalCode", "label": "Código Postal" },
+      { "key": "email", "label": "Email", "wide": true }
+    ]
+  },
+  "messages": {
+    "saved": "Vendedor {id} guardado. Puede ingresar el siguiente.",
+    "required": "Falta: {label}",
+    "email": "El Email no es válido",
+    "chooseAgency": "Elija una agencia de la lista",
+    "duplicate": "Ya existe un asociado o vendedor con esa cédula",
+    "error": "No se pudo guardar el vendedor"
+  }
+}

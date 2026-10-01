@@ -1,0 +1,45 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window [title]="c.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
+    <div class="bg-slate-200 px-4 py-2 text-2xl text-slate-600">{{ c.heading }}</div>
+    <div class="flex flex-1 flex-col gap-4 p-4">
+      <div *ngIf="page() as p" class="flex gap-10 text-sm">
+        <div *ngFor="let column of c.columns" class="flex flex-col gap-1.5">
+          <div *ngFor="let field of column" class="flex items-start gap-2">
+            <span class="w-32 shrink-0 pt-1 text-amber-800">{{ field.label }}</span>
+            <input *ngIf="field.type === 'check'; else box" type="checkbox" disabled class="mt-1.5" [checked]="!!p.associate[field.key]" />
+            <ng-template #box>
+              <textarea *ngIf="field.type === 'memo'; else line" readonly rows="2" class="w-52 resize-none rounded border border-amber-700/40 px-2 py-1">{{ display(p.associate, field, c) }}</textarea>
+              <ng-template #line>
+                <input
+                  type="text"
+                  readonly
+                  class="rounded border border-amber-700/40 px-2 py-1"
+                  [class.w-52]="field.type !== 'bool' && field.type !== 'date'"
+                  [class.w-24]="field.type === 'bool' || field.type === 'date'"
+                  [class.text-right]="field.type === 'bool' || field.type === 'date'"
+                  [value]="display(p.associate, field, c)"
+                />
+              </ng-template>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="page() as p" class="flex flex-wrap items-center gap-2 border-t border-slate-300 pt-3 text-sm">
+        <span>{{ c.recordLabel }}:</span>
+        <button type="button" class="rounded border border-slate-300 px-2 hover:bg-slate-100" (click)="go(0)">{{ c.nav.first }}</button>
+        <button type="button" class="rounded border border-slate-300 px-2 hover:bg-slate-100" (click)="go(p.position - 1)">{{ c.nav.previous }}</button>
+        <span class="min-w-28 text-center">{{ p.position + 1 }} {{ c.ofLabel }} {{ p.total }}</span>
+        <button type="button" class="rounded border border-slate-300 px-2 hover:bg-slate-100" (click)="go(p.position + 1)">{{ c.nav.next }}</button>
+        <button type="button" class="rounded border border-slate-300 px-2 hover:bg-slate-100" (click)="go(p.total - 1)">{{ c.nav.last }}</button>
+        <form class="ml-6 flex items-center gap-2" (submit)="search($event, searchInput.value)">
+          <span>{{ c.searchLabel }}:</span>
+          <input #searchInput type="text" inputmode="numeric" class="w-36 rounded border border-slate-300 px-2 py-1" />
+          <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
+        </form>
+        <button type="button" class="ml-auto rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
+      </div>
+      <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>
+    </div>
+  </app-access-window>
+</div>

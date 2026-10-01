@@ -4,11 +4,14 @@
   [class.grid-cols-2]="columns === 2"
   [class.grid-cols-3]="columns === 3"
 >
-  <app-button
-    *ngFor="let option of options"
-    [label]="option.label"
-    variant="menu"
-    [active]="!!option.emphasis"
-    (pressed)="onSelect(option)"
-  ></app-button>
+  <div *ngFor="let option of options" class="flex flex-col gap-0.5">
+    <app-button
+      [label]="option.label"
+      variant="menu"
+      [active]="!!option.emphasis"
+      [disabled]="!!option.disabled"
+      (pressed)="onSelect(option)"
+    ></app-button>
+    <span *ngIf="option.hint" class="px-1 text-xs text-slate-500">{{ option.hint }}</span>
+  </div>
 </div>

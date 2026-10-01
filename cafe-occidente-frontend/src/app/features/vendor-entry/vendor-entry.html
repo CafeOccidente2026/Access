@@ -1,0 +1,59 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window *ngIf="!kind()" [title]="c.dialog.windowTitle" bodyClass="bg-white">
+    <form class="flex w-[26rem] flex-col gap-4 p-6" (submit)="accept($event)">
+      <p class="text-sm font-medium text-blue-900">{{ c.dialog.question }}</p>
+      <div class="flex flex-col gap-2">
+        <label *ngFor="let option of c.dialog.options" class="flex items-center gap-2 text-sm">
+          <input type="radio" name="kind" [value]="option.value" [checked]="selected() === option.value" (change)="choice.set(option.value)" />
+          {{ option.label }}
+        </label>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.cancelLabel }}</button>
+        <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200">{{ c.acceptLabel }}</button>
+      </div>
+    </form>
+  </app-access-window>
+
+  <app-access-window *ngIf="kind()" [title]="c.windowTitle" bodyClass="bg-white">
+    <div class="flex flex-col gap-3 p-4">
+      <div class="flex items-center gap-4 border-b border-slate-400 pb-3 text-sm">
+        <span class="w-32 font-bold text-blue-900">{{ c.affiliationDateLabel }}:</span>
+        <input type="text" readonly class="w-28 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-right" [value]="today" />
+        <span class="font-bold text-blue-900">{{ c.typeLabel }}:</span>
+        <input type="text" readonly class="w-12 rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.typeValue" />
+      </div>
+
+      <div class="flex flex-col gap-2 text-sm">
+        <div *ngFor="let field of fields()" class="flex items-center gap-2">
+          <span class="w-32 shrink-0 font-bold text-blue-900">{{ field.label }}{{ field.required ? ' *' : '' }}</span>
+          <app-agency-picker *ngIf="field.key === 'agency'; else text" class="w-44" (agencyChange)="agencyId.set($event)"></app-agency-picker>
+          <ng-template #text>
+            <input
+              class="rounded border border-slate-300 px-2 py-1"
+              [class.w-96]="field.wide"
+              [class.w-44]="!field.wide"
+              [attr.data-field-key]="field.key"
+              [attr.type]="field.key === 'email' ? 'email' : 'text'"
+              [value]="values()[field.key] ?? ''"
+              (input)="set(field.key, $any($event.target).value)"
+            />
+          </ng-template>
+          <ng-container *ngIf="field.besideSex">
+            <span class="ml-4 w-16 font-bold text-blue-900">{{ field.besideSex }}:</span>
+            <select class="w-20 rounded border border-slate-300 px-2 py-1" data-field-key="sex" [value]="values()['sex'] ?? ''" (change)="set('sex', $any($event.target).value)">
+              <option value=""></option>
+              <option *ngFor="let s of c.sexOptions" [value]="s">{{ s }}</option>
+            </select>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="saving()" (click)="save()">{{ c.saveLabel }}</button>
+        <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
+      </div>
+      <p *ngIf="message() as m" class="text-sm" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
+    </div>
+  </app-access-window>
+</div>

@@ -1,0 +1,43 @@
+{
+  "idNumberLabel": "Cédula",
+  "fromLabel": "Desde Fecha",
+  "toLabel": "Hasta Fecha",
+  "agencyLabel": "Pto Compra",
+  "allAgenciesHint": "Deje la agencia vacía para ver todas",
+  "acceptLabel": "Aceptar",
+  "cancelLabel": "Cancelar",
+  "backRoute": "/vendedores",
+  "messages": {
+    "empty": "No hay compras para mostrar",
+    "error": "No se pudo generar el informe",
+    "dates": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)"
+  },
+  "text": {
+    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "nit": "NIT. 891,200,986-8",
+    "cedula": "Cedula",
+    "groupSummary": "Resumir por 'Cedula' =  {id} ({count} {records})",
+    "recordSingular": "registro de detalle",
+    "recordPlural": "registros de detalle",
+    "sum": "Suma",
+    "grandTotal": "Suma total",
+    "page": "Página {page} de {pages}"
+  },
+  "reports": {
+    "beneficiary": {
+      "windowTitle": "Búsqueda compras a beneficiario",
+      "prompt": "Escriba el número cédula del Beneficiario",
+      "pdfTitle": "Beneficiario",
+      "layout": "detail",
+      "dates": false,
+      "columns": ["Agencia", "Factura", "Fecha", "Fdo", "KVerdes", "KNetos", "Porc", "Vr. Bruto", "Ap. Socio", "Dcto Coop", "Dcto Fro", "Retefte", "Ot Dscts", "Neto Pagado", "Esp"]
+    },
+    "summary": {
+      "windowTitle": "Diálogo Beneficiario",
+      "pdfTitle": "Beneficiario resumen",
+      "layout": "summary",
+      "dates": true,
+      "columns": ["Agencia", "Fecha", "Fac", "Nombre", "Apellidos", "KV", "KN", "Porc", "Vr_Bruto", "Ap Socio", "Desc Coop", "Desc Fro", "Retefte", "Ot Dscts", "Neto Pagado", "Esp"]
+    }
+  }
+}

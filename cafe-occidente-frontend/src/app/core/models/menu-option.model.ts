@@ -5,6 +5,9 @@ export interface MenuOption {
   readonly emphasis?: boolean;
   /** Si es true, solo el rol ADMIN ve esta opcion (ej: Usuarios, Actualizar Anuncio). */
   readonly adminOnly?: boolean;
+  /** Boton visible pero inactivo (funcion de Access que no aplica todavia); hint explica por que. */
+  readonly disabled?: boolean;
+  readonly hint?: string;
 }
 
 export interface MenuOptionGroup {

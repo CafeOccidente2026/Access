@@ -1,0 +1,16 @@
+{
+  "windowTitle": "VENDEDORES",
+  "columns": [
+    [
+      { "label": "Ingresar Vendedores", "route": "/vendedores/ingresar", "emphasis": true },
+      { "label": "Genera Inf Ventas Benef", "route": "/vendedores/beneficiario" },
+      { "label": "Inf Ventas Benef por Fechas", "route": "/vendedores/beneficiario-fechas" },
+      { "label": "Actualizar Vendedores", "disabled": true, "hint": "No aplica con base de datos unificada" },
+      { "label": "Consultar Asociados", "route": "/vendedores/asociados" },
+      { "label": "Actualiza Cupos NESS", "disabled": true, "hint": "Pendiente: falta el archivo NESS.xlsx real" },
+      { "label": "Consulta Cupos Ness", "route": "/vendedores/cupos-ness" },
+      { "label": "Consulta Saldos Cupos Ness", "route": "/vendedores/saldos-cupos-ness" }
+    ]
+  ],
+  "back": { "label": "Volver al Pánel de Control Principal", "route": "/menu-principal" }
+}
