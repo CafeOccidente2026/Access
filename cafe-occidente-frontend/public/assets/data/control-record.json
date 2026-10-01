@@ -7,18 +7,18 @@
   "savedMessage": "Guardado correctamente.",
   "errorMessage": "Ocurrio un error. Verifique los datos e intente de nuevo.",
   "leftColumn": [
-    { "key": "controlNumber", "label": "Núm Registro Control", "type": "number" },
-    { "key": "baseFactor", "label": "Factor Base", "type": "number" },
+    { "key": "controlNumber", "label": "Núm Registro Control", "type": "number", "rawDisplay": true },
+    { "key": "baseFactor", "label": "Factor Base", "type": "number", "integer": true },
     { "key": "baseWithholding", "label": "Base Rete Fuente", "type": "currency" },
-    { "key": "baseLoad", "label": "Base Carga", "type": "number" },
+    { "key": "baseLoad", "label": "Base Carga", "type": "number", "integer": true },
     { "key": "withholdingPercentage", "label": "Porcentaje Rete Fuente", "type": "percentage" },
-    { "key": "baseHusk", "label": "Base Pasilla", "type": "number" },
+    { "key": "baseHusk", "label": "Base Pasilla", "type": "currency" },
     { "key": "avgHuskPercentage", "label": "% Kg de Pasilla Promedio", "type": "percentage" },
     { "key": "purchasePoint", "label": "Punto de Compra", "type": "text" },
     { "key": "prefix", "label": "Prefijo", "type": "text" },
     { "key": "costs", "label": "Costos", "type": "currency" },
-    { "key": "sampleSize", "label": "Tamaño Muestra", "type": "number" },
-    { "key": "excelsoKg", "label": "Kg de Excelso", "type": "number" },
+    { "key": "sampleSize", "label": "Tamaño Muestra", "type": "count" },
+    { "key": "excelsoKg", "label": "Kg de Excelso", "type": "count" },
     { "key": "greenCoffeePercentage", "label": "Pocentaje Café Verde", "type": "percentage" },
     { "key": "specialtyThreshold", "label": "Umbral Cafés Especiales", "type": "percentage" },
     { "key": "associatePercentage", "label": "Porc Aportes Asociados", "type": "percentage" },
@@ -28,8 +28,8 @@
   "rightColumn": [
     { "key": "dianResolution", "label": "Resol DIAN", "type": "text" },
     { "key": "resolutionDate", "label": "Fecha Res", "type": "date" },
-    { "key": "resolutionFrom", "label": "Desde Res", "type": "number" },
-    { "key": "resolutionTo", "label": "Hasta Res", "type": "number" },
-    { "key": "validity", "label": "Vigencia", "type": "number" }
+    { "key": "resolutionFrom", "label": "Desde Res", "type": "number", "rawDisplay": true },
+    { "key": "resolutionTo", "label": "Hasta Res", "type": "number", "rawDisplay": true },
+    { "key": "validity", "label": "Vigencia", "type": "number", "rawDisplay": true }
   ]
 }

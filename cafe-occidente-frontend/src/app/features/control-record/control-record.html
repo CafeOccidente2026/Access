@@ -21,7 +21,8 @@
       <div class="grid grid-cols-2 gap-x-12 gap-y-3">
         <div class="flex flex-col gap-3">
           <app-form-field
-            *ngFor="let field of leftFields()"
+            *ngFor="let field of leftFields(); trackBy: trackByKey"
+            [formatWhenIdle]="true"
             [field]="field"
             labelClass="text-blue-900"
             labelWidthClass="w-52"
@@ -30,7 +31,8 @@
         </div>
         <div class="flex flex-col gap-3">
           <app-form-field
-            *ngFor="let field of rightFields()"
+            *ngFor="let field of rightFields(); trackBy: trackByKey"
+            [formatWhenIdle]="true"
             [field]="field"
             labelClass="text-blue-900"
             labelWidthClass="w-52"

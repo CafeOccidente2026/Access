@@ -21,7 +21,8 @@
       [readonly]="field.readonly"
       [ngModel]="inputValue"
       (ngModelChange)="onInput($event)"
-      (blur)="committed.emit()"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
       (keydown.enter)="committed.emit()"
     />
   </ng-template>

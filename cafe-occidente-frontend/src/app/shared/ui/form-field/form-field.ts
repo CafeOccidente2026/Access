@@ -23,6 +23,9 @@ export class FormFieldComponent {
   @Input() labelWidthClass = 'w-32';
   @Input() inputWidthClass = 'min-w-[100px]';
   @Input() highlightClass = 'bg-yellow-100';
+  /** Pantallas de edicion libre (Registro de Control): el campo numerico editable se ve formateado
+   *  mientras no tiene el foco y crudo mientras se escribe, sin reformatear en cada tecla. */
+  @Input() formatWhenIdle = false;
 
   /** Nuevo valor escrito/seleccionado por el usuario. */
   @Output() readonly valueChange = new EventEmitter<string | number>();
@@ -30,14 +33,13 @@ export class FormFieldComponent {
   @Output() readonly committed = new EventEmitter<void>();
 
   inputValue: string | number = '';
+  private focused = false;
 
   ngOnChanges(): void {
+    if (this.formatWhenIdle && this.focused) {
+      return; // el usuario esta escribiendo: reescribir el valor mueve el cursor
+    }
     const raw = this.field.value ?? '';
-    const isNumeric =
-      this.field.type === 'currency' ||
-      this.field.type === 'count' ||
-      this.field.type === 'percentage' ||
-      this.field.type === 'number';
     // Solo se formatea de solo-lectura: mientras el campo sigue editable siempre se ve el valor
     // crudo (para no pelear con puntos de miles mientras se escribe). Los formularios de compra
     // bloquean (readonly = true) cada campo apenas se confirma (blur/Enter), asi que esto alcanza
@@ -45,10 +47,29 @@ export class FormFieldComponent {
     // `integer` (Sacos, Bonificacion, Costos) pide 'count' (sin decimales forzados); el resto siempre
     // fuerza 2 decimales, igual que 'currency'. `rawDisplay` (Destare, Castigo, Descuento Fro, Otros
     // Desctos) se salta el formateo entero: se ve tal cual se tipeo, sin agregar ni quitar nada.
-    this.inputValue =
-      this.field.readonly && isNumeric && !this.field.rawDisplay
-        ? formatDisplayNumber(raw, this.field.integer ? 'count' : 'currency')
-        : raw;
+    this.inputValue = this.field.readonly || this.formatWhenIdle ? this.formatted(raw) : raw;
+  }
+
+  onFocus(): void {
+    this.focused = true;
+    if (this.formatWhenIdle && !this.field.readonly) {
+      this.inputValue = this.field.value ?? '';
+    }
+  }
+
+  onBlur(): void {
+    this.focused = false;
+    if (this.formatWhenIdle) {
+      this.inputValue = this.formatted(this.field.value ?? '');
+    }
+    this.committed.emit();
+  }
+
+  private formatted(raw: string | number): string | number {
+    const isNumeric = ['number', 'count', 'currency', 'percentage'].includes(this.field.type);
+    return isNumeric && !this.field.rawDisplay
+      ? formatDisplayNumber(raw, this.field.integer ? 'count' : 'currency')
+      : raw;
   }
 
   onInput(value: string | number): void {

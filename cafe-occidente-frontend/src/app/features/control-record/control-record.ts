@@ -85,6 +85,12 @@ export class ControlRecordComponent {
     });
   }
 
+  /** Sin esto, cada tecla recrea todos los campos (buildFields devuelve objetos nuevos) y el input
+   *  en edicion pierde el foco. */
+  trackByKey(_: number, field: FormFieldDefinition): string {
+    return field.key;
+  }
+
   onFieldValueChange(event: { key: string; value: string | number }): void {
     this.model.update((m) => ({ ...m, [event.key]: String(event.value) }));
   }
