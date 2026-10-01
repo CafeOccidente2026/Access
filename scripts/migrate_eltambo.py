@@ -721,6 +721,31 @@ def load_purchase_payment_splits(cur, el_tambo_id):
     print(f"  purchase_payment_split: {len(splits)} compras con pago mixto.")
 
 
+def load_export_flags(cur, el_tambo_id):
+    """COMPRAS.Exportado y ANUNCIOS.Exportado tal cual en Access (V36). Compras a Futuro e INVENTARIO
+    de El Tambo no se migraron a tablas reales, asi que no hay filas que marcar."""
+    purchases = [
+        (parse_bool(row["exportado"]), el_tambo_id, parse_int(row["factura"]))
+        for row in read_csv("compras_migrar.csv")
+        if s(row, "forma_de_pago") != "ANULADA"
+    ]
+    psycopg2.extras.execute_batch(
+        cur,
+        "UPDATE dry_coffee_purchase SET exported = %s WHERE agency_id = %s AND invoice_number = %s",
+        purchases,
+    )
+    announcements = [
+        (parse_bool(row["exportado"]), el_tambo_id, parse_int(row["anuncio"]))
+        for row in read_csv("anuncios_migrar.csv")
+    ]
+    psycopg2.extras.execute_batch(
+        cur,
+        "UPDATE agency_announcement_number SET exported = %s WHERE agency_id = %s AND announcement_number = %s",
+        announcements,
+    )
+    print(f"  Exportado: {len(purchases)} compras y {len(announcements)} anuncios.")
+
+
 # ---------- Parte B: staging ----------
 
 STAGING_FILES = {
@@ -816,6 +841,7 @@ def main():
                 load_manual_cash_entries(cur, el_tambo_id)
                 load_supplies_petty_cash_and_packaging(cur, el_tambo_id)
                 load_purchase_payment_splits(cur, el_tambo_id)
+                load_export_flags(cur, el_tambo_id)
 
                 print("\nParte B - staging")
                 load_all_staging(cur)
