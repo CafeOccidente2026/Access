@@ -227,30 +227,31 @@ def load_growers(cur):
     if created:
         print(f"  Agencies nuevas creadas desde asociados_migrar.csv ({len(created)}): {created}")
 
+    def text(row, key):
+        return s(row, key) or None
+
+    def flag(row, key):
+        value = s(row, key).lower()
+        return True if value == "t" else False if value == "f" else None
+
     records = []
     for row in rows:
         id_number = s(row, "idasociado")
         agencia = s(row, "agencia")
-        last_name = s(row, "1er apellido")
         if not id_number:
             note_discard("grower_sin_idasociado", row)
             continue
-        if agencia in ("", "0"):
-            note_discard("grower_sin_agencia", id_number)
-            continue
-        if not last_name:
-            note_discard("grower_sin_apellido", id_number)
-            continue
 
+        # Sin agencia o sin apellido se migran igual (V34): Access los tiene asi, no se inventa nada.
         grower_type = s(row, "tipo").upper()[:1] or "C"
         records.append(
             (
                 id_number,
                 s(row, "1er nombre"),
                 s(row, "2o nombre") or None,
-                last_name,
+                s(row, "1er apellido") or None,
                 s(row, "2o apellido") or None,
-                agency_map[agencia],
+                agency_map.get(agencia),
                 parse_date(row.get("fechanacimiento")),
                 s(row, "direccion"),
                 s(row, "telefono"),
@@ -259,6 +260,24 @@ def load_growers(cur):
                 parse_bool(row.get("habil")) and parse_bool(row.get("aceptado")),
                 parse_bool(row.get("fallecido")),
                 parse_bool(row.get("retirado")),
+                text(row, "emp_transp"),
+                text(row, "vehiculo"),
+                text(row, "sexo"),
+                flag(row, "asociacion"),
+                flag(row, "aceptado"),
+                flag(row, "habil"),
+                text(row, "estadocivil"),
+                text(row, "lugarnacimiento"),
+                text(row, "cedulacafetera"),
+                text(row, "acta"),
+                text(row, "observacion"),
+                text(row, "ciu"),
+                text(row, "codigopostal"),
+                text(row, "email"),
+                parse_int(s(row, "numregistro"), None),
+                flag(row, "exportado"),
+                flag(row, "nuevo"),
+                text(row, "pais"),
             )
         )
 
@@ -268,7 +287,10 @@ def load_growers(cur):
         INSERT INTO grower (
             id_number, first_name, second_name, last_name, second_last_name,
             agency_id, birth_date, address, phone, affiliation_date,
-            grower_type, active, deceased, withdrawn
+            grower_type, active, deceased, withdrawn,
+            transport_company, vehicle_plate, sex, is_association, accepted, eligible,
+            marital_status, birth_place, coffee_id_card, act_number, observation,
+            city_code, postal_code, email, registry_number, exported, is_new, country
         ) VALUES %s
         ON CONFLICT (id_number) DO UPDATE SET
             first_name = EXCLUDED.first_name,
@@ -283,7 +305,25 @@ def load_growers(cur):
             grower_type = EXCLUDED.grower_type,
             active = EXCLUDED.active,
             deceased = EXCLUDED.deceased,
-            withdrawn = EXCLUDED.withdrawn
+            withdrawn = EXCLUDED.withdrawn,
+            transport_company = EXCLUDED.transport_company,
+            vehicle_plate = EXCLUDED.vehicle_plate,
+            sex = EXCLUDED.sex,
+            is_association = EXCLUDED.is_association,
+            accepted = EXCLUDED.accepted,
+            eligible = EXCLUDED.eligible,
+            marital_status = EXCLUDED.marital_status,
+            birth_place = EXCLUDED.birth_place,
+            coffee_id_card = EXCLUDED.coffee_id_card,
+            act_number = EXCLUDED.act_number,
+            observation = EXCLUDED.observation,
+            city_code = EXCLUDED.city_code,
+            postal_code = EXCLUDED.postal_code,
+            email = EXCLUDED.email,
+            registry_number = EXCLUDED.registry_number,
+            exported = EXCLUDED.exported,
+            is_new = EXCLUDED.is_new,
+            country = EXCLUDED.country
         """,
         records,
     )
@@ -442,6 +482,245 @@ def load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id):
     print(f"  {len(records)} dry_coffee_purchase insertadas.")
 
 
+def load_check_relation_marks(cur, el_tambo_id):
+    """Caja.Rel_cheques tal cual estaba en Access: solo se marca lo que ya estaba marcado."""
+    cur.execute(
+        "SELECT invoice_number, check_number, id FROM dry_coffee_purchase WHERE agency_id = %s",
+        (el_tambo_id,),
+    )
+    purchase_by_invoice = {inv: (check, pid) for inv, check, pid in cur.fetchall()}
+    marks = []
+    for row in read_csv("caja_migrar.csv"):
+        check = parse_int(s(row, "cheque", "0"))
+        if check <= 0 or s(row, "rel_cheques") != "t":
+            continue
+        invoice = parse_int(s(row, "id_transaccion"), None)
+        purchase = purchase_by_invoice.get(invoice)
+        if purchase is None or parse_int(purchase[0], None) != check:
+            note_discard("Rel_cheques marcado sin compra que lo respalde", s(row, "id_transaccion"))
+            continue
+        marks.append(("DRY", purchase[1]))
+    psycopg2.extras.execute_values(
+        cur,
+        "INSERT INTO check_relation_mark (source, source_id) VALUES %s ON CONFLICT DO NOTHING",
+        marks,
+    )
+    print(f"  {len(marks)} cheques ya relacionados en Access marcados.")
+
+
+PURCHASE_TABLES = ("dry_coffee_purchase", "green_coffee_purchase", "husk_purchase",
+                   "other_coffee_purchase", "ferti_futuro_purchase")
+
+
+def load_manual_cash_entries(cur, el_tambo_id):
+    """
+    Filas de Caja que no son pagos de compras (cruces de almacen, cheques cobrados, ajustes).
+    El sistema nuevo arma al leer las copias que Access hacia entre Caja y Suministros, asi que
+    cada fila se guarda una sola vez, en la tabla donde nacio:
+      - Caja con Entradas y cheque, copiada a Suministros (Efectivo con cheques): cash_entry
+        CHEQUE; el CAMBIO A EFECTIVO se aplica al leer.
+      - Caja con Salidas y cheque que vino de Suministros (Cheques girados a caja): supply_entry.
+      - El resto (incluidos cheques sin copia en Suministros): cash_entry con su Forma_de_Pago.
+    Rel_cheques = t pasa a check_relation_mark. Idempotente: una fila igual ya migrada no se repite.
+    """
+    cur.execute("SELECT id, code FROM fund")
+    fund_by_code = {code: fid for fid, code in cur.fetchall()}
+    cur.execute(" UNION ALL ".join(f"SELECT invoice_number FROM {t} WHERE agency_id = %(a)s"
+                                   for t in PURCHASE_TABLES), {"a": el_tambo_id})
+    invoices = {str(r[0]) for r in cur.fetchall()}
+
+    supply_checks = {}
+    for row in read_csv("suministros_migrar.csv"):
+        if s(row, "forma_de_pago") == "CHEQUE":
+            key = (s(row, "id_transaccion"), parse_decimal(s(row, "vr_gastos_o_comp")))
+            supply_checks[key] = supply_checks.get(key, 0) + 1
+
+    existing = {}
+    for table in ("cash_entry", "supply_entry"):
+        cur.execute(
+            f"SELECT id, transaction_id, entry_date, inflow, outflow, check_number FROM {table}"
+            " WHERE agency_id = %s ORDER BY id",
+            (el_tambo_id,),
+        )
+        for eid, *key in cur.fetchall():
+            existing.setdefault((table, *key), []).append(eid)
+
+    counts = {}
+    for row in read_csv("caja_migrar.csv"):
+        transaction_id = s(row, "id_transaccion")
+        if transaction_id in invoices:
+            continue
+        inflow = parse_decimal(s(row, "entradas"))
+        outflow = parse_decimal(s(row, "salidas"))
+        check = parse_int(s(row, "cheque", "0")) or None
+        method = s(row, "forma_de_pago")
+        table = "cash_entry"
+        copy_key = (transaction_id, inflow if inflow > 0 else outflow)
+        if check and supply_checks.get(copy_key, 0) > 0:
+            supply_checks[copy_key] -= 1
+            method = "CHEQUE"
+            if outflow > 0:
+                table = "supply_entry"
+        entry_date = parse_date(s(row, "fecha"))
+        ids = existing.get((table, transaction_id, entry_date, inflow, outflow, check))
+        if ids:
+            entry_id = ids.pop(0)
+        else:
+            cur.execute(
+                f"INSERT INTO {table} (transaction_id, agency_id, fund_id, entry_date, id_number, detail,"
+                " inflow, outflow, payment_method, check_number, created_at)"
+                " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (transaction_id, el_tambo_id, fund_by_code[s(row, "fondo")], entry_date, s(row, "cedula"),
+                 s(row, "detalle") or None, inflow, outflow, method, check, parse_timestamp(s(row, "fecha"))),
+            )
+            entry_id = cur.fetchone()[0]
+        if s(row, "rel_cheques") == "t":
+            cur.execute(
+                "INSERT INTO check_relation_mark (source, source_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                ("SUPPLY" if table == "supply_entry" else "CASH", entry_id),
+            )
+        counts[(table, method)] = counts.get((table, method), 0) + 1
+    for (table, method), n in sorted(counts.items()):
+        print(f"  {table} {method}: {n} movimientos manuales de Caja.")
+
+
+# SUPUESTO (carga de prueba, decision del usuario 2026-10-01): en Access la fila de Suministros
+# "sumlf60-29-05" (29/05/2026, entrada 60.000.000) tiene Fondo = "j", que no es RP ni LF. Se toma como
+# LF por el patron del propio codigo ("sumlf..."), NO por confirmacion externa. Revisar con el dato
+# real de produccion. En Access esa fila no salia en los informes SuministrosRP/LF (filtran "RP"/"LF").
+SUPPLY_FUND_ASSUMPTIONS = {("sumlf60-29-05", "j"): "LF"}
+
+
+def load_supplies_petty_cash_and_packaging(cur, el_tambo_id):
+    """
+    Suministros propios, CajaMenor y Empaque de Access, tal cual. De Suministros se omiten las filas
+    que el sistema nuevo ya arma al leer: pagos con cheque de compras (ActualizaSuministros) y
+    cheques de Caja (Efectivo con cheques). Un Fondo que no existe en Access como RP/LF no se puede
+    guardar en fund y se reporta como descarte, sin inventar otro. Idempotente.
+    """
+    cur.execute("SELECT id, code FROM fund")
+    fund_by_code = {code: fid for fid, code in cur.fetchall()}
+    cur.execute(" UNION ALL ".join(f"SELECT invoice_number FROM {t} WHERE agency_id = %(a)s"
+                                   for t in PURCHASE_TABLES), {"a": el_tambo_id})
+    invoices = {str(r[0]) for r in cur.fetchall()}
+    cash_check_inflows = {}
+    for row in read_csv("caja_migrar.csv"):
+        if parse_int(s(row, "cheque", "0")) > 0 and parse_decimal(s(row, "entradas")) > 0:
+            key = (s(row, "id_transaccion"), parse_decimal(s(row, "entradas")))
+            cash_check_inflows[key] = cash_check_inflows.get(key, 0) + 1
+
+    def existing(table, value_cols):
+        cur.execute(f"SELECT id, transaction_id, entry_date, {value_cols} FROM {table} WHERE agency_id = %s",
+                    (el_tambo_id,))
+        found = {}
+        for eid, *key in cur.fetchall():
+            found.setdefault(tuple(key), []).append(eid)
+        return found
+
+    def insert_once(found, key, sql, values):
+        if found.get(key):
+            found[key].pop()
+            return 0
+        cur.execute(sql, values)
+        return 1
+
+    ledger_sql = ("INSERT INTO {} (transaction_id, agency_id, fund_id, entry_date, id_number, detail,"
+                  " inflow, outflow, payment_method, check_number, created_at)"
+                  " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+
+    found = existing("supply_entry", "inflow, outflow")
+    inserted = 0
+    for row in read_csv("suministros_migrar.csv"):
+        transaction_id = s(row, "id_transaccion")
+        inflow = parse_decimal(s(row, "valor_suministro"))
+        outflow = parse_decimal(s(row, "vr_gastos_o_comp"))
+        if transaction_id in invoices:
+            continue
+        copy_key = (transaction_id, outflow)
+        if s(row, "forma_de_pago") == "CHEQUE" and cash_check_inflows.get(copy_key, 0) > 0:
+            cash_check_inflows[copy_key] -= 1
+            continue
+        fund = SUPPLY_FUND_ASSUMPTIONS.get((transaction_id, s(row, "fondo")), s(row, "fondo"))
+        if fund not in fund_by_code:
+            note_discard("Suministros con Fondo inexistente", (transaction_id, s(row, "fondo"), str(inflow)))
+            continue
+        entry_date = parse_date(s(row, "fecha"))
+        inserted += insert_once(
+            found, (transaction_id, entry_date, inflow, outflow), ledger_sql.format("supply_entry"),
+            (transaction_id, el_tambo_id, fund_by_code[fund], entry_date, s(row, "cedula"),
+             s(row, "detalle") or None, inflow, outflow, s(row, "forma_de_pago") or None,
+             parse_int(s(row, "cheque", "0")) or None, parse_timestamp(s(row, "fecha"))))
+    print(f"  supply_entry: {inserted} filas propias de Suministros.")
+
+    found = existing("petty_cash_entry", "inflow, outflow")
+    inserted = 0
+    for row in read_csv("cajamenor_migrar.csv"):
+        transaction_id = s(row, "id_transaccion")
+        inflow, outflow = parse_decimal(s(row, "entradas")), parse_decimal(s(row, "salidas"))
+        entry_date = parse_date(s(row, "fecha"))
+        inserted += insert_once(
+            found, (transaction_id, entry_date, inflow, outflow), ledger_sql.format("petty_cash_entry"),
+            (transaction_id, el_tambo_id, fund_by_code[s(row, "fondo")], entry_date, s(row, "cedula"),
+             s(row, "detalle") or None, inflow, outflow, s(row, "forma_de_pago") or None, None,
+             parse_timestamp(s(row, "fecha"))))
+    print(f"  petty_cash_entry: {inserted} filas de CajaMenor.")
+
+    found = existing("packaging_entry", "inflow, outflow")
+    inserted = 0
+    for row in read_csv("empaque_migrar.csv"):
+        transaction_id = s(row, "id_transaccion")
+        inflow, outflow = parse_int(s(row, "entradas")), parse_int(s(row, "salidas"))
+        entry_date = parse_date(s(row, "fecha"))
+        inserted += insert_once(
+            found, (transaction_id, entry_date, inflow, outflow),
+            "INSERT INTO packaging_entry (transaction_id, agency_id, packaging_type, entry_date, id_number,"
+            " detail, inflow, outflow, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (transaction_id, el_tambo_id, s(row, "tipo"), entry_date, s(row, "cedula"),
+             s(row, "detalle") or None, inflow, outflow, parse_timestamp(s(row, "fecha"))))
+    print(f"  packaging_entry: {inserted} filas de Empaque.")
+
+
+def load_purchase_payment_splits(cur, el_tambo_id):
+    """
+    Compras de Access pagadas con mas de una forma (FPef/FPch/FPtx/FPdat > 0 en mas de una). La
+    compra migrada guarda el neto bajo una sola forma; los informes de Suministros leen este desglose
+    para armar Caja/Suministros como Access (una fila por forma). Si las partes no suman el neto, la
+    fila se reporta y no se carga. No toca dry_coffee_purchase. Idempotente (upsert por compra).
+    """
+    cur.execute(
+        "SELECT invoice_number, id, net_to_pay FROM dry_coffee_purchase WHERE agency_id = %s",
+        (el_tambo_id,),
+    )
+    purchase_by_invoice = {inv: (pid, net) for inv, pid, net in cur.fetchall()}
+    splits = []
+    for row in read_csv("compras_migrar.csv"):
+        parts = [parse_decimal(s(row, k)) for k in ("fpef", "fpch", "fptx", "fpdat")]
+        if sum(1 for p in parts if p > 0) < 2:
+            continue
+        invoice = parse_int(s(row, "factura"), None)
+        purchase = purchase_by_invoice.get(invoice)
+        if purchase is None:
+            note_discard("Pago mixto sin compra migrada", invoice)
+            continue
+        if sum(parts) != purchase[1]:
+            note_discard("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[1])))
+            continue
+        splits.append(("DRY", purchase[0], *parts, parse_int(s(row, "numcheque"), None) or None))
+    psycopg2.extras.execute_values(
+        cur,
+        """
+        INSERT INTO purchase_payment_split (source, source_id, cash_amount, check_amount,
+            transfer_amount, card_amount, check_number) VALUES %s
+        ON CONFLICT (source, source_id) DO UPDATE SET
+            cash_amount = EXCLUDED.cash_amount, check_amount = EXCLUDED.check_amount,
+            transfer_amount = EXCLUDED.transfer_amount, card_amount = EXCLUDED.card_amount,
+            check_number = EXCLUDED.check_number
+        """,
+        splits,
+    )
+    print(f"  purchase_payment_split: {len(splits)} compras con pago mixto.")
+
+
 # ---------- Parte B: staging ----------
 
 STAGING_FILES = {
@@ -533,6 +812,10 @@ def main():
                 cur.execute("SELECT id FROM users WHERE username = 'admin'")
                 admin_user_id = cur.fetchone()[0]
                 load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id)
+                load_check_relation_marks(cur, el_tambo_id)
+                load_manual_cash_entries(cur, el_tambo_id)
+                load_supplies_petty_cash_and_packaging(cur, el_tambo_id)
+                load_purchase_payment_splits(cur, el_tambo_id)
 
                 print("\nParte B - staging")
                 load_all_staging(cur)
