@@ -147,6 +147,11 @@ export class ConductorFormComponent {
   }
 
   private label(c: Conductor): string {
-    return `${c.idNumber} - ${c.firstName} ${c.lastName}`;
+    return conductorLabel(c);
   }
+}
+
+/** Asociaciones de Access no tienen apellido: se saltea el nulo en vez de mostrar "null". */
+export function conductorLabel(c: Pick<Conductor, 'idNumber' | 'firstName' | 'lastName'>): string {
+  return `${c.idNumber} - ${[c.firstName, c.lastName].filter(Boolean).join(' ')}`;
 }

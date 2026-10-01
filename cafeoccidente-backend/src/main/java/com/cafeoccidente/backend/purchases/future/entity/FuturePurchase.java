@@ -50,7 +50,8 @@ public class FuturePurchase {
     @Column(name = "first_name", nullable = false)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    /** Copia de Asociados: nulo si el Asociado no tiene apellido (V34). */
+    @Column(name = "last_name")
     private String lastName;
 
     /** Tipo: S = asociado, C = no asociado, F = fallecido (bloquea el anuncio, Texto34_AfterUpdate). */

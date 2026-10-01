@@ -169,7 +169,7 @@ public class GrowerServiceImpl implements GrowerService {
                 grower.getIdNumber(),
                 grower.getFirstName(),
                 grower.getLastName(),
-                grower.getAgency().getName(),
+                grower.getAgency() == null ? null : grower.getAgency().getName(),
                 grower.getAddress(),
                 grower.getAffiliationDate(),
                 grower.getUpdatedAt(),

@@ -213,6 +213,23 @@ class RemissionServiceImplTest {
     }
 
     @Test
+    void conductorWithoutLastNameOrAgencyShowsOnlyTheFirstName() {
+        mockCommonSaves();
+        InventoryMovement rp = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
+        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
+        com.cafeoccidente.backend.purchases.shared.entity.Grower conductor =
+                new com.cafeoccidente.backend.purchases.shared.entity.Grower();
+        conductor.setIdNumber("900723205");
+        conductor.setFirstName("FUNDACION SUYUSAMA");
+        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(conductor));
+
+        RemissionResponse response = service.create(new RemissionRequest(
+                1L, LocalDate.now(), "ALMACAFE", "900723205", java.util.List.of(line(10L, "10.00"))));
+
+        assertThat(response.conductorName()).isEqualTo("FUNDACION SUYUSAMA");
+    }
+
+    @Test
     void displayNumberPadsToFourDigitsAndGrowsBeyond() {
         assertThat(RemissionServiceImpl.displayNumber("SDTA", "LF", 7)).isEqualTo("SDTA-LF-0007");
         assertThat(RemissionServiceImpl.displayNumber("SDTA", "RP", 9999)).isEqualTo("SDTA-RP-9999");

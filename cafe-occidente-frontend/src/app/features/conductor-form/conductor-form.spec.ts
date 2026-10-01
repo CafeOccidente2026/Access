@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { dateTime, shortDate } from './conductor-form';
+import { conductorLabel, dateTime, shortDate } from './conductor-form';
+
+describe('conductor label', () => {
+  it('skips a null last name instead of showing "null"', () => {
+    expect(conductorLabel({ idNumber: '900723205', firstName: 'FUNDACION SUYUSAMA', lastName: null }))
+      .toBe('900723205 - FUNDACION SUYUSAMA');
+    expect(conductorLabel({ idNumber: '555', firstName: 'Luis', lastName: 'Rosero' })).toBe('555 - Luis Rosero');
+  });
+});
 
 describe('conductor form dates', () => {
   it('shows the affiliation date as dd/mm/aaaa', () => {

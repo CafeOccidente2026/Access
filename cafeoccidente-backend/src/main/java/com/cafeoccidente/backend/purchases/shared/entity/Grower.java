@@ -35,14 +35,16 @@ public class Grower {
     @Column(name = "second_name")
     private String secondName;
 
-    @Column(name = "last_name", nullable = false)
+    /** Nulo en Access para asociaciones/fundaciones (todo el nombre va en firstName) - V34. */
+    @Column(name = "last_name")
     private String lastName;
 
     @Column(name = "second_last_name")
     private String secondLastName;
 
+    /** Nula en Access para algunas filas de Asociados - V34. */
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agency_id")
     private Agency agency;
 
     @Column(name = "birth_date")
@@ -81,4 +83,58 @@ public class Grower {
     /** Ultima actualizacion de Emp. Transp./Vehiculo desde "Ingresar Conductores" (V29). */
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    // Resto de columnas de Asociados (V34), tal cual en Access.
+
+    /** Sexo: F / M / E (E = entidad: asociacion, empresa). */
+    @Column(length = 1)
+    private String sex;
+
+    /** Asociados.Asociacion: el vendedor es Asociacion o Fundacion (formulario Asociaciones1). */
+    @Column(name = "is_association")
+    private Boolean isAssociation;
+
+    @Column(name = "accepted")
+    private Boolean accepted;
+
+    /** Asociados.Habil. */
+    @Column(name = "eligible")
+    private Boolean eligible;
+
+    @Column(name = "marital_status")
+    private String maritalStatus;
+
+    @Column(name = "birth_place")
+    private String birthPlace;
+
+    @Column(name = "coffee_id_card")
+    private String coffeeIdCard;
+
+    @Column(name = "act_number")
+    private String actNumber;
+
+    private String observation;
+
+    /** Asociados.Ciu. */
+    @Column(name = "city_code")
+    private String cityCode;
+
+    @Column(name = "postal_code")
+    private String postalCode;
+
+    private String email;
+
+    /** Asociados.NumRegistro: une con RegControl en IngresaVendedor. */
+    @Column(name = "registry_number")
+    private Integer registryNumber;
+
+    /** Asociados.Exportado: "Exportar Informacion" exporta los false y los marca. */
+    private Boolean exported;
+
+    /** Asociados.Nuevo. */
+    @Column(name = "is_new")
+    private Boolean isNew;
+
+    /** Asociados.Pais (codigo). */
+    private String country;
 }

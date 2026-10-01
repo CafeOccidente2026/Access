@@ -127,6 +127,19 @@ class FuturePurchaseServiceImplTest {
     }
 
     @Test
+    void growerWithoutLastNameCanBeAnnouncedAndKeepsTheLastNameEmpty() {
+        // Asociacion de Access sin "1er Apellido": Access no bloquea, aca tampoco; no se inventa apellido.
+        mockHappyPath();
+        when(growerService.findByIdNumber("123456")).thenReturn(new GrowerResponse(
+                1L, "123456", "FUNDACION SUYUSAMA", null, null, null, "", "", "C", true, false, false, null, null));
+
+        FuturePurchaseResponse response = service.create(request());
+
+        assertThat(response.firstName()).isEqualTo("FUNDACION SUYUSAMA");
+        assertThat(response.lastName()).isNull();
+    }
+
+    @Test
     void basePriceLoadIsTheRawAnnouncementValueNotTheNetPrBaseCps() {
         mockHappyPath();
 

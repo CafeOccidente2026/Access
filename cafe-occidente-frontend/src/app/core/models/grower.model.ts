@@ -19,8 +19,9 @@ export interface Grower {
 export interface Conductor {
   readonly idNumber: string;
   readonly firstName: string;
-  readonly lastName: string;
-  readonly agencyName: string;
+  /** Nulos para asociaciones / filas sin agencia de Asociados (V34). */
+  readonly lastName: string | null;
+  readonly agencyName: string | null;
   readonly address: string;
   /** FechaAfiliacion: se llena al crear y nunca cambia. */
   readonly affiliationDate: string | null;

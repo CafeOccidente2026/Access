@@ -186,6 +186,24 @@ class GrowerServiceImplTest {
     }
 
     @Test
+    void conductorWithoutAgencyOrLastNameIsReturnedWithNullsInsteadOfFailing() {
+        // Asociados de Access: asociaciones sin "1er Apellido" y filas sin Agencia (V34).
+        Grower grower = new Grower();
+        grower.setIdNumber("900723205");
+        grower.setFirstName("FUNDACION SUYUSAMA");
+        grower.setAddress("");
+        grower.setTransportCompany("TRANSORIENTE");
+        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(grower));
+
+        var response = growerService.findConductor("900723205");
+
+        assertThat(response.firstName()).isEqualTo("FUNDACION SUYUSAMA");
+        assertThat(response.lastName()).isNull();
+        assertThat(response.agencyName()).isNull();
+        assertThat(response.transportCompany()).isEqualTo("TRANSORIENTE");
+    }
+
+    @Test
     void conductorSearchNeedsThreeDigitsAndReturnsAtMostTen() {
         assertThat(growerService.searchConductors("12")).isEmpty();
         org.mockito.Mockito.verify(growerRepository, org.mockito.Mockito.never())

@@ -29,7 +29,10 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -245,7 +248,8 @@ public class RemissionServiceImpl implements RemissionService {
                 remission.getRemissionDate(),
                 remission.getDestination(),
                 conductor == null ? null : conductor.getIdNumber(),
-                conductor == null ? null : conductor.getFirstName() + " " + conductor.getLastName(),
+                conductor == null ? null : Stream.of(conductor.getFirstName(), conductor.getLastName())
+                        .filter(Objects::nonNull).collect(Collectors.joining(" ")),
                 conductor == null ? null : conductor.getTransportCompany(),
                 conductor == null ? null : conductor.getVehiclePlate(),
                 remission.isExported(),
