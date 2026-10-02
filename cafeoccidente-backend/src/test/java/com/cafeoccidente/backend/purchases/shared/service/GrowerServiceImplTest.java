@@ -110,6 +110,21 @@ class GrowerServiceImplTest {
     }
 
     @Test
+    void isAssociationReadsAsociadosAsociacionAndTreatsNullOrMissingAsNo() {
+        Grower association = new Grower();
+        association.setIsAssociation(true);
+        Grower legacyNull = new Grower();
+        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(association));
+        when(growerRepository.findByIdNumber("1")).thenReturn(Optional.of(legacyNull));
+        when(growerRepository.findByIdNumber("2")).thenReturn(Optional.empty());
+
+        assertThat(growerService.isAssociation(" 900723205 ")).isTrue();
+        assertThat(growerService.isAssociation("1")).isFalse();
+        assertThat(growerService.isAssociation("2")).isFalse();
+        assertThat(growerService.isAssociation(null)).isFalse();
+    }
+
+    @Test
     void createConductorRejectsDuplicateIdNumber() {
         when(growerRepository.findByIdNumber("123456")).thenReturn(Optional.of(new Grower()));
 

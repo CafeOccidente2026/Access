@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 /** Autocompletado al iniciar el formulario (Especial "CV" / Fondo "RP" fijos): Cod Prod + anuncio vigente. */
 export interface GreenAnnouncementInfo {
   readonly fundId: number;
@@ -51,11 +53,10 @@ export interface GreenCoffeePurchaseRequest {
   readonly costs: number;
   readonly penalty: number;
   readonly compKgPrice: number;
-  readonly withholdingExempt: boolean;
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

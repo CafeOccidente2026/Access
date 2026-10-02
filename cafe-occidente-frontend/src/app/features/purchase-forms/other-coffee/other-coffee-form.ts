@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import { Fund } from '../../../core/models/dry-coffee-purchase.model';
 import {
   OtherCoffeeNextInvoiceNumber,
@@ -69,7 +69,7 @@ const READONLY: string[] = [
 const FOCUS_ORDER: string[] = [
   'fund', 'idPart1', 'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -108,6 +108,8 @@ export class OtherCoffeeFormComponent {
     healthyPercentage: null,
   });
   readonly calc = signal<OtherCoffeePurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly result = signal<OtherCoffeePurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
@@ -427,11 +429,9 @@ export class OtherCoffeeFormComponent {
       bonus: this.specialInfo()?.bonus ?? 0,
       penalty: num(this.model['penalty']),
       costs: this.specialInfo()?.costs ?? 0,
-      withholdingExempt: false,
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -528,7 +528,7 @@ export class OtherCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
+      !!this.payment() && !this.result() &&
       !!this.authService.agencyId() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
@@ -652,15 +652,8 @@ export class OtherCoffeeFormComponent {
       additionalDiscountFields: row(base.additionalDiscountFields),
       netToPayField: base.netToPayField ? field(base.netToPayField.key) : undefined,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
-      paymentPanel: base.paymentPanel
-        ? {
-            ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) =>
-              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
-            ),
-            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
-          }
-        : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
@@ -668,7 +661,7 @@ export class OtherCoffeeFormComponent {
   /** Genera el Documento Soporte en PDF (mismo layout que Café Seco, título/Especial propios de Otros). */
   private printInvoice(purchase: OtherCoffeePurchaseResponse): void {
     this.logoDataUrlPromise.then((logoDataUrl) => {
-      const docDefinition = buildOtherCoffeeInvoiceDocDefinition(purchase, logoDataUrl);
+      const docDefinition = buildOtherCoffeeInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl);
       pdfMake.vfs = pdfFonts;
       pdfMake.createPdf(docDefinition).open();
     });

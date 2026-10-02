@@ -28,6 +28,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -51,6 +52,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final GrowerService growerService;
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
     private final InventoryMovementService inventoryMovementService;
+    private final PurchasePaymentService purchasePaymentService;
 
     public DryCoffeePurchaseServiceImpl(
             DryCoffeePurchaseRepository dryCoffeePurchaseRepository,
@@ -64,7 +66,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             SecurityUtils securityUtils,
             GrowerService growerService,
             PurchaseInvoiceNumberService purchaseInvoiceNumberService,
-            InventoryMovementService inventoryMovementService) {
+            InventoryMovementService inventoryMovementService,
+            PurchasePaymentService purchasePaymentService) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -77,11 +80,13 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.growerService = growerService;
         this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
         this.inventoryMovementService = inventoryMovementService;
+        this.purchasePaymentService = purchasePaymentService;
     }
 
     @Override
     @Transactional
     public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request) {
+        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         Agency agency = agencyRepository.findById(request.agencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
@@ -135,12 +140,15 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setFreightDiscount(request.freightDiscount());
         purchase.setOtherDiscounts(request.otherDiscounts());
         purchase.setNetToPay(calculation.netToPay());
-        purchase.setPaymentMethod(request.paymentMethod());
-        purchase.setCheckNumber(request.checkNumber());
+        PurchasePaymentService.ResolvedPayment payment =
+                purchasePaymentService.validate(request.payment(), calculation.netToPay());
+        purchase.setPaymentMethod(payment.paymentMethod());
+        purchase.setCheckNumber(payment.checkNumber());
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
         DryCoffeePurchase savedPurchase = dryCoffeePurchaseRepository.save(purchase);
+        purchasePaymentService.record("DRY", savedPurchase.getId(), request.payment());
 
         inventoryMovementService.recordFromPurchaseSafely(
                 InventoryMovement.PurchaseModule.DRY_COFFEE, savedPurchase.getId(),
@@ -173,6 +181,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
+        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         AnnouncementResponse announcement = announcementService.findLatest(
                 request.agencyId(), request.fundId(), request.specialType());
         ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());

@@ -85,6 +85,13 @@ public class GrowerServiceImpl implements GrowerService {
     }
 
     @Override
+    public boolean isAssociation(String idNumber) {
+        return idNumber != null && growerRepository.findByIdNumber(idNumber.trim())
+                .map(g -> Boolean.TRUE.equals(g.getIsAssociation()))
+                .orElse(false);
+    }
+
+    @Override
     public GrowerResponse createConductor(GrowerCreateRequest request) {
         if (growerRepository.findByIdNumber(request.idNumber()).isPresent()) {
             throw new BusinessRuleException("Ya existe un caficultor/conductor con esa cedula");

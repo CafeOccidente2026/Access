@@ -31,7 +31,7 @@ class HuskPurchaseCalculatorTest {
                 1L, 1L, 27867, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("8908"), new BigDecimal("692"),
-                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test
@@ -122,7 +122,7 @@ class HuskPurchaseCalculatorTest {
                 1L, 1L, 27867, "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
                 new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("-100"), new BigDecimal("692"),
-                false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                false, BigDecimal.ZERO, BigDecimal.ZERO, null);
 
         assertThatThrownBy(() -> calculator.calculate(negative, controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);

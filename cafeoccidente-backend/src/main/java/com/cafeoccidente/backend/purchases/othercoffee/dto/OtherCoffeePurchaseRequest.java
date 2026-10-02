@@ -1,5 +1,7 @@
 package com.cafeoccidente.backend.purchases.othercoffee.dto;
 
+import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -32,9 +34,19 @@ public record OtherCoffeePurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal bonus,
         @NotNull @PositiveOrZero BigDecimal penalty,
         @NotNull @PositiveOrZero BigDecimal costs,
-        boolean withholdingExempt,
+        /** Lo ignora el servidor (se reemplaza en withWithholdingExempt); opcional en el JSON. */
+        Boolean withholdingExempt,
         @NotNull @PositiveOrZero BigDecimal freightDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
-        @NotBlank String paymentMethod,
-        String checkNumber) {
+        /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */
+        @Valid PurchasePaymentRequest payment) {
+    /** Asociados.Asociacion: la exencion de Retefuente la resuelve el servidor (GrowerService.isAssociation),
+     *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
+    public OtherCoffeePurchaseRequest withWithholdingExempt(boolean exempt) {
+        return new OtherCoffeePurchaseRequest(
+                agencyId, fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
+                address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight, defectiveStoredWeight,
+                healthyStoredWeight, healthyUnitPrice, bonus, penalty, costs, exempt, freightDiscount,
+                otherDiscounts, payment);
+    }
 }

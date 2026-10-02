@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   HuskAnnouncementInfo,
   HuskNextInvoiceNumber,
@@ -66,7 +66,7 @@ const READONLY: string[] = [
 /** Orden en que el foco salta de un campo al siguiente (sigue el orden visual del JSON: calidad
  *  antes que pesos - igual que W_AlmSana_AfterUpdate/Destare_LostFocus son independientes). */
 const FOCUS_ORDER: string[] = [
-  'idPart1', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -97,6 +97,8 @@ export class HuskFormComponent {
   readonly announcementInfo = signal<HuskAnnouncementInfo | null>(null);
   readonly invoiceReservation = signal<HuskNextInvoiceNumber | null>(null);
   readonly calc = signal<HuskPurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly result = signal<HuskPurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
@@ -315,11 +317,9 @@ export class HuskFormComponent {
       tareKg: num(this.model['tare']),
       pointPrice: info.pointPrice,
       costs: info.costs,
-      withholdingExempt: false,
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -350,7 +350,7 @@ export class HuskFormComponent {
   private printInvoice(purchase: HuskPurchaseResponse): void {
     this.logoDataUrlPromise.then((logoDataUrl) => {
       pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(buildHuskInvoiceDocDefinition(purchase, logoDataUrl)).open();
+      pdfMake.createPdf(buildHuskInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl)).open();
     });
   }
 
@@ -421,7 +421,7 @@ export class HuskFormComponent {
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
+      !!this.payment() && !this.result() &&
       !!this.authService.agencyId() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
@@ -498,15 +498,8 @@ export class HuskFormComponent {
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
-      paymentPanel: base.paymentPanel
-        ? {
-            ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) =>
-              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
-            ),
-            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
-          }
-        : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }

@@ -28,6 +28,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -51,6 +52,7 @@ public class OtherCoffeePurchaseServiceImpl implements OtherCoffeePurchaseServic
     private final GrowerService growerService;
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
     private final InventoryMovementService inventoryMovementService;
+    private final PurchasePaymentService purchasePaymentService;
 
     public OtherCoffeePurchaseServiceImpl(
             OtherCoffeePurchaseRepository otherCoffeePurchaseRepository,
@@ -64,7 +66,8 @@ public class OtherCoffeePurchaseServiceImpl implements OtherCoffeePurchaseServic
             SecurityUtils securityUtils,
             GrowerService growerService,
             PurchaseInvoiceNumberService purchaseInvoiceNumberService,
-            InventoryMovementService inventoryMovementService) {
+            InventoryMovementService inventoryMovementService,
+            PurchasePaymentService purchasePaymentService) {
         this.otherCoffeePurchaseRepository = otherCoffeePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -77,11 +80,13 @@ public class OtherCoffeePurchaseServiceImpl implements OtherCoffeePurchaseServic
         this.growerService = growerService;
         this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
         this.inventoryMovementService = inventoryMovementService;
+        this.purchasePaymentService = purchasePaymentService;
     }
 
     @Override
     @Transactional
     public OtherCoffeePurchaseResponse create(OtherCoffeePurchaseRequest request) {
+        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         Agency agency = agencyRepository.findById(request.agencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
@@ -137,12 +142,15 @@ public class OtherCoffeePurchaseServiceImpl implements OtherCoffeePurchaseServic
         purchase.setFreightDiscount(request.freightDiscount());
         purchase.setOtherDiscounts(request.otherDiscounts());
         purchase.setNetToPay(calculation.netToPay());
-        purchase.setPaymentMethod(request.paymentMethod());
-        purchase.setCheckNumber(request.checkNumber());
+        PurchasePaymentService.ResolvedPayment payment =
+                purchasePaymentService.validate(request.payment(), calculation.netToPay());
+        purchase.setPaymentMethod(payment.paymentMethod());
+        purchase.setCheckNumber(payment.checkNumber());
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
 
         OtherCoffeePurchase savedPurchase = otherCoffeePurchaseRepository.save(purchase);
+        purchasePaymentService.record("OTHER", savedPurchase.getId(), request.payment());
 
         inventoryMovementService.recordFromPurchaseSafely(
                 InventoryMovement.PurchaseModule.OTHER_COFFEE, savedPurchase.getId(),
@@ -163,6 +171,7 @@ public class OtherCoffeePurchaseServiceImpl implements OtherCoffeePurchaseServic
 
     @Override
     public OtherCoffeePurchaseCalculation preview(OtherCoffeePurchaseRequest request) {
+        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         AnnouncementResponse announcement = announcementService.findLatest(
                 request.agencyId(), request.fundId(), request.specialType());
         ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());

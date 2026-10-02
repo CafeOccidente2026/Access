@@ -1,5 +1,7 @@
 package com.cafeoccidente.backend.purchases.future.dto;
 
+import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -30,9 +32,18 @@ public record FertiFuturoPurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal healthyStoredWeight,
         @NotNull @PositiveOrZero BigDecimal defectiveStoredWeight,
         @NotNull @PositiveOrZero BigDecimal penalty,
-        boolean withholdingExempt,
+        /** Lo ignora el servidor (se reemplaza en withWithholdingExempt); opcional en el JSON. */
+        Boolean withholdingExempt,
         @NotNull @PositiveOrZero BigDecimal freightDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
-        @NotBlank String paymentMethod,
-        String checkNumber) {
+        /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */
+        @Valid PurchasePaymentRequest payment) {
+    /** Asociados.Asociacion: la exencion de Retefuente la resuelve el servidor (GrowerService.isAssociation),
+     *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
+    public FertiFuturoPurchaseRequest withWithholdingExempt(boolean exempt) {
+        return new FertiFuturoPurchaseRequest(
+                agencyId, fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
+                address, futurePurchaseId, sacos, netKg, grossKg, healthyStoredWeight, defectiveStoredWeight,
+                penalty, exempt, freightDiscount, otherDiscounts, payment);
+    }
 }

@@ -27,8 +27,10 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
+import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -51,11 +53,14 @@ class FertiFuturoPurchaseServiceImplTest {
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService = mock(PurchaseInvoiceNumberService.class);
     private final SecurityUtils securityUtils = mock(SecurityUtils.class);
     private final InventoryMovementService inventoryMovementService = mock(InventoryMovementService.class);
+    private final GrowerService growerService = mock(GrowerService.class);
+    private final PurchasePaymentService purchasePaymentService = mock(PurchasePaymentService.class);
 
     private final FertiFuturoPurchaseServiceImpl service = new FertiFuturoPurchaseServiceImpl(
             fertiFuturoPurchaseRepository, futurePurchaseRepository, agencyRepository, fundRepository,
             productCodeResolver, announcementService, controlRecordService, new FertiFuturoPurchaseCalculator(),
-            purchaseInvoiceNumberService, securityUtils, inventoryMovementService);
+            purchaseInvoiceNumberService, securityUtils, inventoryMovementService, growerService,
+            purchasePaymentService);
 
     private Agency agency() {
         Agency agency = new Agency();
@@ -83,7 +88,7 @@ class FertiFuturoPurchaseServiceImplTest {
                 1L, 1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", futurePurchaseId,
                 10, new BigDecimal("1200"), new BigDecimal("1250"), new BigDecimal("220"),
                 new BigDecimal("20"), new BigDecimal("50"), false,
-                BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     private void mockAnnouncementLookup() {
@@ -116,6 +121,26 @@ class FertiFuturoPurchaseServiceImplTest {
         verify(fertiFuturoPurchaseRepository).sumDailyTotalsByIdNumber("123456", java.time.LocalDate.now());
     }
 
+    /** Form_FERTIFUTURO.bas: If var6 > 4295000 And Asociacion.Value = 0 Then Retefuente. */
+    @Test
+    void anAssociationNeverPaysWithholding() {
+        mockAnnouncementLookup();
+        assertThat(service.preview(request(null)).withholding()).isPositive();
+
+        when(growerService.isAssociation("123456")).thenReturn(true);
+
+        assertThat(service.preview(request(null)).withholding()).isZero();
+    }
+
+    /** La exencion la decide el servidor: un cliente que la pida para una persona igual paga. */
+    @Test
+    void theClientCannotClaimTheExemption() {
+        mockAnnouncementLookup();
+        FertiFuturoPurchaseRequest claimsExemption = request(null).withWithholdingExempt(true);
+
+        assertThat(service.preview(claimsExemption).withholding()).isPositive();
+    }
+
     @Test
     void previewRejectsDeliveryAboveTheCommitmentRemainingBalance() {
         mockAnnouncementLookup();
@@ -142,10 +167,14 @@ class FertiFuturoPurchaseServiceImplTest {
         futurePurchase.setId(5L);
         futurePurchase.setRemainingKg(new BigDecimal("2000"));
         when(futurePurchaseRepository.findById(5L)).thenReturn(Optional.of(futurePurchase));
+        when(purchasePaymentService.validate(any(), any()))
+                .thenReturn(new PurchasePaymentService.ResolvedPayment("EFECTIVO", null));
 
         service.create(request(5L));
 
         assertThat(futurePurchase.getRemainingKg()).isEqualByComparingTo("800");
         verify(futurePurchaseRepository).save(futurePurchase);
+        // El desglose de pago queda guardado con la clave de Fertifuturo (la que leen Caja y Suministros).
+        verify(purchasePaymentService).record("FERTI", 1L, null);
     }
 }

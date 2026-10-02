@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
+import { buildDryCoffeeInvoiceDocDefinition, paymentAmounts } from './dry-coffee-invoice';
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
 
 describe('buildDryCoffeeInvoiceDocDefinition', () => {
@@ -24,5 +24,13 @@ describe('buildDryCoffeeInvoiceDocDefinition', () => {
 
     expect(second.pageBreak).toBe('before');
     expect(second.stack).toEqual(content.slice(0, -1));
+  });
+
+  it('prints FORMAS DE PAGO from the payment split, falling back to the whole net in its method', () => {
+    const payment = { cashAmount: 1944624, checkAmount: 3000000, transferAmount: 0, cardAmount: 0, checkNumber: '5379' };
+    expect(paymentAmounts({ paymentMethod: 'MIXTO', netToPay: 4944624, payment }))
+      .toEqual({ cash: 1944624, check: 3000000, transfer: 0, cardTerminal: 0 });
+    expect(paymentAmounts({ paymentMethod: 'CHEQUE', netToPay: 500 }))
+      .toEqual({ cash: 0, check: 500, transfer: 0, cardTerminal: 0 });
   });
 });

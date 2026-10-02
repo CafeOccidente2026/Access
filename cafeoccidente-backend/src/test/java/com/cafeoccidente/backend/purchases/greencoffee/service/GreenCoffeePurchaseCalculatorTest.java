@@ -34,7 +34,7 @@ class GreenCoffeePurchaseCalculatorTest {
                 1L, 1L, 1, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("1200"), BigDecimal.ZERO, costs, BigDecimal.ZERO,
-                new BigDecimal("1300"), false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                new BigDecimal("1300"), false, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test
@@ -57,7 +57,7 @@ class GreenCoffeePurchaseCalculatorTest {
                 1L, 1L, 1, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250.3"), new BigDecimal("50"),
                 new BigDecimal("1200"), BigDecimal.ZERO, new BigDecimal("692"), BigDecimal.ZERO,
-                new BigDecimal("1300.6"), false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                new BigDecimal("1300.6"), false, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test

@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 /** Autocompletado al confirmar "Especial" (paso 5): Cod Prod + datos del anuncio vigente. */
 export interface OtherCoffeeSpecialInfo {
   readonly productCode: string;
@@ -63,11 +65,10 @@ export interface OtherCoffeePurchaseRequest {
   readonly bonus: number;
   readonly penalty: number;
   readonly costs: number;
-  readonly withholdingExempt: boolean;
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

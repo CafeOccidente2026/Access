@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 /** Siguiente factura del rango DIAN (compartido con los otros 4 módulos de compra). */
 export interface FertiFuturoNextInvoiceNumber {
   readonly invoiceNumber: number;
@@ -39,11 +41,10 @@ export interface FertiFuturoPurchaseRequest {
   readonly healthyStoredWeight: number;
   readonly defectiveStoredWeight: number;
   readonly penalty: number;
-  readonly withholdingExempt: boolean;
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

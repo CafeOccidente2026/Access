@@ -1,5 +1,7 @@
 package com.cafeoccidente.backend.purchases.husk.dto;
 
+import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -27,9 +29,18 @@ public record HuskPurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal tareKg,
         @NotNull @PositiveOrZero BigDecimal pointPrice,
         @NotNull @PositiveOrZero BigDecimal costs,
-        boolean withholdingExempt,
+        /** Lo ignora el servidor (se reemplaza en withWithholdingExempt); opcional en el JSON. */
+        Boolean withholdingExempt,
         @NotNull @PositiveOrZero BigDecimal shrinkageDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
-        @NotBlank String paymentMethod,
-        String checkNumber) {
+        /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */
+        @Valid PurchasePaymentRequest payment) {
+    /** Asociados.Asociacion: la exencion de Retefuente la resuelve el servidor (GrowerService.isAssociation),
+     *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
+    public HuskPurchaseRequest withWithholdingExempt(boolean exempt) {
+        return new HuskPurchaseRequest(
+                agencyId, fundId, invoiceNumber, idNumber, firstName, lastName, growerType, address, cellphone,
+                almondWeight, bagsCount, grossKg, tareKg, pointPrice, costs, exempt, shrinkageDiscount,
+                otherDiscounts, payment);
+    }
 }

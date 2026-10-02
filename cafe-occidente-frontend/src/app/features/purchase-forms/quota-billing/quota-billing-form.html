@@ -4,6 +4,7 @@
     [content]="d"
     (fieldValueChange)="onFieldValueChange($event)"
     (fieldCommitted)="onFieldCommitted($event)"
+    (paymentChange)="payment.set($event)"
     (reprintPressed)="print()"
     (closeRequested)="onClose()"
   ></app-purchase-form-view>

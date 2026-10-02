@@ -64,4 +64,7 @@ public interface GrowerService {
      * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si no pertenece.
      */
     void requireProgramMembership(String idNumber, String specialType);
+
+    /** Asociados.Asociacion de esa cedula (sin caficultor o nulo = No, como un Si/No de Access). */
+    boolean isAssociation(String idNumber);
 }

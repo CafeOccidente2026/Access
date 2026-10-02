@@ -92,7 +92,7 @@ public class FertiFuturoPurchaseCalculator {
 
         BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!request.withholdingExempt() && thresholdBase.compareTo(WITHHOLDING_BASE_THRESHOLD) > 0) {
+        if (!Boolean.TRUE.equals(request.withholdingExempt()) && thresholdBase.compareTo(WITHHOLDING_BASE_THRESHOLD) > 0) {
             withholding = roundToWholePeso(
                     thresholdBase.multiply(WITHHOLDING_PERCENTAGE).subtract(dailyAccumulatedWithholding));
         }

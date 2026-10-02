@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import { Announcement, Fund } from '../../../core/models/dry-coffee-purchase.model';
 import {
   FertiFuturoPurchaseCalculation,
@@ -60,7 +60,7 @@ const READONLY: string[] = [
 const FOCUS_ORDER: string[] = [
   'fund', 'idPart1', 'special',
   'sacos', 'grossKg', 'netKg', 'healthyStoredWeight', 'defectiveStoredWeight',
-  'penalty', 'freightDiscount', 'otherDiscounts',
+  'penalty', 'freightDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -96,6 +96,8 @@ export class FertiFuturoFormComponent {
   readonly announcementInfo = signal<Announcement | null>(null);
   readonly invoiceReservation = signal<FertiFuturoNextInvoiceNumber | null>(null);
   readonly calc = signal<FertiFuturoPurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly result = signal<FertiFuturoPurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
@@ -364,11 +366,9 @@ export class FertiFuturoFormComponent {
       healthyStoredWeight: num(this.model['healthyStoredWeight']),
       defectiveStoredWeight: num(this.model['defectiveStoredWeight']),
       penalty: num(this.model['penalty']),
-      withholdingExempt: false,
       freightDiscount: num(this.model['freightDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -460,7 +460,7 @@ export class FertiFuturoFormComponent {
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
+      !!this.payment() && !this.result() &&
       !!this.authService.agencyId() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
@@ -576,13 +576,15 @@ export class FertiFuturoFormComponent {
       additionalDiscountFields: row(base.additionalDiscountFields),
       netToPayField: base.netToPayField ? field(base.netToPayField.key) : undefined,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
 
   private printInvoice(purchase: FertiFuturoPurchaseResponse): void {
     this.logoDataUrlPromise.then((logoDataUrl) => {
-      const docDefinition = buildFertiFuturoInvoiceDocDefinition(purchase, logoDataUrl);
+      const docDefinition = buildFertiFuturoInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl);
       pdfMake.vfs = pdfFonts;
       pdfMake.createPdf(docDefinition).open();
     });

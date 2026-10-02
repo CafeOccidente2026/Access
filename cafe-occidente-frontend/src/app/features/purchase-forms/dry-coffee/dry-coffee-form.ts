@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   DryCoffeePurchaseCalculation,
   DryCoffeePurchaseRequest,
@@ -70,7 +70,7 @@ const READONLY: string[] = [
 const FOCUS_ORDER: string[] = [
   'fund', 'idPart1', 'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -108,6 +108,8 @@ export class DryCoffeeFormComponent {
     healthyPercentage: null,
   });
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly result = signal<DryCoffeePurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
@@ -439,11 +441,9 @@ export class DryCoffeeFormComponent {
       bonus: this.specialInfo()?.bonus ?? 0,
       penalty: num(this.model['penalty']),
       costs: this.specialInfo()?.costs ?? 0,
-      withholdingExempt: false,
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -545,7 +545,7 @@ export class DryCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
+      !!this.payment() && !this.result() &&
       !!this.authService.agencyId() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
@@ -673,15 +673,8 @@ export class DryCoffeeFormComponent {
       additionalDiscountFields: row(base.additionalDiscountFields),
       netToPayField: base.netToPayField ? field(base.netToPayField.key) : undefined,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
-      paymentPanel: base.paymentPanel
-        ? {
-            ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) =>
-              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
-            ),
-            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
-          }
-        : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
@@ -689,7 +682,7 @@ export class DryCoffeeFormComponent {
   /** Genera el Documento Soporte en PDF (mismo layout que capturas/prueba de factura sin boton de nube.pdf). */
   private printInvoice(purchase: DryCoffeePurchaseResponse): void {
     this.logoDataUrlPromise.then((logoDataUrl) => {
-      const docDefinition = buildDryCoffeeInvoiceDocDefinition(purchase, logoDataUrl);
+      const docDefinition = buildDryCoffeeInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl);
       pdfMake.vfs = pdfFonts;
       pdfMake.createPdf(docDefinition).open();
     });

@@ -23,6 +23,10 @@ export interface PurchaseFormContent {
   readonly discountField?: FormFieldDefinition;
   readonly paymentTypeField?: FormFieldDefinition;
   readonly paymentPanel?: PaymentPanelDefinition;
+  /** Neto a Pagar con el que arranca la cascada de FORMAS DE PAGO (null = todavia sin liquidar). */
+  readonly paymentNetToPay?: number | null;
+  /** Factura ya impresa: el pago queda fijo. */
+  readonly paymentLocked?: boolean;
   /** Ausente cuando la pantalla no liquida una compra (ej. Compras a Futuro: solo anuncia, no calcula Vr. Kilo). */
   readonly settlementHeading?: string;
   readonly settlementFields?: FormFieldDefinition[];

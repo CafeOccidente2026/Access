@@ -2,7 +2,7 @@ import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   DryCoffeePurchaseCalculation,
   DryCoffeePurchaseRequest,
@@ -41,7 +41,7 @@ const READONLY: string[] = [
 const FOCUS_ORDER: string[] = [
   'fund', 'special', 'idPart1',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -76,6 +76,8 @@ export class QuotaPurchaseFormComponent {
   readonly specialInfo = signal<SpecialInfo | null>(null);
   readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
   private readonly tick = signal(0);
 
@@ -336,11 +338,9 @@ export class QuotaPurchaseFormComponent {
       bonus: this.specialInfo()?.bonus ?? 0,
       penalty: num(this.model['penalty']),
       costs: this.specialInfo()?.costs ?? 0,
-      withholdingExempt: false,
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -349,7 +349,7 @@ export class QuotaPurchaseFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.specialInfo() &&
+      !!this.payment() && !!this.specialInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
       this.locked.has('otherDiscounts') &&
@@ -456,6 +456,8 @@ export class QuotaPurchaseFormComponent {
       settlementSecondaryFields: row(base.settlementSecondaryFields),
       additionalDiscountFields: row(base.additionalDiscountFields),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: false,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }

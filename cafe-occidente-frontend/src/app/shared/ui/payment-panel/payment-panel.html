@@ -1,25 +1,45 @@
 <div class="grid grid-cols-[110px_1fr] gap-3 rounded border border-slate-400 bg-white/40 p-3">
-  <span class="self-center text-center text-sm font-semibold text-slate-700">
+  <span class="self-center whitespace-pre-line text-center text-sm font-semibold text-slate-700">
     {{ definition.heading }}
   </span>
 
   <div class="flex flex-col gap-2">
-    <label *ngFor="let method of definition.methods" class="flex items-center gap-2 text-sm">
-      <span class="w-24 text-slate-700">{{ method.label }}:</span>
-      <input
-        class="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm"
-        [value]="method.value"
-        readonly
-      />
-    </label>
+    <ng-container *ngFor="let method of definition.methods">
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-28 text-slate-700">{{ method.label }}:</span>
+        <input
+          #amount
+          type="text"
+          inputmode="numeric"
+          class="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
+          [attr.data-field-key]="keyOf[method.key]"
+          [readonly]="!state() || locked"
+          [value]="state() ? display(state()!.amounts[method.key]) : ''"
+          (input)="onAmount(method.key, amount)"
+          (keydown.enter)="commit(method.key, $event)"
+        />
+      </label>
+      <label *ngIf="method.key === 'check' && state() && state()!.amounts.check > 0" class="flex items-center gap-2 text-sm">
+        <span class="w-28 text-slate-700">{{ definition.checkNumberLabel }}:</span>
+        <input
+          #checkNumber
+          type="text"
+          inputmode="numeric"
+          class="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
+          [attr.data-field-key]="keyOf['checkNumber']"
+          [readonly]="locked"
+          [value]="state()!.checkNumber"
+          (input)="onCheckNumber(checkNumber)"
+          (keydown.enter)="commit('checkNumber', $event)"
+        />
+      </label>
+    </ng-container>
 
     <div class="mt-1 flex items-center justify-end gap-2 text-sm font-semibold">
       <span>{{ definition.totalLabel }}:</span>
-      <input
-        class="w-32 rounded border border-slate-300 bg-green-100 px-2 py-1 text-right shadow-sm"
-        [value]="definition.totalValue"
-        readonly
-      />
+      <input class="w-32 rounded border border-slate-300 bg-green-100 px-2 py-1 text-right shadow-sm" [value]="total()" readonly />
     </div>
+    <p *ngIf="unbalanced()" class="text-sm font-semibold text-red-600">{{ definition.unbalancedMessage }}</p>
+    <p *ngIf="missingCheckNumber()" class="text-sm text-red-600">{{ definition.checkNumberMessage }}</p>
   </div>
 </div>

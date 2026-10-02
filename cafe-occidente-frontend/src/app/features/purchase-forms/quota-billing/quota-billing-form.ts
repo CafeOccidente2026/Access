@@ -2,7 +2,7 @@ import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   DryCoffeePurchaseCalculation,
   DryCoffeePurchaseRequest,
@@ -43,7 +43,7 @@ const READONLY: string[] = [
 const FOCUS_ORDER: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
   'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -76,6 +76,8 @@ export class QuotaBillingFormComponent {
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
   private readonly tick = signal(0);
 
@@ -297,11 +299,9 @@ export class QuotaBillingFormComponent {
       bonus: this.specialInfo()?.bonus ?? 0,
       penalty: num(this.model['penalty']),
       costs: this.specialInfo()?.costs ?? 0,
-      withholdingExempt: false,
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -309,7 +309,7 @@ export class QuotaBillingFormComponent {
   print(): void {}
 
   private canPrint(): boolean {
-    return !!this.specialInfo() && !!this.calc() && this.locked.has('otherDiscounts') && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    return !!this.payment() && !!this.specialInfo() && !!this.calc() && this.locked.has('otherDiscounts') && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   @HostListener('document:keydown.escape')
@@ -410,6 +410,8 @@ export class QuotaBillingFormComponent {
       settlementSecondaryFields: row(base.settlementSecondaryFields),
       additionalDiscountFields: row(base.additionalDiscountFields),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: false,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }

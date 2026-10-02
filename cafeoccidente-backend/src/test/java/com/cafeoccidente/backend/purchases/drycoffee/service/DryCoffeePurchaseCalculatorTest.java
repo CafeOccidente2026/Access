@@ -39,7 +39,7 @@ class DryCoffeePurchaseCalculatorTest {
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
                 new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("692"),
-                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test
@@ -69,7 +69,7 @@ class DryCoffeePurchaseCalculatorTest {
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
                 new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("700"),
-                false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                false, BigDecimal.ZERO, BigDecimal.ZERO, null);
 
         DryCoffeePurchaseCalculation result = calculator.calculate(
                 requestWithFrozenAnnouncementCosts, controlRecordWithChangedCosts, ANNOUNCEMENT_BASE,
@@ -103,7 +103,7 @@ class DryCoffeePurchaseCalculatorTest {
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
                 new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("692"),
-                false, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                false, BigDecimal.ZERO, BigDecimal.ZERO, null);
 
         DryCoffeePurchaseCalculation result = calculator.calculate(
                 fractionalKg, controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,

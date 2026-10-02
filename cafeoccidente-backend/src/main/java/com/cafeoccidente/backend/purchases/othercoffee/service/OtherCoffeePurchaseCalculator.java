@@ -94,7 +94,7 @@ public class OtherCoffeePurchaseCalculator {
 
         BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
+        if (!Boolean.TRUE.equals(request.withholdingExempt()) && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .subtract(dailyAccumulatedWithholding));

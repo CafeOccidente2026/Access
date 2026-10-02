@@ -55,12 +55,7 @@
     { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
   ],
   "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true },
-  "paymentPanel": {
-    "heading": "FORMAS\nDE\nPAGO",
-    "methods": [{ "label": "Efectivo", "value": "" }],
-    "totalLabel": "Tot F de Pago",
-    "totalValue": ""
-  },
+  "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
     { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]" },

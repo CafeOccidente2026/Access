@@ -1,6 +1,7 @@
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
+import { PurchasePayment } from '../../../core/models/payment-method.model';
 
 /** Formato colombiano con 2 decimales (Valor Bruto, Aporte Socio, Retefuente, Neto a Pagar, pesos/kilos...). */
 export function money(value: number): string {
@@ -39,7 +40,7 @@ export const HEADER_CELL = { fontSize: 8, bold: true, alignment: 'center' as con
  * Form_COMPRAS.bas (Castigo_lostFocus), la unica lectura razonable dado el layout del reporte real.
  */
 export function buildDryCoffeeInvoiceDocDefinition(
-  purchase: DryCoffeePurchaseResponse,
+  purchase: DryCoffeePurchaseResponse & WithPayment,
   logoDataUrl: string | null,
 ): TDocumentDefinitions {
   const [cashRow, checkRow, transferRow, cardTerminalRow] = paymentCells(purchase);
@@ -60,13 +61,26 @@ const paymentRow = (label: string, value: string): Content[] => [
   { text: value, ...CELL, alignment: 'right', bold: true },
 ];
 
+/** Factura recien guardada: el pago tal como se cuadro en el panel FORMAS DE PAGO. */
+export type WithPayment = { readonly payment?: PurchasePayment | null };
+
+/**
+ * Montos de FORMAS DE PAGO (FPef / FPch / FPtx / FPdat). Con el desglose del panel, ese; sin el (una
+ * factura vieja), el neto completo va a su forma de pago, como antes.
+ */
+export function paymentAmounts(purchase: Pick<InvoiceParty, 'paymentMethod' | 'netToPay'> & WithPayment) {
+  if (purchase.payment) {
+    const p = purchase.payment;
+    return { cash: p.cashAmount, check: p.checkAmount, transfer: p.transferAmount, cardTerminal: p.cardAmount };
+  }
+  const method = (purchase.paymentMethod ?? '').toUpperCase();
+  const all = (m: string) => (method === m ? purchase.netToPay : 0);
+  return { cash: all('EFECTIVO'), check: all('CHEQUE'), transfer: all('TRANSFERENCIA'), cardTerminal: all('DATAFONO') };
+}
+
 /** Las 4 celdas EFECTIVO / CHEQUE / TRANSFER / DATAFONO de "FORMAS DE PAGO" (Fpef/Fpch/FpTx/FpDat). */
-export function paymentCells(purchase: InvoiceParty): Content[] {
-  const paymentMethod = (purchase.paymentMethod ?? '').toUpperCase();
-  const cash = paymentMethod === 'EFECTIVO' ? purchase.netToPay : 0;
-  const check = paymentMethod === 'CHEQUE' ? purchase.netToPay : 0;
-  const transfer = paymentMethod === 'TRANSFERENCIA' || paymentMethod === 'TRANSFER' ? purchase.netToPay : 0;
-  const cardTerminal = paymentMethod === 'DATAFONO' ? purchase.netToPay : 0;
+export function paymentCells(purchase: InvoiceParty & WithPayment): Content[] {
+  const { cash, check, transfer, cardTerminal } = paymentAmounts(purchase);
   return (
     [['EFECTIVO $', cash], ['CHEQUE $', check], ['TRANSFER $', transfer], ['DATAFONO $', cardTerminal]] as const
   ).map(([label, value]) => ({

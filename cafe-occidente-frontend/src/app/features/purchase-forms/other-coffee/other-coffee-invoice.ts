@@ -1,3 +1,4 @@
+import { paymentAmounts, WithPayment } from '../dry-coffee/dry-coffee-invoice';
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { OtherCoffeePurchaseResponse } from '../../../core/models/other-coffee-purchase.model';
@@ -42,7 +43,7 @@ const HEADER_CELL = { fontSize: 8, bold: true, alignment: 'center' as const, mar
  * módulo.
  */
 export function buildOtherCoffeeInvoiceDocDefinition(
-  purchase: OtherCoffeePurchaseResponse,
+  purchase: OtherCoffeePurchaseResponse & WithPayment,
   logoDataUrl: string | null,
 ): TDocumentDefinitions {
   const documentNumber = `${purchase.prefix} - ${purchase.invoiceNumber.toLocaleString('es-CO')}`;
@@ -50,11 +51,7 @@ export function buildOtherCoffeeInvoiceDocDefinition(
   const associated = purchase.growerType === 'S' ? 'ASOCIADO' : 'NO ASOCIADO';
   const nit = /^\d+$/.test(purchase.idNumber) ? Number(purchase.idNumber).toLocaleString('es-CO') : purchase.idNumber;
 
-  const paymentMethod = (purchase.paymentMethod ?? '').toUpperCase();
-  const cash = paymentMethod === 'EFECTIVO' ? purchase.netToPay : 0;
-  const check = paymentMethod === 'CHEQUE' ? purchase.netToPay : 0;
-  const transfer = paymentMethod === 'TRANSFERENCIA' || paymentMethod === 'TRANSFER' ? purchase.netToPay : 0;
-  const cardTerminal = paymentMethod === 'DATAFONO' ? purchase.netToPay : 0;
+  const { cash, check, transfer, cardTerminal } = paymentAmounts(purchase);
 
   const headerBlock: Content = {
     table: {

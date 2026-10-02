@@ -92,7 +92,7 @@ public class GreenCoffeePurchaseCalculator {
         // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
         BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!request.withholdingExempt() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
+        if (!Boolean.TRUE.equals(request.withholdingExempt()) && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .subtract(dailyAccumulatedWithholding)

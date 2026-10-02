@@ -96,6 +96,9 @@
         *ngIf="content.paymentPanel"
         class="flex-1"
         [definition]="content.paymentPanel"
+        [netToPay]="content.paymentNetToPay ?? null"
+        [locked]="!!content.paymentLocked"
+        (paymentChange)="paymentChange.emit($event)"
       ></app-payment-panel>
     </div>
 

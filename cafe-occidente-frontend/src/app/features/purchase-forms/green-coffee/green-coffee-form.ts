@@ -2,7 +2,7 @@ import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   GreenAnnouncementInfo,
   GreenCoffeePurchaseCalculation,
@@ -60,7 +60,7 @@ const READONLY: string[] = [
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario. */
 const FOCUS_ORDER: string[] = [
-  'idPart1', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -91,6 +91,8 @@ export class GreenCoffeeFormComponent {
   readonly announcementInfo = signal<GreenAnnouncementInfo | null>(null);
   readonly invoiceReservation = signal<GreenNextInvoiceNumber | null>(null);
   readonly calc = signal<GreenCoffeePurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly result = signal<GreenCoffeePurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
@@ -311,11 +313,9 @@ export class GreenCoffeeFormComponent {
       costs: info.costs,
       penalty: num(this.model['penalty']),
       compKgPrice: num(this.model['compKgPrice']),
-      withholdingExempt: false,
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -409,7 +409,7 @@ export class GreenCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
+      !!this.payment() && !this.result() &&
       !!this.authService.agencyId() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
@@ -496,15 +496,8 @@ export class GreenCoffeeFormComponent {
       priceFields: row(base.priceFields),
       settlementFields: row(base.settlementFields)!,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
-      paymentPanel: base.paymentPanel
-        ? {
-            ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) =>
-              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
-            ),
-            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
-          }
-        : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }

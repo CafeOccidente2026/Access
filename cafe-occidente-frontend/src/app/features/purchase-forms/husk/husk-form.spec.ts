@@ -143,7 +143,7 @@ describe('HuskFormComponent - gates de captura', () => {
     expect((component as any).locked.has('lastName')).toBe(true);
   });
 
-  it('canPrint() stays false until every REQUIRED field is filled and otherDiscounts is confirmed', () => {
+  it('canPrint() stays false until every REQUIRED field is filled, otherDiscounts is confirmed and the payment balances', () => {
     setup(growerWithPhone);
     expect((component as any).canPrint()).toBe(false);
 
@@ -152,6 +152,9 @@ describe('HuskFormComponent - gates de captura', () => {
     expect((component as any).canPrint()).toBe(false);
 
     fillEverythingAfterGrower();
+    // Ademas hace falta FORMAS DE PAGO cuadrado (lo emite el panel de pago).
+    expect((component as any).canPrint()).toBe(false);
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
     expect((component as any).canPrint()).toBe(true);
   });
 

@@ -1,3 +1,4 @@
+import { paymentAmounts, WithPayment } from '../dry-coffee/dry-coffee-invoice';
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { FertiFuturoPurchaseResponse } from '../../../core/models/ferti-futuro-purchase.model';
@@ -38,7 +39,7 @@ const HEADER_CELL = { fontSize: 8, bold: true, alignment: 'center' as const, mar
  * Calidad, que Seco no tiene).
  */
 export function buildFertiFuturoInvoiceDocDefinition(
-  purchase: FertiFuturoPurchaseResponse,
+  purchase: FertiFuturoPurchaseResponse & WithPayment,
   logoDataUrl: string | null,
 ): TDocumentDefinitions {
   const documentNumber = `${purchase.prefix} - ${purchase.invoiceNumber.toLocaleString('es-CO')}`;
@@ -138,9 +139,7 @@ export function buildFertiFuturoInvoiceDocDefinition(
     { text: value, ...CELL, alignment: 'right', bold: true },
   ];
 
-  const cash = (purchase.paymentMethod ?? '').toUpperCase() === 'EFECTIVO' ? purchase.netToPay : 0;
-  const check = (purchase.paymentMethod ?? '').toUpperCase() === 'CHEQUE' ? purchase.netToPay : 0;
-  const cardTerminal = (purchase.paymentMethod ?? '').toUpperCase() === 'DATAFONO' ? purchase.netToPay : 0;
+  const { cash, check, transfer, cardTerminal } = paymentAmounts(purchase);
 
   const mainTable: Content = {
     table: {
@@ -202,14 +201,17 @@ export function buildFertiFuturoInvoiceDocDefinition(
           ...dataRow('Incremento Calidad $:', wholePeso(purchase.qualityIncrementAmount)),
           {},
           {
-            table: { widths: ['*', 70], body: [paymentRow('DATAFONO $', money(cardTerminal))] },
+            table: { widths: ['*', 70], body: [paymentRow('TRANSFER $', money(transfer))] },
             layout: 'noBorders',
           },
         ],
         [
           ...dataRow('Castigo $:', wholePeso(purchase.penalty)),
           {},
-          {},
+          {
+            table: { widths: ['*', 70], body: [paymentRow('DATAFONO $', money(cardTerminal))] },
+            layout: 'noBorders',
+          },
         ],
         [
           ...dataRow('VALOR KILO $:', wholePeso(purchase.unitPrice)),

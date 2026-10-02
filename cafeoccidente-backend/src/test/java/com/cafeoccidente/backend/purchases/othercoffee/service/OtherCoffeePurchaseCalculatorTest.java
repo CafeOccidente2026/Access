@@ -43,7 +43,7 @@ class OtherCoffeePurchaseCalculatorTest {
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
                 new BigDecimal("100"), new BigDecimal("50"), new BigDecimal("692"),
-                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, "EFECTIVO", null);
+                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test
@@ -66,8 +66,7 @@ class OtherCoffeePurchaseCalculatorTest {
                 otherRequest.tareKg(), otherRequest.totalStoredWeight(), otherRequest.defectiveStoredWeight(),
                 otherRequest.healthyStoredWeight(), otherRequest.healthyUnitPrice(), otherRequest.bonus(),
                 otherRequest.penalty(), otherRequest.costs(), otherRequest.withholdingExempt(),
-                otherRequest.freightDiscount(), otherRequest.otherDiscounts(), otherRequest.paymentMethod(),
-                otherRequest.checkNumber());
+                otherRequest.freightDiscount(), otherRequest.otherDiscounts(), otherRequest.payment());
         DryCoffeePurchaseCalculation dryResult = new DryCoffeePurchaseCalculator().calculate(
                 dryRequest, controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
 

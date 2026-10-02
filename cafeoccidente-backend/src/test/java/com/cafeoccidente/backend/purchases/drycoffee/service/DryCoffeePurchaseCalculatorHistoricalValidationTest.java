@@ -200,8 +200,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 p.getCellphone(), p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
                 p.getTotalStoredWeight(), p.getDefectiveStoredWeight(), p.getHealthyStoredWeight(),
                 p.getHealthyUnitPrice(), p.getBonus(), p.getPenalty(), p.getCosts(),
-                p.isWithholdingExempt(), p.getFreightDiscount(), p.getOtherDiscounts(),
-                p.getPaymentMethod(), p.getCheckNumber());
+                p.isWithholdingExempt(), p.getFreightDiscount(), p.getOtherDiscounts(), null);
     }
 
     /** Suma el Vr_Bruto/Retefuente HISTORICO de las compras ya registradas para esta cedula en el

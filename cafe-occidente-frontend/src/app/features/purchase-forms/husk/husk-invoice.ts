@@ -8,6 +8,7 @@ import {
   buildInvoiceDoc,
   money,
   paymentCells,
+  WithPayment,
   wholePeso,
 } from '../dry-coffee/dry-coffee-invoice';
 
@@ -17,7 +18,7 @@ import {
  * Formatos segun DecimalPlaces del export: Sacos/Kilos/Peso/% con 2, Pr_AlmSana y Vr_Kilo en 0.
  */
 export function buildHuskInvoiceDocDefinition(
-  purchase: HuskPurchaseResponse,
+  purchase: HuskPurchaseResponse & WithPayment,
   logoDataUrl: string | null,
 ): TDocumentDefinitions {
   const dataRow = (label: string, value: string, pesoGr = '', pct = ''): Content[] => [

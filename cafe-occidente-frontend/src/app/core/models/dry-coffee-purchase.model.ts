@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 export interface Fund {
   readonly id: number;
   readonly code: string;
@@ -97,11 +99,10 @@ export interface DryCoffeePurchaseRequest {
   readonly bonus: number;
   readonly penalty: number;
   readonly costs: number;
-  readonly withholdingExempt: boolean;
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

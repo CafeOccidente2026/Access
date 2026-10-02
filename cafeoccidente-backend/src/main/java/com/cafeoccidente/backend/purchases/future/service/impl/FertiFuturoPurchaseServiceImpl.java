@@ -25,7 +25,9 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
+import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -54,6 +56,8 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
     private final SecurityUtils securityUtils;
     private final InventoryMovementService inventoryMovementService;
+    private final PurchasePaymentService purchasePaymentService;
+    private final GrowerService growerService;
 
     public FertiFuturoPurchaseServiceImpl(
             FertiFuturoPurchaseRepository fertiFuturoPurchaseRepository,
@@ -66,7 +70,9 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
             FertiFuturoPurchaseCalculator calculator,
             PurchaseInvoiceNumberService purchaseInvoiceNumberService,
             SecurityUtils securityUtils,
-            InventoryMovementService inventoryMovementService) {
+            InventoryMovementService inventoryMovementService,
+            GrowerService growerService,
+            PurchasePaymentService purchasePaymentService) {
         this.fertiFuturoPurchaseRepository = fertiFuturoPurchaseRepository;
         this.futurePurchaseRepository = futurePurchaseRepository;
         this.agencyRepository = agencyRepository;
@@ -78,11 +84,14 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
         this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
         this.securityUtils = securityUtils;
         this.inventoryMovementService = inventoryMovementService;
+        this.purchasePaymentService = purchasePaymentService;
+        this.growerService = growerService;
     }
 
     @Override
     @Transactional
     public FertiFuturoPurchaseResponse create(FertiFuturoPurchaseRequest request) {
+        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         Agency agency = agencyRepository.findById(request.agencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
@@ -137,12 +146,15 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
         purchase.setFreightDiscount(request.freightDiscount());
         purchase.setOtherDiscounts(request.otherDiscounts());
         purchase.setNetToPay(calculation.netToPay());
-        purchase.setPaymentMethod(request.paymentMethod());
-        purchase.setCheckNumber(request.checkNumber());
+        PurchasePaymentService.ResolvedPayment payment =
+                purchasePaymentService.validate(request.payment(), calculation.netToPay());
+        purchase.setPaymentMethod(payment.paymentMethod());
+        purchase.setCheckNumber(payment.checkNumber());
         purchase.setCreatedByUserId(securityUtils.getCurrentUserId());
         purchase.setCreatedAt(Instant.now());
 
         FertiFuturoPurchase saved = fertiFuturoPurchaseRepository.save(purchase);
+        purchasePaymentService.record("FERTI", saved.getId(), request.payment());
 
         if (futurePurchase != null) {
             futurePurchase.setRemainingKg(futurePurchase.getRemainingKg().subtract(request.netKg()));
@@ -161,6 +173,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
 
     @Override
     public FertiFuturoPurchaseCalculation preview(FertiFuturoPurchaseRequest request) {
+        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         Agency agency = agencyRepository.findById(request.agencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())

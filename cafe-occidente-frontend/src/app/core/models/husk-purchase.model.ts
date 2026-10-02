@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 /** Autocompletado al iniciar el formulario (Especial "PASILLA" / Fondo "RP" fijos en la practica). */
 export interface HuskAnnouncementInfo {
   readonly fundId: number;
@@ -46,11 +48,10 @@ export interface HuskPurchaseRequest {
   readonly tareKg: number;
   readonly pointPrice: number;
   readonly costs: number;
-  readonly withholdingExempt: boolean;
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */
