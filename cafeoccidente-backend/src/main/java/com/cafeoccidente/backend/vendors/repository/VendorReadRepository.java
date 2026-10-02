@@ -13,10 +13,8 @@ import org.springframework.stereotype.Repository;
  * Solo lectura. En Access todas las pantallas de compra escriben en la tabla COMPRAS; aca son las 5
  * tablas de compras, unidas con los nombres de columna de COMPRAS. No escribe nada.
  *
- * <p>Limitaciones conocidas: las facturas ANULADAS (0 kg) nunca se migraron, asi que no salen en
- * Beneficiario ni en Saldos Cupos (una cedula cuya unica compra del programa fue anulada aparece en
- * Access con FACTURADOS 0 y aca no: hoy 5248772 y 98215933). Saldos Cupos replica el filtro literal
- * de Access: las variantes de Especial ("NESPRESSO - FTUSA", "CON TAZA", etc.) no coinciden con los 4
+ * <p>Las facturas ANULADAS (V37) salen en 0, como en Access. Limitacion conocida: Saldos Cupos replica
+ * el filtro literal de Access: las variantes de Especial ("NESPRESSO - FTUSA", "CON TAZA", etc.) no coinciden con los 4
  * nombres exactos y no aparecen, igual que en Access hoy.
  */
 @Repository

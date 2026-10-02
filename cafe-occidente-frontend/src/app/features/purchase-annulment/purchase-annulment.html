@@ -1,0 +1,67 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window [title]="c.windowTitle" bodyClass="bg-white">
+    <div class="flex flex-col gap-4 p-4 text-sm">
+      <form class="flex items-end gap-2" appFormFlow (submit)="search($event, invoiceInput.value)">
+        <label class="flex flex-col gap-1">
+          <span class="font-bold text-blue-900">{{ c.invoiceLabel }}:</span>
+          <input #invoiceInput type="text" inputmode="numeric" data-field-key="invoice" class="w-40 rounded border border-slate-300 px-2 py-1" />
+        </label>
+        <button type="submit" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200">{{ c.searchLabel }}</button>
+        <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
+      </form>
+
+      <div *ngIf="candidates().length > 1" class="flex flex-wrap gap-2">
+        <button
+          *ngFor="let cand of candidates()"
+          type="button"
+          class="rounded border px-3 py-1"
+          [class.border-blue-500]="selected() === cand"
+          [class.border-slate-300]="selected() !== cand"
+          (click)="choose(cand)"
+        >
+          {{ c.modules[cand.module] }} · {{ cand.agencyName }} · {{ cand.status }}
+        </button>
+      </div>
+
+      <div *ngIf="selected() as s" class="flex flex-col gap-3">
+        <div class="grid w-[36rem] grid-cols-[10rem_1fr] gap-x-3 gap-y-1.5">
+          <ng-container *ngFor="let f of c.fields">
+            <span class="pt-1 font-medium text-blue-900">{{ f.label }}:</span>
+            <input
+              type="text"
+              readonly
+              class="rounded border border-slate-300 bg-slate-100 px-2 py-1"
+              [class.text-right]="f.type === 'number' || f.type === 'money'"
+              [class.font-bold]="f.key === 'status'"
+              [class.text-red-700]="f.key === 'status' && s.status === 'ANULADA'"
+              [value]="value(s, f.key, f.type, c)"
+            />
+          </ng-container>
+        </div>
+
+        <p *ngIf="s.module === 'FERTI' && s.status === 'VALIDA'" class="text-xs text-amber-800">{{ c.futureWarning }}</p>
+
+        <div *ngIf="s.status === 'VALIDA' && !prompt()">
+          <button type="button" class="rounded border border-red-500 bg-red-600 px-4 py-1.5 font-bold text-white hover:bg-red-700" (click)="startAnnul()">{{ c.annulLabel }}</button>
+        </div>
+
+        <div *ngIf="prompt() === 'confirm'" class="flex max-w-xl flex-col gap-2 rounded border border-red-300 bg-red-50 p-3">
+          <p class="font-bold text-red-800">{{ c.confirmMessage }}</p>
+          <div class="flex gap-2">
+            <button type="button" class="rounded border border-red-500 bg-red-600 px-4 py-1 font-bold text-white hover:bg-red-700" (click)="confirm()">{{ c.yesLabel }}</button>
+            <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="prompt.set(null)">{{ c.noLabel }}</button>
+          </div>
+        </div>
+
+        <div *ngIf="prompt() === 'exported'" class="flex max-w-xl flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-3">
+          <p class="font-bold text-amber-900">{{ c.exportedMessage }}</p>
+          <div>
+            <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="prompt.set(null)">{{ c.acceptLabel }}</button>
+          </div>
+        </div>
+      </div>
+
+      <p *ngIf="message() as m" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
+    </div>
+  </app-access-window>
+</div>

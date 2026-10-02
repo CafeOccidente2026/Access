@@ -22,7 +22,7 @@ import org.springframework.stereotype.Repository;
  *
  * <p>Limitacion conocida: el historico de INVENTARIO y [COMPRAS A FUTURO] de El Tambo no se migro a
  * inventory_movement/remission/future_purchase (quedo en staging_legacy_*), asi que Inventario y
- * FutureBuys solo traen lo registrado en la web. Las facturas ANULADAS nunca se migraron: no salen.
+ * FutureBuys solo traen lo registrado en la web.
  */
 @Repository
 public class DataExportRepository {
@@ -69,7 +69,7 @@ public class DataExportRepository {
     private static final String PLAIN_ANNOUNCEMENT = "regexp_replace(p.announcement_number, '^.*-', '')";
 
     /** Columnas comunes a las 5 tablas de compras; Forma_de_Pago en COMPRAS es el estado de la factura
-     *  ("VALIDA"; las ANULADA no existen en el sistema nuevo) y el pago real va en FPef/FPch/FPtx/FPdat. */
+     *  (VALIDA / ANULADA, columna status) y el pago real va en FPef/FPch/FPtx/FPdat. */
     private static final Map<String, String> PURCHASE_COMMON = Map.ofEntries(
             Map.entry("Anuncio", PLAIN_ANNOUNCEMENT),
             Map.entry("Agencia", "a.access_agency_value"),
@@ -95,7 +95,7 @@ public class DataExportRepository {
             Map.entry("Retefuente", "p.withholding"),
             Map.entry("Neto_a_Pagar", "p.net_to_pay"),
             Map.entry("OtrosDescuentos", "p.other_discounts"),
-            Map.entry("Forma_de_Pago", "'VALIDA'"),
+            Map.entry("Forma_de_Pago", "p.status"),
             Map.entry("NumCheque", "CASE WHEN p.check_number ~ '^[0-9]{1,9}$' THEN CAST(p.check_number AS INTEGER) END"),
             Map.entry("Especial", "p.special_type"),
             Map.entry("Exportado", "p.exported"),

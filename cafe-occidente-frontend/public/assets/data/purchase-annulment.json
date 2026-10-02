@@ -1,0 +1,40 @@
+{
+  "windowTitle": "CONSULTA COMPRAS PARA ANULAR",
+  "invoiceLabel": "Factura",
+  "searchLabel": "Buscar",
+  "backLabel": "Volver",
+  "backRoute": "/compras",
+  "annulLabel": "Anular Dcto Equiv",
+  "yesLabel": "SI",
+  "noLabel": "NO",
+  "acceptLabel": "Aceptar",
+  "confirmMessage": "ESTA SEGURO QUE DESEA ANULAR ESTE DOCUMENTO SOPORTE?, RECUERDE QUE UNA VEZ ANULADO NO PODRÁ RECUPERAR LA INFORMACION DEL MISMO.",
+  "exportedMessage": "IMPOSIBLE ANULAR EL DOCUMENTO SOPORTE PORQUE YA EXPORTO LA INFORMACION.",
+  "futureWarning": "Como en Access, anular no devuelve el saldo de Compras a Futuro ni el cupo del anuncio.",
+  "modules": {
+    "DRY": "Café Seco",
+    "OTHER": "Cafés Otros",
+    "GREEN": "Café Verde",
+    "HUSK": "Pasilla",
+    "FERTI": "Fertifuturo"
+  },
+  "fields": [
+    { "key": "agencyName", "label": "Agencia" },
+    { "key": "module", "label": "Formulario" },
+    { "key": "purchaseDate", "label": "Fecha de Compra", "type": "date" },
+    { "key": "fundCode", "label": "Fondo" },
+    { "key": "invoice", "label": "Factura" },
+    { "key": "idNumber", "label": "Cédula" },
+    { "key": "name", "label": "Nombre" },
+    { "key": "specialType", "label": "Especial" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "money" },
+    { "key": "paymentMethod", "label": "Forma de Pago" },
+    { "key": "status", "label": "Estado" }
+  ],
+  "messages": {
+    "notFound": "No hay ninguna compra con esa factura",
+    "annulled": "Documento soporte {invoice} anulado",
+    "error": "No se pudo anular el documento soporte"
+  }
+}

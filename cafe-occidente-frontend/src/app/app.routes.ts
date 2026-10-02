@@ -239,6 +239,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'compras/anular',
+    loadComponent: () =>
+      import('./features/purchase-annulment/purchase-annulment').then((m) => m.PurchaseAnnulmentComponent),
+  },
+  {
     path: 'compras/consulta',
     loadComponent: () =>
       import('./features/purchase-query/purchase-query').then((m) => m.PurchaseQueryComponent),

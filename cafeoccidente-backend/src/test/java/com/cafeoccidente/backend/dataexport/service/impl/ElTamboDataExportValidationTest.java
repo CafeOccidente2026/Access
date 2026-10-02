@@ -138,8 +138,8 @@ class ElTamboDataExportValidationTest {
 
     @Test
     void comprasParaExportarMatchesAccessColumnByColumn() throws IOException {
+        // Anuladas incluidas: Forma_de_Pago = ANULADA y sus montos en 0, igual que en Access.
         Map<String, Map<String, String>> access = csv("compras_migrar.csv").stream()
-                .filter(r -> !"ANULADA".equals(r.get("forma_de_pago")))
                 .collect(Collectors.toMap(r -> r.get("factura"), r -> r));
         List<ExportRow> rows = repository.purchases(agencyId, false).stream()
                 .filter(r -> access.containsKey(String.valueOf(r.values().get(PURCHASE_COLUMNS.indexOf("Factura"))))).toList();
@@ -220,7 +220,7 @@ class ElTamboDataExportValidationTest {
     @Test
     void anuncioResumenMatchesAccessPendingPurchases() throws IOException {
         List<Map<String, String>> pending = csv("compras_migrar.csv").stream()
-                .filter(r -> !"ANULADA".equals(r.get("forma_de_pago")) && "f".equals(r.get("exportado"))).toList();
+                .filter(r -> "f".equals(r.get("exportado"))).toList();
         Map<String, BigDecimal[]> access = new TreeMap<>();
         for (Map<String, String> r : pending) {
             BigDecimal[] sums = access.computeIfAbsent(r.get("anuncio") + "|" + r.get("fondo") + "|" + r.get("especial"),
@@ -271,7 +271,7 @@ class ElTamboDataExportValidationTest {
         Map<String, Sheet> special = unzip(service.exportSpecial(agencyId, day, day));
         assertThat(special).containsKeys("AnuncioResumen.xls", "comprasTotal.xls");
         long sameDay = csv("compras_migrar.csv").stream()
-                .filter(r -> !"ANULADA".equals(r.get("forma_de_pago")) && r.get("fecha_compra").startsWith("2026-05-16")).count();
+                .filter(r -> r.get("fecha_compra").startsWith("2026-05-16")).count();
         assertThat(special.get("compras.xls").getLastRowNum()).isGreaterThanOrEqualTo((int) sameDay);
         assertThat(repository.purchases(agencyId, true)).isEmpty();
     }

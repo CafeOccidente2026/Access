@@ -83,11 +83,10 @@ class ElTamboVendorsValidationTest {
         return cedula.endsWith(".0") ? cedula.substring(0, cedula.length() - 2) : cedula;
     }
 
-    /** Access: COMPRAS INNER JOIN Asociados; las ANULADAS nunca se migraron (quedan fuera por construccion). */
+    /** Access: COMPRAS INNER JOIN Asociados, anuladas incluidas (en 0, como la factura 43388 de la captura). */
     private List<Map<String, String>> accessBeneficiary(LocalDate from, LocalDate to) throws IOException {
         Set<String> associates = csv("asociados_migrar.csv").stream().map(r -> r.get("idasociado")).collect(Collectors.toSet());
         return csv("compras_migrar.csv").stream()
-                .filter(r -> !"ANULADA".equals(r.get("forma_de_pago")))
                 .filter(r -> associates.contains(r.get("cedula")))
                 .filter(r -> from == null || !LocalDate.parse(r.get("fecha_compra").substring(0, 10)).isBefore(from)
                         && !LocalDate.parse(r.get("fecha_compra").substring(0, 10)).isAfter(to))
@@ -147,16 +146,14 @@ class ElTamboVendorsValidationTest {
     }
 
     /**
-     * NESSYRAINSALDO sobre CUPOS (la tabla que dejo CalCuposSaldoNess en Access) y NESS. Las facturas
-     * ANULADAS (0 kg) no se migraron: una cedula cuya unica compra del programa fue anulada sale en
-     * Access con FACTURADOS 0 y en el sistema nuevo no sale (hoy 5248772 y 98215933).
+     * NESSYRAINSALDO sobre CUPOS (la tabla que dejo CalCuposSaldoNess en Access) y NESS, anuladas
+     * incluidas: una cedula cuya unica compra del programa fue anulada sale con FACTURADOS 0 (5248772 y
+     * 98215933).
      */
     @Test
     void quotaBalancesMatchNessYRainSaldo() throws IOException {
-        Set<String> annulled = csv("compras_migrar.csv").stream()
-                .filter(r -> "ANULADA".equals(r.get("forma_de_pago"))).map(r -> r.get("factura")).collect(Collectors.toSet());
         Map<String, BigDecimal> kilosByCedula = new HashMap<>();
-        csv("cupos_migrar.csv").stream().filter(r -> !annulled.contains(r.get("factura")))
+        csv("cupos_migrar.csv")
                 .forEach(r -> kilosByCedula.merge(r.get("cedula"), amount(r.get("kilos")), BigDecimal::add));
         Map<String, BigDecimal> access = new TreeMap<>();
         for (Map<String, String> n : csv("ness_migrar.csv")) {

@@ -11,7 +11,7 @@
     { "label": "Compra Pasilla", "route": "/compras/pasilla" },
     { "label": "Compras a Futuro", "route": "/compras/futuro" },
     { "label": "Inventarios", "route": "/compras/inventarios" },
-    { "label": "Anular Documento", "route": "/compras" },
+    { "label": "Anular Documento", "route": "/compras/anular" },
     { "label": "Generar Reporte Anuncio", "route": "/compras/reporte-anuncio" },
     { "label": "Consulta compras por fecha", "route": "/compras/dialogo-fechas" },
     { "label": "Consultar Compras", "route": "/compras/consulta" },

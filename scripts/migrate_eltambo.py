@@ -389,9 +389,8 @@ def load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id):
     records = []
     for row in rows:
         invoice_number = parse_int(row["factura"])
-        if s(row, "forma_de_pago") == "ANULADA":
-            note_discard("compra_anulada", invoice_number)
-            continue
+        # Anuladas (V37): se cargan tal cual estan en Access (AnularFactura ya dejo sus montos en 0).
+        status = "ANULADA" if s(row, "forma_de_pago") == "ANULADA" else "VALIDA"
         if invoice_number in existing_invoices:
             continue
         cedula = s(row, "cedula")
@@ -458,6 +457,7 @@ def load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id):
                 check_number,
                 admin_user_id,
                 purchase_ts,
+                status,
             )
         )
 
@@ -474,7 +474,7 @@ def load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id):
             defective_unit_price, bonus, penalty, costs, unit_price, gross_value,
             inventory_value, associate_contribution, cooperative_discount,
             withholding_exempt, withholding, freight_discount, other_discounts,
-            net_to_pay, payment_method, check_number, created_by_user_id, created_at
+            net_to_pay, payment_method, check_number, created_by_user_id, created_at, status
         ) VALUES %s
         """,
         records,
@@ -727,7 +727,6 @@ def load_export_flags(cur, el_tambo_id):
     purchases = [
         (parse_bool(row["exportado"]), el_tambo_id, parse_int(row["factura"]))
         for row in read_csv("compras_migrar.csv")
-        if s(row, "forma_de_pago") != "ANULADA"
     ]
     psycopg2.extras.execute_batch(
         cur,
