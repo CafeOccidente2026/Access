@@ -1,6 +1,6 @@
 <div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
   <app-access-window *ngIf="screen() as s" [title]="s.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
-    <div class="flex flex-1 flex-col gap-3 p-4">
+    <div class="flex flex-1 flex-col gap-3 p-4" appFormFlow>
       <div class="flex w-[40rem] flex-col gap-2">
         <ng-container *ngFor="let field of s.fields">
           <label *ngIf="field.key === 'agency'" class="flex items-center gap-2 text-sm">
@@ -39,7 +39,7 @@
       </div>
 
       <div class="flex gap-2">
-        <button *ngIf="!saved()" type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="saving()" (click)="save()">{{ c.saveLabel }}</button>
+        <button *ngIf="!saved()" type="button" data-flow-submit class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="saving()" (click)="save()">{{ c.saveLabel }}</button>
         <button *ngIf="saved()" type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700" (click)="printLoan()">{{ c.printLoanLabel }}</button>
         <button *ngIf="saved()" type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200" (click)="reset()">{{ c.newLoanLabel }}</button>
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>

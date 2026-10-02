@@ -1,6 +1,6 @@
 <div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
   <app-access-window *ngIf="!kind()" [title]="c.dialog.windowTitle" bodyClass="bg-white">
-    <form class="flex w-[26rem] flex-col gap-4 p-6" (submit)="accept($event)">
+    <form class="flex w-[26rem] flex-col gap-4 p-6" appFormFlow (submit)="accept($event)">
       <p class="text-sm font-medium text-blue-900">{{ c.dialog.question }}</p>
       <div class="flex flex-col gap-2">
         <label *ngFor="let option of c.dialog.options" class="flex items-center gap-2 text-sm">
@@ -10,13 +10,13 @@
       </div>
       <div class="flex justify-end gap-2">
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.cancelLabel }}</button>
-        <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200">{{ c.acceptLabel }}</button>
+        <button type="submit" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200">{{ c.acceptLabel }}</button>
       </div>
     </form>
   </app-access-window>
 
   <app-access-window *ngIf="kind()" [title]="c.windowTitle" bodyClass="bg-white">
-    <div class="flex flex-col gap-3 p-4">
+    <div class="flex flex-col gap-3 p-4" appFormFlow>
       <div class="flex items-center gap-4 border-b border-slate-400 pb-3 text-sm">
         <span class="w-32 font-bold text-blue-900">{{ c.affiliationDateLabel }}:</span>
         <input type="text" readonly class="w-28 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-right" [value]="today" />
@@ -50,7 +50,7 @@
       </div>
 
       <div class="flex gap-2">
-        <button type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="saving()" (click)="save()">{{ c.saveLabel }}</button>
+        <button type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50" data-flow-submit [disabled]="saving()" (click)="save()">{{ c.saveLabel }}</button>
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
       </div>
       <p *ngIf="message() as m" class="text-sm" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>

@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
-import { AccessWindowComponent, AgencyPickerComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
 import { shortDate } from '../conductor-form/conductor-form';
 import { buildVendorRequest, validationError } from './vendor-entry-request';
 import { VendorEntryContent, VendorKind } from './vendor-entry.model';
@@ -20,11 +20,12 @@ import { VendorEntryContent, VendorKind } from './vendor-entry.model';
 @Component({
   selector: 'app-vendor-entry',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './vendor-entry.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VendorEntryComponent {
+  @ViewChild(FormFlowDirective) private readonly flow?: FormFlowDirective;
   private readonly vendorService = inject(VendorService);
   private readonly navigation = inject(NavigationService);
 
@@ -70,6 +71,7 @@ export class VendorEntryComponent {
       next: (saved) => {
         this.saving.set(false);
         this.values.set({});
+        this.flow?.restart();
         this.message.set(content.messages.saved.replace('{id}', saved.idNumber));
       },
       error: (err) => {

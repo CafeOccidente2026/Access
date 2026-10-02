@@ -9,7 +9,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { SuppliesService } from '../../core/services/supplies.service';
-import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildSuppliesReportDoc, paymentMethodsSheet } from './supplies-report-pdf';
 import { SuppliesReportContent } from './supplies-report.model';
@@ -21,7 +21,7 @@ import { SuppliesReportContent } from './supplies-report.model';
 @Component({
   selector: 'app-supplies-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
   templateUrl: './supplies-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

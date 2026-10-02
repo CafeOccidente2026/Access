@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
@@ -10,7 +10,7 @@ import { ContentService } from '../../core/services/content.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { SuppliesService } from '../../core/services/supplies.service';
-import { AccessWindowComponent, AgencyPickerComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
 import { formatThousands } from '../../shared/utils/number-format';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildLoanReceiptDoc } from './loan-receipt-pdf';
@@ -25,11 +25,12 @@ import { SuppliesEntryContent, SuppliesField } from './supplies-entry.model';
 @Component({
   selector: 'app-supplies-entry',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './supplies-entry.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SuppliesEntryComponent {
+  @ViewChild(FormFlowDirective) private readonly flow?: FormFlowDirective;
   private readonly suppliesService = inject(SuppliesService);
   private readonly growerService = inject(GrowerService);
   private readonly sanitizer = inject(DomSanitizer);
@@ -112,6 +113,7 @@ export class SuppliesEntryComponent {
           this.saved.set(saved); // quedan los datos a la vista hasta imprimir, como en Access
         } else {
           this.edited.set(null);
+          this.flow?.restart();
         }
       },
       error: (err: unknown) => {
@@ -134,6 +136,7 @@ export class SuppliesEntryComponent {
     this.pdfUrl.set(null);
     this.growerNames.set(null);
     this.message.set(null);
+    this.flow?.restart();
   }
 
   back(): void {

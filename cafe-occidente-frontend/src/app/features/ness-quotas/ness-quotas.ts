@@ -8,7 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
-import { AccessWindowComponent, AgencyPickerComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
 
 type View = 'quotas' | 'balances';
 
@@ -41,7 +41,7 @@ export function quotaCells(row: NessQuotaRow | NessQuotaBalanceRow): string[] {
 @Component({
   selector: 'app-ness-quotas',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './ness-quotas.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

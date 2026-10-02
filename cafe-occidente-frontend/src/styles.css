@@ -48,3 +48,10 @@ body {
 .field-flash {
   animation: field-flash 1s ease-in-out;
 }
+
+/* Pantallas con appFormFlow (Suministros, Vendedores): el mismo foco que los campos de Compras
+   (form-field: focus:border-blue-400 focus:outline-none). */
+.form-flow :is(input, select, textarea):focus {
+  border-color: var(--color-blue-400);
+  outline: none;
+}
