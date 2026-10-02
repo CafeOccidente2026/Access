@@ -1,6 +1,6 @@
 <div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
   <app-access-window *ngIf="screen() as s" [title]="s.windowTitle" bodyClass="bg-white">
-    <form class="flex w-[34rem] flex-col gap-4 p-6 text-sm" (submit)="accept($event)">
+    <form class="flex w-[34rem] flex-col gap-4 p-6 text-sm" appFormFlow (submit)="accept($event)">
       <p class="font-medium text-blue-900">{{ c.scopeLabel }}</p>
       <label class="flex items-center gap-2">
         <input type="radio" name="scope" [checked]="allAgencies()" (change)="allAgencies.set(true)" />
@@ -31,7 +31,7 @@
 
       <div class="flex justify-end gap-2">
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="cancel()">{{ c.cancelLabel }}</button>
-        <button type="submit" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="running()">{{ c.acceptLabel }}</button>
+        <button type="submit" data-flow-submit class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 font-bold text-white hover:bg-teal-700 disabled:opacity-50" [disabled]="running()">{{ c.acceptLabel }}</button>
       </div>
       <p *ngIf="message() as m" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
     </form>

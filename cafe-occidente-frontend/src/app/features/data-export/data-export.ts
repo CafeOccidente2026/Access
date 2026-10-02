@@ -7,7 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { DataExportService } from '../../core/services/data-export.service';
 import { NavigationService } from '../../core/services/navigation.service';
-import { AccessWindowComponent, AgencyPickerComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
 
 export interface DataExportContent {
   readonly scopeLabel: string;
@@ -36,7 +36,7 @@ export function attachmentName(header: string | null, fallback: string): string 
 @Component({
   selector: 'app-data-export',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './data-export.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -8,7 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
-import { AccessWindowComponent, AgencyPickerComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildBeneficiaryDoc } from './beneficiary-report-pdf';
 import { BeneficiaryReportContent } from './beneficiary-report.model';
@@ -21,7 +21,7 @@ import { BeneficiaryReportContent } from './beneficiary-report.model';
 @Component({
   selector: 'app-beneficiary-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './beneficiary-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

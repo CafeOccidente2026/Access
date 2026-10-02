@@ -7,7 +7,7 @@ import { Associate, AssociatePage } from '../../core/models/vendor.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
-import { AccessWindowComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { shortDate } from '../conductor-form/conductor-form';
 
 export interface AssociateField {
@@ -49,7 +49,7 @@ export function displayValue(associate: Associate, field: AssociateField, conten
 @Component({
   selector: 'app-associates',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
   templateUrl: './associates.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

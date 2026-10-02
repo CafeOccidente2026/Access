@@ -32,10 +32,10 @@
         <span class="min-w-28 text-center">{{ p.position + 1 }} {{ c.ofLabel }} {{ p.total }}</span>
         <button type="button" class="rounded border border-slate-300 px-2 hover:bg-slate-100" (click)="go(p.position + 1)">{{ c.nav.next }}</button>
         <button type="button" class="rounded border border-slate-300 px-2 hover:bg-slate-100" (click)="go(p.total - 1)">{{ c.nav.last }}</button>
-        <form class="ml-6 flex items-center gap-2" (submit)="search($event, searchInput.value)">
+        <form class="ml-6 flex items-center gap-2" appFormFlow (submit)="search($event, searchInput.value)">
           <span>{{ c.searchLabel }}:</span>
           <input #searchInput type="text" inputmode="numeric" class="w-36 rounded border border-slate-300 px-2 py-1" />
-          <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
+          <button type="submit" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
         </form>
         <button type="button" class="ml-auto rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
       </div>
