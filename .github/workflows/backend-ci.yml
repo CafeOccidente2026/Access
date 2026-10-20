@@ -6,11 +6,11 @@ name: Backend CI
 # migraciones de Flyway antes de que se mezcle a main.
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
 
