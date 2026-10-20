@@ -18,11 +18,11 @@ import org.springframework.stereotype.Repository;
 public class SuppliesReadRepository {
 
     private static final Map<String, String> PURCHASE_TABLES = Map.of(
-            "DRY", "dry_coffee_purchase",
-            "GREEN", "green_coffee_purchase",
-            "HUSK", "husk_purchase",
-            "OTHER", "other_coffee_purchase",
-            "FERTI", "ferti_futuro_purchase");
+            "DRY", "compras_cafe_seco",
+            "GREEN", "compras_cafe_verde",
+            "HUSK", "compras_pasilla",
+            "OTHER", "compras_cafes_otros",
+            "FERTI", "compras_ferti_futuro");
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -33,42 +33,42 @@ public class SuppliesReadRepository {
     /** agencyId null = todas las agencias. */
     public List<PurchasePayment> purchasePayments(Long agencyId, LocalDate from, LocalDate to) {
         String sql = String.join(" UNION ALL ", PURCHASE_TABLES.entrySet().stream()
-                .map(e -> "SELECT '" + e.getKey() + "' AS module, p.id, p.invoice_number, p.agency_id,"
-                        + " a.name AS agency_name, f.code AS fund_code, p.purchase_date, p.id_number,"
+                .map(e -> "SELECT '" + e.getKey() + "' AS module, p.id, p.numero_factura, p.agencia_id,"
+                        + " a.nombre AS agency_name, f.codigo AS fund_code, p.fecha_compra, p.cedula,"
                         // En compras check_number es texto; Caja.Cheque en Access era numerico.
-                        + " p.net_to_pay, p.payment_method,"
-                        + " CASE WHEN p.check_number ~ '^[0-9]{1,9}$' THEN CAST(p.check_number AS INTEGER) END AS check_number,"
-                        + " p.created_at, s.source_id AS split_id, s.cash_amount, s.check_amount,"
-                        + " s.transfer_amount, s.card_amount, s.check_number AS split_check_number"
-                        + " FROM " + e.getValue() + " p JOIN agency a ON a.id = p.agency_id"
-                        + " JOIN fund f ON f.id = p.fund_id"
-                        + " LEFT JOIN purchase_payment_split s ON s.source = '" + e.getKey() + "' AND s.source_id = p.id"
-                        + " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR p.agency_id = :agencyId)"
-                        + " AND p.purchase_date BETWEEN :from AND :to")
+                        + " p.neto_a_pagar, p.forma_pago,"
+                        + " CASE WHEN p.numero_cheque ~ '^[0-9]{1,9}$' THEN CAST(p.numero_cheque AS INTEGER) END AS numero_cheque,"
+                        + " p.creado_en, s.origen_id AS split_id, s.efectivo, s.cheque,"
+                        + " s.transferencia, s.datafono, s.numero_cheque AS split_check_number"
+                        + " FROM " + e.getValue() + " p JOIN agencias a ON a.id = p.agencia_id"
+                        + " JOIN fondos f ON f.id = p.fondo_id"
+                        + " LEFT JOIN formas_pago_compras s ON s.origen = '" + e.getKey() + "' AND s.origen_id = p.id"
+                        + " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR p.agencia_id = :agencyId)"
+                        + " AND p.fecha_compra BETWEEN :from AND :to")
                 .toList());
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("agencyId", agencyId)
                 .addValue("from", from)
                 .addValue("to", to);
         List<List<PurchasePayment>> rows = jdbc.query(sql, params, (rs, i) -> {
-            Timestamp createdAt = rs.getTimestamp("created_at");
+            Timestamp createdAt = rs.getTimestamp("creado_en");
             PurchasePayment payment = new PurchasePayment(
                     rs.getString("module"),
                     rs.getLong("id"),
-                    rs.getInt("invoice_number"),
-                    rs.getLong("agency_id"),
+                    rs.getInt("numero_factura"),
+                    rs.getLong("agencia_id"),
                     rs.getString("agency_name"),
                     rs.getString("fund_code"),
-                    rs.getObject("purchase_date", LocalDate.class),
-                    rs.getString("id_number"),
-                    rs.getBigDecimal("net_to_pay"),
-                    rs.getString("payment_method"),
-                    (Integer) rs.getObject("check_number"),
+                    rs.getObject("fecha_compra", LocalDate.class),
+                    rs.getString("cedula"),
+                    rs.getBigDecimal("neto_a_pagar"),
+                    rs.getString("forma_pago"),
+                    (Integer) rs.getObject("numero_cheque"),
                     createdAt == null ? null : createdAt.toInstant());
             // Pago mixto migrado de Access: una fila por forma de pago en vez del neto bajo una sola.
             return rs.getObject("split_id") == null ? List.of(payment)
-                    : payment.splitInto(rs.getBigDecimal("cash_amount"), rs.getBigDecimal("check_amount"),
-                            rs.getBigDecimal("transfer_amount"), rs.getBigDecimal("card_amount"),
+                    : payment.splitInto(rs.getBigDecimal("efectivo"), rs.getBigDecimal("cheque"),
+                            rs.getBigDecimal("transferencia"), rs.getBigDecimal("datafono"),
                             (Integer) rs.getObject("split_check_number"));
         });
         return rows.stream().flatMap(List::stream).toList();
@@ -80,10 +80,10 @@ public class SuppliesReadRepository {
             return List.of();
         }
         return jdbc.query(
-                "SELECT id_number, TRIM(CONCAT(first_name, ' ', second_name)) AS first_names,"
-                        + " TRIM(CONCAT(last_name, ' ', second_last_name)) AS last_names"
-                        + " FROM grower WHERE id_number IN (:ids)",
+                "SELECT identificacion, TRIM(CONCAT(primer_nombre, ' ', segundo_nombre)) AS first_names,"
+                        + " TRIM(CONCAT(primer_apellido, ' ', segundo_apellido)) AS last_names"
+                        + " FROM terceros WHERE identificacion IN (:ids)",
                 new MapSqlParameterSource("ids", idNumbers),
-                (rs, i) -> new GrowerName(rs.getString("id_number"), rs.getString("first_names"), rs.getString("last_names")));
+                (rs, i) -> new GrowerName(rs.getString("identificacion"), rs.getString("first_names"), rs.getString("last_names")));
     }
 }

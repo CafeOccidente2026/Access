@@ -11,21 +11,21 @@ import java.util.List;
  * PorcMerma, Pr_Base_CPS/Pr_Base_PC, Vr_Kilo_Comp ni VrIncCalidad: esas columnas quedan como estaban.
  */
 public enum AnnulmentModule {
-    DRY("dry_coffee_purchase", "DRY_COFFEE", Columns.DRY_LIKE),
-    OTHER("other_coffee_purchase", "OTHER_COFFEE", Columns.DRY_LIKE),
-    GREEN("green_coffee_purchase", "GREEN_COFFEE", List.of("bags_count", "gross_kg", "tare_kg", "green_kg", "net_kg",
-            "penalty", "inventory_value", "unit_price", "gross_value", "associate_contribution",
-            "cooperative_discount", "shrinkage_discount", "other_discounts", "withholding", "bonus", "costs",
-            "healthy_unit_price", "defective_unit_price", "net_to_pay")),
-    HUSK("husk_purchase", "HUSK", List.of("bags_count", "gross_kg", "tare_kg", "net_kg", "inventory_value",
-            "unit_price", "gross_value", "associate_contribution", "cooperative_discount", "shrinkage_discount",
-            "other_discounts", "withholding", "costs", "almond_weight", "almond_percentage", "point_price",
-            "net_to_pay")),
-    FERTI("ferti_futuro_purchase", "FERTI_FUTURO", List.of("sacos", "gross_kg", "tare_kg", "net_kg", "penalty",
-            "inventory_value", "unit_price", "gross_value", "associate_contribution", "cooperative_discount",
-            "freight_discount", "other_discounts", "withholding", "bonus", "healthy_stored_weight",
-            "defective_stored_weight", "healthy_percentage", "defective_percentage", "quality_increment_amount",
-            "costs", "healthy_unit_price", "defective_unit_price", "net_to_pay"));
+    DRY("compras_cafe_seco", "DRY_COFFEE", Columns.DRY_LIKE),
+    OTHER("compras_cafes_otros", "OTHER_COFFEE", Columns.DRY_LIKE),
+    GREEN("compras_cafe_verde", "GREEN_COFFEE", List.of("sacos", "kilos_brutos", "destare", "kilos_verdes", "kilos_netos",
+            "castigo", "vr_inventario", "vr_kilo", "vr_bruto", "aporte_asociado",
+            "descuento_cooperativo", "descuento_financiero", "otros_descuentos", "retefuente", "bonificacion", "costos",
+            "pr_alm_sana", "pr_alm_defec", "neto_a_pagar")),
+    HUSK("compras_pasilla", "HUSK", List.of("sacos", "kilos_brutos", "destare", "kilos_netos", "vr_inventario",
+            "vr_kilo", "vr_bruto", "aporte_asociado", "descuento_cooperativo", "descuento_financiero",
+            "otros_descuentos", "retefuente", "costos", "peso_almendra", "porc_almendra", "pr_punto",
+            "neto_a_pagar")),
+    FERTI("compras_ferti_futuro", "FERTI_FUTURO", List.of("sacos", "kilos_brutos", "destare", "kilos_netos", "castigo",
+            "vr_inventario", "vr_kilo", "vr_bruto", "aporte_asociado", "descuento_cooperativo",
+            "descuento_financiero", "otros_descuentos", "retefuente", "bonificacion", "peso_alm_sana",
+            "peso_tot_pasilla", "factor", "porc_kg_pasilla", "vr_inc_calidad",
+            "costos", "pr_alm_sana", "pr_alm_defec", "neto_a_pagar"));
 
     /** Tabla de la compra; su nombre de enum es la clave de purchase_payment_split.source. */
     final String table;
@@ -35,11 +35,11 @@ public enum AnnulmentModule {
 
     /** Cafe Seco y Cafes Otros tienen las mismas columnas (formularios COMPRAS y COMPRASESP). */
     private static final class Columns {
-        static final List<String> DRY_LIKE = List.of("bags_count", "gross_kg", "tare_kg", "net_kg", "penalty",
-                "inventory_value", "unit_price", "gross_value", "associate_contribution", "cooperative_discount",
-                "freight_discount", "other_discounts", "withholding", "bonus", "healthy_stored_weight",
-                "defective_stored_weight", "healthy_percentage", "defective_percentage", "costs",
-                "healthy_unit_price", "defective_unit_price", "net_to_pay");
+        static final List<String> DRY_LIKE = List.of("sacos", "kilos_brutos", "destare", "kilos_netos", "castigo",
+                "vr_inventario", "vr_kilo", "vr_bruto", "aporte_asociado", "descuento_cooperativo",
+                "descuento_financiero", "otros_descuentos", "retefuente", "bonificacion", "peso_alm_sana",
+                "peso_tot_pasilla", "factor", "porc_kg_pasilla", "costos",
+                "pr_alm_sana", "pr_alm_defec", "neto_a_pagar");
     }
 
     AnnulmentModule(String table, String inventoryModule, List<String> zeroed) {

@@ -59,74 +59,74 @@ public class DataExportRepository {
 
     /** Tablas de compras -> clave de purchase_payment_split (misma que SuppliesReadRepository). */
     public static final Map<String, String> PURCHASE_TABLES = Map.of(
-            "dry_coffee_purchase", "DRY",
-            "green_coffee_purchase", "GREEN",
-            "husk_purchase", "HUSK",
-            "other_coffee_purchase", "OTHER",
-            "ferti_futuro_purchase", "FERTI");
+            "compras_cafe_seco", "DRY",
+            "compras_cafe_verde", "GREEN",
+            "compras_pasilla", "HUSK",
+            "compras_cafes_otros", "OTHER",
+            "compras_ferti_futuro", "FERTI");
 
     /** Numero de anuncio de Access: las compras nuevas lo guardan como "SDTA-3510". */
-    private static final String PLAIN_ANNOUNCEMENT = "regexp_replace(p.announcement_number, '^.*-', '')";
+    private static final String PLAIN_ANNOUNCEMENT = "regexp_replace(p.numero_anuncio, '^.*-', '')";
 
     /** Columnas comunes a las 5 tablas de compras; Forma_de_Pago en COMPRAS es el estado de la factura
      *  (VALIDA / ANULADA, columna status) y el pago real va en FPef/FPch/FPtx/FPdat. */
     private static final Map<String, String> PURCHASE_COMMON = Map.ofEntries(
             Map.entry("Anuncio", PLAIN_ANNOUNCEMENT),
-            Map.entry("Agencia", "a.access_agency_value"),
-            Map.entry("Fecha_Compra", "p.purchase_date"),
-            Map.entry("Fecha_Anuncio", "p.announcement_date"),
-            Map.entry("Cod_Prod", "pc.code"),
-            Map.entry("Fondo", "f.code"),
-            Map.entry("Factura", "p.invoice_number"),
-            Map.entry("Prefijo", "a.invoice_prefix"),
-            Map.entry("Cedula", "p.id_number"),
-            Map.entry("Kilos_Brutos", "p.gross_kg"),
+            Map.entry("Agencia", "a.nombre_access"),
+            Map.entry("Fecha_Compra", "p.fecha_compra"),
+            Map.entry("Fecha_Anuncio", "p.fecha_anuncio"),
+            Map.entry("Cod_Prod", "pc.codigo"),
+            Map.entry("Fondo", "f.codigo"),
+            Map.entry("Factura", "p.numero_factura"),
+            Map.entry("Prefijo", "a.prefijo_factura"),
+            Map.entry("Cedula", "p.cedula"),
+            Map.entry("Kilos_Brutos", "p.kilos_brutos"),
             // Solo Cafe Verde llena Kilos_Verdes; en Access queda en 0 en el resto (844/844 compras de
             // El Tambo, y SumaDeKilos_Verdes = 0 en comprasTotal.XLS).
             Map.entry("Kilos_Verdes", "0"),
-            Map.entry("Destare", "p.tare_kg"),
-            Map.entry("Kilos_Netos", "p.net_kg"),
-            Map.entry("Pr_Base_CPS", "m.base_price_load"),
-            Map.entry("Vr_Inventario", "p.inventory_value"),
-            Map.entry("Vr_Kilo", "p.unit_price"),
-            Map.entry("Vr_Bruto", "p.gross_value"),
-            Map.entry("Aporte_Socio", "p.associate_contribution"),
-            Map.entry("Descuento_Coop", "p.cooperative_discount"),
-            Map.entry("Retefuente", "p.withholding"),
-            Map.entry("Neto_a_Pagar", "p.net_to_pay"),
-            Map.entry("OtrosDescuentos", "p.other_discounts"),
-            Map.entry("Forma_de_Pago", "p.status"),
-            Map.entry("NumCheque", "CASE WHEN p.check_number ~ '^[0-9]{1,9}$' THEN CAST(p.check_number AS INTEGER) END"),
-            Map.entry("Especial", "p.special_type"),
-            Map.entry("Exportado", "p.exported"),
-            Map.entry("Costos", "p.costs"),
+            Map.entry("Destare", "p.destare"),
+            Map.entry("Kilos_Netos", "p.kilos_netos"),
+            Map.entry("Pr_Base_CPS", "m.pr_base_cps"),
+            Map.entry("Vr_Inventario", "p.vr_inventario"),
+            Map.entry("Vr_Kilo", "p.vr_kilo"),
+            Map.entry("Vr_Bruto", "p.vr_bruto"),
+            Map.entry("Aporte_Socio", "p.aporte_asociado"),
+            Map.entry("Descuento_Coop", "p.descuento_cooperativo"),
+            Map.entry("Retefuente", "p.retefuente"),
+            Map.entry("Neto_a_Pagar", "p.neto_a_pagar"),
+            Map.entry("OtrosDescuentos", "p.otros_descuentos"),
+            Map.entry("Forma_de_Pago", "p.estado"),
+            Map.entry("NumCheque", "CASE WHEN p.numero_cheque ~ '^[0-9]{1,9}$' THEN CAST(p.numero_cheque AS INTEGER) END"),
+            Map.entry("Especial", "p.especial"),
+            Map.entry("Exportado", "p.exportado"),
+            Map.entry("Costos", "p.costos"),
             // COMPRAS.Fiel = RegControl.Fiel de la agencia (87304051 en las 844 compras de El Tambo).
-            Map.entry("Fiel", "CASE WHEN cr.trusted_id ~ '^[0-9]{1,15}$' THEN CAST(cr.trusted_id AS NUMERIC) END"),
-            Map.entry("FPef", payment("s.cash_amount", "EFECTIVO")),
-            Map.entry("FPch", payment("s.check_amount", "CHEQUE")),
-            Map.entry("FPtx", payment("s.transfer_amount", "TRANSFERENCIA")),
-            Map.entry("FPdat", payment("s.card_amount", "DATAFONO")));
+            Map.entry("Fiel", "CASE WHEN cr.cedula_fiel ~ '^[0-9]{1,15}$' THEN CAST(cr.cedula_fiel AS NUMERIC) END"),
+            Map.entry("FPef", payment("s.efectivo", "EFECTIVO")),
+            Map.entry("FPch", payment("s.cheque", "CHEQUE")),
+            Map.entry("FPtx", payment("s.transferencia", "TRANSFERENCIA")),
+            Map.entry("FPdat", payment("s.datafono", "DATAFONO")));
 
     /** Lo propio de cada formulario de compra (ver los Javadoc de cada entidad). */
     private static final Map<String, Map<String, String>> PURCHASE_SPECIFIC = Map.of(
-            "dry_coffee_purchase", dryLike(),
-            "other_coffee_purchase", dryLike(),
-            "green_coffee_purchase", Map.of(
-                    "Sacos", "p.bags_count", "Kilos_Verdes", "p.green_kg", "Pr_AlmSana", "p.healthy_unit_price",
-                    "Pr_AlmDefec", "p.defective_unit_price", "Vr_Kilo_Comp", "p.comp_kg_price", "Bonificación", "p.bonus",
-                    "Pr_Base_PC", "p.base_price_load", "Castigo", "p.penalty", "Descuento_Fro", "p.shrinkage_discount"),
-            "husk_purchase", Map.of(
-                    "Sacos", "p.bags_count", "Pr_AlmSana", "p.point_price", "W_AlmSana", "p.almond_weight",
-                    "PorcAlmSana", "p.almond_percentage", "Pr_Base_CPS", "p.base_price_dry_load",
-                    "Descuento_Fro", "p.shrinkage_discount"),
-            "ferti_futuro_purchase", Map.ofEntries(
-                    Map.entry("Sacos", "p.sacos"), Map.entry("Pr_AlmSana", "p.healthy_unit_price"),
-                    Map.entry("Pr_AlmDefec", "p.defective_unit_price"), Map.entry("W_AlmSana", "p.healthy_stored_weight"),
-                    Map.entry("W_AlmDefec", "p.defective_stored_weight"), Map.entry("Bonificación", "p.bonus"),
-                    Map.entry("PorcAlmSana", "p.healthy_percentage"), Map.entry("PorcAlmDefec", "p.defective_percentage"),
-                    Map.entry("VrIncCalidad", "p.quality_increment_rate"),
-                    Map.entry("IncCalidad", "p.quality_increment_amount"), Map.entry("Castigo", "p.penalty"),
-                    Map.entry("Descuento_Fro", "p.freight_discount")));
+            "compras_cafe_seco", dryLike(),
+            "compras_cafes_otros", dryLike(),
+            "compras_cafe_verde", Map.of(
+                    "Sacos", "p.sacos", "Kilos_Verdes", "p.kilos_verdes", "Pr_AlmSana", "p.pr_alm_sana",
+                    "Pr_AlmDefec", "p.pr_alm_defec", "Vr_Kilo_Comp", "p.vr_kilo_comp", "Bonificación", "p.bonificacion",
+                    "Pr_Base_PC", "p.pr_base_cps", "Castigo", "p.castigo", "Descuento_Fro", "p.descuento_financiero"),
+            "compras_pasilla", Map.of(
+                    "Sacos", "p.sacos", "Pr_AlmSana", "p.pr_punto", "W_AlmSana", "p.peso_almendra",
+                    "PorcAlmSana", "p.porc_almendra", "Pr_Base_CPS", "p.pr_base_cps",
+                    "Descuento_Fro", "p.descuento_financiero"),
+            "compras_ferti_futuro", Map.ofEntries(
+                    Map.entry("Sacos", "p.sacos"), Map.entry("Pr_AlmSana", "p.pr_alm_sana"),
+                    Map.entry("Pr_AlmDefec", "p.pr_alm_defec"), Map.entry("W_AlmSana", "p.peso_alm_sana"),
+                    Map.entry("W_AlmDefec", "p.peso_tot_pasilla"), Map.entry("Bonificación", "p.bonificacion"),
+                    Map.entry("PorcAlmSana", "p.factor"), Map.entry("PorcAlmDefec", "p.porc_kg_pasilla"),
+                    Map.entry("VrIncCalidad", "p.pr_inc_calidad"),
+                    Map.entry("IncCalidad", "p.vr_inc_calidad"), Map.entry("Castigo", "p.castigo"),
+                    Map.entry("Descuento_Fro", "p.descuento_financiero")));
 
     private static final String AGENCY_FILTER = "(CAST(:agencyId AS BIGINT) IS NULL OR %s = :agencyId)";
 
@@ -138,19 +138,19 @@ public class DataExportRepository {
 
     private static Map<String, String> dryLike() {
         return Map.ofEntries(
-                Map.entry("Sacos", "p.bags_count"), Map.entry("Pr_AlmSana", "p.healthy_unit_price"),
-                Map.entry("Pr_AlmDefec", "p.defective_unit_price"), Map.entry("W_TotAlm", "p.total_stored_weight"),
-                Map.entry("W_AlmSana", "p.healthy_stored_weight"), Map.entry("W_AlmDefec", "p.defective_stored_weight"),
-                Map.entry("Bonificación", "p.bonus"), Map.entry("PorcAlmSana", "p.healthy_percentage"),
-                Map.entry("PorcAlmDefec", "p.defective_percentage"), Map.entry("PorcMerma", "p.waste_percentage"),
-                Map.entry("Pr_Base_PC", "p.base_price_load"), Map.entry("Castigo", "p.penalty"),
-                Map.entry("Descuento_Fro", "p.freight_discount"));
+                Map.entry("Sacos", "p.sacos"), Map.entry("Pr_AlmSana", "p.pr_alm_sana"),
+                Map.entry("Pr_AlmDefec", "p.pr_alm_defec"), Map.entry("W_TotAlm", "p.peso_tot_alm"),
+                Map.entry("W_AlmSana", "p.peso_alm_sana"), Map.entry("W_AlmDefec", "p.peso_tot_pasilla"),
+                Map.entry("Bonificación", "p.bonificacion"), Map.entry("PorcAlmSana", "p.factor"),
+                Map.entry("PorcAlmDefec", "p.porc_kg_pasilla"), Map.entry("PorcMerma", "p.porc_merma"),
+                Map.entry("Pr_Base_PC", "p.pr_base_cps"), Map.entry("Castigo", "p.castigo"),
+                Map.entry("Descuento_Fro", "p.descuento_financiero"));
     }
 
     /** Pago mixto migrado: el monto de purchase_payment_split; si no, el neto entero va a su forma de pago. */
     private static String payment(String splitColumn, String method) {
-        return "CASE WHEN s.source_id IS NOT NULL THEN " + splitColumn
-                + " WHEN p.payment_method = '" + method + "' THEN p.net_to_pay ELSE 0 END";
+        return "CASE WHEN s.origen_id IS NOT NULL THEN " + splitColumn
+                + " WHEN p.forma_pago = '" + method + "' THEN p.neto_a_pagar ELSE 0 END";
     }
 
     private static String purchaseSelect(String table) {
@@ -160,14 +160,14 @@ public class DataExportRepository {
                 .map(c -> specific.getOrDefault(c, PURCHASE_COMMON.getOrDefault(c, "CAST(NULL AS NUMERIC)")) + " AS \"" + c + "\"")
                 .collect(Collectors.joining(", "));
         return "SELECT '" + table + "' AS source_table, p.id AS source_id, " + columns
-                + " FROM " + table + " p JOIN agency a ON a.id = p.agency_id JOIN fund f ON f.id = p.fund_id"
-                + " JOIN product_code pc ON pc.id = p.product_code_id"
-                + " LEFT JOIN agency_announcement_number aan ON aan.agency_id = p.agency_id"
-                + " AND CAST(aan.announcement_number AS TEXT) = " + PLAIN_ANNOUNCEMENT
-                + " LEFT JOIN announcement m ON m.id = aan.master_announcement_id"
-                + " LEFT JOIN control_record cr ON cr.agency_id = p.agency_id AND cr.active"
-                + " LEFT JOIN purchase_payment_split s ON s.source = '" + PURCHASE_TABLES.get(table) + "' AND s.source_id = p.id"
-                + " WHERE " + AGENCY_FILTER.formatted("p.agency_id") + " AND (:all OR NOT p.exported)";
+                + " FROM " + table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id"
+                + " JOIN productos pc ON pc.id = p.producto_id"
+                + " LEFT JOIN anuncios_agencias aan ON aan.agencia_id = p.agencia_id"
+                + " AND CAST(aan.numero_anuncio AS TEXT) = " + PLAIN_ANNOUNCEMENT
+                + " LEFT JOIN anuncios m ON m.id = aan.anuncio_id"
+                + " LEFT JOIN registros_control cr ON cr.agencia_id = p.agencia_id AND cr.activo"
+                + " LEFT JOIN formas_pago_compras s ON s.origen = '" + PURCHASE_TABLES.get(table) + "' AND s.origen_id = p.id"
+                + " WHERE " + AGENCY_FILTER.formatted("p.agencia_id") + " AND (:all OR NOT p.exportado)";
     }
 
     /** ComprasParaExportar (pendingOnly) o todas las compras (base de ComprasTotal, que no filtra). */
@@ -180,26 +180,26 @@ public class DataExportRepository {
 
     /** SociosparaExportar: Asociados con Exportado = No (nulo cuenta como No, igual que un Si/No de Access). */
     public List<ExportRow> growers(Long agencyId, boolean pendingOnly) {
-        String sql = "SELECT 'grower' AS source_table, g.id AS source_id, g.id_number, g.first_name, g.second_name,"
-                + " g.last_name, g.second_last_name, a.access_agency_value, g.birth_date, g.birth_place, g.marital_status,"
-                + " g.coffee_id_card, g.address, g.phone, g.affiliation_date, g.act_number, g.accepted, g.eligible,"
-                + " g.withdrawn, g.deceased, g.observation, g.grower_type, g.transport_company, g.vehicle_plate,"
-                + " COALESCE(g.exported, FALSE), g.is_association, g.city_code, g.sex, g.country, g.postal_code, g.email"
-                + " FROM grower g LEFT JOIN agency a ON a.id = g.agency_id"
-                + " WHERE " + AGENCY_FILTER.formatted("g.agency_id") + " AND (:all OR NOT COALESCE(g.exported, FALSE))"
+        String sql = "SELECT 'terceros' AS source_table, g.id AS source_id, g.identificacion, g.primer_nombre, g.segundo_nombre,"
+                + " g.primer_apellido, g.segundo_apellido, a.nombre_access, g.fecha_nacimiento, g.lugar_nacimiento, g.estado_civil,"
+                + " g.cedula_cafetera, g.direccion, g.telefono, g.fecha_afiliacion, g.acta, g.aceptado, g.habil,"
+                + " g.retirado, g.fallecido, g.observacion, g.tipo, g.empresa_transporte, g.vehiculo,"
+                + " COALESCE(g.exportado, FALSE), g.asociacion, g.ciudad, g.sexo, g.pais, g.codigo_postal, g.email"
+                + " FROM terceros g LEFT JOIN agencias a ON a.id = g.agencia_id"
+                + " WHERE " + AGENCY_FILTER.formatted("g.agencia_id") + " AND (:all OR NOT COALESCE(g.exportado, FALSE))"
                 + " ORDER BY g.id";
         return query(sql, agencyId, pendingOnly);
     }
 
     /** FutureBuystoExport. Kilos_Entregados = Kilos_Anunciados - Saldo_Kilos (el sistema nuevo guarda el saldo). */
     public List<ExportRow> futurePurchases(Long agencyId, boolean pendingOnly) {
-        String sql = "SELECT 'future_purchase' AS source_table, p.id AS source_id, " + PLAIN_ANNOUNCEMENT + ","
-                + " a.access_agency_value, p.announcement_date, p.id_number, p.announced_kg,"
-                + " p.announced_kg - p.remaining_kg, p.remaining_kg, p.healthy_unit_price, p.defective_unit_price,"
-                + " p.costs, p.bonus, p.quality_increment, p.base_price_load, p.special_type, p.delivery_date,"
-                + " p.exported, p.finca, p.municipality, p.vereda, NULL"
-                + " FROM future_purchase p JOIN agency a ON a.id = p.agency_id"
-                + " WHERE " + AGENCY_FILTER.formatted("p.agency_id") + " AND (:all OR NOT p.exported)"
+        String sql = "SELECT 'compras_anunciadas' AS source_table, p.id AS source_id, " + PLAIN_ANNOUNCEMENT + ","
+                + " a.nombre_access, p.fecha_anuncio, p.cedula, p.kilos,"
+                + " p.kilos - p.saldo, p.saldo, p.pr_alm_sana, p.pr_alm_defec,"
+                + " p.costos, p.bonificacion, p.pr_inc_calidad, p.pr_base_cps, p.especial, p.fecha_entrega,"
+                + " p.exportado, p.finca, p.municipio, p.vereda, NULL"
+                + " FROM compras_anunciadas p JOIN agencias a ON a.id = p.agencia_id"
+                + " WHERE " + AGENCY_FILTER.formatted("p.agencia_id") + " AND (:all OR NOT p.exportado)"
                 + " ORDER BY p.id";
         return query(sql, agencyId, pendingOnly);
     }
@@ -211,28 +211,28 @@ public class DataExportRepository {
      * entradas son inventory_movement y las salidas remission_line (se marcan por remision).
      */
     public List<ExportRow> inventory(Long agencyId, boolean pendingOnly) {
-        String seller = "COALESCE(d.id_number, gr.id_number, h.id_number, o.id_number, fe.id_number)";
-        String entries = "SELECT 'inventory_movement' AS source_table, im.id AS source_id, a.access_agency_value,"
-                + " pc.code, im.invoice_number, im.purchase_date AS fecha, im.net_kg, im.healthy_percentage,"
-                + " im.inventory_value, NULL, NULL, NULL, NULL, NULL, NULL, im.special_type, im.exported, NULL, NULL, "
+        String seller = "COALESCE(d.cedula, gr.cedula, h.cedula, o.cedula, fe.cedula)";
+        String entries = "SELECT 'inventarios' AS source_table, im.id AS source_id, a.nombre_access,"
+                + " pc.codigo, im.numero_factura, im.fecha_compra AS fecha, im.kilos_netos, im.factor,"
+                + " im.vr_inventario, NULL, NULL, NULL, NULL, NULL, NULL, im.especial, im.exportado, NULL, NULL, "
                 + seller
-                + " FROM inventory_movement im JOIN agency a ON a.id = im.agency_id"
-                + " JOIN product_code pc ON pc.id = im.product_code_id"
-                + " LEFT JOIN dry_coffee_purchase d ON im.purchase_module = 'DRY_COFFEE' AND d.id = im.purchase_id"
-                + " LEFT JOIN green_coffee_purchase gr ON im.purchase_module = 'GREEN_COFFEE' AND gr.id = im.purchase_id"
-                + " LEFT JOIN husk_purchase h ON im.purchase_module = 'HUSK' AND h.id = im.purchase_id"
-                + " LEFT JOIN other_coffee_purchase o ON im.purchase_module = 'OTHER_COFFEE' AND o.id = im.purchase_id"
-                + " LEFT JOIN ferti_futuro_purchase fe ON im.purchase_module = 'FERTI_FUTURO' AND fe.id = im.purchase_id"
-                + " WHERE " + AGENCY_FILTER.formatted("im.agency_id") + " AND (:all OR NOT im.exported)";
-        String exits = "SELECT 'remission' AS source_table, r.id AS source_id, a.access_agency_value, pc.code, NULL,"
-                + " r.remission_date AS fecha, NULL, NULL, NULL, r.display_number, rl.quantity, rl.exit_percentage,"
-                + " rl.unit_value, rl.output_value, r.destination, im.special_type, r.exported, rl.sacos, rl.gross_kg,"
-                + " c.id_number"
-                + " FROM remission_line rl JOIN remission r ON r.id = rl.remission_id"
-                + " JOIN inventory_movement im ON im.id = rl.inventory_movement_id"
-                + " JOIN agency a ON a.id = r.agency_id JOIN product_code pc ON pc.id = im.product_code_id"
-                + " LEFT JOIN grower c ON c.id = r.conductor_id"
-                + " WHERE " + AGENCY_FILTER.formatted("r.agency_id") + " AND (:all OR NOT r.exported)";
+                + " FROM inventarios im JOIN agencias a ON a.id = im.agencia_id"
+                + " JOIN productos pc ON pc.id = im.producto_id"
+                + " LEFT JOIN compras_cafe_seco d ON im.modulo_compra = 'DRY_COFFEE' AND d.id = im.compra_id"
+                + " LEFT JOIN compras_cafe_verde gr ON im.modulo_compra = 'GREEN_COFFEE' AND gr.id = im.compra_id"
+                + " LEFT JOIN compras_pasilla h ON im.modulo_compra = 'HUSK' AND h.id = im.compra_id"
+                + " LEFT JOIN compras_cafes_otros o ON im.modulo_compra = 'OTHER_COFFEE' AND o.id = im.compra_id"
+                + " LEFT JOIN compras_ferti_futuro fe ON im.modulo_compra = 'FERTI_FUTURO' AND fe.id = im.compra_id"
+                + " WHERE " + AGENCY_FILTER.formatted("im.agencia_id") + " AND (:all OR NOT im.exportado)";
+        String exits = "SELECT 'remisiones' AS source_table, r.id AS source_id, a.nombre_access, pc.codigo, NULL,"
+                + " r.fecha_remision AS fecha, NULL, NULL, NULL, r.numero_remision, rl.cantidad, rl.factor_salida,"
+                + " rl.valor_unitario, rl.valor_salida, r.destino, im.especial, r.exportado, rl.sacos, rl.kilos_brutos,"
+                + " c.identificacion"
+                + " FROM remisiones_detalle rl JOIN remisiones r ON r.id = rl.remision_id"
+                + " JOIN inventarios im ON im.id = rl.inventario_id"
+                + " JOIN agencias a ON a.id = r.agencia_id JOIN productos pc ON pc.id = im.producto_id"
+                + " LEFT JOIN terceros c ON c.id = r.conductor_tercero_id"
+                + " WHERE " + AGENCY_FILTER.formatted("r.agencia_id") + " AND (:all OR NOT r.exportado)";
         return query(entries + " UNION ALL " + exits + " ORDER BY fecha, source_table, source_id", agencyId, pendingOnly);
     }
 
@@ -243,32 +243,32 @@ public class DataExportRepository {
      * Cupo/Entregados/Saldo solo si hay cupo asignado (AnnouncementQuotaServiceImpl: compras de Seco).
      */
     public List<ExportRow> announcements(Long agencyId, boolean pendingOnly) {
-        String sql = "SELECT 'agency_announcement_number' AS source_table, aan.id AS source_id,"
-                + " aan.announcement_number, a.access_agency_value, aan.assigned_at, m.base_price_load,"
-                + " CASE WHEN m.healthy_unit_price IS NOT NULL THEN m.healthy_unit_price"
-                + "  WHEN m.point_price IS NOT NULL THEN m.point_price"
-                + "  ELSE ROUND(m.base_price_load / cr.base_load, 2) - cr.costs END,"
-                + " m.defective_unit_price,"
-                + " CASE WHEN m.healthy_unit_price IS NOT NULL THEN m.bonus"
-                + "  ELSE COALESCE(ROUND(m.special_surcharge / cr.base_load, 2), 0) END,"
-                + " CASE WHEN m.healthy_unit_price IS NOT NULL THEN m.costs ELSE cr.costs END,"
-                + " m.special_type, q.assigned_quota, del.kg, q.assigned_quota - del.kg, aan.exported"
-                + " FROM agency_announcement_number aan JOIN announcement m ON m.id = aan.master_announcement_id"
-                + " JOIN agency a ON a.id = aan.agency_id"
-                + " LEFT JOIN control_record cr ON cr.agency_id = aan.agency_id AND cr.active"
-                + " LEFT JOIN announcement_quota q ON q.agency_announcement_number_id = aan.id"
-                + " LEFT JOIN LATERAL (SELECT COALESCE(SUM(d.net_kg), 0) AS kg FROM dry_coffee_purchase d"
-                + "  WHERE q.id IS NOT NULL AND d.agency_id = aan.agency_id"
-                + "  AND d.announcement_number = cr.prefix || '-' || aan.announcement_number) del ON q.id IS NOT NULL"
-                + " WHERE " + AGENCY_FILTER.formatted("aan.agency_id") + " AND (:all OR NOT aan.exported)"
-                + " ORDER BY aan.agency_id, aan.announcement_number";
+        String sql = "SELECT 'anuncios_agencias' AS source_table, aan.id AS source_id,"
+                + " aan.numero_anuncio, a.nombre_access, aan.fecha_asignacion, m.pr_base_cps,"
+                + " CASE WHEN m.pr_alm_sana IS NOT NULL THEN m.pr_alm_sana"
+                + "  WHEN m.pr_punto IS NOT NULL THEN m.pr_punto"
+                + "  ELSE ROUND(m.pr_base_cps / cr.base_carga, 2) - cr.costos END,"
+                + " m.pr_alm_defec,"
+                + " CASE WHEN m.pr_alm_sana IS NOT NULL THEN m.bonificacion"
+                + "  ELSE COALESCE(ROUND(m.sobrepr_carga_esp / cr.base_carga, 2), 0) END,"
+                + " CASE WHEN m.pr_alm_sana IS NOT NULL THEN m.costos ELSE cr.costos END,"
+                + " m.especial, q.cupo, del.kg, q.cupo - del.kg, aan.exportado"
+                + " FROM anuncios_agencias aan JOIN anuncios m ON m.id = aan.anuncio_id"
+                + " JOIN agencias a ON a.id = aan.agencia_id"
+                + " LEFT JOIN registros_control cr ON cr.agencia_id = aan.agencia_id AND cr.activo"
+                + " LEFT JOIN cupos_anuncios q ON q.anuncio_agencia_id = aan.id"
+                + " LEFT JOIN LATERAL (SELECT COALESCE(SUM(d.kilos_netos), 0) AS kg FROM compras_cafe_seco d"
+                + "  WHERE q.id IS NOT NULL AND d.agencia_id = aan.agencia_id"
+                + "  AND d.numero_anuncio = cr.prefijo || '-' || aan.numero_anuncio) del ON q.id IS NOT NULL"
+                + " WHERE " + AGENCY_FILTER.formatted("aan.agencia_id") + " AND (:all OR NOT aan.exportado)"
+                + " ORDER BY aan.agencia_id, aan.numero_anuncio";
         return query(sql, agencyId, pendingOnly);
     }
 
     /** Queries "Exportado", "ExportadodeSocios", etc.: marca exactamente las filas que se exportaron. */
     public void markExported(String table, Collection<Long> ids) {
         if (!ids.isEmpty()) {
-            jdbc.update("UPDATE " + table + " SET exported = TRUE WHERE id IN (:ids)", new MapSqlParameterSource("ids", ids));
+            jdbc.update("UPDATE " + table + " SET exportado = TRUE WHERE id IN (:ids)", new MapSqlParameterSource("ids", ids));
         }
     }
 
@@ -280,13 +280,13 @@ public class DataExportRepository {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("agencyId", agencyId).addValue("from", from).addValue("to", to);
         Map<String, String[]> targets = new LinkedHashMap<>();
-        PURCHASE_TABLES.keySet().forEach(t -> targets.put(t, new String[] {"agency_id", "purchase_date"}));
-        targets.put("grower", new String[] {"agency_id", "affiliation_date"});
-        targets.put("future_purchase", new String[] {"agency_id", "announcement_date"});
-        targets.put("inventory_movement", new String[] {"agency_id", "purchase_date"});
-        targets.put("remission", new String[] {"agency_id", "remission_date"});
-        targets.put("agency_announcement_number", new String[] {"agency_id", "assigned_at"});
-        targets.forEach((table, columns) -> jdbc.update("UPDATE " + table + " SET exported = FALSE WHERE "
+        PURCHASE_TABLES.keySet().forEach(t -> targets.put(t, new String[] {"agencia_id", "fecha_compra"}));
+        targets.put("terceros", new String[] {"agencia_id", "fecha_afiliacion"});
+        targets.put("compras_anunciadas", new String[] {"agencia_id", "fecha_anuncio"});
+        targets.put("inventarios", new String[] {"agencia_id", "fecha_compra"});
+        targets.put("remisiones", new String[] {"agencia_id", "fecha_remision"});
+        targets.put("anuncios_agencias", new String[] {"agencia_id", "fecha_asignacion"});
+        targets.forEach((table, columns) -> jdbc.update("UPDATE " + table + " SET exportado = FALSE WHERE "
                 + AGENCY_FILTER.formatted(columns[0]) + " AND " + columns[1] + " BETWEEN :from AND :to", params));
     }
 

@@ -55,8 +55,8 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
     @Override
     public void record(String source, Long purchaseId, PurchasePaymentRequest payment) {
         String checkNumber = payment.checkAmount().signum() > 0 ? payment.checkNumber().trim() : null;
-        jdbc.update("INSERT INTO purchase_payment_split (source, source_id, cash_amount, check_amount,"
-                        + " transfer_amount, card_amount, check_number) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbc.update("INSERT INTO formas_pago_compras (origen, origen_id, efectivo, cheque,"
+                        + " transferencia, datafono, numero_cheque) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 source, purchaseId, payment.cashAmount(), payment.checkAmount(), payment.transferAmount(),
                 payment.cardAmount(), checkNumber == null ? null : Integer.valueOf(checkNumber));
     }

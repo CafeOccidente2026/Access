@@ -28,11 +28,11 @@ public class VendorReadRepository {
     /** COMPRAS como union de las 5 tablas. Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la
      *  merma en Verde y Pasilla; PorcAlmSana en Pasilla es el porcentaje de almendra y Verde no lo usa. */
     private static final String PURCHASES = String.join(" UNION ALL ",
-            purchase("dry_coffee_purchase", "0", "p.healthy_percentage", "p.freight_discount"),
-            purchase("other_coffee_purchase", "0", "p.healthy_percentage", "p.freight_discount"),
-            purchase("ferti_futuro_purchase", "0", "p.healthy_percentage", "p.freight_discount"),
-            purchase("green_coffee_purchase", "p.green_kg", "0", "p.shrinkage_discount"),
-            purchase("husk_purchase", "0", "p.almond_percentage", "p.shrinkage_discount"));
+            purchase("compras_cafe_seco", "0", "p.factor", "p.descuento_financiero"),
+            purchase("compras_cafes_otros", "0", "p.factor", "p.descuento_financiero"),
+            purchase("compras_ferti_futuro", "0", "p.factor", "p.descuento_financiero"),
+            purchase("compras_cafe_verde", "p.kilos_verdes", "0", "p.descuento_financiero"),
+            purchase("compras_pasilla", "0", "p.porc_almendra", "p.descuento_financiero"));
 
     /** Cedula de la tabla NESS: el CSV de origen la trae como numero ("210514.0"). */
     private static final String NESS_ID = "regexp_replace(n.cedula, '\\.0$', '')";
@@ -44,21 +44,21 @@ public class VendorReadRepository {
     }
 
     private static String purchase(String table, String greenKg, String healthyPercentage, String freightDiscount) {
-        return "SELECT p.agency_id, a.name AS agency_name, p.purchase_date, f.code AS fund_code, p.invoice_number,"
-                + " p.id_number, " + greenKg + " AS green_kg, p.net_kg, " + healthyPercentage + " AS healthy_percentage,"
-                + " p.gross_value, p.associate_contribution, p.cooperative_discount, " + freightDiscount
-                + " AS freight_discount, p.withholding, p.other_discounts, p.net_to_pay, p.special_type"
-                + " FROM " + table + " p JOIN agency a ON a.id = p.agency_id JOIN fund f ON f.id = p.fund_id";
+        return "SELECT p.agencia_id, a.nombre AS agency_name, p.fecha_compra, f.codigo AS fund_code, p.numero_factura,"
+                + " p.cedula, " + greenKg + " AS kilos_verdes, p.kilos_netos, " + healthyPercentage + " AS factor,"
+                + " p.vr_bruto, p.aporte_asociado, p.descuento_cooperativo, " + freightDiscount
+                + " AS descuento_financiero, p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.especial"
+                + " FROM " + table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
     }
 
     /** "Beneficiario" (sin fechas) y "Beneficiario Resumen": Cedula Like texto & "*"; agencyId null = todas. */
     public List<BeneficiaryRow> beneficiary(Long agencyId, String idNumberPrefix, LocalDate from, LocalDate to) {
-        String sql = "SELECT c.*, g.first_name, g.last_name FROM (" + PURCHASES + ") c"
-                + " JOIN grower g ON g.id_number = c.id_number"
-                + " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR c.agency_id = :agencyId)"
-                + " AND c.id_number LIKE :prefix ESCAPE '\\'"
-                + " AND (CAST(:from AS DATE) IS NULL OR c.purchase_date BETWEEN :from AND :to)"
-                + " ORDER BY c.id_number, c.invoice_number";
+        String sql = "SELECT c.*, g.primer_nombre, g.primer_apellido FROM (" + PURCHASES + ") c"
+                + " JOIN terceros g ON g.identificacion = c.cedula"
+                + " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR c.agencia_id = :agencyId)"
+                + " AND c.cedula LIKE :prefix ESCAPE '\\'"
+                + " AND (CAST(:from AS DATE) IS NULL OR c.fecha_compra BETWEEN :from AND :to)"
+                + " ORDER BY c.cedula, c.numero_factura";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("agencyId", agencyId)
                 .addValue("prefix", likePrefix(idNumberPrefix))
@@ -66,30 +66,30 @@ public class VendorReadRepository {
                 .addValue("to", to);
         return jdbc.query(sql, params, (rs, i) -> new BeneficiaryRow(
                 rs.getString("agency_name"),
-                rs.getObject("purchase_date", LocalDate.class),
+                rs.getObject("fecha_compra", LocalDate.class),
                 rs.getString("fund_code"),
-                (Integer) rs.getObject("invoice_number"),
-                rs.getString("id_number"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getBigDecimal("green_kg"),
-                rs.getBigDecimal("net_kg"),
-                rs.getBigDecimal("healthy_percentage"),
-                rs.getBigDecimal("gross_value"),
-                rs.getBigDecimal("associate_contribution"),
-                rs.getBigDecimal("cooperative_discount"),
-                rs.getBigDecimal("freight_discount"),
-                rs.getBigDecimal("withholding"),
-                rs.getBigDecimal("other_discounts"),
-                rs.getBigDecimal("net_to_pay"),
-                rs.getString("special_type")));
+                (Integer) rs.getObject("numero_factura"),
+                rs.getString("cedula"),
+                rs.getString("primer_nombre"),
+                rs.getString("primer_apellido"),
+                rs.getBigDecimal("kilos_verdes"),
+                rs.getBigDecimal("kilos_netos"),
+                rs.getBigDecimal("factor"),
+                rs.getBigDecimal("vr_bruto"),
+                rs.getBigDecimal("aporte_asociado"),
+                rs.getBigDecimal("descuento_cooperativo"),
+                rs.getBigDecimal("descuento_financiero"),
+                rs.getBigDecimal("retefuente"),
+                rs.getBigDecimal("otros_descuentos"),
+                rs.getBigDecimal("neto_a_pagar"),
+                rs.getString("especial")));
     }
 
     /** "CuposNess": la tabla NESS en su orden de carga, filtrada por prefijo de cedula. */
     public List<NessQuotaRow> nessQuotas(String idNumberPrefix, int offset, int limit) {
         return jdbc.query(
                 "SELECT " + NESS_ID + " AS cedula, n.nombres, n.programa, CAST(n.cupo AS NUMERIC) AS cupo"
-                        + " FROM staging_legacy_ness n WHERE " + NESS_ID + " LIKE :prefix ESCAPE '\\'"
+                        + " FROM cupos_ness n WHERE " + NESS_ID + " LIKE :prefix ESCAPE '\\'"
                         + " ORDER BY n.id OFFSET :offset LIMIT :limit",
                 new MapSqlParameterSource()
                         .addValue("prefix", likePrefix(idNumberPrefix))
@@ -101,7 +101,7 @@ public class VendorReadRepository {
 
     public long countNessQuotas(String idNumberPrefix) {
         Long total = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM staging_legacy_ness n WHERE " + NESS_ID + " LIKE :prefix ESCAPE '\\'",
+                "SELECT COUNT(*) FROM cupos_ness n WHERE " + NESS_ID + " LIKE :prefix ESCAPE '\\'",
                 new MapSqlParameterSource("prefix", likePrefix(idNumberPrefix)), Long.class);
         return total == null ? 0 : total;
     }
@@ -112,11 +112,11 @@ public class VendorReadRepository {
      * programa y cupo - tal cual la consulta de Access.
      */
     public List<NessQuotaBalanceRow> nessQuotaBalances(Long agencyId) {
-        String sql = "WITH cupos AS (SELECT c.id_number AS cedula, c.net_kg AS kilos FROM (" + PURCHASES + ") c"
-                + " WHERE c.special_type IN (:specials)"
-                + " AND (CAST(:agencyId AS BIGINT) IS NULL OR c.agency_id = :agencyId))"
+        String sql = "WITH cupos AS (SELECT c.cedula AS cedula, c.kilos_netos AS kilos FROM (" + PURCHASES + ") c"
+                + " WHERE c.especial IN (:specials)"
+                + " AND (CAST(:agencyId AS BIGINT) IS NULL OR c.agencia_id = :agencyId))"
                 + " SELECT cu.cedula, n.nombres, n.programa, CAST(n.cupo AS NUMERIC) AS cupo, SUM(cu.kilos) AS facturados"
-                + " FROM staging_legacy_ness n JOIN cupos cu ON " + NESS_ID + " = cu.cedula"
+                + " FROM cupos_ness n JOIN cupos cu ON " + NESS_ID + " = cu.cedula"
                 + " GROUP BY cu.cedula, n.nombres, n.programa, n.cupo ORDER BY cu.cedula, n.programa";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("specials", QUOTA_SPECIALS)
