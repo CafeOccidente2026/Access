@@ -14,7 +14,7 @@ import lombok.Setter;
 
 /** Caja.Rel_cheques = Yes de Access: el cheque (source, sourceId) ya salio en "Relacion Cheques". */
 @Entity
-@Table(name = "check_relation_mark")
+@Table(name = "cheques_relacionados")
 @IdClass(CheckRelationMark.Key.class)
 @Getter
 @Setter
@@ -23,11 +23,11 @@ import lombok.Setter;
 public class CheckRelationMark {
 
     @Id
-    @Column(nullable = false)
+    @Column(name = "origen", nullable = false)
     private String source;
 
     @Id
-    @Column(name = "source_id", nullable = false)
+    @Column(name = "origen_id", nullable = false)
     private Long sourceId;
 
     @NoArgsConstructor

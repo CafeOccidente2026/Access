@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import lombok.Getter;
@@ -15,6 +16,7 @@ import lombok.Setter;
  * (Cuadro_combinado61 en el formulario Access original) con el Fondo (Cuadro_combinado37).
  */
 @Entity
+@Table(name = "productos")
 @Getter
 @Setter
 public class ProductCode {
@@ -23,16 +25,17 @@ public class ProductCode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "special_type", nullable = false)
+    @Column(name = "especial", nullable = false)
     private String specialType;
 
     @ManyToOne
-    @JoinColumn(name = "fund_id", nullable = false)
+    @JoinColumn(name = "fondo_id", nullable = false)
     private Fund fund;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "codigo", nullable = false, unique = true)
     private String code;
 
     /** "Nom" de Access (V28); NULL si el codigo no estaba en producto_migrar.csv. */
+    @Column(name = "nombre")
     private String name;
 }

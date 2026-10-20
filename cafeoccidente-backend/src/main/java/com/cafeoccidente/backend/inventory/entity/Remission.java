@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.time.Instant;
@@ -21,6 +22,7 @@ import lombok.Setter;
  * vehiclePlate). Numeración correlativa simple por agencia (Access "Ultimo de remision", MAX+1).
  */
 @Entity
+@Table(name = "remisiones")
 @Getter
 @Setter
 public class Remission {
@@ -29,43 +31,43 @@ public class Remission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "remission_number", nullable = false)
+    @Column(name = "numero_remision_anterior", nullable = false)
     private Integer remissionNumber;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
-    @Column(name = "remission_date", nullable = false)
+    @Column(name = "fecha_remision", nullable = false)
     private LocalDate remissionDate;
 
-    @Column
+    @Column(name = "destino")
     private String destination;
 
     /** Conductor (cédula) - Form_Conductores.bas confirma que es el mismo Asociado/Grower. */
     @ManyToOne
-    @JoinColumn(name = "conductor_id")
+    @JoinColumn(name = "conductor_tercero_id")
     private Grower conductor;
 
-    @Column(nullable = false)
+    @Column(name = "exportado", nullable = false)
     private boolean exported;
 
-    @Column(name = "created_by_user_id", nullable = false)
+    @Column(name = "creado_por_usuario_id", nullable = false)
     private Long createdByUserId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
 
     /** Fondo (LF/RP) de todas sus lineas (V30). */
     @ManyToOne
-    @JoinColumn(name = "fund_id")
+    @JoinColumn(name = "fondo_id")
     private Fund fund;
 
     /** Consecutivo por agencia + fondo; NULL en las remisiones anteriores a V30. */
-    @Column(name = "sequence_number")
+    @Column(name = "consecutivo")
     private Integer sequenceNumber;
 
     /** Numero impreso: {prefijo}-{LF|RP}-{0000}; en las viejas, su remission_number tal cual. */
-    @Column(name = "display_number", nullable = false)
+    @Column(name = "numero_remision", nullable = false)
     private String displayNumber;
 }

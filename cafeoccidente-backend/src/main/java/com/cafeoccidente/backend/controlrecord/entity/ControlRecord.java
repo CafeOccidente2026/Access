@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ import lombok.Setter;
  * Solo se espera un registro activo por agencia a la vez (ver ControlRecordService.getActive()).
  */
 @Entity
+@Table(name = "registros_control")
 @Getter
 @Setter
 public class ControlRecord {
@@ -28,75 +30,81 @@ public class ControlRecord {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
-    @Column(nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean active = true;
 
-    @Column(name = "control_number", nullable = false)
+    @Column(name = "numero_registro_control", nullable = false)
     private Integer controlNumber;
 
-    @Column(name = "base_factor", nullable = false)
+    /**
+     * Cruce heredado de la carga de Access, pendiente hasta HU-07: el campo Java se llama baseFactor
+     * pero guarda KgExcelso (70) y el Factor lo usa como tal. La columna ya se llama por lo que guarda.
+     */
+    @Column(name = "kg_excelso", nullable = false)
     private Integer baseFactor;
 
-    @Column(name = "base_withholding", nullable = false, precision = 15, scale = 2)
+    @Column(name = "base_retencion", nullable = false, precision = 15, scale = 2)
     private BigDecimal baseWithholding;
 
-    @Column(name = "base_load", nullable = false)
+    @Column(name = "base_carga", nullable = false)
     private Integer baseLoad;
 
-    @Column(name = "withholding_percentage", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porcentaje_retencion", nullable = false, precision = 5, scale = 2)
     private BigDecimal withholdingPercentage;
 
-    @Column(name = "base_husk", nullable = false, precision = 10, scale = 2)
+    @Column(name = "base_pasilla", nullable = false, precision = 10, scale = 2)
     private BigDecimal baseHusk;
 
-    @Column(name = "avg_husk_percentage", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porc_kg_pasilla_promedio", nullable = false, precision = 5, scale = 2)
     private BigDecimal avgHuskPercentage;
 
-    @Column(name = "purchase_point", nullable = false)
+    @Column(name = "punto_compra", nullable = false)
     private String purchasePoint;
 
-    @Column(nullable = false)
+    @Column(name = "prefijo", nullable = false)
     private String prefix;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "costos", nullable = false, precision = 15, scale = 2)
     private BigDecimal costs;
 
-    @Column(name = "sample_size", nullable = false, precision = 10, scale = 2)
+    @Column(name = "tamano_muestra", nullable = false, precision = 10, scale = 2)
     private BigDecimal sampleSize;
 
-    @Column(name = "excelso_kg", nullable = false, precision = 10, scale = 2)
+    /** Copia de KgExcelso que no se usa en ningun calculo; HU-07 decide si se borra o es el umbral (Q15). */
+    @Column(name = "kg_excelso_copia", nullable = false, precision = 10, scale = 2)
     private BigDecimal excelsoKg;
 
-    @Column(name = "green_coffee_percentage", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porcentaje_cafe_verde", nullable = false, precision = 5, scale = 2)
     private BigDecimal greenCoffeePercentage;
 
-    @Column(name = "specialty_threshold", nullable = false, precision = 5, scale = 2)
+    /** Cruce pendiente hasta HU-07: specialtyThreshold guarda FactorBase (94) y el Vr. Kilo lo usa como tal. */
+    @Column(name = "factor_base", nullable = false, precision = 5, scale = 2)
     private BigDecimal specialtyThreshold;
 
-    @Column(name = "associate_percentage", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porc_aportes_asociados", nullable = false, precision = 5, scale = 2)
     private BigDecimal associatePercentage;
 
-    @Column(name = "non_associate_discount", nullable = false, precision = 5, scale = 2)
+    @Column(name = "porc_desc_coop_no_asociados", nullable = false, precision = 5, scale = 2)
     private BigDecimal nonAssociateDiscount;
 
-    @Column(name = "trusted_id", nullable = false)
+    @Column(name = "cedula_fiel", nullable = false)
     private String trustedId;
 
-    @Column(name = "dian_resolution", nullable = false)
+    @Column(name = "resolucion_dian", nullable = false)
     private String dianResolution;
 
-    @Column(name = "resolution_date", nullable = false)
+    @Column(name = "fecha_resolucion", nullable = false)
     private LocalDate resolutionDate;
 
-    @Column(name = "resolution_from", nullable = false)
+    @Column(name = "desde_resolucion", nullable = false)
     private Integer resolutionFrom;
 
-    @Column(name = "resolution_to", nullable = false)
+    @Column(name = "hasta_resolucion", nullable = false)
     private Integer resolutionTo;
 
-    @Column(nullable = false)
+    @Column(name = "vigencia", nullable = false)
     private Integer validity;
 }

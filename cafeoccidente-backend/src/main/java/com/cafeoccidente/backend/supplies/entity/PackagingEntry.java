@@ -16,7 +16,7 @@ import lombok.Setter;
 
 /** Tabla Empaque de Access (Empaque Suministros = Entradas, Prestamo Empaques = Salidas). */
 @Entity
-@Table(name = "packaging_entry")
+@Table(name = "empaques")
 @Getter
 @Setter
 public class PackagingEntry {
@@ -25,31 +25,31 @@ public class PackagingEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "transaction_id", nullable = false)
+    @Column(name = "id_transaccion", nullable = false)
     private String transactionId;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
-    @Column(name = "packaging_type", nullable = false)
+    @Column(name = "tipo_empaque", nullable = false)
     private String packagingType;
 
-    @Column(name = "entry_date", nullable = false)
+    @Column(name = "fecha", nullable = false)
     private LocalDate entryDate;
 
-    @Column(name = "id_number", nullable = false)
+    @Column(name = "cedula", nullable = false)
     private String idNumber;
 
-    @Column
+    @Column(name = "detalle")
     private String detail;
 
-    @Column(nullable = false)
+    @Column(name = "entradas", nullable = false)
     private int inflow;
 
-    @Column(nullable = false)
+    @Column(name = "salidas", nullable = false)
     private int outflow;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
 }

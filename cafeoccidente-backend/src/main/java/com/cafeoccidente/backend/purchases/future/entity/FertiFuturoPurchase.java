@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
@@ -26,6 +27,7 @@ import lombok.Setter;
  * esta fase.
  */
 @Entity
+@Table(name = "compras_ferti_futuro")
 @Getter
 @Setter
 public class FertiFuturoPurchase {
@@ -34,34 +36,34 @@ public class FertiFuturoPurchase {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "purchase_date", nullable = false)
+    @Column(name = "fecha_compra", nullable = false)
     private LocalDate purchaseDate;
 
-    @Column(name = "invoice_number", nullable = false, unique = true)
+    @Column(name = "numero_factura", nullable = false, unique = true)
     private Integer invoiceNumber;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
     /** RP o LF (Cuadro combinado37). */
     @ManyToOne
-    @JoinColumn(name = "fund_id", nullable = false)
+    @JoinColumn(name = "fondo_id", nullable = false)
     private Fund fund;
 
     /** Especial (Cuadro combinado61: RN/NESS/CORR/TE - "NESS" resuelve a los mismos Cod_Prod que
      *  "NESPRESSO - FTUSA" en Seco/Otros, ver migración V25). */
-    @Column(name = "special_type", nullable = false)
+    @Column(name = "especial", nullable = false)
     private String specialType;
 
     @ManyToOne
-    @JoinColumn(name = "product_code_id", nullable = false)
+    @JoinColumn(name = "producto_id", nullable = false)
     private ProductCode productCode;
 
-    @Column(name = "announcement_number", nullable = false)
+    @Column(name = "numero_anuncio", nullable = false)
     private String announcementNumber;
 
-    @Column(name = "announcement_date", nullable = false)
+    @Column(name = "fecha_anuncio", nullable = false)
     private LocalDate announcementDate;
 
     /** Compromiso de Compras a Futuro que esta liquidacion paga, si aplica (Form_FUTURE
@@ -69,116 +71,116 @@ public class FertiFuturoPurchase {
      *  ver FertiFuturoPurchaseServiceImpl). Nullable: no toda liquidacion tiene que venir de un
      *  compromiso previo registrado en el sistema. */
     @ManyToOne
-    @JoinColumn(name = "future_purchase_id")
+    @JoinColumn(name = "compra_anunciada_id")
     private FuturePurchase futurePurchase;
 
-    @Column(name = "id_number", nullable = false)
+    @Column(name = "cedula", nullable = false)
     private String idNumber;
 
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "nombres", nullable = false)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "apellidos", nullable = false)
     private String lastName;
 
-    @Column(name = "grower_type", nullable = false)
+    @Column(name = "tipo_vendedor", nullable = false)
     private String growerType;
 
-    @Column(nullable = false)
+    @Column(name = "direccion", nullable = false)
     private String address;
 
-    @Column(nullable = false)
+    @Column(name = "sacos", nullable = false)
     private Integer sacos;
 
     /** Kilos_Netos: a diferencia de Seco/Otros, es un INPUT directo aca (Sacos_AfterUpdate/
      *  Kilos_Brutos_AfterUpdate derivan Destare/Kilos_Brutos a partir de este, no al reves). */
-    @Column(name = "net_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "kilos_netos", nullable = false, precision = 10, scale = 2)
     private BigDecimal netKg;
 
-    @Column(name = "gross_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "kilos_brutos", nullable = false, precision = 10, scale = 2)
     private BigDecimal grossKg;
 
     /** Destare = Kilos_Brutos - Kilos_Netos (Kilos_Brutos_AfterUpdate). */
-    @Column(name = "tare_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "destare", nullable = false, precision = 10, scale = 2)
     private BigDecimal tareKg;
 
-    @Column(name = "healthy_stored_weight", nullable = false, precision = 10, scale = 2)
+    @Column(name = "peso_alm_sana", nullable = false, precision = 10, scale = 2)
     private BigDecimal healthyStoredWeight;
 
     /** PorcAlmSana = (W_AlmSana*100)/250 (W_AlmSana_AfterUpdate - 250 fijo, no sampleSize). */
-    @Column(name = "healthy_percentage", nullable = false, precision = 6, scale = 2)
+    @Column(name = "factor", nullable = false, precision = 6, scale = 2)
     private BigDecimal healthyPercentage;
 
-    @Column(name = "defective_stored_weight", nullable = false, precision = 10, scale = 2)
+    @Column(name = "peso_tot_pasilla", nullable = false, precision = 10, scale = 2)
     private BigDecimal defectiveStoredWeight;
 
-    @Column(name = "defective_percentage", nullable = false, precision = 6, scale = 2)
+    @Column(name = "porc_kg_pasilla", nullable = false, precision = 6, scale = 2)
     private BigDecimal defectivePercentage;
 
     /** Pr_AlmSana, congelado del anuncio al momento de la liquidación. */
-    @Column(name = "healthy_unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_alm_sana", nullable = false, precision = 15, scale = 2)
     private BigDecimal healthyUnitPrice;
 
-    @Column(name = "defective_unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_alm_defec", nullable = false, precision = 15, scale = 2)
     private BigDecimal defectiveUnitPrice;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "bonificacion", nullable = false, precision = 15, scale = 2)
     private BigDecimal bonus;
 
     /** Castigo. */
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "castigo", nullable = false, precision = 15, scale = 2)
     private BigDecimal penalty;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "costos", nullable = false, precision = 15, scale = 2)
     private BigDecimal costs;
 
     /** VrIncCalidad: tasa cruda del anuncio (Announcement.qualityIncrement), congelada aca. */
-    @Column(name = "quality_increment_rate", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_inc_calidad", nullable = false, precision = 15, scale = 2)
     private BigDecimal qualityIncrementRate;
 
     /** IncCalidad calculado: max(0, PorcAlmSana - 75) * VrIncCalidad (W_AlmSana_AfterUpdate). */
-    @Column(name = "quality_increment_amount", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_inc_calidad", nullable = false, precision = 15, scale = 2)
     private BigDecimal qualityIncrementAmount;
 
-    @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_kilo", nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice;
 
-    @Column(name = "gross_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_bruto", nullable = false, precision = 15, scale = 2)
     private BigDecimal grossValue;
 
-    @Column(name = "inventory_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_inventario", nullable = false, precision = 15, scale = 2)
     private BigDecimal inventoryValue;
 
-    @Column(name = "associate_contribution", nullable = false, precision = 15, scale = 2)
+    @Column(name = "aporte_asociado", nullable = false, precision = 15, scale = 2)
     private BigDecimal associateContribution;
 
-    @Column(name = "cooperative_discount", nullable = false, precision = 15, scale = 2)
+    @Column(name = "descuento_cooperativo", nullable = false, precision = 15, scale = 2)
     private BigDecimal cooperativeDiscount;
 
-    @Column(name = "withholding_exempt", nullable = false)
+    @Column(name = "exento_retencion", nullable = false)
     private boolean withholdingExempt;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "retefuente", nullable = false, precision = 15, scale = 2)
     private BigDecimal withholding;
 
-    @Column(name = "freight_discount", nullable = false, precision = 15, scale = 2)
+    @Column(name = "descuento_financiero", nullable = false, precision = 15, scale = 2)
     private BigDecimal freightDiscount;
 
-    @Column(name = "other_discounts", nullable = false, precision = 15, scale = 2)
+    @Column(name = "otros_descuentos", nullable = false, precision = 15, scale = 2)
     private BigDecimal otherDiscounts;
 
-    @Column(name = "net_to_pay", nullable = false, precision = 15, scale = 2)
+    @Column(name = "neto_a_pagar", nullable = false, precision = 15, scale = 2)
     private BigDecimal netToPay;
 
-    @Column(name = "payment_method", nullable = false)
+    @Column(name = "forma_pago", nullable = false)
     private String paymentMethod;
 
-    @Column(name = "check_number")
+    @Column(name = "numero_cheque")
     private String checkNumber;
 
-    @Column(name = "created_by_user_id", nullable = false)
+    @Column(name = "creado_por_usuario_id", nullable = false)
     private Long createdByUserId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
 }

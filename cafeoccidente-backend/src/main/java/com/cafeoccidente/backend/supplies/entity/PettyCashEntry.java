@@ -5,6 +5,6 @@ import jakarta.persistence.Table;
 
 /** Tabla CajaMenor de Access (Caja Menor Suministros, Gastos Caja Menor). */
 @Entity
-@Table(name = "petty_cash_entry")
+@Table(name = "movimientos_caja_menor")
 public class PettyCashEntry extends LedgerEntry {
 }

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ import lombok.Setter;
  * historial - ver RemissionServiceImpl.
  */
 @Entity
+@Table(name = "remisiones_detalle")
 @Getter
 @Setter
 public class RemissionLine {
@@ -28,32 +30,32 @@ public class RemissionLine {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "remission_id", nullable = false)
+    @JoinColumn(name = "remision_id", nullable = false)
     private Remission remission;
 
     @ManyToOne
-    @JoinColumn(name = "inventory_movement_id", nullable = false)
+    @JoinColumn(name = "inventario_id", nullable = false)
     private InventoryMovement inventoryMovement;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(name = "cantidad", nullable = false, precision = 10, scale = 2)
     private BigDecimal quantity;
 
     /** Valor_unitario (ParaSalidas!VRUNIT - el Vr_Kilo/Vr_Inventario de la entrada origen). */
-    @Column(name = "unit_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "valor_unitario", nullable = false, precision = 15, scale = 2)
     private BigDecimal unitValue;
 
     /** Vr_Salida = Valor_unitario * Cantidad. */
-    @Column(name = "output_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "valor_salida", nullable = false, precision = 15, scale = 2)
     private BigDecimal outputValue;
 
     /** Sacos y Kilos_Brutos de la salida (Form_EXITS); NULL en lineas anteriores a V31. */
-    @Column
+    @Column(name = "sacos")
     private Integer sacos;
 
-    @Column(name = "gross_kg", precision = 10, scale = 2)
+    @Column(name = "kilos_brutos", precision = 10, scale = 2)
     private BigDecimal grossKg;
 
     /** PorcAlmSanaSl = frpond de Sld3 (factor ponderado del Cod_Prod al salir); NULL antes de V32. */
-    @Column(name = "exit_percentage", precision = 12, scale = 6)
+    @Column(name = "factor_salida", precision = 12, scale = 6)
     private BigDecimal exitPercentage;
 }

@@ -5,6 +5,6 @@ import jakarta.persistence.Table;
 
 /** Tabla Suministros de Access (Ingresar Suministros, Cheques Girados). */
 @Entity
-@Table(name = "supply_entry")
+@Table(name = "suministros")
 public class SupplyEntry extends LedgerEntry {
 }

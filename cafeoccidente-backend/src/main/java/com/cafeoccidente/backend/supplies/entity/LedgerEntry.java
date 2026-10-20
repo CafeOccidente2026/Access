@@ -25,38 +25,38 @@ public abstract class LedgerEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "transaction_id", nullable = false)
+    @Column(name = "id_transaccion", nullable = false)
     private String transactionId;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
     @ManyToOne
-    @JoinColumn(name = "fund_id", nullable = false)
+    @JoinColumn(name = "fondo_id", nullable = false)
     private Fund fund;
 
-    @Column(name = "entry_date", nullable = false)
+    @Column(name = "fecha", nullable = false)
     private LocalDate entryDate;
 
-    @Column(name = "id_number", nullable = false)
+    @Column(name = "cedula", nullable = false)
     private String idNumber;
 
-    @Column
+    @Column(name = "detalle")
     private String detail;
 
-    @Column(nullable = false)
+    @Column(name = "entradas", nullable = false)
     private BigDecimal inflow = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(name = "salidas", nullable = false)
     private BigDecimal outflow = BigDecimal.ZERO;
 
-    @Column(name = "payment_method")
+    @Column(name = "forma_pago")
     private String paymentMethod;
 
-    @Column(name = "check_number")
+    @Column(name = "numero_cheque")
     private Integer checkNumber;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
 }

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,6 +14,7 @@ import lombok.Setter;
  * "Municipality", consolidada aqui porque son el mismo concepto de negocio).
  */
 @Entity
+@Table(name = "agencias")
 @Getter
 @Setter
 public class Agency {
@@ -22,7 +24,7 @@ public class Agency {
     private Long id;
 
     /** Nombre visible (ej: "Buesaco"). */
-    @Column(nullable = false, unique = true)
+    @Column(name = "nombre", nullable = false, unique = true)
     private String name;
 
     /**
@@ -30,13 +32,13 @@ public class Agency {
      * (ej: "BUESACO1 OCCIDENTE" para el punto de compra "Buesaco"). No siempre coincide con el
      * nombre visible.
      */
-    @Column(name = "access_agency_value", nullable = false, unique = true)
+    @Column(name = "nombre_access", nullable = false, unique = true)
     private String accessAgencyValue;
 
     /** Prefijo de factura (ej: "SDBU"). */
-    @Column(name = "invoice_prefix", nullable = false)
+    @Column(name = "prefijo_factura", nullable = false)
     private String invoicePrefix;
 
-    @Column(nullable = false)
+    @Column(name = "activa", nullable = false)
     private boolean active = true;
 }
