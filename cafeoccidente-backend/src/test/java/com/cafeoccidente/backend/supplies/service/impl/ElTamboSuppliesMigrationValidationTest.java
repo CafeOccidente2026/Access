@@ -46,11 +46,11 @@ class ElTamboSuppliesMigrationValidationTest {
 
     @BeforeEach
     void requireMigratedData() {
-        Assumptions.assumeTrue(Files.exists(DIR.resolve("suministros_migrar.csv")), "Sin CSV de Access - se salta.");
-        agencyId = jdbc.queryForObject("SELECT id FROM agency WHERE access_agency_value = 'EL TAMBO'", Long.class);
+        Assumptions.assumeTrue(Files.exists(DIR.resolve("suministros_migrar.csv")), "FALTA el CSV de Access " + DIR.resolve("suministros_migrar.csv") + " (docs/ es local, no esta en git).");
+        agencyId = jdbc.queryForObject("SELECT id FROM agencias WHERE nombre_access = 'EL TAMBO'", Long.class);
         Assumptions.assumeTrue(jdbc.queryForObject(
-                "SELECT count(*) FROM packaging_entry WHERE agency_id = ?", Long.class, agencyId) > 0,
-                "Suministros/CajaMenor/Empaque sin migrar - corra scripts/migrate_eltambo.py primero.");
+                "SELECT count(*) FROM empaques WHERE agencia_id = ?", Long.class, agencyId) > 0,
+                "FALTAN los empaques de El Tambo: corra 'python scripts/migrate_eltambo.py' contra esta base.");
     }
 
     /** Filas del CSV como mapas columna -> valor (respeta comillas). */

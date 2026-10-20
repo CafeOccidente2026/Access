@@ -61,13 +61,13 @@ class NewPurchasePaymentIntegrationTest {
     @BeforeEach
     void signInAsElTambo() {
         var user = users.findByUsername("admin_eltambo");
-        Assumptions.assumeTrue(user.isPresent(), "Sin usuario de El Tambo - corra la migracion primero.");
+        Assumptions.assumeTrue(user.isPresent(), "FALTA el usuario admin_eltambo: corra 'python scripts/migrate_eltambo.py' contra esta base.");
         SecurityUser principal = new SecurityUser(user.get());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
         agencyId = principal.getAgencyId();
         Assumptions.assumeTrue(jdbc.queryForObject(
-                "SELECT count(*) FROM grower WHERE id_number = ?", Long.class, GROWER) > 0, "Sin el caficultor de prueba.");
+                "SELECT count(*) FROM terceros WHERE identificacion = ?", Long.class, GROWER) > 0, "FALTA el tercero " + GROWER + " (viene de asociados_migrar.csv): corra 'python scripts/migrate_eltambo.py' contra esta base.");
     }
 
     @AfterEach
@@ -76,9 +76,9 @@ class NewPurchasePaymentIntegrationTest {
     }
 
     private DryCoffeePurchaseRequest request(PurchasePaymentRequest payment) {
-        Long fundId = jdbc.queryForObject("SELECT id FROM fund WHERE code = 'RP'", Long.class);
+        Long fundId = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
         SpecialInfoResponse info = purchases.specialInfo(agencyId, fundId, "NESPRESSO - FTUSA");
-        Integer invoice = jdbc.queryForObject("SELECT COALESCE(MAX(invoice_number), 0) + 1000 FROM dry_coffee_purchase", Integer.class);
+        Integer invoice = jdbc.queryForObject("SELECT COALESCE(MAX(numero_factura), 0) + 1000 FROM compras_cafe_seco", Integer.class);
         return new DryCoffeePurchaseRequest(agencyId, fundId, invoice, "NESPRESSO - FTUSA", GROWER, "PRUEBA", "PAGO",
                 "C", "VEREDA", "3000000000", 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"),
                 new BigDecimal("10"), new BigDecimal("190"), info.healthyUnitPrice(), info.bonus(), BigDecimal.ZERO,
@@ -125,11 +125,11 @@ class NewPurchasePaymentIntegrationTest {
     @Test
     void anUnbalancedPaymentIsNotSaved() {
         BigDecimal net = purchases.preview(request(null)).netToPay();
-        Long before = jdbc.queryForObject("SELECT count(*) FROM dry_coffee_purchase", Long.class);
+        Long before = jdbc.queryForObject("SELECT count(*) FROM compras_cafe_seco", Long.class);
 
         assertThatThrownBy(() -> purchases.create(request(
                 new PurchasePaymentRequest(net.subtract(BigDecimal.ONE), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null))))
                 .isInstanceOf(BusinessRuleException.class);
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM dry_coffee_purchase", Long.class)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM compras_cafe_seco", Long.class)).isEqualTo(before);
     }
 }

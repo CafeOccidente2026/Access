@@ -98,8 +98,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
     @Test
     void recalculatesEveryHistoricalElTamboPurchaseAndReportsExactMatchRate() throws IOException {
         Assumptions.assumeTrue(Files.exists(CSV_PATH),
-                "No esta " + CSV_PATH + " en este checkout (docs/ esta en .gitignore) - "
-                        + "se salta la validacion historica.");
+                "FALTA el CSV de Access " + CSV_PATH + " (docs/ es local, no esta en git).");
 
         Set<Integer> historicalInvoiceNumbers = validInvoiceNumbersFromCsv();
 
@@ -111,8 +110,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 .toList();
 
         Assumptions.assumeTrue(!historicalPurchases.isEmpty(),
-                "El CSV esta pero dry_coffee_purchase no tiene esas facturas todavia - corra "
-                        + "'python scripts/migrate_eltambo.py' contra la base de este entorno primero.");
+                "FALTAN en compras_cafe_seco las facturas del CSV: corra 'python scripts/migrate_eltambo.py' contra esta base.");
 
         Map<Long, ControlRecord> controlRecordByAgencyId = new HashMap<>();
         Map<String, List<DailyEntry>> historyByIdNumber = new HashMap<>();

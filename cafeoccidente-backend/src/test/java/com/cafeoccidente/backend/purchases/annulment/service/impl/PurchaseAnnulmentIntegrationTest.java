@@ -56,13 +56,13 @@ class PurchaseAnnulmentIntegrationTest {
     @BeforeEach
     void signInAsElTambo() {
         var user = users.findByUsername("admin_eltambo");
-        Assumptions.assumeTrue(user.isPresent(), "Sin usuario de El Tambo - corra la migracion primero.");
+        Assumptions.assumeTrue(user.isPresent(), "FALTA el usuario admin_eltambo: corra 'python scripts/migrate_eltambo.py' contra esta base.");
         SecurityUser principal = new SecurityUser(user.get());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
         agencyId = principal.getAgencyId();
-        Assumptions.assumeTrue(jdbc.queryForObject("SELECT count(*) FROM dry_coffee_purchase WHERE agency_id = ?"
-                + " AND status = 'ANULADA'", Long.class, agencyId) > 0, "Sin las anuladas de El Tambo migradas.");
+        Assumptions.assumeTrue(jdbc.queryForObject("SELECT count(*) FROM compras_cafe_seco WHERE agencia_id = ?"
+                + " AND estado = 'ANULADA'", Long.class, agencyId) > 0, "FALTAN las compras anuladas de El Tambo: corra 'python scripts/migrate_eltambo.py' contra esta base.");
     }
 
     @AfterEach
@@ -72,51 +72,51 @@ class PurchaseAnnulmentIntegrationTest {
 
     /** Una compra real de El Tambo, valida, todavia sin exportar y con pago mixto (efectivo + cheque). */
     private Map<String, Object> pendingMixedPurchase() {
-        return jdbc.queryForMap("SELECT p.id, p.invoice_number, p.total_stored_weight, p.base_price_load,"
-                + " p.product_code_id, p.special_type, p.purchase_date, p.net_kg FROM dry_coffee_purchase p"
-                + " JOIN purchase_payment_split s ON s.source = 'DRY' AND s.source_id = p.id"
-                + " WHERE p.agency_id = ? AND p.status = 'VALIDA' AND NOT p.exported AND s.check_amount > 0"
+        return jdbc.queryForMap("SELECT p.id, p.numero_factura, p.peso_tot_alm, p.pr_base_cps,"
+                + " p.producto_id, p.especial, p.fecha_compra, p.kilos_netos FROM compras_cafe_seco p"
+                + " JOIN formas_pago_compras s ON s.origen = 'DRY' AND s.origen_id = p.id"
+                + " WHERE p.agencia_id = ? AND p.estado = 'VALIDA' AND NOT p.exportado AND s.cheque > 0"
                 + " ORDER BY p.id LIMIT 1", agencyId);
     }
 
     private void inventoryEntry(Map<String, Object> p, BigDecimal remainingKg) {
-        jdbc.update("INSERT INTO inventory_movement (purchase_module, purchase_id, agency_id, product_code_id,"
-                        + " special_type, invoice_number, purchase_date, sacos, gross_kg, net_kg, remaining_kg,"
-                        + " healthy_percentage, inventory_value, created_at, exported)"
+        jdbc.update("INSERT INTO inventarios (modulo_compra, compra_id, agencia_id, producto_id,"
+                        + " especial, numero_factura, fecha_compra, sacos, kilos_brutos, kilos_netos, saldo_kilos,"
+                        + " factor, vr_inventario, creado_en, exportado)"
                         + " VALUES ('DRY_COFFEE', ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 90, 1, now(), false)",
-                p.get("id"), agencyId, p.get("product_code_id"), p.get("special_type"), p.get("invoice_number"),
-                p.get("purchase_date"), p.get("net_kg"), p.get("net_kg"), remainingKg);
+                p.get("id"), agencyId, p.get("producto_id"), p.get("especial"), p.get("numero_factura"),
+                p.get("fecha_compra"), p.get("kilos_netos"), p.get("kilos_netos"), remainingKg);
     }
 
     @Test
     void annulsLikeAnularFactura() {
         Map<String, Object> p = pendingMixedPurchase();
         Long id = ((Number) p.get("id")).longValue();
-        String invoice = String.valueOf(p.get("invoice_number"));
-        inventoryEntry(p, (BigDecimal) p.get("net_kg"));
+        String invoice = String.valueOf(p.get("numero_factura"));
+        inventoryEntry(p, (BigDecimal) p.get("kilos_netos"));
 
         AnnulmentCandidate annulled = service.annul(agencyId, AnnulmentModule.DRY, id);
 
         assertThat(annulled.status()).isEqualTo("ANULADA");
         assertThat(annulled.netToPay()).isZero();
         assertThat(annulled.netKg()).isZero();
-        Map<String, Object> row = jdbc.queryForMap("SELECT * FROM dry_coffee_purchase WHERE id = ?", id);
-        for (String zero : List.of("bags_count", "gross_kg", "gross_value", "withholding", "healthy_percentage",
-                "healthy_unit_price", "costs", "cooperative_discount", "associate_contribution")) {
+        Map<String, Object> row = jdbc.queryForMap("SELECT * FROM compras_cafe_seco WHERE id = ?", id);
+        for (String zero : List.of("sacos", "kilos_brutos", "vr_bruto", "retefuente", "factor",
+                "pr_alm_sana", "costos", "descuento_cooperativo", "aporte_asociado")) {
             assertThat(((Number) row.get(zero)).doubleValue()).as(zero).isZero();
         }
         // AnularFactura no toca W_TotAlm ni Pr_Base_PC.
-        assertThat((BigDecimal) row.get("total_stored_weight")).isEqualByComparingTo((BigDecimal) p.get("total_stored_weight"));
-        assertThat((BigDecimal) row.get("base_price_load")).isEqualByComparingTo((BigDecimal) p.get("base_price_load"));
-        assertThat(row.get("check_number")).isNull();
-        assertThat(row.get("annulled_at")).isNotNull();
-        assertThat(row.get("annulled_by_user_id")).isNotNull();
-        assertThat(jdbc.queryForObject("SELECT cash_amount + check_amount + transfer_amount + card_amount"
-                + " FROM purchase_payment_split WHERE source = 'DRY' AND source_id = ?", BigDecimal.class, id)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM inventory_movement WHERE purchase_module = 'DRY_COFFEE'"
-                + " AND purchase_id = ?", Long.class, id)).isZero();
+        assertThat((BigDecimal) row.get("peso_tot_alm")).isEqualByComparingTo((BigDecimal) p.get("peso_tot_alm"));
+        assertThat((BigDecimal) row.get("pr_base_cps")).isEqualByComparingTo((BigDecimal) p.get("pr_base_cps"));
+        assertThat(row.get("numero_cheque")).isNull();
+        assertThat(row.get("anulado_en")).isNotNull();
+        assertThat(row.get("anulado_por_usuario_id")).isNotNull();
+        assertThat(jdbc.queryForObject("SELECT efectivo + cheque + transferencia + datafono"
+                + " FROM formas_pago_compras WHERE origen = 'DRY' AND origen_id = ?", BigDecimal.class, id)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM inventarios WHERE modulo_compra = 'DRY_COFFEE'"
+                + " AND compra_id = ?", Long.class, id)).isZero();
 
-        java.time.LocalDate date = ((java.sql.Date) p.get("purchase_date")).toLocalDate();
+        java.time.LocalDate date = ((java.sql.Date) p.get("fecha_compra")).toLocalDate();
         // Caja (Formas de Pago, todas las formas) y Suministros RP / LF ya no la tienen.
         assertThat(supplies.paymentMethods(agencyId, date, date, "*")).extracting(SuppliesReportRow::transactionId)
                 .doesNotContain(invoice);
@@ -131,15 +131,15 @@ class PurchaseAnnulmentIntegrationTest {
         assertThat(exported.values().get(PURCHASE_COLUMNS.indexOf("Forma_de_Pago"))).isEqualTo("ANULADA");
         assertThat((BigDecimal) exported.values().get(PURCHASE_COLUMNS.indexOf("FPch"))).isZero();
 
-        assertThat(vendors.beneficiary(agencyId, (String) row.get("id_number"), null, null))
+        assertThat(vendors.beneficiary(agencyId, (String) row.get("cedula"), null, null))
                 .filteredOn(b -> b.invoiceNumber().toString().equals(invoice))
                 .singleElement().satisfies(b -> assertThat(b.netToPay()).isZero());
     }
 
     @Test
     void cannotAnnulWhatWasAlreadyExported() {
-        Long id = jdbc.queryForObject("SELECT id FROM dry_coffee_purchase WHERE agency_id = ? AND status = 'VALIDA'"
-                + " AND exported ORDER BY id LIMIT 1", Long.class, agencyId);
+        Long id = jdbc.queryForObject("SELECT id FROM compras_cafe_seco WHERE agencia_id = ? AND estado = 'VALIDA'"
+                + " AND exportado ORDER BY id LIMIT 1", Long.class, agencyId);
         assertThatThrownBy(() -> service.annul(agencyId, AnnulmentModule.DRY, id))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("IMPOSIBLE ANULAR EL DOCUMENTO SOPORTE PORQUE YA EXPORTO LA INFORMACION.");
@@ -155,8 +155,8 @@ class PurchaseAnnulmentIntegrationTest {
 
     @Test
     void cannotAnnulTwiceNorFromAnotherAgency() {
-        Long annulled = jdbc.queryForObject("SELECT id FROM dry_coffee_purchase WHERE agency_id = ? AND status = 'ANULADA'"
-                + " AND NOT exported ORDER BY id LIMIT 1", Long.class, agencyId);
+        Long annulled = jdbc.queryForObject("SELECT id FROM compras_cafe_seco WHERE agencia_id = ? AND estado = 'ANULADA'"
+                + " AND NOT exportado ORDER BY id LIMIT 1", Long.class, agencyId);
         assertThatThrownBy(() -> service.annul(agencyId, AnnulmentModule.DRY, annulled))
                 .isInstanceOf(BusinessRuleException.class).hasMessage("El documento soporte ya esta anulado");
         Long pending = ((Number) pendingMixedPurchase().get("id")).longValue();
@@ -167,7 +167,7 @@ class PurchaseAnnulmentIntegrationTest {
     @Test
     void findsTheInvoiceInEveryModuleOfTheAgency() {
         Map<String, Object> p = pendingMixedPurchase();
-        assertThat(service.findByInvoice(agencyId, (Integer) p.get("invoice_number")))
+        assertThat(service.findByInvoice(agencyId, (Integer) p.get("numero_factura")))
                 .singleElement().satisfies(c -> {
                     assertThat(c.module()).isEqualTo(AnnulmentModule.DRY);
                     assertThat(c.status()).isEqualTo("VALIDA");
