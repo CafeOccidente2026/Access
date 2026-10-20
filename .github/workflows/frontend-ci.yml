@@ -4,13 +4,15 @@ name: Frontend CI
 # hacer push directo a main (por si alguna vez se permite excepcionalmente).
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "cafe-occidente-frontend/**"
+      - ".github/workflows/frontend-ci.yml"
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "cafe-occidente-frontend/**"
+      - ".github/workflows/frontend-ci.yml"
 
 jobs:
   build:
@@ -33,6 +35,10 @@ jobs:
 
       - name: Instalar dependencias
         run: npm ci
+
+      # Vitest con jsdom (sin navegador): corre en Node, no requiere Chrome en Ubuntu.
+      - name: Correr pruebas
+        run: npx ng test --watch=false
 
       - name: Compilar (build de produccion)
         run: npm run build

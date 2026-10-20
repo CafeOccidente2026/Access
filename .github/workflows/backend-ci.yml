@@ -6,13 +6,15 @@ name: Backend CI
 # migraciones de Flyway antes de que se mezcle a main.
 on:
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
+      - ".github/workflows/backend-ci.yml"
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
+      - ".github/workflows/backend-ci.yml"
 
 jobs:
   build:
