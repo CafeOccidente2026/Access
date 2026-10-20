@@ -9,10 +9,12 @@ on:
     branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
+      - ".github/workflows/backend-ci.yml"
   push:
     branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
+      - ".github/workflows/backend-ci.yml"
 
 jobs:
   build:

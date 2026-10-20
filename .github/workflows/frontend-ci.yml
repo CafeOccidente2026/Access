@@ -7,10 +7,12 @@ on:
     branches: [main, develop]
     paths:
       - "cafe-occidente-frontend/**"
+      - ".github/workflows/frontend-ci.yml"
   push:
     branches: [main, develop]
     paths:
       - "cafe-occidente-frontend/**"
+      - ".github/workflows/frontend-ci.yml"
 
 jobs:
   build:
