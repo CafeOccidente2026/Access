@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
@@ -25,6 +26,7 @@ import lombok.Setter;
  * Pr_AlmDefec se usen en un calculo en Form_VERDES.bas.
  */
 @Entity
+@Table(name = "compras_cafe_verde")
 @Getter
 @Setter
 public class GreenCoffeePurchase {
@@ -33,140 +35,140 @@ public class GreenCoffeePurchase {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "purchase_date", nullable = false)
+    @Column(name = "fecha_compra", nullable = false)
     private LocalDate purchaseDate;
 
     /** Factura: "Para asignar # factura verdes" = MAX(Factura de este modulo) + 1. */
-    @Column(name = "invoice_number", nullable = false, unique = true)
+    @Column(name = "numero_factura", nullable = false, unique = true)
     private Integer invoiceNumber;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
     @ManyToOne
-    @JoinColumn(name = "fund_id", nullable = false)
+    @JoinColumn(name = "fondo_id", nullable = false)
     private Fund fund;
 
     /** Especial: fijo "CV" (RowSource="CV" en Cuadro combinado61 de VERDES.txt). */
-    @Column(name = "special_type", nullable = false)
+    @Column(name = "especial", nullable = false)
     private String specialType;
 
     @ManyToOne
-    @JoinColumn(name = "product_code_id", nullable = false)
+    @JoinColumn(name = "producto_id", nullable = false)
     private ProductCode productCode;
 
-    @Column(name = "announcement_number", nullable = false)
+    @Column(name = "numero_anuncio", nullable = false)
     private String announcementNumber;
 
-    @Column(name = "announcement_date", nullable = false)
+    @Column(name = "fecha_anuncio", nullable = false)
     private LocalDate announcementDate;
 
     /** Pr_Base_PC = Texto91 (Pr_Base_CPS del anuncio) - (Costos * BaseCarga). Cedula_AfterUpdate. */
-    @Column(name = "base_price_load", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_base_cps", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePriceLoad;
 
-    @Column(name = "id_number", nullable = false)
+    @Column(name = "cedula", nullable = false)
     private String idNumber;
 
-    @Column(name = "first_name", nullable = false)
+    @Column(name = "nombres", nullable = false)
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @Column(name = "apellidos", nullable = false)
     private String lastName;
 
     /** Tipo: S = asociado, C = no asociado (Castigo_lostFocus). */
-    @Column(name = "grower_type", nullable = false)
+    @Column(name = "tipo_vendedor", nullable = false)
     private String growerType;
 
-    @Column(nullable = false)
+    @Column(name = "direccion", nullable = false)
     private String address;
 
-    @Column(nullable = false)
+    @Column(name = "celular", nullable = false)
     private String cellphone;
 
-    @Column(name = "bags_count", nullable = false)
+    @Column(name = "sacos", nullable = false)
     private Integer bagsCount;
 
-    @Column(name = "gross_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "kilos_brutos", nullable = false, precision = 10, scale = 2)
     private BigDecimal grossKg;
 
-    @Column(name = "tare_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "destare", nullable = false, precision = 10, scale = 2)
     private BigDecimal tareKg;
 
     /** Kilos_Verdes = Kilos_Brutos - Destare (Destare_LostFocus). */
-    @Column(name = "green_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "kilos_verdes", nullable = false, precision = 10, scale = 2)
     private BigDecimal greenKg;
 
     /** Kilos_Netos = Kilos_Verdes * PorcVerde / 100 (Destare_LostFocus). */
-    @Column(name = "net_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "kilos_netos", nullable = false, precision = 10, scale = 2)
     private BigDecimal netKg;
 
     /** Pr_AlmSana vigente en el anuncio (snapshot, se muestra como "Pr Alm Sana"). */
-    @Column(name = "healthy_unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_alm_sana", nullable = false, precision = 15, scale = 2)
     private BigDecimal healthyUnitPrice;
 
     /** Pr_AlmDefec: snapshot del anuncio, no participa en ninguna formula de VERDES. */
-    @Column(name = "defective_unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_alm_defec", nullable = false, precision = 15, scale = 2)
     private BigDecimal defectiveUnitPrice;
 
     /** Bonificacion: snapshot del anuncio, no participa en ninguna formula de VERDES. */
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "bonificacion", nullable = false, precision = 15, scale = 2)
     private BigDecimal bonus;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "costos", nullable = false, precision = 15, scale = 2)
     private BigDecimal costs;
 
     /** Castigo: capturado y mostrado, dispara la cascada (Castigo_lostFocus) pero no se resta en
      *  ninguna formula de VERDES (a diferencia de Cafe Seco). */
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "castigo", nullable = false, precision = 15, scale = 2)
     private BigDecimal penalty;
 
     /** Vr_Kilo_Comp: precio de compra digitado a mano (Vr_Kilo_Comp_AfterUpdate: Vr_Kilo = Vr_Kilo_Comp). */
-    @Column(name = "comp_kg_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_kilo_comp", nullable = false, precision = 15, scale = 2)
     private BigDecimal compKgPrice;
 
-    @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_kilo", nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice;
 
     /** Vr_Bruto = Vr_Kilo_Comp * Kilos_Verdes (no Kilos_Netos - Castigo_lostFocus). */
-    @Column(name = "gross_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_bruto", nullable = false, precision = 15, scale = 2)
     private BigDecimal grossValue;
 
-    @Column(name = "inventory_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_inventario", nullable = false, precision = 15, scale = 2)
     private BigDecimal inventoryValue;
 
-    @Column(name = "associate_contribution", nullable = false, precision = 15, scale = 2)
+    @Column(name = "aporte_asociado", nullable = false, precision = 15, scale = 2)
     private BigDecimal associateContribution;
 
-    @Column(name = "cooperative_discount", nullable = false, precision = 15, scale = 2)
+    @Column(name = "descuento_cooperativo", nullable = false, precision = 15, scale = 2)
     private BigDecimal cooperativeDiscount;
 
     /** Asociacion (checkbox): si esta marcado, el caficultor esta exento de Retefuente. */
-    @Column(name = "withholding_exempt", nullable = false)
+    @Column(name = "exento_retencion", nullable = false)
     private boolean withholdingExempt;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "retefuente", nullable = false, precision = 15, scale = 2)
     private BigDecimal withholding;
 
-    @Column(name = "shrinkage_discount", nullable = false, precision = 15, scale = 2)
+    @Column(name = "descuento_financiero", nullable = false, precision = 15, scale = 2)
     private BigDecimal shrinkageDiscount;
 
-    @Column(name = "other_discounts", nullable = false, precision = 15, scale = 2)
+    @Column(name = "otros_descuentos", nullable = false, precision = 15, scale = 2)
     private BigDecimal otherDiscounts;
 
-    @Column(name = "net_to_pay", nullable = false, precision = 15, scale = 2)
+    @Column(name = "neto_a_pagar", nullable = false, precision = 15, scale = 2)
     private BigDecimal netToPay;
 
-    @Column(name = "payment_method", nullable = false)
+    @Column(name = "forma_pago", nullable = false)
     private String paymentMethod;
 
-    @Column(name = "check_number")
+    @Column(name = "numero_cheque")
     private String checkNumber;
 
-    @Column(name = "created_by_user_id", nullable = false)
+    @Column(name = "creado_por_usuario_id", nullable = false)
     private Long createdByUserId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
 }

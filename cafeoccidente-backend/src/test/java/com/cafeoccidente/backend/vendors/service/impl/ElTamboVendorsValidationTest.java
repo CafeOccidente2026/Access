@@ -49,11 +49,11 @@ class ElTamboVendorsValidationTest {
 
     @BeforeEach
     void requireMigratedData() {
-        Assumptions.assumeTrue(Files.exists(DIR.resolve("compras_migrar.csv")), "Sin CSV de Access - se salta.");
-        agencyId = jdbc.queryForObject("SELECT id FROM agency WHERE access_agency_value = 'EL TAMBO'", Long.class);
+        Assumptions.assumeTrue(Files.exists(DIR.resolve("compras_migrar.csv")), "FALTA el CSV de Access " + DIR.resolve("compras_migrar.csv") + " (docs/ es local, no esta en git).");
+        agencyId = jdbc.queryForObject("SELECT id FROM agencias WHERE nombre_access = 'EL TAMBO'", Long.class);
         Assumptions.assumeTrue(jdbc.queryForObject(
-                "SELECT count(*) FROM dry_coffee_purchase WHERE agency_id = ?", Long.class, agencyId) > 0,
-                "Compras sin migrar - corra scripts/migrate_eltambo.py primero.");
+                "SELECT count(*) FROM compras_cafe_seco WHERE agencia_id = ?", Long.class, agencyId) > 0,
+                "FALTAN las compras de El Tambo en compras_cafe_seco: corra 'python scripts/migrate_eltambo.py' contra esta base.");
     }
 
     private static List<Map<String, String>> csv(String name) throws IOException {

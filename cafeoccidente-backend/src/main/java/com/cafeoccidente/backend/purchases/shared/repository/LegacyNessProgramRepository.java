@@ -10,7 +10,7 @@ public interface LegacyNessProgramRepository extends JpaRepository<LegacyNessPro
 
     /** Cedula en staging_legacy_ness trae sufijo ".0" (artefacto del CSV); se normaliza en SQL para cruzar. */
     @Query(
-            value = "SELECT * FROM staging_legacy_ness WHERE regexp_replace(cedula, '\\.0+$', '') = :idNumber",
+            value = "SELECT * FROM cupos_ness WHERE regexp_replace(cedula, '\\.0+$', '') = :idNumber",
             nativeQuery = true)
     List<LegacyNessProgram> findByNormalizedCedula(@Param("idNumber") String idNumber);
 }

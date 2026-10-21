@@ -5,6 +5,6 @@ import jakarta.persistence.Table;
 
 /** Tabla Caja de Access (Caja suministros, Ajustes Caja). */
 @Entity
-@Table(name = "cash_entry")
+@Table(name = "movimientos_caja")
 public class CashEntry extends LedgerEntry {
 }

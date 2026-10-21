@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import lombok.Setter;
  * el boton "Verificar Entregados" del VBA original.
  */
 @Entity
+@Table(name = "cupos_anuncios")
 @Getter
 @Setter
 public class AnnouncementQuota {
@@ -29,9 +31,9 @@ public class AnnouncementQuota {
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "agency_announcement_number_id", nullable = false, unique = true)
+    @JoinColumn(name = "anuncio_agencia_id", nullable = false, unique = true)
     private AgencyAnnouncementNumber agencyAnnouncementNumber;
 
-    @Column(name = "assigned_quota", nullable = false, precision = 10, scale = 2)
+    @Column(name = "cupo", nullable = false, precision = 10, scale = 2)
     private BigDecimal assignedQuota;
 }

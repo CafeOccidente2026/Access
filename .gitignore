@@ -49,7 +49,6 @@ capturas
 target/
 *.class
 *.jar
-.mvn/
 *.iml
 
 docs/

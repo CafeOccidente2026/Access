@@ -5,11 +5,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 /** Fondo de compra (ej: RP = Resolucion Propia, LF = Libre Formacion). */
 @Entity
+@Table(name = "fondos")
 @Getter
 @Setter
 public class Fund {
@@ -18,12 +20,12 @@ public class Fund {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "codigo", nullable = false, unique = true)
     private String code;
 
-    @Column(nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean active = true;
 }

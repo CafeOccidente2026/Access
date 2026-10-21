@@ -46,11 +46,11 @@ class ElTamboCashBookMigrationValidationTest {
     @SuppressWarnings("null")
     @Test
     void cashBookMatchesAccessAtCutoff() throws IOException {
-        Assumptions.assumeTrue(Files.exists(CSV_PATH), "No esta " + CSV_PATH + " - se salta.");
-        Long agencyId = jdbc.queryForObject("SELECT id FROM agency WHERE access_agency_value = 'EL TAMBO'", Long.class);
+        Assumptions.assumeTrue(Files.exists(CSV_PATH), "FALTA el CSV de Access " + CSV_PATH + " (docs/ es local, no esta en git).");
+        Long agencyId = jdbc.queryForObject("SELECT id FROM agencias WHERE nombre_access = 'EL TAMBO'", Long.class);
         Assumptions.assumeTrue(jdbc.queryForObject(
-                "SELECT count(*) FROM cash_entry WHERE agency_id = ?", Long.class, agencyId) > 0,
-                "Caja de El Tambo sin migrar - corra scripts/migrate_eltambo.py primero.");
+                "SELECT count(*) FROM movimientos_caja WHERE agencia_id = ?", Long.class, agencyId) > 0,
+                "FALTA la caja de El Tambo en movimientos_caja: corra 'python scripts/migrate_eltambo.py' contra esta base.");
 
         List<String> lines = Files.readAllLines(CSV_PATH, StandardCharsets.UTF_8);
         List<String> header = Arrays.asList(lines.get(0).split(","));

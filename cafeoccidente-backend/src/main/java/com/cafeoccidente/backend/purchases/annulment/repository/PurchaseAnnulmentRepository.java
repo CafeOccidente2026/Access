@@ -24,17 +24,17 @@ public class PurchaseAnnulmentRepository {
     }
 
     private static String select(AnnulmentModule module) {
-        return "SELECT '" + module.name() + "' AS module, p.id, p.agency_id, a.name AS agency_name, a.invoice_prefix,"
-                + " p.invoice_number, p.purchase_date, f.code AS fund_code, p.id_number, p.first_name, p.last_name,"
-                + " p.special_type, p.net_kg, p.net_to_pay, p.payment_method, p.status, p.exported, p.annulled_at"
-                + " FROM " + module.table + " p JOIN agency a ON a.id = p.agency_id JOIN fund f ON f.id = p.fund_id";
+        return "SELECT '" + module.name() + "' AS module, p.id, p.agencia_id, a.nombre AS agency_name, a.prefijo_factura,"
+                + " p.numero_factura, p.fecha_compra, f.codigo AS fund_code, p.cedula, p.nombres, p.apellidos,"
+                + " p.especial, p.kilos_netos, p.neto_a_pagar, p.forma_pago, p.estado, p.exportado, p.anulado_en"
+                + " FROM " + module.table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
     }
 
     /** Cns_Compras por numero de factura; cada modulo numera aparte, asi que puede haber mas de una. */
     public List<AnnulmentCandidate> findByInvoice(Long agencyId, Integer invoiceNumber) {
         String sql = Arrays.stream(AnnulmentModule.values())
-                .map(m -> select(m) + " WHERE p.invoice_number = :invoice"
-                        + " AND (CAST(:agencyId AS BIGINT) IS NULL OR p.agency_id = :agencyId)")
+                .map(m -> select(m) + " WHERE p.numero_factura = :invoice"
+                        + " AND (CAST(:agencyId AS BIGINT) IS NULL OR p.agencia_id = :agencyId)")
                 .collect(Collectors.joining(" UNION ALL ")) + " ORDER BY agency_name, module";
         return jdbc.query(sql, new MapSqlParameterSource().addValue("invoice", invoiceNumber).addValue("agencyId", agencyId),
                 (rs, i) -> toCandidate(rs));
@@ -49,9 +49,9 @@ public class PurchaseAnnulmentRepository {
 
     /** Entradas de inventario de la compra que ya tuvieron salidas (remision) o saldo menor a lo comprado. */
     public boolean hasInventoryExits(AnnulmentModule module, Long id) {
-        Boolean exits = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM inventory_movement im"
-                        + " WHERE im.purchase_module = :module AND im.purchase_id = :id AND (im.remaining_kg < im.net_kg"
-                        + " OR EXISTS (SELECT 1 FROM remission_line rl WHERE rl.inventory_movement_id = im.id)))",
+        Boolean exits = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM inventarios im"
+                        + " WHERE im.modulo_compra = :module AND im.compra_id = :id AND (im.saldo_kilos < im.kilos_netos"
+                        + " OR EXISTS (SELECT 1 FROM remisiones_detalle rl WHERE rl.inventario_id = im.id)))",
                 new MapSqlParameterSource().addValue("module", module.inventoryModule).addValue("id", id), Boolean.class);
         return Boolean.TRUE.equals(exits);
     }
@@ -65,37 +65,37 @@ public class PurchaseAnnulmentRepository {
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("id", id).addValue("userId", userId)
                 .addValue("module", module.name()).addValue("inventoryModule", module.inventoryModule);
         String zeros = module.zeroed.stream().map(c -> c + " = 0").collect(Collectors.joining(", "));
-        int updated = jdbc.update("UPDATE " + module.table + " SET status = 'ANULADA', annulled_at = now(),"
-                + " annulled_by_user_id = :userId, check_number = NULL, " + zeros
-                + " WHERE id = :id AND status = 'VALIDA' AND NOT exported", params);
+        int updated = jdbc.update("UPDATE " + module.table + " SET estado = 'ANULADA', anulado_en = now(),"
+                + " anulado_por_usuario_id = :userId, numero_cheque = NULL, " + zeros
+                + " WHERE id = :id AND estado = 'VALIDA' AND NOT exportado", params);
         if (updated != 1) {
             throw new IllegalStateException("La compra cambio mientras se anulaba: " + module + " " + id);
         }
-        jdbc.update("UPDATE purchase_payment_split SET cash_amount = 0, check_amount = 0, transfer_amount = 0,"
-                + " card_amount = 0, check_number = NULL WHERE source = :module AND source_id = :id", params);
-        jdbc.update("DELETE FROM inventory_movement WHERE purchase_module = :inventoryModule AND purchase_id = :id", params);
+        jdbc.update("UPDATE formas_pago_compras SET efectivo = 0, cheque = 0, transferencia = 0,"
+                + " datafono = 0, numero_cheque = NULL WHERE origen = :module AND origen_id = :id", params);
+        jdbc.update("DELETE FROM inventarios WHERE modulo_compra = :inventoryModule AND compra_id = :id", params);
     }
 
     private static AnnulmentCandidate toCandidate(ResultSet rs) throws SQLException {
-        Timestamp annulledAt = rs.getTimestamp("annulled_at");
+        Timestamp annulledAt = rs.getTimestamp("anulado_en");
         return new AnnulmentCandidate(
                 AnnulmentModule.valueOf(rs.getString("module")),
                 rs.getLong("id"),
-                rs.getLong("agency_id"),
+                rs.getLong("agencia_id"),
                 rs.getString("agency_name"),
-                rs.getString("invoice_prefix"),
-                (Integer) rs.getObject("invoice_number"),
-                rs.getObject("purchase_date", LocalDate.class),
+                rs.getString("prefijo_factura"),
+                (Integer) rs.getObject("numero_factura"),
+                rs.getObject("fecha_compra", LocalDate.class),
                 rs.getString("fund_code"),
-                rs.getString("id_number"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("special_type"),
-                rs.getBigDecimal("net_kg"),
-                rs.getBigDecimal("net_to_pay"),
-                rs.getString("payment_method"),
-                rs.getString("status"),
-                rs.getBoolean("exported"),
+                rs.getString("cedula"),
+                rs.getString("nombres"),
+                rs.getString("apellidos"),
+                rs.getString("especial"),
+                rs.getBigDecimal("kilos_netos"),
+                rs.getBigDecimal("neto_a_pagar"),
+                rs.getString("forma_pago"),
+                rs.getString("estado"),
+                rs.getBoolean("exportado"),
                 annulledAt == null ? null : annulledAt.toInstant());
     }
 }

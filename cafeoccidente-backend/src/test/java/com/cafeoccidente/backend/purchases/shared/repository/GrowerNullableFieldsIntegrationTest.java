@@ -34,16 +34,16 @@ class GrowerNullableFieldsIntegrationTest {
         growerRepository.saveAndFlush(grower);
 
         assertThat(jdbc.queryForMap(
-                "SELECT last_name, agency_id, is_association FROM grower WHERE id_number = 'V34-TEST-0001'"))
-                .containsEntry("last_name", null)
-                .containsEntry("agency_id", null)
-                .containsEntry("is_association", true);
+                "SELECT primer_apellido, agencia_id, asociacion FROM terceros WHERE identificacion = 'V34-TEST-0001'"))
+                .containsEntry("primer_apellido", null)
+                .containsEntry("agencia_id", null)
+                .containsEntry("asociacion", true);
     }
 
     @Test
     void futurePurchaseLastNameAcceptsNull() {
         assertThat(jdbc.queryForObject("SELECT is_nullable FROM information_schema.columns"
-                + " WHERE table_name = 'future_purchase' AND column_name = 'last_name'", String.class))
+                + " WHERE table_name = 'compras_anunciadas' AND column_name = 'apellidos'", String.class))
                 .isEqualTo("YES");
     }
 }
