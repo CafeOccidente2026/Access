@@ -63,7 +63,10 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
 - `develop` es la rama base de trabajo. Cada fase o historia va en su propia rama, creada desde
   `develop` actualizado: `feature/<fase-o-hu>-<descripcion-corta>`
   (ej. `feature/hu-01-login-roles`, `feature/bd-esquema-espanol`).
-- Al terminar se abre un PR a `develop`. El usuario lo revisa y hace el merge.
+- Al terminar se abre un PR a `develop` con **merge commit** (no squash). Se esperan los checks en
+  verde; el usuario lo revisa y hace el merge.
+- Después del merge: `git switch develop && git pull`, borrar la rama local con `git branch -d`
+  (nunca `-D`) y la remota. La siguiente rama sale de ese `develop` actualizado.
 - `feature/daniers` y `feature/juan` no se modifican: quedan como respaldo.
 - Commits pequeños y frecuentes: uno por cambio lógico, no uno gigante al final.
 - Mensajes en español, imperativo, máximo ~60 caracteres, sin punto final y sin emojis.
