@@ -1,5 +1,6 @@
 -- Datos semilla en español: las mismas filas (con sus ids) que dejaban V1-V37.
--- Incluye datos de prueba que se limpian en su HU (D13 del mapeo).
+-- Incluye datos de prueba que se limpian en su HU (D13 del mapeo). Los anuncios de prueba llevan
+-- CURRENT_DATE, igual que en V4 y V14.
 
 INSERT INTO agencias (id, nombre, activa, nombre_access, prefijo_factura) VALUES
     (1, 'Buesaco', true, 'BUESACO1 OCCIDENTE', 'SDBU'),
@@ -89,14 +90,14 @@ INSERT INTO roles (id, nombre) VALUES
     (2, 'USER');
 
 INSERT INTO anuncios (id, numero_anuncio, fecha_anuncio, pr_base_cps, agencia_id, fondo_id, activo, pr_alm_defec, pr_alm_sana, bonificacion, costos, especial, sobrepr_carga_esp, pr_punto, pr_inc_calidad) VALUES
-    (1, '1', '2026-10-20'::date, 1200000.00, 1, 1, true, 8000.00, 12000.00, 100.00, 692.00, 'ESTANDAR', NULL, NULL, NULL),
-    (2, '1', '2026-10-20'::date, 1200000.00, 1, 1, true, 0.00, 1200000.00, 0.00, 692.00, 'CV', NULL, NULL, NULL),
-    (3, '1', '2026-10-20'::date, 1200000.00, 1, 1, true, 0.00, 1200000.00, 0.00, 692.00, 'PASILLA', NULL, NULL, NULL);
+    (1, '1', CURRENT_DATE, 1200000.00, 1, 1, true, 8000.00, 12000.00, 100.00, 692.00, 'ESTANDAR', NULL, NULL, NULL),
+    (2, '1', CURRENT_DATE, 1200000.00, 1, 1, true, 0.00, 1200000.00, 0.00, 692.00, 'CV', NULL, NULL, NULL),
+    (3, '1', CURRENT_DATE, 1200000.00, 1, 1, true, 0.00, 1200000.00, 0.00, 692.00, 'PASILLA', NULL, NULL, NULL);
 
 INSERT INTO anuncios_agencias (id, agencia_id, anuncio_id, numero_anuncio, fecha_asignacion, exportado) VALUES
-    (1, 1, 1, 1, '2026-10-20'::date, false),
-    (2, 1, 2, 2, '2026-10-20'::date, false),
-    (3, 1, 3, 3, '2026-10-20'::date, false);
+    (1, 1, 1, 1, CURRENT_DATE, false),
+    (2, 1, 2, 2, CURRENT_DATE, false),
+    (3, 1, 3, 3, CURRENT_DATE, false);
 
 -- Las secuencias quedan donde las dejaban V1-V37 (algunas tablas se borraron y resembraron).
 SELECT setval('anuncios_agencias_id_seq', 3, true);
