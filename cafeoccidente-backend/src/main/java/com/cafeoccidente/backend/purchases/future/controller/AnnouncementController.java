@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.HuskAnnouncementRequest;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/announcements")
+@PreAuthorize(Roles.ADMIN_USER)
 public class AnnouncementController {
 
     private final AnnouncementService announcementService;
@@ -32,24 +34,24 @@ public class AnnouncementController {
         return announcementService.findLatest(agencyId, fundId, specialType);
     }
 
-    /** "Actualizar Anuncio con Factor": solo ADMIN, siempre crea un anuncio nuevo. */
+    /** "Actualizar Anuncio con Factor" (Administrador y Operaciones, RF-08): siempre crea un anuncio nuevo. */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Roles.ADMIN_OPS)
     @ResponseStatus(HttpStatus.CREATED)
     public AnnouncementResponse create(@Valid @RequestBody AnnouncementRequest request) {
         return announcementService.create(request);
     }
 
-    /** "Actualizar Anuncio Pasilla": solo ADMIN, Fondo RP y Especial PASILLA van fijos. */
+    /** "Actualizar Anuncio Pasilla" (RF-09): Fondo RP y Especial PASILLA van fijos. */
     @PostMapping("/husk")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Roles.ADMIN_OPS)
     @ResponseStatus(HttpStatus.CREATED)
     public AnnouncementResponse createHusk(@Valid @RequestBody HuskAnnouncementRequest request) {
         return announcementService.createHusk(request);
     }
 
     @GetMapping("/history")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(Roles.ADMIN_OPS)
     public List<AnnouncementResponse> history() {
         return announcementService.history();
     }

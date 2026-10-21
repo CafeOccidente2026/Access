@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.husk.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.husk.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseResponse;
@@ -8,6 +9,7 @@ import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseCalculation;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/purchases/husk")
+@PreAuthorize(Roles.ADMIN_USER)
 public class HuskPurchaseController {
 
     private final HuskPurchaseService huskPurchaseService;

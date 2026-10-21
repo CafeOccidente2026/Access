@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.vendors.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.vendors.dto.AssociatePage;
 import com.cafeoccidente.backend.vendors.dto.AssociateResponse;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/vendors")
+@PreAuthorize(Roles.ADMIN_USER)
 public class VendorController {
 
     private final VendorService vendorService;

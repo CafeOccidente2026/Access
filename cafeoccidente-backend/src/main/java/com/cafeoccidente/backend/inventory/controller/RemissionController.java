@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
 import com.cafeoccidente.backend.inventory.dto.RemissionResponse;
@@ -7,6 +8,7 @@ import com.cafeoccidente.backend.inventory.service.RemissionService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/remissions")
+@PreAuthorize(Roles.ADMIN_USER)
 public class RemissionController {
 
     private final RemissionService remissionService;

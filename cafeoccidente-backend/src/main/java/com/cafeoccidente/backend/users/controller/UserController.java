@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.users.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.users.dto.UserRequest;
 import com.cafeoccidente.backend.users.dto.UserResponse;
 import com.cafeoccidente.backend.users.service.UserService;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(Roles.ADMIN)
 public class UserController {
 
     private final UserService userService;

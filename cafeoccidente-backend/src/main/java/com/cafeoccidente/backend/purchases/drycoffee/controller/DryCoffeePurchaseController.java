@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.drycoffee.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/purchases/dry-coffee")
+@PreAuthorize(Roles.ADMIN_USER)
 public class DryCoffeePurchaseController {
 
     private final DryCoffeePurchaseService dryCoffeePurchaseService;
@@ -39,6 +42,7 @@ public class DryCoffeePurchaseController {
     }
 
     @GetMapping("/by-date")
+    @PreAuthorize(Roles.ADMIN)
     public List<DryCoffeePurchaseResponse> findByDate(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return dryCoffeePurchaseService.findByDate(date);
