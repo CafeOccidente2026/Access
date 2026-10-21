@@ -29,6 +29,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // CSRF desactivado a proposito: la API es STATELESS y se autentica solo con el JWT de la
+        // cabecera Authorization (JwtAuthenticationFilter). No hay cookies de sesion que el navegador
+        // mande solo, asi que un sitio ajeno no puede falsificar una peticion autenticada.
         http.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

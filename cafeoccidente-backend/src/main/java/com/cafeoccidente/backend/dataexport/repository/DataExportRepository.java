@@ -65,6 +65,10 @@ public class DataExportRepository {
             "compras_cafes_otros", "OTHER",
             "compras_ferti_futuro", "FERTI");
 
+    /** Tablas que se marcan como exportadas, con la fecha que usa "Exportado Especial". Es la lista
+     *  fija de tablas permitidas: el nombre de tabla va concatenado al SQL y no puede salir de afuera. */
+    private static final Map<String, String> EXPORT_DATE_COLUMNS = exportDateColumns();
+
     /** Numero de anuncio de Access: las compras nuevas lo guardan como "SDTA-3510". */
     private static final String PLAIN_ANNOUNCEMENT = "regexp_replace(p.numero_anuncio, '^.*-', '')";
 
@@ -136,6 +140,24 @@ public class DataExportRepository {
         this.jdbc = jdbc;
     }
 
+    private static Map<String, String> exportDateColumns() {
+        Map<String, String> columns = new LinkedHashMap<>();
+        PURCHASE_TABLES.keySet().forEach(t -> columns.put(t, "fecha_compra"));
+        columns.put("terceros", "fecha_afiliacion");
+        columns.put("compras_anunciadas", "fecha_anuncio");
+        columns.put("inventarios", "fecha_compra");
+        columns.put("remisiones", "fecha_remision");
+        columns.put("anuncios_agencias", "fecha_asignacion");
+        return columns;
+    }
+
+    private static String requireAllowedTable(String table, Collection<String> allowed) {
+        if (!allowed.contains(table)) {
+            throw new IllegalArgumentException("Tabla no permitida en la exportacion: " + table);
+        }
+        return table;
+    }
+
     private static Map<String, String> dryLike() {
         return Map.ofEntries(
                 Map.entry("Sacos", "p.sacos"), Map.entry("Pr_AlmSana", "p.pr_alm_sana"),
@@ -154,7 +176,7 @@ public class DataExportRepository {
     }
 
     private static String purchaseSelect(String table) {
-        Map<String, String> specific = PURCHASE_SPECIFIC.get(table);
+        Map<String, String> specific = PURCHASE_SPECIFIC.get(requireAllowedTable(table, PURCHASE_TABLES.keySet()));
         String columns = PURCHASE_COLUMNS.stream()
                 // NULL tipado: en el UNION una columna puede ser numerica en un modulo y vacia en otro.
                 .map(c -> specific.getOrDefault(c, PURCHASE_COMMON.getOrDefault(c, "CAST(NULL AS NUMERIC)")) + " AS \"" + c + "\"")
@@ -267,6 +289,7 @@ public class DataExportRepository {
 
     /** Queries "Exportado", "ExportadodeSocios", etc.: marca exactamente las filas que se exportaron. */
     public void markExported(String table, Collection<Long> ids) {
+        requireAllowedTable(table, EXPORT_DATE_COLUMNS.keySet());
         if (!ids.isEmpty()) {
             jdbc.update("UPDATE " + table + " SET exportado = TRUE WHERE id IN (:ids)", new MapSqlParameterSource("ids", ids));
         }
@@ -279,15 +302,8 @@ public class DataExportRepository {
     public void unmarkRange(Long agencyId, LocalDate from, LocalDate to) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("agencyId", agencyId).addValue("from", from).addValue("to", to);
-        Map<String, String[]> targets = new LinkedHashMap<>();
-        PURCHASE_TABLES.keySet().forEach(t -> targets.put(t, new String[] {"agencia_id", "fecha_compra"}));
-        targets.put("terceros", new String[] {"agencia_id", "fecha_afiliacion"});
-        targets.put("compras_anunciadas", new String[] {"agencia_id", "fecha_anuncio"});
-        targets.put("inventarios", new String[] {"agencia_id", "fecha_compra"});
-        targets.put("remisiones", new String[] {"agencia_id", "fecha_remision"});
-        targets.put("anuncios_agencias", new String[] {"agencia_id", "fecha_asignacion"});
-        targets.forEach((table, columns) -> jdbc.update("UPDATE " + table + " SET exportado = FALSE WHERE "
-                + AGENCY_FILTER.formatted(columns[0]) + " AND " + columns[1] + " BETWEEN :from AND :to", params));
+        EXPORT_DATE_COLUMNS.forEach((table, dateColumn) -> jdbc.update("UPDATE " + table + " SET exportado = FALSE WHERE "
+                + AGENCY_FILTER.formatted("agencia_id") + " AND " + dateColumn + " BETWEEN :from AND :to", params));
     }
 
     private List<ExportRow> query(String sql, Long agencyId, boolean pendingOnly) {

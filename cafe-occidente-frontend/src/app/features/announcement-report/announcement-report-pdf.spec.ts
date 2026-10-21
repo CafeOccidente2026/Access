@@ -8,7 +8,7 @@ import {
   shortDate,
   weightedFactor,
 } from './announcement-report-pdf';
-// c
+
 function purchase(over: Partial<DryCoffeePurchaseResponse>): DryCoffeePurchaseResponse {
   return {
     invoiceNumber: 1, purchaseDate: '2026-05-09', agencyName: 'EL TAMBO', fundCode: 'LF', specialType: 'NESPRESSO',

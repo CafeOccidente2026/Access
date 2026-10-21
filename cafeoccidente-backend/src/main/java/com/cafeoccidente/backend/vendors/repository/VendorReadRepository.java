@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.vendors.dto.NessQuotaBalanceRow;
 import com.cafeoccidente.backend.vendors.dto.NessQuotaRow;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -25,6 +26,10 @@ public class VendorReadRepository {
     public static final List<String> QUOTA_SPECIALS =
             List.of("NESPRESSO", "RAINFOREST", "NESPRESSO LATE HARVEST", "REGIONAL NARIÑO 4C");
 
+    /** Las 5 tablas de compra: lista fija de tablas permitidas en purchase(), que las concatena al SQL. */
+    private static final Set<String> PURCHASE_TABLES = Set.of(
+            "compras_cafe_seco", "compras_cafes_otros", "compras_ferti_futuro", "compras_cafe_verde", "compras_pasilla");
+
     /** COMPRAS como union de las 5 tablas. Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la
      *  merma en Verde y Pasilla; PorcAlmSana en Pasilla es el porcentaje de almendra y Verde no lo usa. */
     private static final String PURCHASES = String.join(" UNION ALL ",
@@ -43,7 +48,10 @@ public class VendorReadRepository {
         this.jdbc = jdbc;
     }
 
-    private static String purchase(String table, String greenKg, String healthyPercentage, String freightDiscount) {
+    static String purchase(String table, String greenKg, String healthyPercentage, String freightDiscount) {
+        if (!PURCHASE_TABLES.contains(table)) {
+            throw new IllegalArgumentException("Tabla de compras no permitida: " + table);
+        }
         return "SELECT p.agencia_id, a.nombre AS agency_name, p.fecha_compra, f.codigo AS fund_code, p.numero_factura,"
                 + " p.cedula, " + greenKg + " AS kilos_verdes, p.kilos_netos, " + healthyPercentage + " AS factor,"
                 + " p.vr_bruto, p.aporte_asociado, p.descuento_cooperativo, " + freightDiscount

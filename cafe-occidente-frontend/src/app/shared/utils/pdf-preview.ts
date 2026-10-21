@@ -11,5 +11,14 @@ export function renderPdfPreview(
   done: (url: SafeResourceUrl) => void,
 ): void {
   pdfMake.vfs = pdfFonts;
-  pdfMake.createPdf(docDefinition).getBlob((blob) => done(sanitizer.bypassSecurityTrustResourceUrl(URL.createObjectURL(blob))));
+  pdfMake.createPdf(docDefinition).getBlob((blob) => done(trustBlobUrl(URL.createObjectURL(blob), sanitizer)));
+}
+
+/** Único punto que salta el saneamiento de Angular. Es seguro porque solo acepta URLs "blob:", que
+ *  crea URL.createObjectURL con el PDF que arma esta misma app: nunca una URL que venga de afuera. */
+export function trustBlobUrl(url: string, sanitizer: DomSanitizer): SafeResourceUrl {
+  if (!url.startsWith('blob:')) {
+    throw new Error(`Solo se permiten URLs blob: para la vista previa del PDF (${url})`);
+  }
+  return sanitizer.bypassSecurityTrustResourceUrl(url);
 }
