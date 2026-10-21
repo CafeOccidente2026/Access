@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.common.config;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.Role;
@@ -12,7 +13,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** Crea el usuario ADMIN inicial (desde variables de entorno) si todavia no existe. */
+/** Crea el Administrador inicial (desde variables de entorno) si todavia no existe. */
 @Component
 public class AdminUserSeeder implements ApplicationRunner {
 
@@ -43,10 +44,10 @@ public class AdminUserSeeder implements ApplicationRunner {
         if (userRepository.findByUsername(adminUsername).isPresent()) {
             return;
         }
-        Role adminRole = roleRepository.findByName("ADMIN")
-                .orElseThrow(() -> new IllegalStateException("El rol ADMIN debe existir (ver Flyway V2)"));
+        Role adminRole = roleRepository.findByName(Roles.ADMINISTRADOR)
+                .orElseThrow(() -> new IllegalStateException("El rol ADMINISTRADOR debe existir (ver Flyway V3)"));
         Agency agency = agencyRepository.findByActiveTrue().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException("Debe existir al menos una agencia (ver Flyway V7)"));
+                .orElseThrow(() -> new IllegalStateException("Debe existir al menos una agencia (ver Flyway V2)"));
 
         User admin = new User();
         admin.setUsername(adminUsername);

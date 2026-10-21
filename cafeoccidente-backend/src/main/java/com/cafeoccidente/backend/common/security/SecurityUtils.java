@@ -35,6 +35,6 @@ public class SecurityUtils {
             throw new IllegalStateException("No hay un usuario autenticado en el contexto actual");
         }
         return securityUser.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                .anyMatch(authority -> ("ROLE_" + Roles.ADMINISTRADOR).equals(authority.getAuthority()));
     }
 }
