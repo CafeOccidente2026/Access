@@ -19,6 +19,9 @@
 
   <properties>
     <java.version>21</java.version>
+    <sonar.organization>cafeoccidente2026</sonar.organization>
+    <sonar.projectKey>CafeOccidente2026_Access_backend</sonar.projectKey>
+    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
   </properties>
 
   <dependencies>
@@ -125,6 +128,26 @@
             </path>
           </annotationProcessorPaths>
         </configuration>
+      </plugin>
+      <!-- Cobertura para SonarCloud: target/site/jacoco/jacoco.xml en la fase verify. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.15</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

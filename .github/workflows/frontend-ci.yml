@@ -21,10 +21,16 @@ jobs:
     defaults:
       run:
         working-directory: cafe-occidente-frontend
+    env:
+      # A nivel de job para que el if del paso de Sonar lo pueda leer; vacio si no hay secret.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Descargar el codigo
         uses: actions/checkout@v4
+        with:
+          # Historial completo: SonarCloud lo usa para el codigo nuevo y el blame.
+          fetch-depth: 0
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -37,8 +43,17 @@ jobs:
         run: npm ci
 
       # Vitest con jsdom (sin navegador): corre en Node, no requiere Chrome en Ubuntu.
+      # --coverage deja coverage/cafe-occidente-frontend/lcov.info para SonarCloud.
       - name: Correr pruebas
-        run: npx ng test --watch=false
+        run: npx ng test --watch=false --coverage
 
       - name: Compilar (build de produccion)
         run: npm run build
+
+      # Informativo: un fallo de SonarCloud no pone el check en rojo ni bloquea el merge.
+      - name: Analisis SonarCloud (informativo)
+        if: env.SONAR_TOKEN != ''
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@v8.3.0
+        with:
+          projectBaseDir: cafe-occidente-frontend
