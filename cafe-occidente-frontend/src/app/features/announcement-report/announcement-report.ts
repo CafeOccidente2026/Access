@@ -1,12 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { DryCoffeePurchaseService } from '../../core/services/dry-coffee-purchase.service';
 import { AccessWindowComponent } from '../../shared/ui';
+import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildAnnouncementDetailDoc, buildAnnouncementSummaryDoc, shortDate } from './announcement-report-pdf';
 
 /**
@@ -57,9 +56,6 @@ export class AnnouncementReportComponent {
   }
 
   private render(docDefinition: TDocumentDefinitions, target: ReturnType<typeof signal<SafeResourceUrl | null>>): void {
-    pdfMake.vfs = pdfFonts;
-    pdfMake.createPdf(docDefinition).getBlob((blob) => {
-      target.set(this.sanitizer.bypassSecurityTrustResourceUrl(URL.createObjectURL(blob)));
-    });
+    renderPdfPreview(docDefinition, this.sanitizer, (url) => target.set(url));
   }
 }
