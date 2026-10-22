@@ -12,7 +12,6 @@ import java.util.List;
  */
 public enum AnnulmentModule {
     DRY("compras_cafe_seco", "DRY_COFFEE", Columns.DRY_LIKE),
-    OTHER("compras_cafes_otros", "OTHER_COFFEE", Columns.DRY_LIKE),
     GREEN("compras_cafe_verde", "GREEN_COFFEE", List.of("sacos", "kilos_brutos", "destare", "kilos_verdes", "kilos_netos",
             "castigo", "vr_inventario", "vr_kilo", "vr_bruto", "aporte_asociado",
             "descuento_cooperativo", "descuento_financiero", "otros_descuentos", "retefuente", "bonificacion", "costos",
@@ -33,7 +32,7 @@ public enum AnnulmentModule {
     final String inventoryModule;
     final List<String> zeroed;
 
-    /** Cafe Seco y Cafes Otros tienen las mismas columnas (formularios COMPRAS y COMPRASESP). */
+    /** Columnas de Cafe Seco (formulario COMPRAS). */
     private static final class Columns {
         static final List<String> DRY_LIKE = List.of("sacos", "kilos_brutos", "destare", "kilos_netos", "castigo",
                 "vr_inventario", "vr_kilo", "vr_bruto", "aporte_asociado", "descuento_cooperativo",

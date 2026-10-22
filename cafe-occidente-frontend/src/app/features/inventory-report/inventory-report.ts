@@ -14,7 +14,7 @@ import { buildInventoryReportDoc } from './inventory-report-pdf';
 
 /** En Access la consulta INV pedia la especialidad con un InputBox (texto libre, sin lista). La
  *  lista sale de los "Especial" de los formularios de compra, mas los fijos de Verde y Pasilla. */
-const PURCHASE_FORMS = ['purchase-form-dry', 'purchase-form-other', 'purchase-form-ferti-futuro', 'purchase-form-future', 'purchase-form-quota-purchase'];
+const PURCHASE_FORMS = ['purchase-form-dry', 'purchase-form-ferti-futuro', 'purchase-form-future', 'purchase-form-quota-purchase'];
 const FIXED_SPECIALS = ['CV', 'PASILLA']; // GreenCoffeePurchaseServiceImpl / HuskPurchaseServiceImpl
 
 export function specialOptions(forms: unknown[]): string[] {

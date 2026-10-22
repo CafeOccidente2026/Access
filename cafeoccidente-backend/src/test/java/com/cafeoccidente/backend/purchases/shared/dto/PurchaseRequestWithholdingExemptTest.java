@@ -6,14 +6,13 @@ import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseReques
 import com.cafeoccidente.backend.purchases.future.dto.FertiFuturoPurchaseRequest;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
-import com.cafeoccidente.backend.purchases.othercoffee.dto.OtherCoffeePurchaseRequest;
 import java.lang.reflect.RecordComponent;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * withWithholdingExempt es la copia que usan los 5 servicios para imponer la exencion resuelta por el
+ * withWithholdingExempt es la copia que usan los 4 servicios para imponer la exencion resuelta por el
  * servidor: tiene que cambiar solo ese campo (un argumento corrido cambiaria kilos o valores).
  */
 class PurchaseRequestWithholdingExemptTest {
@@ -21,7 +20,7 @@ class PurchaseRequestWithholdingExemptTest {
     @Test
     void copiesEveryFieldAndChangesOnlyTheExemption() throws Exception {
         for (Class<?> type : List.of(DryCoffeePurchaseRequest.class, GreenCoffeePurchaseRequest.class,
-                HuskPurchaseRequest.class, OtherCoffeePurchaseRequest.class, FertiFuturoPurchaseRequest.class)) {
+                HuskPurchaseRequest.class, FertiFuturoPurchaseRequest.class)) {
             RecordComponent[] components = type.getRecordComponents();
             Object[] values = new Object[components.length];
             Class<?>[] types = new Class<?>[components.length];

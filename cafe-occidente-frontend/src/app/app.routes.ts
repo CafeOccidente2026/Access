@@ -131,14 +131,6 @@ export const routes: Routes = [
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
-        path: 'compras/cafe-otros',
-        loadComponent: () =>
-          import('./features/purchase-forms/other-coffee/other-coffee-form').then(
-            (m) => m.OtherCoffeeFormComponent,
-          ),
-        canDeactivate: [dryCoffeeUnsavedChangesGuard],
-      },
-      {
         path: 'compras/cafe-verde',
         loadComponent: () =>
           import('./features/purchase-forms/green-coffee/green-coffee-form').then(

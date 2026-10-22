@@ -26,15 +26,14 @@ public class VendorReadRepository {
     public static final List<String> QUOTA_SPECIALS =
             List.of("NESPRESSO", "RAINFOREST", "NESPRESSO LATE HARVEST", "REGIONAL NARIÑO 4C");
 
-    /** Las 5 tablas de compra: lista fija de tablas permitidas en purchase(), que las concatena al SQL. */
+    /** Las 4 tablas de compra: lista fija de tablas permitidas en purchase(), que las concatena al SQL. */
     private static final Set<String> PURCHASE_TABLES = Set.of(
-            "compras_cafe_seco", "compras_cafes_otros", "compras_ferti_futuro", "compras_cafe_verde", "compras_pasilla");
+            "compras_cafe_seco", "compras_ferti_futuro", "compras_cafe_verde", "compras_pasilla");
 
-    /** COMPRAS como union de las 5 tablas. Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la
+    /** COMPRAS como union de las 4 tablas. Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la
      *  merma en Verde y Pasilla; PorcAlmSana en Pasilla es el porcentaje de almendra y Verde no lo usa. */
     private static final String PURCHASES = String.join(" UNION ALL ",
             purchase("compras_cafe_seco", "0", "p.factor", "p.descuento_financiero"),
-            purchase("compras_cafes_otros", "0", "p.factor", "p.descuento_financiero"),
             purchase("compras_ferti_futuro", "0", "p.factor", "p.descuento_financiero"),
             purchase("compras_cafe_verde", "p.kilos_verdes", "0", "p.descuento_financiero"),
             purchase("compras_pasilla", "0", "p.porc_almendra", "p.descuento_financiero"));

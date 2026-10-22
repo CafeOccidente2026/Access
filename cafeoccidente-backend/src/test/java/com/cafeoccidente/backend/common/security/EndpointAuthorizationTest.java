@@ -19,7 +19,6 @@ import com.cafeoccidente.backend.purchases.future.service.FertiFuturoPurchaseSer
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
-import com.cafeoccidente.backend.purchases.othercoffee.service.OtherCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
@@ -121,19 +120,16 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
         add(ADMIN, get, "/api/agencies");
 
-        // Compras: RF-13 a RF-20 (seco, verde, pasilla) y Cafes Otros (Q5).
-        for (String module : List.of("dry-coffee", "green-coffee", "husk", "other-coffee", "ferti-futuro")) {
+        // Compras: RF-13 a RF-20 (seco, verde, pasilla).
+        for (String module : List.of("dry-coffee", "green-coffee", "husk", "ferti-futuro")) {
             String base = "/api/purchases/" + module;
             add(ADMIN_USER, post, base);
             add(ADMIN_USER, get, base + "/{id}", base + "/1");
             add(ADMIN_USER, post, base + "/preview");
             add(ADMIN_USER, get, base + "/next-invoice-number");
         }
-        for (String module : List.of("dry-coffee", "other-coffee")) {
-            String base = "/api/purchases/" + module;
-            add(ADMIN_USER, get, base + "/special-info", base + "/special-info?fundId=1&specialType=X");
-            add(ADMIN_USER, get, base + "/quality-percentages");
-        }
+        add(ADMIN_USER, get, "/api/purchases/dry-coffee/special-info", "/api/purchases/dry-coffee/special-info?fundId=1&specialType=X");
+        add(ADMIN_USER, get, "/api/purchases/dry-coffee/quality-percentages");
         add(ADMIN_USER, get, "/api/purchases/green-coffee/announcement-info");
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
         // Generar Reporte Anuncio: Administrador y Usuario (área de compras, 22 oct; prima sobre RF-24).
@@ -230,7 +226,6 @@ class EndpointAuthorizationTest {
     @MockitoBean private FuturePurchaseService futurePurchaseService;
     @MockitoBean private GreenCoffeePurchaseService greenCoffeePurchaseService;
     @MockitoBean private HuskPurchaseService huskPurchaseService;
-    @MockitoBean private OtherCoffeePurchaseService otherCoffeePurchaseService;
     @MockitoBean private GrowerService growerService;
     @MockitoBean private SuppliesEntryService suppliesEntryService;
     @MockitoBean private SuppliesReportService suppliesReportService;

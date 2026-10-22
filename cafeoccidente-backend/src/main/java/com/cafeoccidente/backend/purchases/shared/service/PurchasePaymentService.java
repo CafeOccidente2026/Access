@@ -16,6 +16,6 @@ public interface PurchasePaymentService {
     /** Rechaza el pago descuadrado o el cheque sin numero (NumCheque_LostFocus / Texto203_LostFocus). */
     ResolvedPayment validate(PurchasePaymentRequest payment, BigDecimal netToPay);
 
-    /** source = clave del modulo en purchase_payment_split (DRY, GREEN, HUSK, OTHER, FERTI). */
+    /** source = clave del modulo en purchase_payment_split (DRY, GREEN, HUSK, FERTI). */
     void record(String source, Long purchaseId, PurchasePaymentRequest payment);
 }

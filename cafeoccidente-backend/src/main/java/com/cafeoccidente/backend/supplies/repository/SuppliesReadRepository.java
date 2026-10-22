@@ -21,7 +21,6 @@ public class SuppliesReadRepository {
             "DRY", "compras_cafe_seco",
             "GREEN", "compras_cafe_verde",
             "HUSK", "compras_pasilla",
-            "OTHER", "compras_cafes_otros",
             "FERTI", "compras_ferti_futuro");
 
     private final NamedParameterJdbcTemplate jdbc;

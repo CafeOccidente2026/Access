@@ -84,6 +84,6 @@ public class InventoryMovement {
     private Instant createdAt;
 
     public enum PurchaseModule {
-        DRY_COFFEE, GREEN_COFFEE, HUSK, OTHER_COFFEE, FERTI_FUTURO
+        DRY_COFFEE, GREEN_COFFEE, HUSK, FERTI_FUTURO
     }
 }

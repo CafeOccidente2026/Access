@@ -13,7 +13,6 @@
   "futureWarning": "Como en Access, anular no devuelve el saldo de Compras a Futuro ni el cupo del anuncio.",
   "modules": {
     "DRY": "Café Seco",
-    "OTHER": "Cafés Otros",
     "GREEN": "Café Verde",
     "HUSK": "Pasilla",
     "FERTI": "Fertifuturo"
