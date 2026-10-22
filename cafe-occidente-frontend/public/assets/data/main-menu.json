@@ -17,9 +17,6 @@
     { "label": "Suministros", "route": "/suministros", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Vendedores", "route": "/vendedores", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Contabilizado", "disabled": true, "hint": "Pendiente de levantamiento", "roles": ["ADMINISTRADOR", "USUARIO"] },
-    { "label": "Exportar Informacion", "route": "/exportar-informacion", "roles": ["ADMINISTRADOR"] },
-    { "label": "Importar Información", "route": "/importar-informacion", "roles": ["ADMINISTRADOR", "USUARIO"] },
-    { "label": "Exportado Especial", "route": "/exportado-especial", "roles": ["ADMINISTRADOR"] },
     { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Salir de la aplicación", "route": "/login" }
   ]

@@ -1,6 +1,5 @@
 package com.cafeoccidente.backend.purchases.annulment.service.impl;
 
-import static com.cafeoccidente.backend.dataexport.repository.DataExportRepository.PURCHASE_COLUMNS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -8,7 +7,6 @@ import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUser;
-import com.cafeoccidente.backend.dataexport.repository.DataExportRepository;
 import com.cafeoccidente.backend.purchases.annulment.dto.AnnulmentCandidate;
 import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
 import com.cafeoccidente.backend.supplies.dto.SuppliesReportRow;
@@ -43,8 +41,6 @@ class PurchaseAnnulmentIntegrationTest {
     private PurchaseAnnulmentServiceImpl service;
     @Autowired
     private SuppliesReportService supplies;
-    @Autowired
-    private DataExportRepository export;
     @Autowired
     private VendorReadRepository vendors;
     @Autowired
@@ -125,12 +121,6 @@ class PurchaseAnnulmentIntegrationTest {
             assertThat(supplies.supplies(agencyId, fund, date)).extracting(SuppliesReportRow::transactionId)
                     .doesNotContain(invoice);
         }
-
-        var exported = export.purchases(agencyId, true).stream()
-                .filter(r -> invoice.equals(String.valueOf(r.values().get(PURCHASE_COLUMNS.indexOf("Factura")))))
-                .findFirst().orElseThrow();
-        assertThat(exported.values().get(PURCHASE_COLUMNS.indexOf("Forma_de_Pago"))).isEqualTo("ANULADA");
-        assertThat((BigDecimal) exported.values().get(PURCHASE_COLUMNS.indexOf("FPch"))).isZero();
 
         assertThat(vendors.beneficiary(agencyId, (String) row.get("cedula"), null, null))
                 .filteredOn(b -> b.invoiceNumber().toString().equals(invoice))

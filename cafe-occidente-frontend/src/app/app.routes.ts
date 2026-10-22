@@ -249,16 +249,6 @@ export const routes: Routes = [
       },
       ...suppliesRoutes(),
       ...vendorsRoutes(),
-      {
-        path: 'exportar-informacion',
-        loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
-        data: { screen: 'export', roles: ADMIN },
-      },
-      {
-        path: 'exportado-especial',
-        loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
-        data: { screen: 'special', roles: ADMIN },
-      },
     ],
   },
   { path: '**', redirectTo: 'login' },

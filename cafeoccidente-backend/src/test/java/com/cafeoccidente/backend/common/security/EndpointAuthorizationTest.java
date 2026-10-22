@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.cafeoccidente.backend.common.config.CorsConfig;
 import com.cafeoccidente.backend.common.config.SecurityConfig;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
-import com.cafeoccidente.backend.dataexport.service.DataExportService;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
@@ -183,10 +182,6 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/vendors/ness-quotas");
         add(ADMIN_USER, get, "/api/vendors/ness-quota-balances");
 
-        // Exportar Informacion y Exportado Especial: solo Administrador (se eliminaran).
-        add(ADMIN, post, "/api/data-export");
-        add(ADMIN, post, "/api/data-export/special", "/api/data-export/special?from=2026-01-01&to=2026-01-31");
-
         // Sesion y boton Agencias (RF-05.1, RN-05.2: solo el Administrador elige agencia).
         add(ALL, get, "/api/me");
         add(ADMIN, put, "/api/me/working-agency");
@@ -213,7 +208,6 @@ class EndpointAuthorizationTest {
     @MockitoBean private AuthService authService;
     @MockitoBean private UserService userService;
     @MockitoBean private ControlRecordService controlRecordService;
-    @MockitoBean private DataExportService dataExportService;
     @MockitoBean private InventoryMovementService inventoryMovementService;
     @MockitoBean private InventoryReportService inventoryReportService;
     @MockitoBean private RemissionService remissionService;
