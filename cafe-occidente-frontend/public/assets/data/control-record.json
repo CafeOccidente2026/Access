@@ -20,6 +20,7 @@
     { "key": "sampleSize", "label": "Tamaño Muestra", "type": "count" },
     { "key": "excelsoKg", "label": "Kg de Excelso", "type": "number", "integer": true },
     { "key": "greenCoffeePercentage", "label": "Pocentaje Café Verde", "type": "percentage" },
+    { "key": "specialtyThreshold", "label": "Umbral Cafés Especiales", "type": "percentage" },
     { "key": "associatePercentage", "label": "Porc Aportes Asociados", "type": "percentage" },
     { "key": "nonAssociateDiscount", "label": "Poc Desc Coop No Asoc", "type": "percentage" },
     { "key": "trustedId", "label": "Fiel", "type": "text" }
@@ -29,6 +30,11 @@
     { "key": "resolutionDate", "label": "Fecha Res", "type": "date" },
     { "key": "resolutionFrom", "label": "Desde Res", "type": "number", "rawDisplay": true },
     { "key": "resolutionTo", "label": "Hasta Res", "type": "number", "rawDisplay": true },
-    { "key": "validity", "label": "Vigencia", "type": "number", "rawDisplay": true }
+    { "key": "validity", "label": "Vigencia", "type": "number", "rawDisplay": true },
+    { "key": "greenTotalStoredWeight", "label": "Peso Tot Alm Café Verde", "type": "percentage" },
+    { "key": "greenTotalHuskWeight", "label": "Peso Tot Pasilla Café Verde", "type": "percentage" },
+    { "key": "greenHealthyStoredWeight", "label": "Peso Alm Sana Café Verde", "type": "percentage" },
+    { "key": "greenHealthyUnitPrice", "label": "Pr Alm Sana Café Verde", "type": "currency" },
+    { "key": "greenDefectiveUnitPrice", "label": "Pr_AlmDefec Café Verde", "type": "currency" }
   ]
 }

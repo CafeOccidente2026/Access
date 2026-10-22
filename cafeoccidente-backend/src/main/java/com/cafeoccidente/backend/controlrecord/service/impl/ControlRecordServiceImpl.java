@@ -10,7 +10,6 @@ import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepositor
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
-import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,7 +86,6 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setCosts(request.costs());
         controlRecord.setSampleSize(request.sampleSize());
         controlRecord.setExcelsoKg(request.excelsoKg());
-        controlRecord.setExcelsoKgCopy(BigDecimal.valueOf(request.excelsoKg()));
         controlRecord.setGreenCoffeePercentage(request.greenCoffeePercentage());
         controlRecord.setAssociatePercentage(request.associatePercentage());
         controlRecord.setNonAssociateDiscount(request.nonAssociateDiscount());
@@ -97,5 +95,11 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setResolutionFrom(request.resolutionFrom());
         controlRecord.setResolutionTo(request.resolutionTo());
         controlRecord.setValidity(request.validity());
+        controlRecord.setSpecialtyThreshold(request.specialtyThreshold());
+        controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
+        controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
+        controlRecord.setGreenHealthyStoredWeight(request.greenHealthyStoredWeight());
+        controlRecord.setGreenHealthyUnitPrice(request.greenHealthyUnitPrice());
+        controlRecord.setGreenDefectiveUnitPrice(request.greenDefectiveUnitPrice());
     }
 }

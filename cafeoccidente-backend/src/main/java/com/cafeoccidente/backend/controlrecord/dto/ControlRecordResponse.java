@@ -28,5 +28,11 @@ public record ControlRecordResponse(
         LocalDate resolutionDate,
         Integer resolutionFrom,
         Integer resolutionTo,
-        Integer validity) {
+        Integer validity,
+        BigDecimal specialtyThreshold,
+        BigDecimal greenTotalStoredWeight,
+        BigDecimal greenTotalHuskWeight,
+        BigDecimal greenHealthyStoredWeight,
+        BigDecimal greenHealthyUnitPrice,
+        BigDecimal greenDefectiveUnitPrice) {
 }

@@ -70,10 +70,6 @@ public class ControlRecord {
     @Column(name = "tamano_muestra", nullable = false, precision = 10, scale = 2)
     private BigDecimal sampleSize;
 
-    /** Copia de KgExcelso que no se usa en ningun calculo; V6 borra la columna. */
-    @Column(name = "kg_excelso_copia", nullable = false, precision = 10, scale = 2)
-    private BigDecimal excelsoKgCopy;
-
     @Column(name = "porcentaje_cafe_verde", nullable = false, precision = 5, scale = 2)
     private BigDecimal greenCoffeePercentage;
 
@@ -104,4 +100,24 @@ public class ControlRecord {
 
     @Column(name = "vigencia", nullable = false)
     private Integer validity;
+
+    /** Umbral Cafes Especiales (Access: UmbralEspeciales, 93,33). La regla que lo usa es de Compras. */
+    @Column(name = "umbral_cafes_especiales", nullable = false, precision = 5, scale = 2)
+    private BigDecimal specialtyThreshold;
+
+    /** RN-06.7: valores de cafe verde que se cargan en Compras Cafe Verde (0 = sin configurar). */
+    @Column(name = "peso_tot_alm_cv", nullable = false, precision = 10, scale = 2)
+    private BigDecimal greenTotalStoredWeight;
+
+    @Column(name = "peso_tot_pasilla_cv", nullable = false, precision = 10, scale = 2)
+    private BigDecimal greenTotalHuskWeight;
+
+    @Column(name = "peso_alm_sana_cv", nullable = false, precision = 10, scale = 2)
+    private BigDecimal greenHealthyStoredWeight;
+
+    @Column(name = "pr_alm_sana_cv", nullable = false, precision = 15, scale = 2)
+    private BigDecimal greenHealthyUnitPrice;
+
+    @Column(name = "pr_alm_defec_cv", nullable = false, precision = 15, scale = 2)
+    private BigDecimal greenDefectiveUnitPrice;
 }

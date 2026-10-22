@@ -21,6 +21,7 @@ class DryCoffeePurchaseCalculatorTest {
         ControlRecord cr = new ControlRecord();
         cr.setExcelsoKg(70);
         cr.setBaseFactor(new BigDecimal("94"));
+        cr.setSpecialtyThreshold(new BigDecimal("93.33"));
         cr.setBaseWithholding(new BigDecimal("8379840.00"));
         cr.setBaseLoad(125);
         cr.setWithholdingPercentage(new BigDecimal("0.5"));

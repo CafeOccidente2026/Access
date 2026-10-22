@@ -28,5 +28,11 @@ public record ControlRecordRequest(
         @NotNull LocalDate resolutionDate,
         @NotNull Integer resolutionFrom,
         @NotNull Integer resolutionTo,
-        @NotNull Integer validity) {
+        @NotNull Integer validity,
+        @NotNull @PositiveOrZero BigDecimal specialtyThreshold,
+        @NotNull @PositiveOrZero BigDecimal greenTotalStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal greenTotalHuskWeight,
+        @NotNull @PositiveOrZero BigDecimal greenHealthyStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal greenHealthyUnitPrice,
+        @NotNull @PositiveOrZero BigDecimal greenDefectiveUnitPrice) {
 }

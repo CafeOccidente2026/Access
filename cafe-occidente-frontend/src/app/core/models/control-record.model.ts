@@ -24,6 +24,12 @@ export interface ControlRecordResponse {
   readonly resolutionFrom: number;
   readonly resolutionTo: number;
   readonly validity: number;
+  readonly specialtyThreshold: number;
+  readonly greenTotalStoredWeight: number;
+  readonly greenTotalHuskWeight: number;
+  readonly greenHealthyStoredWeight: number;
+  readonly greenHealthyUnitPrice: number;
+  readonly greenDefectiveUnitPrice: number;
 }
 
 export type ControlRecordRequest = Omit<ControlRecordResponse, 'id' | 'agencyId' | 'agencyName' | 'active'>;

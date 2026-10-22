@@ -34,6 +34,12 @@ public class ControlRecordMapper {
                 controlRecord.getResolutionDate(),
                 controlRecord.getResolutionFrom(),
                 controlRecord.getResolutionTo(),
-                controlRecord.getValidity());
+                controlRecord.getValidity(),
+                controlRecord.getSpecialtyThreshold(),
+                controlRecord.getGreenTotalStoredWeight(),
+                controlRecord.getGreenTotalHuskWeight(),
+                controlRecord.getGreenHealthyStoredWeight(),
+                controlRecord.getGreenHealthyUnitPrice(),
+                controlRecord.getGreenDefectiveUnitPrice());
     }
 }

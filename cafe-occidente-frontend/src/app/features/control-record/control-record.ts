@@ -162,6 +162,12 @@ export class ControlRecordComponent {
       resolutionFrom: num('resolutionFrom'),
       resolutionTo: num('resolutionTo'),
       validity: num('validity'),
+      specialtyThreshold: num('specialtyThreshold'),
+      greenTotalStoredWeight: num('greenTotalStoredWeight'),
+      greenTotalHuskWeight: num('greenTotalHuskWeight'),
+      greenHealthyStoredWeight: num('greenHealthyStoredWeight'),
+      greenHealthyUnitPrice: num('greenHealthyUnitPrice'),
+      greenDefectiveUnitPrice: num('greenDefectiveUnitPrice'),
     };
   }
 
