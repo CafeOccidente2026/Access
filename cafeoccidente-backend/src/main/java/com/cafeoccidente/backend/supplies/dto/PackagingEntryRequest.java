@@ -10,7 +10,6 @@ import java.time.LocalDate;
 /** Alta de Empaque: Entradas (Empaque Suministros) o Salidas (Prestamo Empaques) en quantity. */
 public record PackagingEntryRequest(
         @NotBlank @Size(max = 30) String transactionId,
-        Long agencyId,
         @NotBlank String packagingType,
         LocalDate entryDate,
         @NotBlank @Pattern(regexp = "[0-9]{1,20}") String idNumber,

@@ -28,6 +28,7 @@ import com.cafeoccidente.backend.supplies.service.SuppliesReportService;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.service.AuthService;
 import com.cafeoccidente.backend.users.service.UserService;
+import com.cafeoccidente.backend.users.service.WorkingAgencyService;
 import com.cafeoccidente.backend.vendors.service.VendorReportService;
 import com.cafeoccidente.backend.vendors.service.VendorService;
 import java.util.ArrayList;
@@ -117,7 +118,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_OPS, post, "/api/announcements/husk");
         add(ADMIN_OPS, get, "/api/announcements/history");
         add(ALL, get, "/api/funds");
-        add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?agencyId=1&fundId=1&specialType=X");
+        add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
         add(ADMIN_USER, get, "/api/agencies");
 
         // Compras: RF-13 a RF-20 (seco, verde, pasilla) y Cafes Otros (Q5).
@@ -130,7 +131,7 @@ class EndpointAuthorizationTest {
         }
         for (String module : List.of("dry-coffee", "other-coffee")) {
             String base = "/api/purchases/" + module;
-            add(ADMIN_USER, get, base + "/special-info", base + "/special-info?agencyId=1&fundId=1&specialType=X");
+            add(ADMIN_USER, get, base + "/special-info", base + "/special-info?fundId=1&specialType=X");
             add(ADMIN_USER, get, base + "/quality-percentages");
         }
         add(ADMIN_USER, get, "/api/purchases/green-coffee/announcement-info");
@@ -144,18 +145,18 @@ class EndpointAuthorizationTest {
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
         add(ADMIN_USER, post, "/api/purchases/future");
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
-        add(ADMIN_USER, get, "/api/announcement-quotas/{agencyId}", "/api/announcement-quotas/1");
-        add(ADMIN_USER, get, "/api/announcement-quotas/{agencyId}/{announcementNumber}", "/api/announcement-quotas/1/1");
-        add(ADMIN_USER, put, "/api/announcement-quotas/{agencyId}/{announcementNumber}", "/api/announcement-quotas/1/1");
+        add(ADMIN_USER, get, "/api/announcement-quotas");
+        add(ADMIN_USER, get, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
+        add(ADMIN_USER, put, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
 
         // Remesa (RF-11) e Inventarios (RF-22, roles por definir: como hoy).
         add(ADMIN_USER, post, "/api/remissions");
-        add(ADMIN_USER, get, "/api/remissions", "/api/remissions?agencyId=1");
+        add(ADMIN_USER, get, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions/{id}", "/api/remissions/1");
         add(ADMIN_USER, post, "/api/remissions/mark-exported");
-        add(ADMIN_USER, get, "/api/inventory-movements", "/api/inventory-movements?agencyId=1");
+        add(ADMIN_USER, get, "/api/inventory-movements");
         add(ADMIN_USER, get, "/api/inventory-movements/{id}", "/api/inventory-movements/1");
-        add(ADMIN_USER, get, "/api/inventory-report", "/api/inventory-report?agencyId=1");
+        add(ADMIN_USER, get, "/api/inventory-report");
         add(ADMIN_USER, get, "/api/inventory-report/product-codes");
 
         // Terceros y conductores (RF-28.1).
@@ -191,6 +192,10 @@ class EndpointAuthorizationTest {
         add(ADMIN, post, "/api/data-export");
         add(ADMIN, post, "/api/data-export/special", "/api/data-export/special?from=2026-01-01&to=2026-01-31");
 
+        // Sesion y boton Agencias (RF-05.1, RN-05.2: solo el Administrador elige agencia).
+        add(ALL, get, "/api/me");
+        add(ADMIN, put, "/api/me/working-agency");
+
         // Inicio de sesion: publico.
         add(ALL, post, "/api/auth/login");
     }
@@ -205,6 +210,8 @@ class EndpointAuthorizationTest {
     @MockitoBean private JwtService jwtService;
     @MockitoBean private UserDetailsService userDetailsService;
     @MockitoBean private SecurityUtils securityUtils;
+    @MockitoBean private CurrentAgencyProvider currentAgencyProvider;
+    @MockitoBean private WorkingAgencyService workingAgencyService;
     @MockitoBean private AgencyRepository agencyRepository;
     @MockitoBean private FundRepository fundRepository;
     @MockitoBean private RoleRepository roleRepository;

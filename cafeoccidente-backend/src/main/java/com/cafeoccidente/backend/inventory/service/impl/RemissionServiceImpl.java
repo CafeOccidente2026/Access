@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.inventory.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.inventory.dto.RemissionLineRequest;
@@ -46,6 +47,7 @@ public class RemissionServiceImpl implements RemissionService {
     private final AgencyRepository agencyRepository;
     private final GrowerRepository growerRepository;
     private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
     private final ControlRecordService controlRecordService;
 
     public RemissionServiceImpl(
@@ -54,7 +56,7 @@ public class RemissionServiceImpl implements RemissionService {
             InventoryMovementRepository inventoryMovementRepository,
             AgencyRepository agencyRepository,
             GrowerRepository growerRepository,
-            SecurityUtils securityUtils,
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             ControlRecordService controlRecordService) {
         this.controlRecordService = controlRecordService;
         this.remissionRepository = remissionRepository;
@@ -63,12 +65,13 @@ public class RemissionServiceImpl implements RemissionService {
         this.agencyRepository = agencyRepository;
         this.growerRepository = growerRepository;
         this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @Override
     @Transactional
     public RemissionResponse create(RemissionRequest request) {
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = requireSingleFund(request);
         Grower conductor = request.conductorIdNumber() == null || request.conductorIdNumber().isBlank()

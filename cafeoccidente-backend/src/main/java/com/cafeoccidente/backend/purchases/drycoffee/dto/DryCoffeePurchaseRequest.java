@@ -16,7 +16,6 @@ import java.math.BigDecimal;
  * (ver Announcement.defectiveUnitPrice), igual que basePriceLoad.
  */
 public record DryCoffeePurchaseRequest(
-        @NotNull Long agencyId,
         @NotNull Long fundId,
         @NotNull Integer invoiceNumber,
         @NotBlank String specialType,
@@ -46,7 +45,7 @@ public record DryCoffeePurchaseRequest(
      *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
     public DryCoffeePurchaseRequest withWithholdingExempt(boolean exempt) {
         return new DryCoffeePurchaseRequest(
-                agencyId, fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
+                fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
                 address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight, defectiveStoredWeight,
                 healthyStoredWeight, healthyUnitPrice, bonus, penalty, costs, exempt, freightDiscount,
                 otherDiscounts, payment);

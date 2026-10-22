@@ -20,12 +20,9 @@ public class SecurityUser implements UserDetails {
         return user.getId();
     }
 
-    public Long getAgencyId() {
-        return user.getAgency().getId();
-    }
-
-    public String getAgencyName() {
-        return user.getAgency().getName();
+    /** El usuario tal como se leyo de la BD en este request (rol, agencia asignada y ultima agencia). */
+    public User getUser() {
+        return user;
     }
 
     @Override

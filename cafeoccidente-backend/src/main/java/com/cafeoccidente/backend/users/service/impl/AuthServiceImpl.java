@@ -1,8 +1,10 @@
 package com.cafeoccidente.backend.users.service.impl;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.JwtService;
 import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.users.dto.LoginRequest;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.users.dto.LoginResponse;
 import com.cafeoccidente.backend.users.service.AuthService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,6 +29,8 @@ public class AuthServiceImpl implements AuthService {
         SecurityUser user = (SecurityUser) authentication.getPrincipal();
         String token = jwtService.generateToken(user);
         String roleName = user.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
-        return new LoginResponse(token, user.getUsername(), roleName, user.getAgencyId(), user.getAgencyName());
+        // RN-05.1.5: el Administrador entra con la ultima agencia que uso.
+        Agency agency = CurrentAgencyProvider.workingAgency(user.getUser());
+        return new LoginResponse(token, user.getUsername(), roleName, agency.getId(), agency.getName());
     }
 }

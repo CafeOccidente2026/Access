@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.future.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -55,6 +56,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
     private final FertiFuturoPurchaseCalculator calculator;
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
     private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
     private final GrowerService growerService;
@@ -69,7 +71,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
             ControlRecordService controlRecordService,
             FertiFuturoPurchaseCalculator calculator,
             PurchaseInvoiceNumberService purchaseInvoiceNumberService,
-            SecurityUtils securityUtils,
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             InventoryMovementService inventoryMovementService,
             GrowerService growerService,
             PurchasePaymentService purchasePaymentService) {
@@ -83,6 +85,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
         this.calculator = calculator;
         this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
         this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
         this.growerService = growerService;
@@ -92,7 +95,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
     @Transactional
     public FertiFuturoPurchaseResponse create(FertiFuturoPurchaseRequest request) {
         request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
@@ -174,7 +177,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
     @Override
     public FertiFuturoPurchaseCalculation preview(FertiFuturoPurchaseRequest request) {
         request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
@@ -229,7 +232,7 @@ public class FertiFuturoPurchaseServiceImpl implements FertiFuturoPurchaseServic
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;

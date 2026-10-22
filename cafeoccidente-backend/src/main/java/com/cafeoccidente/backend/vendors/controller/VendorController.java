@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.vendors.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.vendors.dto.AssociatePage;
@@ -37,18 +38,21 @@ public class VendorController {
     private final VendorService vendorService;
     private final VendorReportService vendorReportService;
     private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
     public VendorController(
-            VendorService vendorService, VendorReportService vendorReportService, SecurityUtils securityUtils) {
+            VendorService vendorService, VendorReportService vendorReportService, SecurityUtils securityUtils,
+            CurrentAgencyProvider currentAgencyProvider) {
         this.vendorService = vendorService;
         this.vendorReportService = vendorReportService;
         this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public AssociateResponse create(@Valid @RequestBody VendorCreateRequest request) {
-        return vendorService.create(request, securityUtils.resolveAgencyId(request.agencyId()));
+        return vendorService.create(request, currentAgencyProvider.currentAgencyId());
     }
 
     @GetMapping("/associates")
@@ -63,11 +67,13 @@ public class VendorController {
 
     @GetMapping("/reports/beneficiary")
     public List<BeneficiaryRow> beneficiary(
-            @RequestParam(required = false) Long agencyId,
+            @RequestParam(defaultValue = "false") boolean allAgencies,
             @RequestParam(required = false) String idNumber,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return vendorReportService.beneficiary(agency(agencyId), idNumber, from, to);
+        // null = todas las agencias (RN-28.2.4: solo el Administrador; a otro rol se le ignora).
+        Long agencyId = allAgencies && securityUtils.isAdmin() ? null : currentAgencyProvider.currentAgencyId();
+        return vendorReportService.beneficiary(agencyId, idNumber, from, to);
     }
 
     @GetMapping("/ness-quotas")
@@ -81,7 +87,8 @@ public class VendorController {
         return vendorReportService.nessQuotaBalances(agency(agencyId));
     }
 
+    /** Saldos Cupos NESS (fuera del RF, Q5): el Administrador conserva "todas las agencias" (null). */
     private Long agency(Long requested) {
-        return securityUtils.isAdmin() ? requested : securityUtils.getCurrentAgencyId();
+        return securityUtils.isAdmin() ? requested : currentAgencyProvider.currentAgencyId();
     }
 }

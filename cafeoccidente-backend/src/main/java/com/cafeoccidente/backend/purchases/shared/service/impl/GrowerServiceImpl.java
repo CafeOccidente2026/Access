@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.shared.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
@@ -53,14 +54,17 @@ public class GrowerServiceImpl implements GrowerService {
     private final GrowerRepository growerRepository;
     private final LegacyNessProgramRepository legacyNessProgramRepository;
     private final AgencyRepository agencyRepository;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
     public GrowerServiceImpl(
             GrowerRepository growerRepository,
             LegacyNessProgramRepository legacyNessProgramRepository,
-            AgencyRepository agencyRepository) {
+            AgencyRepository agencyRepository,
+            CurrentAgencyProvider currentAgencyProvider) {
         this.growerRepository = growerRepository;
         this.legacyNessProgramRepository = legacyNessProgramRepository;
         this.agencyRepository = agencyRepository;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @Override
@@ -96,7 +100,7 @@ public class GrowerServiceImpl implements GrowerService {
         if (growerRepository.findByIdNumber(request.idNumber()).isPresent()) {
             throw new BusinessRuleException("Ya existe un caficultor/conductor con esa cedula");
         }
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
 
         Grower grower = new Grower();

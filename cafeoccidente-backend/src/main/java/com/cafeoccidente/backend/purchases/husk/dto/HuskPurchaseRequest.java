@@ -14,7 +14,6 @@ import java.math.BigDecimal;
  * netToPay) los calcula el servidor (HuskPurchaseCalculator).
  */
 public record HuskPurchaseRequest(
-        @NotNull Long agencyId,
         @NotNull Long fundId,
         @NotNull Integer invoiceNumber,
         @NotBlank String idNumber,
@@ -39,7 +38,7 @@ public record HuskPurchaseRequest(
      *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
     public HuskPurchaseRequest withWithholdingExempt(boolean exempt) {
         return new HuskPurchaseRequest(
-                agencyId, fundId, invoiceNumber, idNumber, firstName, lastName, growerType, address, cellphone,
+                fundId, invoiceNumber, idNumber, firstName, lastName, growerType, address, cellphone,
                 almondWeight, bagsCount, grossKg, tareKg, pointPrice, costs, exempt, shrinkageDiscount,
                 otherDiscounts, payment);
     }

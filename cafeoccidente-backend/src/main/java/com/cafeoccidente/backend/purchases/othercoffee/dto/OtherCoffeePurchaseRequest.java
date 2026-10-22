@@ -14,7 +14,6 @@ import java.math.BigDecimal;
  * Verde/Pasilla.
  */
 public record OtherCoffeePurchaseRequest(
-        @NotNull Long agencyId,
         @NotNull Long fundId,
         @NotNull Integer invoiceNumber,
         @NotBlank String specialType,
@@ -44,7 +43,7 @@ public record OtherCoffeePurchaseRequest(
      *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
     public OtherCoffeePurchaseRequest withWithholdingExempt(boolean exempt) {
         return new OtherCoffeePurchaseRequest(
-                agencyId, fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
+                fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
                 address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight, defectiveStoredWeight,
                 healthyStoredWeight, healthyUnitPrice, bonus, penalty, costs, exempt, freightDiscount,
                 otherDiscounts, payment);

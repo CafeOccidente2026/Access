@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
@@ -28,8 +29,10 @@ class GrowerServiceImplTest {
     private final GrowerRepository growerRepository = mock(GrowerRepository.class);
     private final LegacyNessProgramRepository legacyNessProgramRepository = mock(LegacyNessProgramRepository.class);
     private final AgencyRepository agencyRepository = mock(AgencyRepository.class);
+    /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
+    private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final GrowerService growerService =
-            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository);
+            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository, currentAgencyProvider);
 
     /** LegacyNessProgram es una entidad de staging de solo lectura (solo @Getter, sin setters) -
      *  se instancia real y se llenan los campos por reflexion en vez de mockearla. */
@@ -129,7 +132,7 @@ class GrowerServiceImplTest {
         when(growerRepository.findByIdNumber("123456")).thenReturn(Optional.of(new Grower()));
 
         GrowerCreateRequest request =
-                new GrowerCreateRequest("123456", "Juan", null, "Perez", null, 1L, "Coop", "ABC123");
+                new GrowerCreateRequest("123456", "Juan", null, "Perez", null, "Coop", "ABC123");
 
         assertThatThrownBy(() -> growerService.createConductor(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -146,7 +149,7 @@ class GrowerServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         GrowerCreateRequest request =
-                new GrowerCreateRequest("999888", "Ana", null, "Gomez", null, 1L, "Coop", "XYZ987");
+                new GrowerCreateRequest("999888", "Ana", null, "Gomez", null, "Coop", "XYZ987");
         GrowerResponse response = growerService.createConductor(request);
 
         assertThat(response.growerType()).isEqualTo("C");
@@ -164,7 +167,7 @@ class GrowerServiceImplTest {
         when(growerRepository.save(saved.capture())).thenAnswer(invocation -> invocation.getArgument(0));
 
         growerService.createConductor(new GrowerCreateRequest(
-                "777", "Ana", null, "Gomez", null, 1L, "Coop", "XYZ987", " Vereda El Tambo "));
+                "777", "Ana", null, "Gomez", null, "Coop", "XYZ987", " Vereda El Tambo "));
 
         assertThat(saved.getValue().getAddress()).isEqualTo("Vereda El Tambo");
         assertThat(saved.getValue().getAffiliationDate()).isEqualTo(java.time.LocalDate.now());

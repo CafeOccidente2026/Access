@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.othercoffee.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.othercoffee.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.othercoffee.dto.OtherCoffeePurchaseRequest;
@@ -27,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class OtherCoffeePurchaseController {
 
     private final OtherCoffeePurchaseService otherCoffeePurchaseService;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public OtherCoffeePurchaseController(OtherCoffeePurchaseService otherCoffeePurchaseService) {
+    public OtherCoffeePurchaseController(OtherCoffeePurchaseService otherCoffeePurchaseService, CurrentAgencyProvider currentAgencyProvider) {
         this.otherCoffeePurchaseService = otherCoffeePurchaseService;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @PostMapping
@@ -55,8 +58,8 @@ public class OtherCoffeePurchaseController {
 
     @GetMapping("/special-info")
     public SpecialInfoResponse specialInfo(
-            @RequestParam Long agencyId, @RequestParam Long fundId, @RequestParam String specialType) {
-        return otherCoffeePurchaseService.specialInfo(agencyId, fundId, specialType);
+            @RequestParam Long fundId, @RequestParam String specialType) {
+        return otherCoffeePurchaseService.specialInfo(currentAgencyProvider.currentAgencyId(), fundId, specialType);
     }
 
     @GetMapping("/quality-percentages")

@@ -107,7 +107,7 @@ describe('QuotaAssignmentComponent', () => {
 
     component.save();
 
-    expect(assignSpy).toHaveBeenCalledWith(1, 32, { assignedQuota: 576.7 });
+    expect(assignSpy).toHaveBeenCalledWith(32, { assignedQuota: 576.7 });
   });
 
   it('shows the real backend error message on a failed save instead of a generic one', () => {

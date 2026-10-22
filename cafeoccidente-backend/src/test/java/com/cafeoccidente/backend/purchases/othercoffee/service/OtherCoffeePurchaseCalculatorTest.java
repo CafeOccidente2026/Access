@@ -38,7 +38,7 @@ class OtherCoffeePurchaseCalculatorTest {
 
     private OtherCoffeePurchaseRequest request(String growerType, boolean withholdingExempt) {
         return new OtherCoffeePurchaseRequest(
-                1L, 1L, 27867, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                1L, 27867, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
@@ -59,7 +59,7 @@ class OtherCoffeePurchaseCalculatorTest {
                 otherRequest, controlRecord(), ANNOUNCEMENT_BASE, BigDecimal.ZERO, BigDecimal.ZERO);
 
         DryCoffeePurchaseRequest dryRequest = new DryCoffeePurchaseRequest(
-                otherRequest.agencyId(), otherRequest.fundId(), otherRequest.invoiceNumber(),
+                otherRequest.fundId(), otherRequest.invoiceNumber(),
                 otherRequest.specialType(), otherRequest.idNumber(), otherRequest.firstName(),
                 otherRequest.lastName(), otherRequest.growerType(), otherRequest.address(),
                 otherRequest.cellphone(), otherRequest.bagsCount(), otherRequest.grossKg(),

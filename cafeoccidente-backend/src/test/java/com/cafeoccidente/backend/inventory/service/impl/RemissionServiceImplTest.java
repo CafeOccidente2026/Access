@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -40,9 +41,11 @@ class RemissionServiceImplTest {
     private final SecurityUtils securityUtils = mock(SecurityUtils.class);
     private final ControlRecordService controlRecordService = mock(ControlRecordService.class);
 
+    /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
+    private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final RemissionServiceImpl service = new RemissionServiceImpl(
             remissionRepository, remissionLineRepository, inventoryMovementRepository,
-            agencyRepository, growerRepository, securityUtils, controlRecordService);
+            agencyRepository, growerRepository, securityUtils, currentAgencyProvider, controlRecordService);
 
     /** Linea con Sacos y Kilos Brutos de relleno (no intervienen en saldo ni valor). */
     private static RemissionLineRequest line(long movementId, String quantity) {
@@ -102,7 +105,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
 
         RemissionRequest request = new RemissionRequest(
-                1L, LocalDate.now(), "Bodega central", null,
+                LocalDate.now(), "Bodega central", null,
                 java.util.List.of(line(10L, "150.00")));
 
         assertThatThrownBy(() -> service.create(request)).isInstanceOf(BusinessRuleException.class);
@@ -118,7 +121,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
 
         RemissionRequest request = new RemissionRequest(
-                1L, LocalDate.now(), "Bodega central", null,
+                LocalDate.now(), "Bodega central", null,
                 java.util.List.of(line(10L, "500.00")));
 
         RemissionResponse response = service.create(request);
@@ -136,7 +139,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
 
         RemissionRequest request = new RemissionRequest(
-                1L, LocalDate.now(), "Bodega central", null,
+                LocalDate.now(), "Bodega central", null,
                 java.util.List.of(line(10L, "500.00")));
 
         service.create(request);
@@ -152,7 +155,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
 
         RemissionRequest request = new RemissionRequest(
-                1L, LocalDate.now(), "Bodega central", null,
+                LocalDate.now(), "Bodega central", null,
                 java.util.List.of(line(10L, "300.00")));
 
         service.create(request);
@@ -171,7 +174,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(11L)).thenReturn(Optional.of(lf));
 
         RemissionRequest request = new RemissionRequest(
-                1L, LocalDate.now(), "Bodega central", null,
+                LocalDate.now(), "Bodega central", null,
                 java.util.List.of(
                         line(10L, "10.00"),
                         line(11L, "10.00")));
@@ -192,7 +195,7 @@ class RemissionServiceImplTest {
         when(remissionRepository.findMaxSequenceNumber(1L, 1L)).thenReturn(947);
 
         RemissionResponse response = service.create(new RemissionRequest(
-                1L, LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
+                LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
 
         assertThat(response.displayNumber()).isEqualTo("SDBU-RP-0948");
         verify(remissionRepository).findMaxSequenceNumber(1L, 1L);
@@ -207,7 +210,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(lf));
 
         RemissionResponse response = service.create(new RemissionRequest(
-                1L, LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
+                LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
 
         assertThat(response.displayNumber()).isEqualTo("SDBU-LF-0001");
     }
@@ -224,7 +227,7 @@ class RemissionServiceImplTest {
         when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(conductor));
 
         RemissionResponse response = service.create(new RemissionRequest(
-                1L, LocalDate.now(), "ALMACAFE", "900723205", java.util.List.of(line(10L, "10.00"))));
+                LocalDate.now(), "ALMACAFE", "900723205", java.util.List.of(line(10L, "10.00"))));
 
         assertThat(response.conductorName()).isEqualTo("FUNDACION SUYUSAMA");
     }
@@ -242,7 +245,7 @@ class RemissionServiceImplTest {
         InventoryMovement rp = movement(new BigDecimal("400.00"), new BigDecimal("400.00"), new BigDecimal("502000.00"));
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
 
-        RemissionResponse response = service.create(new RemissionRequest(1L, LocalDate.now(), "ALMACAFE", null,
+        RemissionResponse response = service.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
                 java.util.List.of(new RemissionLineRequest(10L, new BigDecimal("360"), 9, new BigDecimal("365")))));
 
         assertThat(response.lines().get(0).sacos()).isEqualTo(9);
@@ -252,7 +255,7 @@ class RemissionServiceImplTest {
     private RemissionResponse dispatch(String quantity) {
         InventoryMovement movement = movement(new BigDecimal("5000"), new BigDecimal("5000"), new BigDecimal("1"));
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
-        return service.create(new RemissionRequest(1L, LocalDate.of(2026, 4, 11), "ALMACAFE", null,
+        return service.create(new RemissionRequest(LocalDate.of(2026, 4, 11), "ALMACAFE", null,
                 java.util.List.of(line(10L, quantity))));
     }
 
@@ -297,7 +300,7 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(a));
         when(inventoryMovementRepository.findById(11L)).thenReturn(Optional.of(b));
 
-        RemissionResponse ok = service.create(new RemissionRequest(1L, LocalDate.of(2026, 5, 7), "ALMACAFE", null,
+        RemissionResponse ok = service.create(new RemissionRequest(LocalDate.of(2026, 5, 7), "ALMACAFE", null,
                 java.util.List.of(line(10L, "300"), line(11L, "500"))));
         assertThat(ok.lines().get(0).outputValue()).isEqualByComparingTo("3187500");
         assertThat(ok.lines().get(1).outputValue()).isEqualByComparingTo("5312500");
@@ -306,7 +309,7 @@ class RemissionServiceImplTest {
         // Con el mismo saldo de 800 kg, 300 + 501 ya no alcanza: la segunda linea ve el saldo que dejo la primera.
         a.setRemainingKg(new BigDecimal("600"));
         b.setRemainingKg(new BigDecimal("600"));
-        assertThatThrownBy(() -> service.create(new RemissionRequest(1L, LocalDate.of(2026, 5, 7), "ALMACAFE", null,
+        assertThatThrownBy(() -> service.create(new RemissionRequest(LocalDate.of(2026, 5, 7), "ALMACAFE", null,
                 java.util.List.of(line(10L, "300"), line(11L, "501")))))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("saldo");

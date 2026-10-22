@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record RemissionRequest(
-        @NotNull Long agencyId,
         @NotNull LocalDate remissionDate,
         String destination,
         /** Cédula del conductor (= Grower, ver Remission). Opcional. */

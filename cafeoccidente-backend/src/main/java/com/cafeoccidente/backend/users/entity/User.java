@@ -38,4 +38,9 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
+
+    /** Ultima agencia de trabajo que eligio el Administrador (RF-05.1); null si nunca eligio. */
+    @ManyToOne
+    @JoinColumn(name = "ultima_agencia_id")
+    private Agency lastAgency;
 }

@@ -15,7 +15,6 @@ import java.math.BigDecimal;
  * deriva) - tareKg lo calcula el servidor como grossKg - netKg (Kilos_Brutos_AfterUpdate).
  */
 public record FertiFuturoPurchaseRequest(
-        @NotNull Long agencyId,
         @NotNull Long fundId,
         @NotNull Integer invoiceNumber,
         @NotBlank String specialType,
@@ -42,7 +41,7 @@ public record FertiFuturoPurchaseRequest(
      *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
     public FertiFuturoPurchaseRequest withWithholdingExempt(boolean exempt) {
         return new FertiFuturoPurchaseRequest(
-                agencyId, fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
+                fundId, invoiceNumber, specialType, idNumber, firstName, lastName, growerType,
                 address, futurePurchaseId, sacos, netKg, grossKg, healthyStoredWeight, defectiveStoredWeight,
                 penalty, exempt, freightDiscount, otherDiscounts, payment);
     }

@@ -1,7 +1,6 @@
 package com.cafeoccidente.backend.purchases.shared.controller;
 
 import com.cafeoccidente.backend.common.security.Roles;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
@@ -31,11 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class GrowerController {
 
     private final GrowerService growerService;
-    private final SecurityUtils securityUtils;
 
-    public GrowerController(GrowerService growerService, SecurityUtils securityUtils) {
+    public GrowerController(GrowerService growerService) {
         this.growerService = growerService;
-        this.securityUtils = securityUtils;
     }
 
     /** "Actualizar uno ya existente": busqueda global (una sola base), solo conductores. La ruta
@@ -73,11 +70,6 @@ public class GrowerController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public GrowerResponse createConductor(@Valid @RequestBody GrowerCreateRequest request) {
-        // USER: la agencia siempre es la de su sesion (ADMIN puede elegir otra).
-        Long agencyId = securityUtils.resolveAgencyId(request.agencyId());
-        return growerService.createConductor(new GrowerCreateRequest(
-                request.idNumber(), request.firstName(), request.secondName(), request.lastName(),
-                request.secondLastName(), agencyId, request.transportCompany(), request.vehiclePlate(),
-                request.address()));
+        return growerService.createConductor(request);
     }
 }

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.dataexport.repository.DataExportRepository;
 import com.cafeoccidente.backend.purchases.annulment.dto.AnnulmentCandidate;
@@ -60,7 +61,7 @@ class PurchaseAnnulmentIntegrationTest {
         SecurityUser principal = new SecurityUser(user.get());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
-        agencyId = principal.getAgencyId();
+        agencyId = CurrentAgencyProvider.workingAgency(user.get()).getId();
         Assumptions.assumeTrue(jdbc.queryForObject("SELECT count(*) FROM compras_cafe_seco WHERE agencia_id = ?"
                 + " AND estado = 'ANULADA'", Long.class, agencyId) > 0, "FALTAN las compras anuladas de El Tambo: corra 'python scripts/migrate_eltambo.py' contra esta base.");
     }
