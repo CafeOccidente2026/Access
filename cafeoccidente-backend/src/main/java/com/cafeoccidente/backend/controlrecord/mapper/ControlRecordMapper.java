@@ -27,7 +27,6 @@ public class ControlRecordMapper {
                 controlRecord.getSampleSize(),
                 controlRecord.getExcelsoKg(),
                 controlRecord.getGreenCoffeePercentage(),
-                controlRecord.getSpecialtyThreshold(),
                 controlRecord.getAssociatePercentage(),
                 controlRecord.getNonAssociateDiscount(),
                 controlRecord.getTrustedId(),

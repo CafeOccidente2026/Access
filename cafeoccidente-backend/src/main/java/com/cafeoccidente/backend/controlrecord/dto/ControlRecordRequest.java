@@ -9,7 +9,7 @@ import java.time.LocalDate;
 /** Campos editables del ControlRecord (pantalla "RegControl"). agencyId va en la URL, no aqui. */
 public record ControlRecordRequest(
         @NotNull Integer controlNumber,
-        @NotNull Integer baseFactor,
+        @NotNull @PositiveOrZero BigDecimal baseFactor,
         @NotNull @PositiveOrZero BigDecimal baseWithholding,
         @NotNull Integer baseLoad,
         @NotNull @PositiveOrZero BigDecimal withholdingPercentage,
@@ -19,9 +19,8 @@ public record ControlRecordRequest(
         @NotBlank String prefix,
         @NotNull @PositiveOrZero BigDecimal costs,
         @NotNull @PositiveOrZero BigDecimal sampleSize,
-        @NotNull @PositiveOrZero BigDecimal excelsoKg,
+        @NotNull @PositiveOrZero Integer excelsoKg,
         @NotNull @PositiveOrZero BigDecimal greenCoffeePercentage,
-        @NotNull @PositiveOrZero BigDecimal specialtyThreshold,
         @NotNull @PositiveOrZero BigDecimal associatePercentage,
         @NotNull @PositiveOrZero BigDecimal nonAssociateDiscount,
         @NotBlank String trustedId,

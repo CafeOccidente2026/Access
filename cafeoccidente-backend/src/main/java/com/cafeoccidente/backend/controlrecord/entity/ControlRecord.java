@@ -39,12 +39,9 @@ public class ControlRecord {
     @Column(name = "numero_registro_control", nullable = false)
     private Integer controlNumber;
 
-    /**
-     * Cruce heredado de la carga de Access, pendiente hasta HU-07: el campo Java se llama baseFactor
-     * pero guarda KgExcelso (70) y el Factor lo usa como tal. La columna ya se llama por lo que guarda.
-     */
+    /** KgExcelso (ej. 70): entra en PorcAlmSana = TamMuestra x KgExcelso / Peso Alm Sana. */
     @Column(name = "kg_excelso", nullable = false)
-    private Integer baseFactor;
+    private Integer excelsoKg;
 
     @Column(name = "base_retencion", nullable = false, precision = 15, scale = 2)
     private BigDecimal baseWithholding;
@@ -73,16 +70,16 @@ public class ControlRecord {
     @Column(name = "tamano_muestra", nullable = false, precision = 10, scale = 2)
     private BigDecimal sampleSize;
 
-    /** Copia de KgExcelso que no se usa en ningun calculo; HU-07 decide si se borra o es el umbral (Q15). */
+    /** Copia de KgExcelso que no se usa en ningun calculo; V6 borra la columna. */
     @Column(name = "kg_excelso_copia", nullable = false, precision = 10, scale = 2)
-    private BigDecimal excelsoKg;
+    private BigDecimal excelsoKgCopy;
 
     @Column(name = "porcentaje_cafe_verde", nullable = false, precision = 5, scale = 2)
     private BigDecimal greenCoffeePercentage;
 
-    /** Cruce pendiente hasta HU-07: specialtyThreshold guarda FactorBase (94) y el Vr. Kilo lo usa como tal. */
+    /** FactorBase (ej. 94, varia por agencia): entra en el Vr. Kilo como FactorBase / PorcAlmSana. */
     @Column(name = "factor_base", nullable = false, precision = 5, scale = 2)
-    private BigDecimal specialtyThreshold;
+    private BigDecimal baseFactor;
 
     @Column(name = "porc_aportes_asociados", nullable = false, precision = 5, scale = 2)
     private BigDecimal associatePercentage;

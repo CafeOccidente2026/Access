@@ -16,7 +16,6 @@ export interface ControlRecordResponse {
   readonly sampleSize: number;
   readonly excelsoKg: number;
   readonly greenCoffeePercentage: number;
-  readonly specialtyThreshold: number;
   readonly associatePercentage: number;
   readonly nonAssociateDiscount: number;
   readonly trustedId: string;

@@ -19,14 +19,14 @@ class DryCoffeePurchaseCalculatorTest {
     /** Valores del RegControl sembrado en V4__purchases_shared_and_announcement.sql. */
     private ControlRecord controlRecord() {
         ControlRecord cr = new ControlRecord();
-        cr.setBaseFactor(94);
+        cr.setExcelsoKg(70);
+        cr.setBaseFactor(new BigDecimal("94"));
         cr.setBaseWithholding(new BigDecimal("8379840.00"));
         cr.setBaseLoad(125);
         cr.setWithholdingPercentage(new BigDecimal("0.5"));
         cr.setAvgHuskPercentage(new BigDecimal("6.14"));
         cr.setCosts(new BigDecimal("692.00"));
         cr.setSampleSize(new BigDecimal("250.00"));
-        cr.setSpecialtyThreshold(new BigDecimal("93.33"));
         cr.setAssociatePercentage(new BigDecimal("2"));
         cr.setNonAssociateDiscount(new BigDecimal("0.8"));
         return cr;

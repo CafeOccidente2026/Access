@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 
+import content from '../../../../public/assets/data/control-record.json';
 import { ControlRecordComponent } from './control-record';
 import { AgencyService } from '../../core/services/agency.service';
 import { ContentService } from '../../core/services/content.service';
@@ -63,6 +64,23 @@ describe('ControlRecordComponent', () => {
     const edited = (loaded.slice(0, -1) + '6').replace(/[^0-9,]/g, '');
     component.onFieldValueChange({ key: 'withholdingPercentage', value: edited });
     expect(request().withholdingPercentage).toBe(0.6);
+  });
+
+  it('D1: with the backend response, Kg de Excelso shows 70 and Factor Base shows 94 (real labels)', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 1, name: 'Buesaco' }]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco', active: true, excelsoKg: 70, baseFactor: 94 }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    const byLabel = (label: string) => [...component.leftFields(), ...component.rightFields()].find((f) => f.label === label)?.value;
+    expect(byLabel('Kg de Excelso')).toBe('70');
+    expect(byLabel('Factor Base')).toBe('94');
   });
 
   it('shows the empty create form when the session agency has no record yet', () => {

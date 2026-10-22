@@ -154,7 +154,6 @@ export class ControlRecordComponent {
       sampleSize: num('sampleSize'),
       excelsoKg: num('excelsoKg'),
       greenCoffeePercentage: num('greenCoffeePercentage'),
-      specialtyThreshold: num('specialtyThreshold'),
       associatePercentage: num('associatePercentage'),
       nonAssociateDiscount: num('nonAssociateDiscount'),
       trustedId: str('trustedId'),

@@ -8,7 +8,7 @@
   "errorMessage": "Ocurrio un error. Verifique los datos e intente de nuevo.",
   "leftColumn": [
     { "key": "controlNumber", "label": "Núm Registro Control", "type": "number", "rawDisplay": true },
-    { "key": "baseFactor", "label": "Factor Base", "type": "number", "integer": true },
+    { "key": "baseFactor", "label": "Factor Base", "type": "percentage" },
     { "key": "baseWithholding", "label": "Base Rete Fuente", "type": "currency" },
     { "key": "baseLoad", "label": "Base Carga", "type": "number", "integer": true },
     { "key": "withholdingPercentage", "label": "Porcentaje Rete Fuente", "type": "percentage" },
@@ -18,9 +18,8 @@
     { "key": "prefix", "label": "Prefijo", "type": "text" },
     { "key": "costs", "label": "Costos", "type": "currency" },
     { "key": "sampleSize", "label": "Tamaño Muestra", "type": "count" },
-    { "key": "excelsoKg", "label": "Kg de Excelso", "type": "count" },
+    { "key": "excelsoKg", "label": "Kg de Excelso", "type": "number", "integer": true },
     { "key": "greenCoffeePercentage", "label": "Pocentaje Café Verde", "type": "percentage" },
-    { "key": "specialtyThreshold", "label": "Umbral Cafés Especiales", "type": "percentage" },
     { "key": "associatePercentage", "label": "Porc Aportes Asociados", "type": "percentage" },
     { "key": "nonAssociateDiscount", "label": "Poc Desc Coop No Asoc", "type": "percentage" },
     { "key": "trustedId", "label": "Fiel", "type": "text" }
