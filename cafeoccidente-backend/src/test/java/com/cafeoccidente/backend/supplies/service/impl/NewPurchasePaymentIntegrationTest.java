@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.dataexport.repository.DataExportRepository;
 import com.cafeoccidente.backend.dataexport.repository.ExportRow;
@@ -65,7 +66,7 @@ class NewPurchasePaymentIntegrationTest {
         SecurityUser principal = new SecurityUser(user.get());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
-        agencyId = principal.getAgencyId();
+        agencyId = CurrentAgencyProvider.workingAgency(user.get()).getId();
         Assumptions.assumeTrue(jdbc.queryForObject(
                 "SELECT count(*) FROM terceros WHERE identificacion = ?", Long.class, GROWER) > 0, "FALTA el tercero " + GROWER + " (viene de asociados_migrar.csv): corra 'python scripts/migrate_eltambo.py' contra esta base.");
     }
@@ -79,7 +80,7 @@ class NewPurchasePaymentIntegrationTest {
         Long fundId = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
         SpecialInfoResponse info = purchases.specialInfo(agencyId, fundId, "NESPRESSO - FTUSA");
         Integer invoice = jdbc.queryForObject("SELECT COALESCE(MAX(numero_factura), 0) + 1000 FROM compras_cafe_seco", Integer.class);
-        return new DryCoffeePurchaseRequest(agencyId, fundId, invoice, "NESPRESSO - FTUSA", GROWER, "PRUEBA", "PAGO",
+        return new DryCoffeePurchaseRequest(fundId, invoice, "NESPRESSO - FTUSA", GROWER, "PRUEBA", "PAGO",
                 "C", "VEREDA", "3000000000", 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"),
                 new BigDecimal("10"), new BigDecimal("190"), info.healthyUnitPrice(), info.bonus(), BigDecimal.ZERO,
                 info.costs(), false, BigDecimal.ZERO, BigDecimal.ZERO, payment);

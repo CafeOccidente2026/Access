@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
@@ -30,17 +31,18 @@ class DryCoffeePurchaseServiceImplTest {
     private final ControlRecordService controlRecordService = mock(ControlRecordService.class);
     private final SecurityUtils securityUtils = mock(SecurityUtils.class);
 
+    private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class);
     private final DryCoffeePurchaseServiceImpl service = new DryCoffeePurchaseServiceImpl(
             repository, mock(AgencyRepository.class), mock(FundRepository.class), mock(ProductCodeResolver.class),
             mock(AnnouncementService.class), controlRecordService, new DryCoffeePurchaseCalculator(),
-            new DryCoffeePurchaseMapper(), securityUtils, mock(GrowerService.class),
+            new DryCoffeePurchaseMapper(), securityUtils, currentAgencyProvider, mock(GrowerService.class),
             mock(PurchaseInvoiceNumberService.class), mock(InventoryMovementService.class),
             mock(PurchasePaymentService.class));
 
     @Test
     void findByDateFiltersBySessionAgencyAndReturnsEmptyWhenNoPurchases() {
         LocalDate date = LocalDate.of(2026, 5, 9);
-        when(securityUtils.getCurrentAgencyId()).thenReturn(4L);
+        when(currentAgencyProvider.currentAgencyId()).thenReturn(4L);
         when(repository.findByAgencyIdAndPurchaseDateOrderByInvoiceNumberAsc(4L, date)).thenReturn(List.of());
 
         assertThat(service.findByDate(date)).isEmpty();

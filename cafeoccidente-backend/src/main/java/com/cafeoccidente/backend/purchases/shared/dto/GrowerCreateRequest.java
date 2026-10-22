@@ -10,7 +10,6 @@ public record GrowerCreateRequest(
         String secondName,
         @NotBlank String lastName,
         String secondLastName,
-        @NotNull Long agencyId,
         String transportCompany,
         String vehiclePlate,
         /** Opcional: el alta rapida de Registrar Salidas no la envia (queda vacia como antes). */
@@ -19,7 +18,7 @@ public record GrowerCreateRequest(
     /** Alta rapida sin direccion (firma anterior a "Ingresar Conductores"). */
     public GrowerCreateRequest(
             String idNumber, String firstName, String secondName, String lastName, String secondLastName,
-            Long agencyId, String transportCompany, String vehiclePlate) {
-        this(idNumber, firstName, secondName, lastName, secondLastName, agencyId, transportCompany, vehiclePlate, null);
+            String transportCompany, String vehiclePlate) {
+        this(idNumber, firstName, secondName, lastName, secondLastName, transportCompany, vehiclePlate, null);
     }
 }

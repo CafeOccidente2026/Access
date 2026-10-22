@@ -16,7 +16,6 @@ import java.time.LocalDate;
  */
 public record LedgerEntryRequest(
         @NotBlank @Size(max = 30) String transactionId,
-        Long agencyId,
         String fundCode,
         LocalDate entryDate,
         @NotBlank @Pattern(regexp = "[0-9]{1,20}") String idNumber,

@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.drycoffee.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
@@ -30,9 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DryCoffeePurchaseController {
 
     private final DryCoffeePurchaseService dryCoffeePurchaseService;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public DryCoffeePurchaseController(DryCoffeePurchaseService dryCoffeePurchaseService) {
+    public DryCoffeePurchaseController(DryCoffeePurchaseService dryCoffeePurchaseService, CurrentAgencyProvider currentAgencyProvider) {
         this.dryCoffeePurchaseService = dryCoffeePurchaseService;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @PostMapping
@@ -65,8 +68,8 @@ public class DryCoffeePurchaseController {
 
     @GetMapping("/special-info")
     public SpecialInfoResponse specialInfo(
-            @RequestParam Long agencyId, @RequestParam Long fundId, @RequestParam String specialType) {
-        return dryCoffeePurchaseService.specialInfo(agencyId, fundId, specialType);
+            @RequestParam Long fundId, @RequestParam String specialType) {
+        return dryCoffeePurchaseService.specialInfo(currentAgencyProvider.currentAgencyId(), fundId, specialType);
     }
 
     @GetMapping("/quality-percentages")

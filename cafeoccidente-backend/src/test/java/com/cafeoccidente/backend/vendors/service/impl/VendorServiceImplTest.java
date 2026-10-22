@@ -50,8 +50,7 @@ class VendorServiceImplTest {
 
     @Test
     void associationKeepsWholeNameInFirstNameWithSexE() {
-        service.create(new VendorCreateRequest(true, " 900723205 ", "FUNDACION SUYUSAMA", "X", "Y", "Z", null,
-                "M", "300", "CLL 20 24 64", "520001", "a@b.co"), 4L);
+        service.create(new VendorCreateRequest(true, " 900723205 ", "FUNDACION SUYUSAMA", "X", "Y", "Z", "M", "300", "CLL 20 24 64", "520001", "a@b.co"), 4L);
 
         Grower g = saved();
         assertThat(g.getIdNumber()).isEqualTo("900723205");
@@ -74,8 +73,7 @@ class VendorServiceImplTest {
 
     @Test
     void personKeepsAllThirteenFields() {
-        service.create(new VendorCreateRequest(false, "59124124", "AURA", "MARIA", "TUTISTAR", " ", null,
-                "F", "3001234567", "VDA LA PALMA", "522060", "aura@correo.co"), 4L);
+        service.create(new VendorCreateRequest(false, "59124124", "AURA", "MARIA", "TUTISTAR", " ", "F", "3001234567", "VDA LA PALMA", "522060", "aura@correo.co"), 4L);
 
         Grower g = saved();
         assertThat(g.getSecondName()).isEqualTo("MARIA");
@@ -95,7 +93,7 @@ class VendorServiceImplTest {
         when(growers.findByIdNumber("59124124")).thenReturn(Optional.of(new Grower()));
 
         assertThatThrownBy(() -> service.create(new VendorCreateRequest(false, "59124124", "AURA", null, null,
-                null, null, null, null, null, null, null), 4L)).isInstanceOf(BusinessRuleException.class);
+                null, null, null, null, null, null), 4L)).isInstanceOf(BusinessRuleException.class);
         verify(growers, never()).save(any());
     }
 }

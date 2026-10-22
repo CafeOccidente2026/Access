@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
@@ -38,9 +39,11 @@ class FuturePurchaseServiceImplTest {
     private final GrowerService growerService = mock(GrowerService.class);
     private final SecurityUtils securityUtils = mock(SecurityUtils.class);
 
+    /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
+    private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final FuturePurchaseServiceImpl service = new FuturePurchaseServiceImpl(
             futurePurchaseRepository, agencyRepository, fundRepository, announcementService, growerService,
-            securityUtils);
+            securityUtils, currentAgencyProvider);
 
     private Agency agency() {
         Agency agency = new Agency();
@@ -70,7 +73,7 @@ class FuturePurchaseServiceImplTest {
 
     private FuturePurchaseRequest request() {
         return new FuturePurchaseRequest(
-                1L, "123456", "RN", new BigDecimal("500.00"), LocalDate.now().plusMonths(1),
+                "123456", "RN", new BigDecimal("500.00"), LocalDate.now().plusMonths(1),
                 "Finca", "Buesaco", "Vereda");
     }
 

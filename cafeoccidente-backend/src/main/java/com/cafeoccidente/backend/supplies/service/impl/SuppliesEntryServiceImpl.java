@@ -2,7 +2,7 @@ package com.cafeoccidente.backend.supplies.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
@@ -50,7 +50,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private final SuppliesReadRepository suppliesReadRepository;
     private final AgencyRepository agencyRepository;
     private final FundRepository fundRepository;
-    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
     private final SuppliesMapper mapper;
 
     public SuppliesEntryServiceImpl(
@@ -61,7 +61,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
             SuppliesReadRepository suppliesReadRepository,
             AgencyRepository agencyRepository,
             FundRepository fundRepository,
-            SecurityUtils securityUtils,
+            CurrentAgencyProvider currentAgencyProvider,
             SuppliesMapper mapper) {
         this.cashEntryRepository = cashEntryRepository;
         this.pettyCashEntryRepository = pettyCashEntryRepository;
@@ -70,7 +70,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         this.suppliesReadRepository = suppliesReadRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
-        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
         this.mapper = mapper;
     }
 
@@ -160,7 +160,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private <T extends LedgerEntry> T fill(
             T entry, LedgerEntryRequest request, LocalDate date, Fund fund, String method, Integer checkNumber) {
         entry.setTransactionId(request.transactionId().trim());
-        entry.setAgency(agency(request.agencyId()));
+        entry.setAgency(agency());
         entry.setFund(fund);
         entry.setEntryDate(date);
         entry.setIdNumber(request.idNumber());
@@ -176,7 +176,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private PackagingEntry packaging(PackagingEntryRequest request, LocalDate date) {
         PackagingEntry entry = new PackagingEntry();
         entry.setTransactionId(request.transactionId().trim());
-        entry.setAgency(agency(request.agencyId()));
+        entry.setAgency(agency());
         entry.setPackagingType(oneOf(request.packagingType(), PACKAGING_TYPES, "Tipo de empaque"));
         entry.setEntryDate(date);
         entry.setIdNumber(request.idNumber());
@@ -185,12 +185,9 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         return entry;
     }
 
-    private Agency agency(Long requestedAgencyId) {
-        Long agencyId = securityUtils.resolveAgencyId(requestedAgencyId);
-        if (agencyId == null) {
-            throw new BusinessRuleException("Elija una agencia");
-        }
-        return agencyRepository.findById(agencyId)
+    /** Agencia de trabajo (RF-05.1): nunca la que mande el cliente. */
+    private Agency agency() {
+        return agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
     }
 

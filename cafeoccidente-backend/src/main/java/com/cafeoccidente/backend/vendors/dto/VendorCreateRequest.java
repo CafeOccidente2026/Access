@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * "Ingresar Vendedores": association = true es la pantalla de 6 items (Asociaciones1: todo el nombre
- * en firstName, Sexo "E"); false la de 13 items (formulario Vendedores, persona). agencyId solo lo
- * usa ADMIN: USER queda siempre con la agencia de su sesion.
+ * en firstName, Sexo "E"); false la de 13 items (formulario Vendedores, persona). La agencia
+ * la pone el servidor: es la agencia de trabajo (RF-05.1).
  */
 public record VendorCreateRequest(
         boolean association,
@@ -17,7 +17,6 @@ public record VendorCreateRequest(
         @Size(max = 100) String secondName,
         @Size(max = 100) String lastName,
         @Size(max = 100) String secondLastName,
-        Long agencyId,
         /** Combo de Access con LimitToList: F, M o E. */
         @Pattern(regexp = "[FME]") String sex,
         @Size(max = 30) String phone,

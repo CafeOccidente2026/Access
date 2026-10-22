@@ -1,7 +1,7 @@
 package com.cafeoccidente.backend.purchases.future.service.impl;
 
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -42,7 +42,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private final FundRepository fundRepository;
     private final ControlRecordRepository controlRecordRepository;
     private final ControlRecordService controlRecordService;
-    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
     public AnnouncementServiceImpl(
             AnnouncementRepository announcementRepository,
@@ -50,13 +50,13 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             FundRepository fundRepository,
             ControlRecordRepository controlRecordRepository,
             ControlRecordService controlRecordService,
-            SecurityUtils securityUtils) {
+            CurrentAgencyProvider currentAgencyProvider) {
         this.announcementRepository = announcementRepository;
         this.agencyAnnouncementNumberRepository = agencyAnnouncementNumberRepository;
         this.fundRepository = fundRepository;
         this.controlRecordRepository = controlRecordRepository;
         this.controlRecordService = controlRecordService;
-        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @Override
@@ -114,7 +114,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private AnnouncementResponse publish(Announcement master, Fund fund) {
         announcementRepository.save(master);
 
-        Long callerAgencyId = securityUtils.getCurrentAgencyId();
+        Long callerAgencyId = currentAgencyProvider.currentAgencyId();
         AgencyAnnouncementNumber callerNumbering = null;
         ControlRecord callerControlRecord = null;
 
@@ -151,7 +151,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
 
     @Override
     public List<AnnouncementResponse> history() {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         return agencyAnnouncementNumberRepository.findByAgencyIdOrderByAssignedAtDescIdDesc(agencyId).stream()
                 .map(numbering -> toResponse(numbering, controlRecord))

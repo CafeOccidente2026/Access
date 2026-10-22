@@ -1,7 +1,7 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.inventory.dto.InventoryReportRow;
 import com.cafeoccidente.backend.inventory.dto.ProductCodeOption;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
@@ -19,21 +19,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class InventoryReportController {
 
     private final InventoryReportService inventoryReportService;
-    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public InventoryReportController(InventoryReportService inventoryReportService, SecurityUtils securityUtils) {
+    public InventoryReportController(InventoryReportService inventoryReportService, CurrentAgencyProvider currentAgencyProvider) {
         this.inventoryReportService = inventoryReportService;
-        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
-    /** USER: siempre su agencia de sesion, ignora el agencyId pedido (SecurityUtils.resolveAgencyId). */
+    /** Siempre la agencia de trabajo (RF-05.1). */
     @GetMapping
     public List<InventoryReportRow> report(
-            @RequestParam Long agencyId,
             @RequestParam(required = false) String productCode,
             @RequestParam(required = false) String specialType) {
         return inventoryReportService.report(
-                securityUtils.resolveAgencyId(agencyId), productCode, specialType, LocalDate.now());
+                currentAgencyProvider.currentAgencyId(), productCode, specialType, LocalDate.now());
     }
 
     @GetMapping("/product-codes")

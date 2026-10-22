@@ -1,7 +1,7 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
 import com.cafeoccidente.backend.inventory.dto.RemissionResponse;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
@@ -24,11 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class RemissionController {
 
     private final RemissionService remissionService;
-    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public RemissionController(RemissionService remissionService, SecurityUtils securityUtils) {
+    public RemissionController(RemissionService remissionService, CurrentAgencyProvider currentAgencyProvider) {
         this.remissionService = remissionService;
-        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @PostMapping
@@ -43,13 +43,12 @@ public class RemissionController {
     }
 
     /** "Reimprimir Remision" busca por numero+agencia; sin numero, lista todas (mas nueva primero).
-     *  USER: siempre su agencia de sesion (ver SecurityUtils.resolveAgencyId). */
+     *  Siempre la agencia de trabajo (RF-05.1). */
     @GetMapping
     public List<RemissionResponse> list(
-            @RequestParam Long agencyId,
             @RequestParam(required = false) String remissionNumber,
             @RequestParam(required = false, defaultValue = "false") boolean pendingExport) {
-        agencyId = securityUtils.resolveAgencyId(agencyId);
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         if (remissionNumber != null && !remissionNumber.isBlank()) {
             return remissionService.findByNumber(agencyId, remissionNumber).map(List::of).orElseGet(List::of);
         }

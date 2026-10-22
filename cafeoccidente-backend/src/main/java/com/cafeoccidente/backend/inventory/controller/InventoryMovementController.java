@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.inventory.dto.InventoryMovementResponse;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
@@ -18,14 +19,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class InventoryMovementController {
 
     private final InventoryMovementService inventoryMovementService;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public InventoryMovementController(InventoryMovementService inventoryMovementService) {
+    public InventoryMovementController(InventoryMovementService inventoryMovementService, CurrentAgencyProvider currentAgencyProvider) {
         this.inventoryMovementService = inventoryMovementService;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @GetMapping
-    public List<InventoryMovementResponse> listByAgency(@RequestParam Long agencyId) {
-        return inventoryMovementService.listByAgency(agencyId);
+    public List<InventoryMovementResponse> listByAgency() {
+        return inventoryMovementService.listByAgency(currentAgencyProvider.currentAgencyId());
     }
 
     @GetMapping("/{id}")

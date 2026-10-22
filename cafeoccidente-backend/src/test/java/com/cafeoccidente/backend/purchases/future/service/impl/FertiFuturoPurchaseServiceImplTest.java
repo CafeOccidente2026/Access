@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -56,10 +57,12 @@ class FertiFuturoPurchaseServiceImplTest {
     private final GrowerService growerService = mock(GrowerService.class);
     private final PurchasePaymentService purchasePaymentService = mock(PurchasePaymentService.class);
 
+    /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
+    private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final FertiFuturoPurchaseServiceImpl service = new FertiFuturoPurchaseServiceImpl(
             fertiFuturoPurchaseRepository, futurePurchaseRepository, agencyRepository, fundRepository,
             productCodeResolver, announcementService, controlRecordService, new FertiFuturoPurchaseCalculator(),
-            purchaseInvoiceNumberService, securityUtils, inventoryMovementService, growerService,
+            purchaseInvoiceNumberService, securityUtils, currentAgencyProvider, inventoryMovementService, growerService,
             purchasePaymentService);
 
     private Agency agency() {
@@ -85,7 +88,7 @@ class FertiFuturoPurchaseServiceImplTest {
 
     private FertiFuturoPurchaseRequest request(Long futurePurchaseId) {
         return new FertiFuturoPurchaseRequest(
-                1L, 1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", futurePurchaseId,
+                1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", futurePurchaseId,
                 10, new BigDecimal("1200"), new BigDecimal("1250"), new BigDecimal("220"),
                 new BigDecimal("20"), new BigDecimal("50"), false,
                 BigDecimal.ZERO, BigDecimal.ZERO, null);

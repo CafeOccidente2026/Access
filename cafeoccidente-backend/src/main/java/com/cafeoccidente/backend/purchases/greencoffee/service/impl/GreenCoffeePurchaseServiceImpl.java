@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.greencoffee.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -52,6 +53,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final GreenCoffeePurchaseCalculator calculator;
     private final GreenCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
     private final InventoryMovementService inventoryMovementService;
@@ -66,7 +68,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             ControlRecordService controlRecordService,
             GreenCoffeePurchaseCalculator calculator,
             GreenCoffeePurchaseMapper mapper,
-            SecurityUtils securityUtils,
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
             PurchaseInvoiceNumberService purchaseInvoiceNumberService,
             InventoryMovementService inventoryMovementService,
@@ -80,6 +82,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
         this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
         this.inventoryMovementService = inventoryMovementService;
@@ -90,7 +93,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     @Transactional
     public GreenCoffeePurchaseResponse create(GreenCoffeePurchaseRequest request) {
         request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
@@ -167,13 +170,13 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     public GreenCoffeePurchaseCalculation preview(GreenCoffeePurchaseRequest request) {
         request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
         AnnouncementResponse announcement =
-                announcementService.findLatest(request.agencyId(), request.fundId(), SPECIAL_TYPE);
+                announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), SPECIAL_TYPE);
         return runCalculation(request, announcement);
     }
 
     private GreenCoffeePurchaseCalculation runCalculation(
             GreenCoffeePurchaseRequest request, AnnouncementResponse announcement) {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
+        ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
 
         MonthlyGrowerTotals dailyTotals = greenCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
                 request.idNumber(), LocalDate.now());
@@ -192,7 +195,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
@@ -214,7 +217,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
 
     @Override
     public AnnouncementInfoResponse announcementInfo() {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         Fund fund = fundRepository.findByCode(FUND_CODE)
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());

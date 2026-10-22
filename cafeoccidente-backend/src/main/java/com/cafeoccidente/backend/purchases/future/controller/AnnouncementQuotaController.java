@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaResponse;
@@ -16,31 +17,32 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Pantalla "Asignar Cupo" (Access "ACTUALIZA CUPOS"). Solo ADMIN. */
 @RestController
-@RequestMapping("/api/announcement-quotas/{agencyId}")
+@RequestMapping("/api/announcement-quotas")
 @PreAuthorize(Roles.ADMIN_USER)
 public class AnnouncementQuotaController {
 
     private final AnnouncementQuotaService announcementQuotaService;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public AnnouncementQuotaController(AnnouncementQuotaService announcementQuotaService) {
+    public AnnouncementQuotaController(AnnouncementQuotaService announcementQuotaService, CurrentAgencyProvider currentAgencyProvider) {
         this.announcementQuotaService = announcementQuotaService;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @GetMapping
-    public List<AnnouncementQuotaResponse> list(@PathVariable Long agencyId) {
-        return announcementQuotaService.list(agencyId);
+    public List<AnnouncementQuotaResponse> list() {
+        return announcementQuotaService.list(currentAgencyProvider.currentAgencyId());
     }
 
     @GetMapping("/{announcementNumber}")
-    public AnnouncementQuotaResponse get(@PathVariable Long agencyId, @PathVariable Integer announcementNumber) {
-        return announcementQuotaService.get(agencyId, announcementNumber);
+    public AnnouncementQuotaResponse get(@PathVariable Integer announcementNumber) {
+        return announcementQuotaService.get(currentAgencyProvider.currentAgencyId(), announcementNumber);
     }
 
     @PutMapping("/{announcementNumber}")
     public AnnouncementQuotaResponse assign(
-            @PathVariable Long agencyId,
             @PathVariable Integer announcementNumber,
             @Valid @RequestBody AnnouncementQuotaRequest request) {
-        return announcementQuotaService.assign(agencyId, announcementNumber, request);
+        return announcementQuotaService.assign(currentAgencyProvider.currentAgencyId(), announcementNumber, request);
     }
 }

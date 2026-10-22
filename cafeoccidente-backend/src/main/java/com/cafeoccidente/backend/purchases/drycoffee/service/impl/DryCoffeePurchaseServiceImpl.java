@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.drycoffee.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -49,6 +50,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final DryCoffeePurchaseCalculator calculator;
     private final DryCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
     private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
     private final InventoryMovementService inventoryMovementService;
@@ -63,7 +65,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             ControlRecordService controlRecordService,
             DryCoffeePurchaseCalculator calculator,
             DryCoffeePurchaseMapper mapper,
-            SecurityUtils securityUtils,
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
             PurchaseInvoiceNumberService purchaseInvoiceNumberService,
             InventoryMovementService inventoryMovementService,
@@ -77,6 +79,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.calculator = calculator;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
         this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
         this.inventoryMovementService = inventoryMovementService;
@@ -87,7 +90,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Transactional
     public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request) {
         request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
@@ -169,7 +172,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public List<DryCoffeePurchaseResponse> findByDate(LocalDate purchaseDate) {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         List<DryCoffeePurchase> purchases =
                 dryCoffeePurchaseRepository.findByAgencyIdAndPurchaseDateOrderByInvoiceNumberAsc(agencyId, purchaseDate);
         if (purchases.isEmpty()) {
@@ -182,9 +185,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
         request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
-        AnnouncementResponse announcement = announcementService.findLatest(
-                request.agencyId(), request.fundId(), request.specialType());
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
+        AnnouncementResponse announcement = announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), request.specialType());
+        ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
         return runCalculation(request, announcement, controlRecord);
     }
 
@@ -208,7 +210,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
         int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
@@ -255,7 +257,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     public QualityPercentagesResponse qualityPercentages(
             BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, BigDecimal healthyStoredWeight) {
-        ControlRecord controlRecord = controlRecordService.getActive(securityUtils.getCurrentAgencyId());
+        ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
         return new QualityPercentagesResponse(
                 totalStoredWeight == null ? null : calculator.wastePercentage(totalStoredWeight, controlRecord),
                 defectiveStoredWeight == null

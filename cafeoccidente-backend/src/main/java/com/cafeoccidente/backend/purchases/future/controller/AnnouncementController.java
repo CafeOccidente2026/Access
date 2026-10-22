@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
@@ -23,15 +24,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AnnouncementController {
 
     private final AnnouncementService announcementService;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public AnnouncementController(AnnouncementService announcementService) {
+    public AnnouncementController(AnnouncementService announcementService, CurrentAgencyProvider currentAgencyProvider) {
         this.announcementService = announcementService;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @GetMapping("/latest")
     public AnnouncementResponse latest(
-            @RequestParam Long agencyId, @RequestParam Long fundId, @RequestParam String specialType) {
-        return announcementService.findLatest(agencyId, fundId, specialType);
+            @RequestParam Long fundId, @RequestParam String specialType) {
+        return announcementService.findLatest(currentAgencyProvider.currentAgencyId(), fundId, specialType);
     }
 
     /** "Actualizar Anuncio con Factor" (Administrador y Operaciones, RF-08): siempre crea un anuncio nuevo. */

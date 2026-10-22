@@ -1,7 +1,7 @@
 package com.cafeoccidente.backend.purchases.annulment.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.annulment.dto.AnnulmentCandidate;
 import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
@@ -21,11 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class PurchaseAnnulmentController {
 
     private final PurchaseAnnulmentService service;
-    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public PurchaseAnnulmentController(PurchaseAnnulmentService service, SecurityUtils securityUtils) {
+    public PurchaseAnnulmentController(PurchaseAnnulmentService service, CurrentAgencyProvider currentAgencyProvider) {
         this.service = service;
-        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @GetMapping
@@ -38,7 +38,8 @@ public class PurchaseAnnulmentController {
         return service.annul(agency(), module, id);
     }
 
+    /** Anular Documento trabaja solo sobre la agencia de trabajo (RF-05.1). */
     private Long agency() {
-        return securityUtils.isAdmin() ? null : securityUtils.getCurrentAgencyId();
+        return currentAgencyProvider.currentAgencyId();
     }
 }

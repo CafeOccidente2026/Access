@@ -17,7 +17,7 @@ class FertiFuturoPurchaseCalculatorTest {
     private FertiFuturoPurchaseRequest request(
             String growerType, boolean withholdingExempt, BigDecimal healthyStoredWeight) {
         return new FertiFuturoPurchaseRequest(
-                1L, 1L, 27867, "RN", "123456", "Juan", "Perez", growerType, "Vereda", null,
+                1L, 27867, "RN", "123456", "Juan", "Perez", growerType, "Vereda", null,
                 10, new BigDecimal("1200"), new BigDecimal("1250"), healthyStoredWeight,
                 new BigDecimal("20"), new BigDecimal("50"), withholdingExempt,
                 BigDecimal.ZERO, BigDecimal.ZERO, null);

@@ -193,7 +193,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
 
     private static DryCoffeePurchaseRequest toRequest(DryCoffeePurchase p) {
         return new DryCoffeePurchaseRequest(
-                p.getAgency().getId(), p.getFund().getId(), p.getInvoiceNumber(), p.getSpecialType(),
+                p.getFund().getId(), p.getInvoiceNumber(), p.getSpecialType(),
                 p.getIdNumber(), p.getFirstName(), p.getLastName(), p.getGrowerType(), p.getAddress(),
                 p.getCellphone(), p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
                 p.getTotalStoredWeight(), p.getDefectiveStoredWeight(), p.getHealthyStoredWeight(),
