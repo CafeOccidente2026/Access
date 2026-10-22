@@ -1,7 +1,6 @@
 /** Campos de entrada de "Ingresar Compras a Futuro" (Form_COMPRAS A FUTURO.bas). Sin cascada de
  *  precio ni factura: solo registra el compromiso de entrega. */
 export interface FuturePurchaseRequest {
-  readonly agencyId: number;
   readonly idNumber: string;
   readonly specialType: string;
   readonly announcedKg: number;

@@ -12,7 +12,7 @@
       </label>
       <label *ngIf="!allAgencies()" class="ml-6 flex items-center gap-2">
         <span class="w-24 font-bold text-blue-900">{{ c.agencyLabel }}:</span>
-        <app-agency-picker class="w-56" (agencyChange)="agencyId.set($event)"></app-agency-picker>
+        <app-agency-picker class="w-56" [selectable]="true" (agencyChange)="agencyId.set($event)"></app-agency-picker>
       </label>
 
       <div *ngIf="s.dates" class="flex gap-4">

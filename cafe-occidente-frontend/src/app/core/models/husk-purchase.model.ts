@@ -33,7 +33,6 @@ export interface HuskPurchaseCalculation {
 
 /** Campos de entrada manual del formulario Compra Pasilla (PASILLA). */
 export interface HuskPurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
   readonly invoiceNumber: number;
   readonly idNumber: string;

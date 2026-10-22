@@ -15,11 +15,14 @@
         <div class="flex items-end gap-2">
           <label class="flex w-56 flex-col gap-1">
             <span class="font-bold text-blue-900">{{ c.agencyLabel }}:</span>
-            <app-agency-picker (agencyChange)="agencyId.set($event)"></app-agency-picker>
+            <app-agency-picker></app-agency-picker>
           </label>
           <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200" data-flow-submit (click)="load()">{{ c.acceptLabel }}</button>
         </div>
-        <p *ngIf="admin" class="text-xs text-slate-500">{{ c.allAgenciesHint }}</p>
+        <label *ngIf="admin" class="flex items-center gap-2 text-sm">
+          <input type="checkbox" [checked]="allAgencies()" (change)="allAgencies.set($any($event.target).checked)" />
+          {{ c.allAgenciesLabel }}
+        </label>
         <p class="max-w-4xl text-xs text-amber-800">{{ v.note }}</p>
       </div>
 

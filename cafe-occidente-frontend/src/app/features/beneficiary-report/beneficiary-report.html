@@ -5,7 +5,7 @@
       <form class="flex flex-wrap items-end gap-3" appFormFlow (submit)="accept($event)">
         <label class="flex w-56 flex-col gap-1 text-sm">
           <span class="font-bold text-blue-900">{{ c.agencyLabel }}:</span>
-          <app-agency-picker (agencyChange)="agencyId.set($event)"></app-agency-picker>
+          <app-agency-picker></app-agency-picker>
         </label>
         <label class="flex w-44 flex-col gap-1 text-sm">
           <span class="font-bold text-blue-900">{{ c.idNumberLabel }}:</span>
@@ -24,7 +24,10 @@
         <button type="submit" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200">{{ c.acceptLabel }}</button>
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="cancel()">{{ c.cancelLabel }}</button>
       </form>
-      <p *ngIf="admin" class="text-xs text-slate-500">{{ c.allAgenciesHint }}</p>
+      <label *ngIf="admin" class="flex items-center gap-2 text-sm">
+        <input type="checkbox" [checked]="allAgencies()" (change)="allAgencies.set($any($event.target).checked)" />
+        {{ c.allAgenciesLabel }}
+      </label>
       <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>
       <iframe *ngIf="pdfUrl() as url" [title]="r.pdfTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>

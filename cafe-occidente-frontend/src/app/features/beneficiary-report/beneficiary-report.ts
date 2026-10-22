@@ -35,7 +35,8 @@ export class BeneficiaryReportComponent {
   readonly content = toSignal(inject(ContentService).loadJson<BeneficiaryReportContent>('beneficiary-report'));
   readonly report = computed(() => this.content()?.reports[this.reportKey]);
 
-  readonly agencyId = signal<number | null>(inject(AuthService).agencyId());
+  /** RN-28.2.4: solo el Administrador; el servidor lo ignora para otro rol. */
+  readonly allAgencies = signal(false);
   readonly idNumber = signal('');
   readonly from = signal('');
   readonly to = signal('');
@@ -53,7 +54,7 @@ export class BeneficiaryReportComponent {
       return;
     }
     const params = {
-      agencyId: this.agencyId(),
+      allAgencies: this.allAgencies() ? 'true' : null,
       idNumber: this.idNumber().replace(/\D/g, ''),
       from: report.dates ? this.from() : null,
       to: report.dates ? this.to() : null,

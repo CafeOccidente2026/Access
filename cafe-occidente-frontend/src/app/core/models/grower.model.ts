@@ -44,7 +44,6 @@ export interface GrowerCreateRequest {
   readonly secondName: string | null;
   readonly lastName: string;
   readonly secondLastName: string | null;
-  readonly agencyId: number;
   readonly transportCompany: string | null;
   readonly vehiclePlate: string | null;
   /** Opcional: el alta rapida de Registrar Salidas no la envia. */

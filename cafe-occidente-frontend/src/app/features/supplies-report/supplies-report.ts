@@ -5,7 +5,6 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
-import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { SuppliesService } from '../../core/services/supplies.service';
@@ -31,11 +30,9 @@ export class SuppliesReportComponent {
   private readonly navigation = inject(NavigationService);
   private readonly reportKey: string = inject(ActivatedRoute).snapshot.data['report'];
 
-  readonly admin = inject(AuthService).isAdmin();
   readonly content = toSignal(inject(ContentService).loadJson<SuppliesReportContent>('supplies-report'));
   readonly report = computed(() => this.content()?.reports[this.reportKey]);
 
-  readonly agencyId = signal<number | null>(inject(AuthService).agencyId());
   readonly filters = signal<Record<string, string>>({});
   readonly message = signal<string | null>(null);
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
@@ -61,7 +58,7 @@ export class SuppliesReportComponent {
       this.message.set(content.messages.required.replace('{label}', missing.label));
       return;
     }
-    const params = { agencyId: this.agencyId(), ...report.fixedParams, ...filters };
+    const params = { ...report.fixedParams, ...filters };
     this.suppliesService.report(report.endpoint, params, report.post).subscribe({
       next: (rows) => {
         if (rows.length === 0 && report.layout !== 'checks') {

@@ -5,7 +5,6 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 
 import { SuppliesEntryResponse } from '../../core/models/supplies.model';
-import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { NavigationService } from '../../core/services/navigation.service';
@@ -40,7 +39,6 @@ export class SuppliesEntryComponent {
   readonly content = toSignal(inject(ContentService).loadJson<SuppliesEntryContent>('supplies-entry'));
   readonly screen = computed(() => this.content()?.screens[this.screenKey]);
 
-  readonly agencyId = signal<number | null>(inject(AuthService).agencyId());
   private readonly edited = signal<Record<string, string> | null>(null);
   readonly values = computed(() => {
     const screen = this.screen();
@@ -99,12 +97,8 @@ export class SuppliesEntryComponent {
       this.fail(messages.required.replace('{label}', missing));
       return;
     }
-    if (!this.agencyId()) {
-      this.fail(messages.chooseAgency);
-      return;
-    }
     this.saving.set(true);
-    this.suppliesService.create(screen.endpoint, buildRequest(screen, this.values(), this.agencyId())).subscribe({
+    this.suppliesService.create(screen.endpoint, buildRequest(screen, this.values())).subscribe({
       next: (saved) => {
         this.saving.set(false);
         this.error.set(false);

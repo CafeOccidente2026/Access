@@ -55,7 +55,6 @@ export class InventoryReportComponent {
   readonly admin = this.auth.isAdmin();
   readonly year = new Date().getFullYear();
 
-  readonly agencyId = signal<number | null>(this.auth.agencyId());
   readonly products = signal<ProductCodeOption[]>([]);
   readonly productLabels = computed(() => this.products().map((p) => `${p.code} ${p.name ?? ''}`.trimEnd()));
   readonly specials = signal<string[]>([]);
@@ -77,21 +76,16 @@ export class InventoryReportComponent {
   }
 
   accept(): void {
-    const agencyId = this.agencyId();
     const choice = this.choice().trim();
     this.message.set(null);
     this.pdfUrl.set(null);
-    if (!agencyId) {
-      this.message.set('Elija una agencia de la lista');
-      return;
-    }
     const productCode = this.byCode ? this.products()[this.productLabels().indexOf(choice)]?.code : undefined;
     if (this.byCode ? !productCode : !this.specials().includes(choice)) {
       this.message.set(this.byCode ? 'Elija un código de producto de la lista' : 'Elija una especialidad de la lista');
       return;
     }
     const filter = productCode ? { productCode } : { specialType: choice };
-    this.inventoryService.inventoryReport(agencyId, filter).subscribe({
+    this.inventoryService.inventoryReport(filter).subscribe({
       next: (rows) => {
         if (rows.length === 0) {
           this.message.set(`No hay movimientos de ${this.byCode ? 'ese producto' : 'esa especialidad'} en ${this.year}`);

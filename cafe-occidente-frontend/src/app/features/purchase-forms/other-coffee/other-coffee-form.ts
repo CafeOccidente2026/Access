@@ -320,13 +320,12 @@ export class OtherCoffeeFormComponent {
 
   /** Cod Prod + datos del anuncio vigente para Agencia+Fondo+Especial. */
   private loadSpecialInfo(): void {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const specialType = this.model['special'];
-    if (!agencyId || !fundId || !specialType) {
+    if (!fundId || !specialType) {
       return;
     }
-    this.service.specialInfo(agencyId, fundId, specialType).subscribe({
+    this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
@@ -400,16 +399,14 @@ export class OtherCoffeeFormComponent {
   }
 
   private buildRequest(): OtherCoffeePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
-      agencyId,
       fundId,
       invoiceNumber,
       specialType: this.model['special'],
@@ -529,7 +526,6 @@ export class OtherCoffeeFormComponent {
   private canPrint(): boolean {
     return (
       !!this.payment() && !this.result() &&
-      !!this.authService.agencyId() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

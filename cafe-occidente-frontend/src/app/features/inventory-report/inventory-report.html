@@ -4,7 +4,7 @@
       <div class="flex items-end gap-3">
         <label *ngIf="byCode || admin" class="flex w-56 flex-col gap-1 text-sm">
           <span class="font-bold text-blue-900">Pto Compra:</span>
-          <app-agency-picker (agencyChange)="agencyId.set($event)"></app-agency-picker>
+          <app-agency-picker></app-agency-picker>
         </label>
         <label class="flex w-[28rem] flex-col gap-1 text-sm">
           <span class="font-bold text-blue-900">{{ byCode ? 'Cód Producto:' : 'Especialidad:' }}</span>

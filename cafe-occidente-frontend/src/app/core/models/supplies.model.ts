@@ -1,7 +1,6 @@
 /** Alta de Caja / Caja Menor / Suministros (LedgerEntryRequest del backend). */
 export interface LedgerEntryRequest {
   readonly transactionId: string;
-  readonly agencyId: number | null;
   readonly fundCode: string | null;
   readonly entryDate: string | null;
   readonly idNumber: string;
@@ -14,7 +13,6 @@ export interface LedgerEntryRequest {
 /** Alta de Empaque (Suministro Empaques = Entradas, Prestamo Empaques = Salidas en quantity). */
 export interface PackagingEntryRequest {
   readonly transactionId: string;
-  readonly agencyId: number | null;
   readonly packagingType: string;
   readonly entryDate: string | null;
   readonly idNumber: string;

@@ -87,7 +87,7 @@ describe('RemissionFormComponent', () => {
     component.save();
 
     expect(createSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ agencyId: 1, lines: [{ inventoryMovementId: 10, quantity: 300, sacos: 8, grossKg: 305 }] }),
+      expect.objectContaining({ lines: [{ inventoryMovementId: 10, quantity: 300, sacos: 8, grossKg: 305 }] }),
     );
     expect(component.result()?.displayNumber).toBe('SDBU-RP-0001');
   });

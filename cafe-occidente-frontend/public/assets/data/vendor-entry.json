@@ -42,7 +42,6 @@
     "saved": "Vendedor {id} guardado. Puede ingresar el siguiente.",
     "required": "Falta: {label}",
     "email": "El Email no es válido",
-    "chooseAgency": "Elija una agencia de la lista",
     "duplicate": "Ya existe un asociado o vendedor con esa cédula",
     "error": "No se pudo guardar el vendedor"
   }

@@ -41,8 +41,8 @@ export class OtherCoffeePurchaseService {
   }
 
   /** Cod Prod + datos del anuncio vigente (paso "Especial"). */
-  specialInfo(agencyId: number, fundId: number, specialType: string): Observable<OtherCoffeeSpecialInfo> {
-    const params = `agencyId=${agencyId}&fundId=${fundId}&specialType=${encodeURIComponent(specialType)}`;
+  specialInfo(fundId: number, specialType: string): Observable<OtherCoffeeSpecialInfo> {
+    const params = `fundId=${fundId}&specialType=${encodeURIComponent(specialType)}`;
     return this.http.get<OtherCoffeeSpecialInfo>(`${API_BASE_URL}/purchases/other-coffee/special-info?${params}`);
   }
 

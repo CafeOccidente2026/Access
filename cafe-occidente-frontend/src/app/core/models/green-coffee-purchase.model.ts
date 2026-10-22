@@ -36,7 +36,6 @@ export interface GreenCoffeePurchaseCalculation {
 
 /** Campos de entrada manual del formulario Compras Cafe Verde (VERDES). */
 export interface GreenCoffeePurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
   readonly invoiceNumber: number;
   readonly idNumber: string;

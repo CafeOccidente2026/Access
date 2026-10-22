@@ -46,7 +46,6 @@ export interface RemissionLineResponse {
 }
 
 export interface RemissionRequest {
-  readonly agencyId: number;
   readonly remissionDate: string;
   readonly destination: string | null;
   readonly conductorIdNumber: string | null;

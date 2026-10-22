@@ -45,8 +45,8 @@ export class DryCoffeePurchaseService {
   }
 
   /** Cod Prod + datos del anuncio vigente (paso "Especial"). */
-  specialInfo(agencyId: number, fundId: number, specialType: string): Observable<SpecialInfo> {
-    const params = `agencyId=${agencyId}&fundId=${fundId}&specialType=${encodeURIComponent(specialType)}`;
+  specialInfo(fundId: number, specialType: string): Observable<SpecialInfo> {
+    const params = `fundId=${fundId}&specialType=${encodeURIComponent(specialType)}`;
     return this.http.get<SpecialInfo>(`${API_BASE_URL}/purchases/dry-coffee/special-info?${params}`);
   }
 
