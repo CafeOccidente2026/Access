@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { LoginRequest, LoginResponse } from '../models/user.model';
+import { UserRole } from '../models';
+import { LoginRequest, LoginResponse, SessionResponse } from '../models/user.model';
 
 const TOKEN_KEY = 'cafeoccidente.token';
 const USERNAME_KEY = 'cafeoccidente.username';
@@ -11,13 +12,14 @@ const ROLE_KEY = 'cafeoccidente.role';
 const AGENCY_ID_KEY = 'cafeoccidente.agencyId';
 const AGENCY_NAME_KEY = 'cafeoccidente.agencyName';
 
-/** Unica responsabilidad: autenticar al usuario y mantener su sesion (token + datos basicos). */
+/** Unica responsabilidad: autenticar al usuario y mantener su sesion (token, rol y agencia de trabajo). */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
 
   readonly username = signal<string | null>(localStorage.getItem(USERNAME_KEY));
   readonly roleName = signal<string | null>(localStorage.getItem(ROLE_KEY));
+  /** Agencia de trabajo (RF-05.1): la decide el servidor; aca solo se muestra. */
   readonly agencyId = signal<number | null>(Number(localStorage.getItem(AGENCY_ID_KEY)) || null);
   readonly agencyName = signal<string | null>(localStorage.getItem(AGENCY_NAME_KEY));
 
@@ -25,16 +27,27 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${API_BASE_URL}/auth/login`, request).pipe(
       tap((response) => {
         localStorage.setItem(TOKEN_KEY, response.token);
-        localStorage.setItem(USERNAME_KEY, response.username);
-        localStorage.setItem(ROLE_KEY, response.roleName);
-        localStorage.setItem(AGENCY_ID_KEY, String(response.agencyId));
-        localStorage.setItem(AGENCY_NAME_KEY, response.agencyName);
-        this.username.set(response.username);
-        this.roleName.set(response.roleName);
-        this.agencyId.set(response.agencyId);
-        this.agencyName.set(response.agencyName);
+        this.store(response);
       }),
     );
+  }
+
+  /** Relee la sesion del servidor (rol y agencia de trabajo) al abrir la app. Sin sesion no hace nada. */
+  refreshSession(): Observable<SessionResponse | null> {
+    if (!this.isAuthenticated()) {
+      return of(null);
+    }
+    return this.http.get<SessionResponse>(`${API_BASE_URL}/me`).pipe(
+      tap((session) => this.store(session)),
+      catchError(() => of(null)),
+    );
+  }
+
+  /** Boton Agencias (RF-05.1, solo el Administrador): el servidor la guarda y la aplica en todas las pantallas. */
+  chooseWorkingAgency(agencyId: number): Observable<SessionResponse> {
+    return this.http
+      .put<SessionResponse>(`${API_BASE_URL}/me/working-agency`, { agencyId })
+      .pipe(tap((session) => this.store(session)));
   }
 
   logout(): void {
@@ -59,5 +72,21 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.roleName() === 'ADMINISTRADOR';
+  }
+
+  /** Sin lista de roles, cualquier sesion pasa. */
+  hasRole(roles: readonly UserRole[] | undefined): boolean {
+    return !roles || roles.includes(this.roleName() as UserRole);
+  }
+
+  private store(session: SessionResponse): void {
+    localStorage.setItem(USERNAME_KEY, session.username);
+    localStorage.setItem(ROLE_KEY, session.roleName);
+    localStorage.setItem(AGENCY_ID_KEY, String(session.agencyId));
+    localStorage.setItem(AGENCY_NAME_KEY, session.agencyName);
+    this.username.set(session.username);
+    this.roleName.set(session.roleName);
+    this.agencyId.set(session.agencyId);
+    this.agencyName.set(session.agencyName);
   }
 }

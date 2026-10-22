@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
-import { adminGuard } from './core/guards/admin.guard';
+import { authGuard } from './core/guards/auth.guard';
+import { UserRole } from './core/models';
 import { dryCoffeeUnsavedChangesGuard } from './features/purchase-forms/dry-coffee/unsaved-changes.guard';
 
 /** "MENUS SUMINISTROS": los menus, altas e informes comparten componente; data elige el JSON. */
@@ -55,6 +56,10 @@ function vendorsRoutes(): Routes {
   ];
 }
 
+const ADMIN: readonly UserRole[] = ['ADMINISTRADOR'];
+const ADMIN_OPS: readonly UserRole[] = ['ADMINISTRADOR', 'OPERACIONES'];
+const ALL: readonly UserRole[] = ['ADMINISTRADOR', 'USUARIO', 'OPERACIONES'];
+
 /** Mapa de rutas de la aplicacion; cada pantalla migrada tiene su propia ruta. */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -63,204 +68,212 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login').then((m) => m.LoginComponent),
   },
   {
-    path: 'acceso-principal',
-    loadComponent: () => import('./features/main-access/main-access').then((m) => m.MainAccessComponent),
-  },
-  {
-    path: 'menu-principal',
-    loadComponent: () => import('./features/main-menu/main-menu').then((m) => m.MainMenuComponent),
-  },
-  {
-    path: 'registro-control',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/control-record/control-record').then((m) => m.ControlRecordComponent),
-  },
-  {
-    path: 'usuarios',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
-  },
-  {
-    path: 'anuncios',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/announcements-menu/announcements-menu').then(
-        (m) => m.AnnouncementsMenuComponent,
-      ),
-  },
-  {
-    path: 'anuncios/actualizar',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/announcement-update/announcement-update').then(
-        (m) => m.AnnouncementUpdateComponent,
-      ),
-  },
-  {
-    path: 'anuncios/actualizar-pasilla',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/announcement-update-husk/announcement-update-husk').then(
-        (m) => m.AnnouncementUpdateHuskComponent,
-      ),
-  },
-  {
-    path: 'compras',
-    loadComponent: () =>
-      import('./features/purchases-menu/purchases-menu').then((m) => m.PurchasesMenuComponent),
-  },
-  {
-    path: 'compras/cafe-seco',
-    loadComponent: () =>
-      import('./features/purchase-forms/dry-coffee/dry-coffee-form').then((m) => m.DryCoffeeFormComponent),
-    canDeactivate: [dryCoffeeUnsavedChangesGuard],
-  },
-  {
-    path: 'compras/cafe-otros',
-    loadComponent: () =>
-      import('./features/purchase-forms/other-coffee/other-coffee-form').then(
-        (m) => m.OtherCoffeeFormComponent,
-      ),
-    canDeactivate: [dryCoffeeUnsavedChangesGuard],
-  },
-  {
-    path: 'compras/cafe-verde',
-    loadComponent: () =>
-      import('./features/purchase-forms/green-coffee/green-coffee-form').then(
-        (m) => m.GreenCoffeeFormComponent,
-      ),
-    canDeactivate: [dryCoffeeUnsavedChangesGuard],
-  },
-  {
-    path: 'compras/pasilla',
-    loadComponent: () =>
-      import('./features/purchase-forms/husk/husk-form').then((m) => m.HuskFormComponent),
-    canDeactivate: [dryCoffeeUnsavedChangesGuard],
-  },
-  {
-    path: 'compras/futuro',
-    loadComponent: () =>
-      import('./features/future-purchases-menu/future-purchases-menu').then(
-        (m) => m.FuturePurchasesMenuComponent,
-      ),
-  },
-  {
-    path: 'compras/futuro/asignar-cupo',
-    canActivate: [adminGuard],
-    loadComponent: () =>
-      import('./features/quota-assignment/quota-assignment').then(
-        (m) => m.QuotaAssignmentComponent,
-      ),
-  },
-  {
-    path: 'compras/futuro/ingresar',
-    loadComponent: () =>
-      import('./features/purchase-forms/future-purchase/future-purchase-form').then(
-        (m) => m.FuturePurchaseFormComponent,
-      ),
-    canDeactivate: [dryCoffeeUnsavedChangesGuard],
-  },
-  {
-    path: 'compras/futuro/fertifuturo',
-    loadComponent: () =>
-      import('./features/purchase-forms/ferti-futuro/ferti-futuro-form').then(
-        (m) => m.FertiFuturoFormComponent,
-      ),
-    canDeactivate: [dryCoffeeUnsavedChangesGuard],
-  },
-  {
-    path: 'compras/futuro/facturar-cupos',
-    loadComponent: () =>
-      import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
-        (m) => m.QuotaPurchaseFormComponent,
-      ),
-  },
-  {
-    path: 'compras/futuro/facturar-anunciadas',
-    loadComponent: () =>
-      import('./features/purchase-forms/quota-billing/quota-billing-form').then(
-        (m) => m.QuotaBillingFormComponent,
-      ),
-  },
-  {
-    path: 'compras/inventarios',
-    loadComponent: () =>
-      import('./features/inventory-menu/inventory-menu').then((m) => m.InventoryMenuComponent),
-  },
-  {
-    path: 'compras/inventarios/consulta',
-    loadComponent: () =>
-      import('./features/inventory-consulta/inventory-consulta').then((m) => m.InventoryConsultaComponent),
-  },
-  {
-    path: 'compras/inventarios/salidas',
-    loadComponent: () =>
-      import('./features/remission-form/remission-form').then((m) => m.RemissionFormComponent),
-  },
-  {
-    path: 'compras/inventarios/conductores',
-    loadComponent: () =>
-      import('./features/conductor-form/conductor-form').then((m) => m.ConductorFormComponent),
-  },
-  {
-    path: 'compras/inventarios/reporte-cod',
-    loadComponent: () =>
-      import('./features/inventory-report/inventory-report').then((m) => m.InventoryReportComponent),
-    data: { mode: 'code' },
-  },
-  {
-    path: 'compras/inventarios/reporte-esp',
-    loadComponent: () =>
-      import('./features/inventory-report/inventory-report').then((m) => m.InventoryReportComponent),
-    data: { mode: 'special' },
-  },
-  {
-    path: 'compras/inventarios/reimprimir-remision',
-    loadComponent: () =>
-      import('./features/remission-reprint/remission-reprint').then((m) => m.RemissionReprintComponent),
-  },
-  {
-    path: 'compras/remesa',
-    loadComponent: () =>
-      import('./features/remesa-export/remesa-export').then((m) => m.RemesaExportComponent),
-  },
-  {
-    path: 'compras/reporte-anuncio',
-    loadComponent: () =>
-      import('./features/announcement-report/announcement-report').then((m) => m.AnnouncementReportComponent),
-  },
-  {
-    path: 'compras/dialogo-fechas',
-    loadComponent: () =>
-      import('./features/date-range-dialog/date-range-dialog').then(
-        (m) => m.DateRangeDialogComponent,
-      ),
-  },
-  {
-    path: 'compras/anular',
-    loadComponent: () =>
-      import('./features/purchase-annulment/purchase-annulment').then((m) => m.PurchaseAnnulmentComponent),
-  },
-  {
-    path: 'compras/consulta',
-    loadComponent: () =>
-      import('./features/purchase-query/purchase-query').then((m) => m.PurchaseQueryComponent),
-  },
-  ...suppliesRoutes(),
-  ...vendorsRoutes(),
-  {
-    path: 'exportar-informacion',
-    canActivate: [adminGuard],
-    loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
-    data: { screen: 'export' },
-  },
-  {
-    path: 'exportado-especial',
-    canActivate: [adminGuard],
-    loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
-    data: { screen: 'special' },
+    // Toda pantalla salvo el login: sesion obligatoria y data.roles (por defecto Administrador y Usuario).
+    path: '',
+    canActivateChild: [authGuard],
+    children: [
+      {
+        path: 'acceso-principal',
+        data: { roles: ALL },
+        loadComponent: () => import('./features/main-access/main-access').then((m) => m.MainAccessComponent),
+      },
+      {
+        path: 'menu-principal',
+        data: { roles: ALL },
+        loadComponent: () => import('./features/main-menu/main-menu').then((m) => m.MainMenuComponent),
+      },
+      {
+        path: 'registro-control',
+        data: { roles: ADMIN },
+        loadComponent: () =>
+          import('./features/control-record/control-record').then((m) => m.ControlRecordComponent),
+      },
+      {
+        path: 'usuarios',
+        data: { roles: ADMIN },
+        loadComponent: () =>
+          import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
+      },
+      {
+        path: 'anuncios',
+        data: { roles: ADMIN_OPS },
+        loadComponent: () =>
+          import('./features/announcements-menu/announcements-menu').then(
+            (m) => m.AnnouncementsMenuComponent,
+          ),
+      },
+      {
+        path: 'anuncios/actualizar',
+        data: { roles: ADMIN_OPS },
+        loadComponent: () =>
+          import('./features/announcement-update/announcement-update').then(
+            (m) => m.AnnouncementUpdateComponent,
+          ),
+      },
+      {
+        path: 'anuncios/actualizar-pasilla',
+        data: { roles: ADMIN_OPS },
+        loadComponent: () =>
+          import('./features/announcement-update-husk/announcement-update-husk').then(
+            (m) => m.AnnouncementUpdateHuskComponent,
+          ),
+      },
+      {
+        path: 'compras',
+        loadComponent: () =>
+          import('./features/purchases-menu/purchases-menu').then((m) => m.PurchasesMenuComponent),
+      },
+      {
+        path: 'compras/cafe-seco',
+        loadComponent: () =>
+          import('./features/purchase-forms/dry-coffee/dry-coffee-form').then((m) => m.DryCoffeeFormComponent),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        path: 'compras/cafe-otros',
+        loadComponent: () =>
+          import('./features/purchase-forms/other-coffee/other-coffee-form').then(
+            (m) => m.OtherCoffeeFormComponent,
+          ),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        path: 'compras/cafe-verde',
+        loadComponent: () =>
+          import('./features/purchase-forms/green-coffee/green-coffee-form').then(
+            (m) => m.GreenCoffeeFormComponent,
+          ),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        path: 'compras/pasilla',
+        loadComponent: () =>
+          import('./features/purchase-forms/husk/husk-form').then((m) => m.HuskFormComponent),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        path: 'compras/futuro',
+        loadComponent: () =>
+          import('./features/future-purchases-menu/future-purchases-menu').then(
+            (m) => m.FuturePurchasesMenuComponent,
+          ),
+      },
+      {
+        path: 'compras/futuro/asignar-cupo',
+        loadComponent: () =>
+          import('./features/quota-assignment/quota-assignment').then(
+            (m) => m.QuotaAssignmentComponent,
+          ),
+      },
+      {
+        path: 'compras/futuro/ingresar',
+        loadComponent: () =>
+          import('./features/purchase-forms/future-purchase/future-purchase-form').then(
+            (m) => m.FuturePurchaseFormComponent,
+          ),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        path: 'compras/futuro/fertifuturo',
+        loadComponent: () =>
+          import('./features/purchase-forms/ferti-futuro/ferti-futuro-form').then(
+            (m) => m.FertiFuturoFormComponent,
+          ),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        path: 'compras/futuro/facturar-cupos',
+        loadComponent: () =>
+          import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
+            (m) => m.QuotaPurchaseFormComponent,
+          ),
+      },
+      {
+        path: 'compras/futuro/facturar-anunciadas',
+        loadComponent: () =>
+          import('./features/purchase-forms/quota-billing/quota-billing-form').then(
+            (m) => m.QuotaBillingFormComponent,
+          ),
+      },
+      {
+        path: 'compras/inventarios',
+        loadComponent: () =>
+          import('./features/inventory-menu/inventory-menu').then((m) => m.InventoryMenuComponent),
+      },
+      {
+        path: 'compras/inventarios/consulta',
+        loadComponent: () =>
+          import('./features/inventory-consulta/inventory-consulta').then((m) => m.InventoryConsultaComponent),
+      },
+      {
+        path: 'compras/inventarios/salidas',
+        loadComponent: () =>
+          import('./features/remission-form/remission-form').then((m) => m.RemissionFormComponent),
+      },
+      {
+        path: 'compras/inventarios/conductores',
+        loadComponent: () =>
+          import('./features/conductor-form/conductor-form').then((m) => m.ConductorFormComponent),
+      },
+      {
+        path: 'compras/inventarios/reporte-cod',
+        loadComponent: () =>
+          import('./features/inventory-report/inventory-report').then((m) => m.InventoryReportComponent),
+        data: { mode: 'code' },
+      },
+      {
+        path: 'compras/inventarios/reporte-esp',
+        loadComponent: () =>
+          import('./features/inventory-report/inventory-report').then((m) => m.InventoryReportComponent),
+        data: { mode: 'special' },
+      },
+      {
+        path: 'compras/inventarios/reimprimir-remision',
+        loadComponent: () =>
+          import('./features/remission-reprint/remission-reprint').then((m) => m.RemissionReprintComponent),
+      },
+      {
+        path: 'compras/remesa',
+        loadComponent: () =>
+          import('./features/remesa-export/remesa-export').then((m) => m.RemesaExportComponent),
+      },
+      {
+        path: 'compras/reporte-anuncio',
+        data: { roles: ADMIN },
+        loadComponent: () =>
+          import('./features/announcement-report/announcement-report').then((m) => m.AnnouncementReportComponent),
+      },
+      {
+        path: 'compras/dialogo-fechas',
+        loadComponent: () =>
+          import('./features/date-range-dialog/date-range-dialog').then(
+            (m) => m.DateRangeDialogComponent,
+          ),
+      },
+      {
+        path: 'compras/anular',
+        data: { roles: ADMIN },
+        loadComponent: () =>
+          import('./features/purchase-annulment/purchase-annulment').then((m) => m.PurchaseAnnulmentComponent),
+      },
+      {
+        path: 'compras/consulta',
+        loadComponent: () =>
+          import('./features/purchase-query/purchase-query').then((m) => m.PurchaseQueryComponent),
+      },
+      ...suppliesRoutes(),
+      ...vendorsRoutes(),
+      {
+        path: 'exportar-informacion',
+        loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
+        data: { screen: 'export', roles: ADMIN },
+      },
+      {
+        path: 'exportado-especial',
+        loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
+        data: { screen: 'special', roles: ADMIN },
+      },
+    ],
   },
   { path: '**', redirectTo: 'login' },
 ];

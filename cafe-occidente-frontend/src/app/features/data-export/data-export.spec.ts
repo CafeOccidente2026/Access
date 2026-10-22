@@ -11,7 +11,9 @@ describe('data export', () => {
   });
 
   it('only ADMIN sees Exportar Informacion and Exportado Especial', () => {
-    const adminOnly = menu.options.filter((o) => 'adminOnly' in o && o.adminOnly).map((o) => o.label);
+    const adminOnly = menu.options
+      .filter((o) => o.roles?.join() === 'ADMINISTRADOR')
+      .map((o) => o.label);
     expect(adminOnly).toEqual(expect.arrayContaining(['Exportar Informacion', 'Exportado Especial']));
   });
 });
