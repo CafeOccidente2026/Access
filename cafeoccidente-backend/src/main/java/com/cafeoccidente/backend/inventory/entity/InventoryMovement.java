@@ -20,7 +20,7 @@ import lombok.Setter;
 
 /**
  * Entrada de inventario (Access "INVENTARIO"/INVENTARIOTB.txt): una fila por CADA compra real
- * (Seco/Verde/Pasilla/Otros/Fertifuturo), creada automáticamente al guardarse la compra (ver
+ * (Seco/Verde/Pasilla), creada automáticamente al guardarse la compra (ver
  * InventoryMovementService, enganchado desde cada *PurchaseServiceImpl.create()). remainingKg se
  * consume vía {@link RemissionLine} - ver esa clase para la regla de saldo (Form_EXITS.bas,
  * Cantidad_AfterUpdate).
@@ -40,7 +40,7 @@ public class InventoryMovement {
     @Enumerated(EnumType.STRING)
     private PurchaseModule purchaseModule;
 
-    /** Id de la fila en la tabla del módulo de origen (DryCoffeePurchase/.../FertiFuturoPurchase). */
+    /** Id de la fila en la tabla del módulo de origen (DryCoffeePurchase, GreenCoffeePurchase o HuskPurchase). */
     @Column(name = "compra_id", nullable = false)
     private Long purchaseId;
 
@@ -84,6 +84,6 @@ public class InventoryMovement {
     private Instant createdAt;
 
     public enum PurchaseModule {
-        DRY_COFFEE, GREEN_COFFEE, HUSK, FERTI_FUTURO
+        DRY_COFFEE, GREEN_COFFEE, HUSK
     }
 }

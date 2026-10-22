@@ -3,7 +3,7 @@ package com.cafeoccidente.backend.purchases.annulment.repository;
 import java.util.List;
 
 /**
- * Las 5 tablas de compra y, en cada una, las columnas que AnularFactura pone en 0. AnularFactura (29
+ * Las 3 tablas de compra y, en cada una, las columnas que AnularFactura pone en 0. AnularFactura (29
  * SetValue): Sacos, Kilos_Brutos, Destare, Kilos_Verdes, Kilos_Netos, Castigo, Vr_Inventario, Vr_Kilo,
  * Vr_Bruto, Aporte_Socio, Descuento_Coop, Descuento_Fro, OtrosDescuentos, Retefuente, Bonificacion,
  * W_AlmSana, W_AlmDefec, PorcAlmSana, PorcAlmDefec, IncCalidad, Costos, Pr_AlmSana, Pr_AlmDefec,
@@ -19,12 +19,7 @@ public enum AnnulmentModule {
     HUSK("compras_pasilla", "HUSK", List.of("sacos", "kilos_brutos", "destare", "kilos_netos", "vr_inventario",
             "vr_kilo", "vr_bruto", "aporte_asociado", "descuento_cooperativo", "descuento_financiero",
             "otros_descuentos", "retefuente", "costos", "peso_almendra", "porc_almendra", "pr_punto",
-            "neto_a_pagar")),
-    FERTI("compras_ferti_futuro", "FERTI_FUTURO", List.of("sacos", "kilos_brutos", "destare", "kilos_netos", "castigo",
-            "vr_inventario", "vr_kilo", "vr_bruto", "aporte_asociado", "descuento_cooperativo",
-            "descuento_financiero", "otros_descuentos", "retefuente", "bonificacion", "peso_alm_sana",
-            "peso_tot_pasilla", "factor", "porc_kg_pasilla", "vr_inc_calidad",
-            "costos", "pr_alm_sana", "pr_alm_defec", "neto_a_pagar"));
+            "neto_a_pagar"));
 
     /** Tabla de la compra; su nombre de enum es la clave de purchase_payment_split.source. */
     final String table;

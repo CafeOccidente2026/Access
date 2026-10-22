@@ -1,4 +1,4 @@
-export type AnnulmentModule = 'DRY' | 'GREEN' | 'HUSK' | 'FERTI';
+export type AnnulmentModule = 'DRY' | 'GREEN' | 'HUSK';
 
 /** Ficha de "CONSULTA COMPRAS PARA ANULAR" (AnnulmentCandidate del backend). */
 export interface AnnulmentCandidate {

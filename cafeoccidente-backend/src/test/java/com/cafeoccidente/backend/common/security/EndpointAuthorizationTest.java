@@ -15,7 +15,6 @@ import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentSe
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
-import com.cafeoccidente.backend.purchases.future.service.FertiFuturoPurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
@@ -121,7 +120,7 @@ class EndpointAuthorizationTest {
         add(ADMIN, get, "/api/agencies");
 
         // Compras: RF-13 a RF-20 (seco, verde, pasilla).
-        for (String module : List.of("dry-coffee", "green-coffee", "husk", "ferti-futuro")) {
+        for (String module : List.of("dry-coffee", "green-coffee", "husk")) {
             String base = "/api/purchases/" + module;
             add(ADMIN_USER, post, base);
             add(ADMIN_USER, get, base + "/{id}", base + "/1");
@@ -222,7 +221,6 @@ class EndpointAuthorizationTest {
     @MockitoBean private DryCoffeePurchaseService dryCoffeePurchaseService;
     @MockitoBean private AnnouncementService announcementService;
     @MockitoBean private AnnouncementQuotaService announcementQuotaService;
-    @MockitoBean private FertiFuturoPurchaseService fertiFuturoPurchaseService;
     @MockitoBean private FuturePurchaseService futurePurchaseService;
     @MockitoBean private GreenCoffeePurchaseService greenCoffeePurchaseService;
     @MockitoBean private HuskPurchaseService huskPurchaseService;

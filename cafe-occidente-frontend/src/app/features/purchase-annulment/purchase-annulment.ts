@@ -22,7 +22,6 @@ export interface PurchaseAnnulmentContent {
   readonly acceptLabel: string;
   readonly confirmMessage: string;
   readonly exportedMessage: string;
-  readonly futureWarning: string;
   readonly modules: Record<string, string>;
   readonly fields: { key: string; label: string; type?: 'date' | 'number' | 'money' }[];
   readonly messages: Record<'notFound' | 'annulled' | 'error', string>;

@@ -168,14 +168,6 @@ export const routes: Routes = [
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
-        path: 'compras/futuro/fertifuturo',
-        loadComponent: () =>
-          import('./features/purchase-forms/ferti-futuro/ferti-futuro-form').then(
-            (m) => m.FertiFuturoFormComponent,
-          ),
-        canDeactivate: [dryCoffeeUnsavedChangesGuard],
-      },
-      {
         path: 'compras/futuro/facturar-cupos',
         loadComponent: () =>
           import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(

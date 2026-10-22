@@ -3,7 +3,6 @@ package com.cafeoccidente.backend.purchases.shared.dto;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
-import com.cafeoccidente.backend.purchases.future.dto.FertiFuturoPurchaseRequest;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import java.math.BigDecimal;
@@ -28,7 +27,7 @@ class PurchaseRequestJsonTest {
     @Test
     void theFormsJsonWithoutWithholdingExemptDeserializes() {
         for (Class<?> type : List.of(DryCoffeePurchaseRequest.class, GreenCoffeePurchaseRequest.class,
-                HuskPurchaseRequest.class, FertiFuturoPurchaseRequest.class)) {
+                HuskPurchaseRequest.class)) {
             assertThat(json.readValue("{\"idNumber\":\"1\",\"payment\":null}", type)).as(type.getSimpleName()).isNotNull();
         }
         DryCoffeePurchaseRequest withPayment = json.readValue("{\"payment\":{\"cashAmount\":10,\"checkAmount\":5,"

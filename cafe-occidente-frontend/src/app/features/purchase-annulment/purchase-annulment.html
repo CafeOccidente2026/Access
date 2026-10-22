@@ -39,8 +39,6 @@
           </ng-container>
         </div>
 
-        <p *ngIf="s.module === 'FERTI' && s.status === 'VALIDA'" class="text-xs text-amber-800">{{ c.futureWarning }}</p>
-
         <div *ngIf="s.status === 'VALIDA' && !prompt()">
           <button type="button" class="rounded border border-red-500 bg-red-600 px-4 py-1.5 font-bold text-white hover:bg-red-700" (click)="startAnnul()">{{ c.annulLabel }}</button>
         </div>
