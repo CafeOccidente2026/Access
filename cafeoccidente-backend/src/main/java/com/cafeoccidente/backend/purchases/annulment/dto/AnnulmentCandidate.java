@@ -23,6 +23,6 @@ public record AnnulmentCandidate(
         BigDecimal netToPay,
         String paymentMethod,
         String status,
-        boolean exported,
+        boolean annulmentLocked,
         Instant annulledAt) {
 }

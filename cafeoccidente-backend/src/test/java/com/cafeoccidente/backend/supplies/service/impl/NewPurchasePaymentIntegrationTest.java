@@ -1,14 +1,11 @@
 package com.cafeoccidente.backend.supplies.service.impl;
 
-import static com.cafeoccidente.backend.dataexport.repository.DataExportRepository.PURCHASE_COLUMNS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUser;
-import com.cafeoccidente.backend.dataexport.repository.DataExportRepository;
-import com.cafeoccidente.backend.dataexport.repository.ExportRow;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
@@ -48,8 +45,6 @@ class NewPurchasePaymentIntegrationTest {
     private DryCoffeePurchaseService purchases;
     @Autowired
     private SuppliesReportServiceImpl supplies;
-    @Autowired
-    private DataExportRepository export;
     @Autowired
     private UserRepository users;
     @Autowired
@@ -115,12 +110,11 @@ class NewPurchasePaymentIntegrationTest {
         assertThat(supplies.checkRelation(agencyId, null, null, today))
                 .anySatisfy(r -> assertThat(r.transactionId()).isEqualTo(invoice));
 
-        ExportRow row = export.purchases(agencyId, true).stream()
-                .filter(r -> invoice.equals(String.valueOf(r.values().get(PURCHASE_COLUMNS.indexOf("Factura")))))
-                .findFirst().orElseThrow();
-        assertThat((BigDecimal) row.values().get(PURCHASE_COLUMNS.indexOf("FPef"))).isEqualByComparingTo(net.subtract(check));
-        assertThat((BigDecimal) row.values().get(PURCHASE_COLUMNS.indexOf("FPch"))).isEqualByComparingTo(check);
-        assertThat(row.values().get(PURCHASE_COLUMNS.indexOf("NumCheque"))).isEqualTo(987654);
+        var split = jdbc.queryForMap("SELECT s.efectivo, s.cheque, s.numero_cheque FROM formas_pago_compras s"
+                + " JOIN compras_cafe_seco p ON s.origen = 'DRY' AND s.origen_id = p.id WHERE p.id = ?", saved.id());
+        assertThat((BigDecimal) split.get("efectivo")).isEqualByComparingTo(net.subtract(check));
+        assertThat((BigDecimal) split.get("cheque")).isEqualByComparingTo(check);
+        assertThat(split.get("numero_cheque")).isEqualTo(987654);
     }
 
     @Test

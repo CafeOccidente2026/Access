@@ -21,8 +21,7 @@ export interface PurchaseAnnulmentContent {
   readonly noLabel: string;
   readonly acceptLabel: string;
   readonly confirmMessage: string;
-  readonly exportedMessage: string;
-  readonly futureWarning: string;
+  readonly lockedMessage: string;
   readonly modules: Record<string, string>;
   readonly fields: { key: string; label: string; type?: 'date' | 'number' | 'money' }[];
   readonly messages: Record<'notFound' | 'annulled' | 'error', string>;
@@ -53,7 +52,7 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
 
 /**
  * "Anular Documento" (macro ParaAnularFactura -> Cns_ComprasParaAnular -> AnularFactura): buscar la
- * factura, ver la ficha y anular con la misma confirmacion de Access. Si ya se exporto, Access no deja.
+ * factura, ver la ficha y anular con la misma confirmacion de Access. Una compra cerrada en Access no se anula.
  */
 @Component({
   selector: 'app-purchase-annulment',
@@ -69,8 +68,8 @@ export class PurchaseAnnulmentComponent {
   readonly content = toSignal(inject(ContentService).loadJson<PurchaseAnnulmentContent>('purchase-annulment'));
   readonly candidates = signal<AnnulmentCandidate[]>([]);
   readonly selected = signal<AnnulmentCandidate | null>(null);
-  /** Comando87: 'confirm' = Etiqueta97 + SI/NO; 'exported' = Etiqueta98 + Aceptar. */
-  readonly prompt = signal<'confirm' | 'exported' | null>(null);
+  /** Comando87: 'confirm' = Etiqueta97 + SI/NO; 'locked' = Etiqueta98 + Aceptar. */
+  readonly prompt = signal<'confirm' | 'locked' | null>(null);
   readonly message = signal<string | null>(null);
   readonly error = signal(false);
   readonly value = fieldValue;
@@ -102,7 +101,7 @@ export class PurchaseAnnulmentComponent {
 
   startAnnul(): void {
     this.message.set(null);
-    this.prompt.set(this.selected()!.exported ? 'exported' : 'confirm');
+    this.prompt.set(this.selected()!.annulmentLocked ? 'locked' : 'confirm');
   }
 
   confirm(): void {

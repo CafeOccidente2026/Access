@@ -131,14 +131,6 @@ export const routes: Routes = [
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
-        path: 'compras/cafe-otros',
-        loadComponent: () =>
-          import('./features/purchase-forms/other-coffee/other-coffee-form').then(
-            (m) => m.OtherCoffeeFormComponent,
-          ),
-        canDeactivate: [dryCoffeeUnsavedChangesGuard],
-      },
-      {
         path: 'compras/cafe-verde',
         loadComponent: () =>
           import('./features/purchase-forms/green-coffee/green-coffee-form').then(
@@ -172,14 +164,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/purchase-forms/future-purchase/future-purchase-form').then(
             (m) => m.FuturePurchaseFormComponent,
-          ),
-        canDeactivate: [dryCoffeeUnsavedChangesGuard],
-      },
-      {
-        path: 'compras/futuro/fertifuturo',
-        loadComponent: () =>
-          import('./features/purchase-forms/ferti-futuro/ferti-futuro-form').then(
-            (m) => m.FertiFuturoFormComponent,
           ),
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
@@ -265,16 +249,6 @@ export const routes: Routes = [
       },
       ...suppliesRoutes(),
       ...vendorsRoutes(),
-      {
-        path: 'exportar-informacion',
-        loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
-        data: { screen: 'export', roles: ADMIN },
-      },
-      {
-        path: 'exportado-especial',
-        loadComponent: () => import('./features/data-export/data-export').then((m) => m.DataExportComponent),
-        data: { screen: 'special', roles: ADMIN },
-      },
     ],
   },
   { path: '**', redirectTo: 'login' },

@@ -51,7 +51,7 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
   it('CA-2: the User does not see the exclusive options nor Agencias, but sees Compras', () => {
     const el = render('USUARIO');
     expect(labels(el)).toContain('Compras');
-    for (const exclusive of [...ADMIN_ONLY, 'Actualizar Anuncios', 'Exportar Informacion', 'Exportado Especial']) {
+    for (const exclusive of [...ADMIN_ONLY, 'Actualizar Anuncios']) {
       expect(labels(el)).not.toContain(exclusive);
     }
     expect(el.querySelector('[data-testid="agencies"]')).toBeNull();

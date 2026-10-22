@@ -119,7 +119,7 @@ public class DryCoffeePurchaseCalculator {
         // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado hoy),
         // y se descuenta la Retefuente ya practicada hoy, dejando solo el diferencial.
         // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
-        // Cuando existan othercoffee/greencoffee/husk habra que decidir si tambien deben sumar.
+        // Cuando existan greencoffee/husk habra que decidir si tambien deben sumar.
         // Ventana: CalculoReteFteMes copia TotalVrBruto/TotalRetefuente del reporte "ReteMesCurso",
         // cuyo RecordSource es una consulta guardada que no esta en el export. Pese al nombre "Mes",
         // la ventana diaria reproduce mejor la Retefuente historica de compras_migrar.csv (750/844

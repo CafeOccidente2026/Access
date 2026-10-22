@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.cafeoccidente.backend.common.config.CorsConfig;
 import com.cafeoccidente.backend.common.config.SecurityConfig;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
-import com.cafeoccidente.backend.dataexport.service.DataExportService;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
@@ -15,11 +14,9 @@ import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentSe
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
-import com.cafeoccidente.backend.purchases.future.service.FertiFuturoPurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
-import com.cafeoccidente.backend.purchases.othercoffee.service.OtherCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
@@ -121,19 +118,16 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
         add(ADMIN, get, "/api/agencies");
 
-        // Compras: RF-13 a RF-20 (seco, verde, pasilla) y Cafes Otros (Q5).
-        for (String module : List.of("dry-coffee", "green-coffee", "husk", "other-coffee", "ferti-futuro")) {
+        // Compras: RF-13 a RF-20 (seco, verde, pasilla).
+        for (String module : List.of("dry-coffee", "green-coffee", "husk")) {
             String base = "/api/purchases/" + module;
             add(ADMIN_USER, post, base);
             add(ADMIN_USER, get, base + "/{id}", base + "/1");
             add(ADMIN_USER, post, base + "/preview");
             add(ADMIN_USER, get, base + "/next-invoice-number");
         }
-        for (String module : List.of("dry-coffee", "other-coffee")) {
-            String base = "/api/purchases/" + module;
-            add(ADMIN_USER, get, base + "/special-info", base + "/special-info?fundId=1&specialType=X");
-            add(ADMIN_USER, get, base + "/quality-percentages");
-        }
+        add(ADMIN_USER, get, "/api/purchases/dry-coffee/special-info", "/api/purchases/dry-coffee/special-info?fundId=1&specialType=X");
+        add(ADMIN_USER, get, "/api/purchases/dry-coffee/quality-percentages");
         add(ADMIN_USER, get, "/api/purchases/green-coffee/announcement-info");
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
         // Generar Reporte Anuncio: Administrador y Usuario (área de compras, 22 oct; prima sobre RF-24).
@@ -188,10 +182,6 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/vendors/ness-quotas");
         add(ADMIN_USER, get, "/api/vendors/ness-quota-balances");
 
-        // Exportar Informacion y Exportado Especial: solo Administrador (se eliminaran).
-        add(ADMIN, post, "/api/data-export");
-        add(ADMIN, post, "/api/data-export/special", "/api/data-export/special?from=2026-01-01&to=2026-01-31");
-
         // Sesion y boton Agencias (RF-05.1, RN-05.2: solo el Administrador elige agencia).
         add(ALL, get, "/api/me");
         add(ADMIN, put, "/api/me/working-agency");
@@ -218,7 +208,6 @@ class EndpointAuthorizationTest {
     @MockitoBean private AuthService authService;
     @MockitoBean private UserService userService;
     @MockitoBean private ControlRecordService controlRecordService;
-    @MockitoBean private DataExportService dataExportService;
     @MockitoBean private InventoryMovementService inventoryMovementService;
     @MockitoBean private InventoryReportService inventoryReportService;
     @MockitoBean private RemissionService remissionService;
@@ -226,11 +215,9 @@ class EndpointAuthorizationTest {
     @MockitoBean private DryCoffeePurchaseService dryCoffeePurchaseService;
     @MockitoBean private AnnouncementService announcementService;
     @MockitoBean private AnnouncementQuotaService announcementQuotaService;
-    @MockitoBean private FertiFuturoPurchaseService fertiFuturoPurchaseService;
     @MockitoBean private FuturePurchaseService futurePurchaseService;
     @MockitoBean private GreenCoffeePurchaseService greenCoffeePurchaseService;
     @MockitoBean private HuskPurchaseService huskPurchaseService;
-    @MockitoBean private OtherCoffeePurchaseService otherCoffeePurchaseService;
     @MockitoBean private GrowerService growerService;
     @MockitoBean private SuppliesEntryService suppliesEntryService;
     @MockitoBean private SuppliesReportService suppliesReportService;

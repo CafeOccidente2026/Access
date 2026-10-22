@@ -518,8 +518,7 @@ def load_check_relation_marks(cur, el_tambo_id):
     print(f"  {len(marks)} cheques ya relacionados en Access marcados.")
 
 
-PURCHASE_TABLES = ("compras_cafe_seco", "compras_cafe_verde", "compras_pasilla",
-                   "compras_cafes_otros", "compras_ferti_futuro")
+PURCHASE_TABLES = ("compras_cafe_seco", "compras_cafe_verde", "compras_pasilla")
 
 
 def load_manual_cash_entries(cur, el_tambo_id):
@@ -731,28 +730,19 @@ def load_purchase_payment_splits(cur, el_tambo_id):
     print(f"  formas_pago_compras: {len(splits)} compras con pago mixto.")
 
 
-def load_export_flags(cur, el_tambo_id):
-    """COMPRAS.Exportado y ANUNCIOS.Exportado tal cual en Access (V36). Compras a Futuro e INVENTARIO
-    de El Tambo no se migraron a tablas reales, asi que no hay filas que marcar."""
+def load_annulment_locks(cur, el_tambo_id):
+    """COMPRAS.Exportado = Si en Access: compra cerrada en el sistema anterior, que no se puede anular
+    (V5, anulacion_bloqueada)."""
     purchases = [
         (parse_bool(row["exportado"]), el_tambo_id, parse_int(row["factura"]))
         for row in read_csv("compras_migrar.csv")
     ]
     psycopg2.extras.execute_batch(
         cur,
-        "UPDATE compras_cafe_seco SET exportado = %s WHERE agencia_id = %s AND numero_factura = %s",
+        "UPDATE compras_cafe_seco SET anulacion_bloqueada = %s WHERE agencia_id = %s AND numero_factura = %s",
         purchases,
     )
-    announcements = [
-        (parse_bool(row["exportado"]), el_tambo_id, parse_int(row["anuncio"]))
-        for row in read_csv("anuncios_migrar.csv")
-    ]
-    psycopg2.extras.execute_batch(
-        cur,
-        "UPDATE anuncios_agencias SET exportado = %s WHERE agencia_id = %s AND numero_anuncio = %s",
-        announcements,
-    )
-    print(f"  Exportado: {len(purchases)} compras y {len(announcements)} anuncios.")
+    print(f"  Anulacion bloqueada: {sum(1 for p in purchases if p[0])} de {len(purchases)} compras.")
 
 
 # ---------- Parte B: NESS ----------
@@ -810,7 +800,7 @@ def main():
                 load_manual_cash_entries(cur, el_tambo_id)
                 load_supplies_petty_cash_and_packaging(cur, el_tambo_id)
                 load_purchase_payment_splits(cur, el_tambo_id)
-                load_export_flags(cur, el_tambo_id)
+                load_annulment_locks(cur, el_tambo_id)
                 ensure_admin_eltambo(cur, el_tambo_id)
 
                 print("\nParte B - NESS")

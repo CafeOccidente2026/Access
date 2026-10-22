@@ -1,4 +1,4 @@
-export type AnnulmentModule = 'DRY' | 'OTHER' | 'GREEN' | 'HUSK' | 'FERTI';
+export type AnnulmentModule = 'DRY' | 'GREEN' | 'HUSK';
 
 /** Ficha de "CONSULTA COMPRAS PARA ANULAR" (AnnulmentCandidate del backend). */
 export interface AnnulmentCandidate {
@@ -18,6 +18,6 @@ export interface AnnulmentCandidate {
   readonly netToPay: number;
   readonly paymentMethod: string;
   readonly status: 'VALIDA' | 'ANULADA';
-  readonly exported: boolean;
+  readonly annulmentLocked: boolean;
   readonly annulledAt: string | null;
 }

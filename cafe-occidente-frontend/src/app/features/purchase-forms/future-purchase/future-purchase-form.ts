@@ -46,7 +46,7 @@ const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca'
  * "Ingresar Compras a Futuro" (Form_COMPRAS A FUTURO.bas): sin cascada de precio ni factura - es un
  * compromiso de entrega futura, no una compra liquidada. Cédula busca al caficultor; Especial trae
  * el anuncio vigente (Fondo fijo RP) con sus precios informativos; Kilos_LostFocus simplemente copia
- * SaldoKilos = Kilos (arranca igual al anunciado, se va descontando con Fertifuturo). El backend
+ * SaldoKilos = Kilos (arranca igual al anunciado, se descontará al facturar, RF-21.5). El backend
  * valida fallecido y pertenencia a programa (`GrowerService.requireProgramMembership`) - esos
  * mensajes reales se muestran tal cual los devuelve, no se repiten en el frontend.
  */

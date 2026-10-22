@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Pago de una compra (Seco/Verde/Pasilla/Otros/Fertifuturo) tal como lo leen los informes. */
+/** Pago de una compra (Seco/Verde/Pasilla) tal como lo leen los informes. */
 public record PurchasePayment(
         String module,
         Long id,

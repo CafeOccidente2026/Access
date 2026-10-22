@@ -1,4 +1,4 @@
-export type PurchaseModule = 'DRY_COFFEE' | 'GREEN_COFFEE' | 'HUSK' | 'OTHER_COFFEE' | 'FERTI_FUTURO';
+export type PurchaseModule = 'DRY_COFFEE' | 'GREEN_COFFEE' | 'HUSK';
 
 /** Una entrada de inventario (una fila por cada compra real de los 5 módulos), creada
  *  automáticamente al guardarse la compra - de solo lectura acá. */

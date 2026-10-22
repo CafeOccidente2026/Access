@@ -20,9 +20,7 @@ public class SuppliesReadRepository {
     private static final Map<String, String> PURCHASE_TABLES = Map.of(
             "DRY", "compras_cafe_seco",
             "GREEN", "compras_cafe_verde",
-            "HUSK", "compras_pasilla",
-            "OTHER", "compras_cafes_otros",
-            "FERTI", "compras_ferti_futuro");
+            "HUSK", "compras_pasilla");
 
     private final NamedParameterJdbcTemplate jdbc;
 

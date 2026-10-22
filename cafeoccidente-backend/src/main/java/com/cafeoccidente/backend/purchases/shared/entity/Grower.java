@@ -132,7 +132,7 @@ public class Grower {
     @Column(name = "numero_registro")
     private Integer registryNumber;
 
-    /** Asociados.Exportado: "Exportar Informacion" exporta los false y los marca. */
+    /** Asociados.Exportado: dato de Access que Consultar Asociados muestra (RF-28.3); los nuevos nacen en false. */
     @Column(name = "exportado")
     private Boolean exported;
 

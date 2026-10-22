@@ -20,8 +20,8 @@ import lombok.Setter;
  * FUTURO.bas). NO es una compra con pago: no hay cascada de precio (Vr_Kilo/Vr_Bruto/Neto_a_Pagar)
  * ni numeración de factura en el VBA real - solo el registro del compromiso (cédula, Especial,
  * kilos anunciados, fecha de entrega) y una carta-manifiesto imprimible (ver
- * FuturePurchaseServiceImpl). El pago real de lo entregado se liquida después en FERTIFUTURO
- * (módulo aparte).
+ * FuturePurchaseServiceImpl). En Access el pago de lo entregado se liquidaba en FERTIFUTURO;
+ * aquí lo hará "Facturar Compras Anunciadas" (RF-21.5).
  */
 @Entity
 @Table(name = "compras_anunciadas")

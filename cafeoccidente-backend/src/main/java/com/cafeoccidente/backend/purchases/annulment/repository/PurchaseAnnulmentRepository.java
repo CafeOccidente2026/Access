@@ -26,7 +26,7 @@ public class PurchaseAnnulmentRepository {
     private static String select(AnnulmentModule module) {
         return "SELECT '" + module.name() + "' AS module, p.id, p.agencia_id, a.nombre AS agency_name, a.prefijo_factura,"
                 + " p.numero_factura, p.fecha_compra, f.codigo AS fund_code, p.cedula, p.nombres, p.apellidos,"
-                + " p.especial, p.kilos_netos, p.neto_a_pagar, p.forma_pago, p.estado, p.exportado, p.anulado_en"
+                + " p.especial, p.kilos_netos, p.neto_a_pagar, p.forma_pago, p.estado, p.anulacion_bloqueada, p.anulado_en"
                 + " FROM " + module.table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
     }
 
@@ -67,7 +67,7 @@ public class PurchaseAnnulmentRepository {
         String zeros = module.zeroed.stream().map(c -> c + " = 0").collect(Collectors.joining(", "));
         int updated = jdbc.update("UPDATE " + module.table + " SET estado = 'ANULADA', anulado_en = now(),"
                 + " anulado_por_usuario_id = :userId, numero_cheque = NULL, " + zeros
-                + " WHERE id = :id AND estado = 'VALIDA' AND NOT exportado", params);
+                + " WHERE id = :id AND estado = 'VALIDA' AND NOT anulacion_bloqueada", params);
         if (updated != 1) {
             throw new IllegalStateException("La compra cambio mientras se anulaba: " + module + " " + id);
         }
@@ -95,7 +95,7 @@ public class PurchaseAnnulmentRepository {
                 rs.getBigDecimal("neto_a_pagar"),
                 rs.getString("forma_pago"),
                 rs.getString("estado"),
-                rs.getBoolean("exportado"),
+                rs.getBoolean("anulacion_bloqueada"),
                 annulledAt == null ? null : annulledAt.toInstant());
     }
 }

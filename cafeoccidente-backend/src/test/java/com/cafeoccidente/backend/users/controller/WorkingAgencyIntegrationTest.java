@@ -93,7 +93,7 @@ class WorkingAgencyIntegrationTest {
         String admin = signIn("hu06_admin", Roles.ADMINISTRADOR);
 
         chooseAgency(admin, 4).andExpect(status().isOk());
-        for (String module : new String[] {"dry-coffee", "green-coffee", "husk", "other-coffee", "ferti-futuro"}) {
+        for (String module : new String[] {"dry-coffee", "green-coffee", "husk"}) {
             mockMvc.perform(get("/api/purchases/" + module + "/next-invoice-number").header("Authorization", admin))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.prefix").value("SDTA"));

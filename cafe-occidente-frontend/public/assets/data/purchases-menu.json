@@ -1,12 +1,10 @@
 {
   "windowTitle": "COMPRAS",
   "sideOptions": [
-    { "label": "Genera Remesa", "route": "/compras/remesa" },
-    { "label": "Genera Remesa Otros", "route": "/compras/remesa" }
+    { "label": "Genera Remesa", "route": "/compras/remesa" }
   ],
   "options": [
     { "label": "Compras Café Seco", "route": "/compras/cafe-seco", "emphasis": true },
-    { "label": "Compras Cafés Otros", "route": "/compras/cafe-otros" },
     { "label": "Compras Café Verde", "route": "/compras/cafe-verde" },
     { "label": "Compra Pasilla", "route": "/compras/pasilla" },
     { "label": "Compras a Futuro", "route": "/compras/futuro" },

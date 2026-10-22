@@ -18,8 +18,8 @@ class SpanishSchemaTest {
 
     private static final Set<String> TABLES = Set.of(
             "agencias", "anuncios", "anuncios_agencias", "cupos_anuncios", "cheques_relacionados",
-            "compras_anunciadas", "compras_cafe_seco", "compras_cafe_verde", "compras_cafes_otros",
-            "compras_ferti_futuro", "compras_pasilla", "cupos_ness", "empaques", "fondos",
+            "compras_anunciadas", "compras_cafe_seco", "compras_cafe_verde",
+            "compras_pasilla", "cupos_ness", "empaques", "fondos",
             "formas_pago_compras", "inventarios", "movimientos_caja", "movimientos_caja_menor", "permisos",
             "productos", "registros_control", "remisiones", "remisiones_detalle", "roles", "suministros",
             "terceros", "usuarios");
