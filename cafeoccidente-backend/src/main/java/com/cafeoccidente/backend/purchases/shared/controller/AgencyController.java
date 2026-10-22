@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Solo lectura: la administracion de agencias no esta expuesta todavia (no fue solicitada). */
+/**
+ * Solo lectura: la administracion de agencias no esta expuesta todavia (no fue solicitada). Solo el
+ * Administrador lista agencias: boton Agencias (RF-05.1), Registro de Control y Usuarios.
+ */
 @RestController
 @RequestMapping("/api/agencies")
-@PreAuthorize(Roles.ADMIN_USER)
+@PreAuthorize(Roles.ADMIN)
 public class AgencyController {
 
     private final AgencyRepository agencyRepository;

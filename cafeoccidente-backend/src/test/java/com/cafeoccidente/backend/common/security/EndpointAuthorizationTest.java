@@ -119,7 +119,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_OPS, get, "/api/announcements/history");
         add(ALL, get, "/api/funds");
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
-        add(ADMIN_USER, get, "/api/agencies");
+        add(ADMIN, get, "/api/agencies");
 
         // Compras: RF-13 a RF-20 (seco, verde, pasilla) y Cafes Otros (Q5).
         for (String module : List.of("dry-coffee", "green-coffee", "husk", "other-coffee", "ferti-futuro")) {
