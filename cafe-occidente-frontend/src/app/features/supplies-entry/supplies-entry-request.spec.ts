@@ -27,21 +27,19 @@ describe('supplies entry', () => {
     expect(missingField(screens['issuedCheck'], { ...values, checkNumber: '5400' })).toBeNull();
   });
 
-  it('builds ledger and packaging requests with plain numbers', () => {
+  it('builds ledger and packaging requests with plain numbers and no agency (the server sets it)', () => {
     const ledger = buildRequest(
       screens['cash'],
       { transactionId: ' sum1 ', idNumber: '87304051', fundCode: 'RP', entryDate: '2026-09-30', detail: '', amount: '1234,5', paymentMethod: 'CHEQUE', checkNumber: '5320' },
-      4,
     );
     expect(ledger).toEqual({
-      transactionId: 'sum1', agencyId: 4, entryDate: '2026-09-30', idNumber: '87304051', detail: null,
+      transactionId: 'sum1', entryDate: '2026-09-30', idNumber: '87304051', detail: null,
       fundCode: 'RP', amount: 1234.5, paymentMethod: 'CHEQUE', checkNumber: 5320,
     });
     const loan = buildRequest(
       screens['packagingLoan'],
       { transactionId: 'P1', idNumber: '87304051', packagingType: 'NUEVO', entryDate: '2026-09-30', detail: 'x', quantity: '3' },
-      null,
     );
-    expect(loan).toEqual({ transactionId: 'P1', agencyId: null, entryDate: '2026-09-30', idNumber: '87304051', detail: 'x', packagingType: 'NUEVO', quantity: 3 });
+    expect(loan).toEqual({ transactionId: 'P1', entryDate: '2026-09-30', idNumber: '87304051', detail: 'x', packagingType: 'NUEVO', quantity: 3 });
   });
 });

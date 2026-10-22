@@ -33,7 +33,7 @@ export interface SuppliesEntryContent {
   readonly backLabel: string;
   readonly printLoanLabel: string;
   readonly newLoanLabel: string;
-  readonly messages: Record<'saved' | 'saveError' | 'required' | 'chooseAgency' | 'growerNotFound', string>;
+  readonly messages: Record<'saved' | 'saveError' | 'required' | 'growerNotFound', string>;
   readonly screens: Record<string, SuppliesScreen>;
   readonly loanReceipt: LoanReceiptContent;
 }

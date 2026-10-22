@@ -7,7 +7,6 @@
     "saved": "Registro guardado: transacción {id}",
     "saveError": "No se pudo guardar el registro",
     "required": "Falta: {label}",
-    "chooseAgency": "Elija una agencia de la lista",
     "growerNotFound": "La cédula no está registrada como asociado"
   },
   "screens": {

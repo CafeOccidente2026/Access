@@ -3,7 +3,7 @@
   "fromLabel": "Desde Fecha",
   "toLabel": "Hasta Fecha",
   "agencyLabel": "Pto Compra",
-  "allAgenciesHint": "Deje la agencia vacía para ver todas",
+  "allAgenciesLabel": "Todas las agencias",
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
   "backRoute": "/vendedores",

@@ -3,7 +3,6 @@
   "cancelLabel": "Cancelar",
   "downloadLabel": "Descargar Excel",
   "agencyLabel": "Pto Compra",
-  "allAgenciesHint": "Deje la agencia vacía para ver todas",
   "messages": {
     "empty": "No hay movimientos para mostrar",
     "error": "No se pudo generar el informe",

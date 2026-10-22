@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { Conductor } from '../../core/models/grower.model';
-import { AuthService } from '../../core/services/auth.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent } from '../../shared/ui';
 
@@ -51,7 +50,6 @@ export class ConductorFormComponent {
 
   // Alta
   readonly today = new Date().toLocaleDateString('en-CA');
-  readonly agencyId = signal<number | null>(inject(AuthService).agencyId());
   readonly form = { idNumber: '', firstName: '', lastName: '', address: '', transportCompany: '', vehiclePlate: '' };
 
   // Actualizacion
@@ -71,11 +69,10 @@ export class ConductorFormComponent {
 
   create(): void {
     const f = this.form;
-    const agencyId = this.agencyId();
     this.message.set(null);
     this.error.set(null);
-    if (!f.idNumber.trim() || !f.firstName.trim() || !f.lastName.trim() || !agencyId) {
-      this.error.set('Cédula, Nombre, Apellidos y Agencia son obligatorios');
+    if (!f.idNumber.trim() || !f.firstName.trim() || !f.lastName.trim()) {
+      this.error.set('Cédula, Nombre y Apellidos son obligatorios');
       return;
     }
     this.growerService
@@ -85,7 +82,6 @@ export class ConductorFormComponent {
         secondName: null,
         lastName: f.lastName.trim(),
         secondLastName: null,
-        agencyId,
         transportCompany: f.transportCompany.trim() || null,
         vehiclePlate: f.vehiclePlate.trim() || null,
         address: f.address.trim() || null,

@@ -5,7 +5,6 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { InventoryMovementResponse, RemissionLineRequest, RemissionResponse } from '../../core/models/inventory.model';
 import { Grower, GrowerCreateRequest } from '../../core/models/grower.model';
-import { AuthService } from '../../core/services/auth.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent } from '../../shared/ui';
@@ -35,7 +34,6 @@ interface DraftLine {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RemissionFormComponent {
-  private readonly authService = inject(AuthService);
   private readonly growerService = inject(GrowerService);
   private readonly inventoryService = inject(InventoryService);
 
@@ -69,10 +67,7 @@ export class RemissionFormComponent {
 
   constructor() {
     this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
-    const agencyId = this.authService.agencyId();
-    if (agencyId) {
-      this.inventoryService.listMovements(agencyId).subscribe((list) => this.movements.set(list));
-    }
+    this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
   }
 
   print(): void {
@@ -117,9 +112,8 @@ export class RemissionFormComponent {
   /** "Ingresar Conductores" (Form_Conductores.bas), a la mano desde acá: la cédula ya está capturada
    *  arriba, solo falta el resto de datos para dar de alta al conductor y seguir con la remisión. */
   saveNewConductor(): void {
-    const agencyId = this.authService.agencyId();
     const idNumber = this.conductorIdNumber().trim();
-    if (!agencyId || !idNumber || !this.newConductorFirstName().trim() || !this.newConductorLastName().trim()) {
+    if (!idNumber || !this.newConductorFirstName().trim() || !this.newConductorLastName().trim()) {
       return;
     }
     this.newConductorError.set(null);
@@ -129,7 +123,6 @@ export class RemissionFormComponent {
       secondName: null,
       lastName: this.newConductorLastName().trim(),
       secondLastName: null,
-      agencyId,
       transportCompany: this.newConductorTransportCompany().trim() || null,
       vehiclePlate: this.newConductorVehiclePlate().trim() || null,
     };
@@ -177,8 +170,7 @@ export class RemissionFormComponent {
   }
 
   save(): void {
-    const agencyId = this.authService.agencyId();
-    if (!agencyId || !this.canSave()) {
+    if (!this.canSave()) {
       return;
     }
     this.errorMessage.set(null);
@@ -190,7 +182,6 @@ export class RemissionFormComponent {
     }));
     this.inventoryService
       .createRemission({
-        agencyId,
         remissionDate: this.remissionDate(),
         destination: this.destination() || null,
         conductorIdNumber: this.conductorIdNumber() || null,
@@ -214,9 +205,6 @@ export class RemissionFormComponent {
     this.lines.set([]);
     this.result.set(null);
     this.errorMessage.set(null);
-    const agencyId = this.authService.agencyId();
-    if (agencyId) {
-      this.inventoryService.listMovements(agencyId).subscribe((list) => this.movements.set(list));
-    }
+    this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
   }
 }

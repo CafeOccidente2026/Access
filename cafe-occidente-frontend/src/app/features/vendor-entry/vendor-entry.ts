@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
@@ -39,7 +38,6 @@ export class VendorEntryComponent {
     return kind ? (this.content()?.forms[kind] ?? []) : [];
   });
   readonly values = signal<Record<string, string>>({});
-  readonly agencyId = signal<number | null>(inject(AuthService).agencyId());
   readonly message = signal<string | null>(null);
   readonly error = signal(false);
   readonly saving = signal(false);
@@ -60,14 +58,14 @@ export class VendorEntryComponent {
   save(): void {
     const content = this.content()!;
     const kind = this.kind()!;
-    const problem = validationError(this.fields(), this.values(), this.agencyId(), content.messages);
+    const problem = validationError(this.fields(), this.values(), content.messages);
     this.error.set(!!problem);
     this.message.set(problem);
     if (problem) {
       return;
     }
     this.saving.set(true);
-    this.vendorService.create(buildVendorRequest(kind, this.fields(), this.values(), this.agencyId())).subscribe({
+    this.vendorService.create(buildVendorRequest(kind, this.fields(), this.values())).subscribe({
       next: (saved) => {
         this.saving.set(false);
         this.values.set({});

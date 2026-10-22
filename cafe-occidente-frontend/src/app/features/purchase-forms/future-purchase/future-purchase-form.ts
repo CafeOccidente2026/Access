@@ -198,12 +198,11 @@ export class FuturePurchaseFormComponent {
    *  informativos - solo para mostrar en pantalla, el backend los vuelve a resolver el mismo al
    *  guardar (no viajan en el request). */
   private loadAnnouncementInfo(): void {
-    const agencyId = this.authService.agencyId();
     const specialType = this.model['special'];
-    if (!agencyId || !this.rpFundId || !specialType) {
+    if (!this.rpFundId || !specialType) {
       return;
     }
-    this.announcementService.latest(agencyId, this.rpFundId, specialType).subscribe({
+    this.announcementService.latest(this.rpFundId, specialType).subscribe({
       next: (info) => {
         this.announcementInfo.set(info);
         this.tick.update((n) => n + 1);
@@ -241,12 +240,10 @@ export class FuturePurchaseFormComponent {
   }
 
   private buildRequest(): FuturePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
-    if (!agencyId || !REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '')) {
+    if (!REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '')) {
       return null;
     }
     return {
-      agencyId,
       idNumber: this.model['idPart1'],
       specialType: this.model['special'],
       announcedKg: parseDisplayNumber(this.model['kilos']),

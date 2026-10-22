@@ -330,13 +330,12 @@ export class DryCoffeeFormComponent {
 
   /** Paso 5: Cod Prod + datos del anuncio vigente para Agencia+Fondo+Especial. */
   private loadSpecialInfo(): void {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const specialType = this.model['special'];
-    if (!agencyId || !fundId || !specialType) {
+    if (!fundId || !specialType) {
       return;
     }
-    this.service.specialInfo(agencyId, fundId, specialType).subscribe({
+    this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
@@ -408,7 +407,6 @@ export class DryCoffeeFormComponent {
   }
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     // Sin este chequeo, recalculate() dispara un preview cada vez que se confirma un peso (para que
@@ -416,12 +414,11 @@ export class DryCoffeeFormComponent {
     // con healthyStoredWeight todavia en 0, el backend rechaza el calculo (no se puede dividir por
     // almendra sana = 0) y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
-      agencyId,
       fundId,
       invoiceNumber,
       specialType: this.model['special'],
@@ -546,7 +543,6 @@ export class DryCoffeeFormComponent {
   private canPrint(): boolean {
     return (
       !!this.payment() && !this.result() &&
-      !!this.authService.agencyId() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

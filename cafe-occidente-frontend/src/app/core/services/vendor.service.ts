@@ -38,6 +38,7 @@ export class VendorService {
     return this.http.get<NessQuotaPage>(`${this.url}/ness-quotas`, { params: toParams({ idNumber, page }) });
   }
 
+  /** Saldos Cupos NESS (fuera del RF, Q5): el Administrador puede pedir todas las agencias (agencyId null). */
   nessQuotaBalances(agencyId: number | null): Observable<NessQuotaBalanceRow[]> {
     return this.http.get<NessQuotaBalanceRow[]>(`${this.url}/ness-quota-balances`, { params: toParams({ agencyId }) });
   }

@@ -26,7 +26,7 @@ export interface BeneficiaryReportContent {
   readonly fromLabel: string;
   readonly toLabel: string;
   readonly agencyLabel: string;
-  readonly allAgenciesHint: string;
+  readonly allAgenciesLabel: string;
   readonly acceptLabel: string;
   readonly cancelLabel: string;
   readonly backRoute: string;

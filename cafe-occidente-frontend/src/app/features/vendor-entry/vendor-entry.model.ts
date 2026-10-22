@@ -28,5 +28,5 @@ export interface VendorEntryContent {
   readonly backLabel: string;
   readonly backRoute: string;
   readonly forms: Record<VendorKind, VendorField[]>;
-  readonly messages: Record<'saved' | 'required' | 'email' | 'chooseAgency' | 'duplicate' | 'error', string>;
+  readonly messages: Record<'saved' | 'required' | 'email' | 'duplicate' | 'error', string>;
 }

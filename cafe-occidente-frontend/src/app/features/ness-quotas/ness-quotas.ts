@@ -19,7 +19,7 @@ export interface NessQuotasContent {
   readonly searchButton: string;
   readonly agencyLabel: string;
   readonly acceptLabel: string;
-  readonly allAgenciesHint: string;
+  readonly allAgenciesLabel: string;
   readonly recordLabel: string;
   readonly previousLabel: string;
   readonly nextLabel: string;
@@ -50,11 +50,12 @@ export class NessQuotasComponent {
   private readonly navigation = inject(NavigationService);
 
   readonly viewKey: View = inject(ActivatedRoute).snapshot.data['view'];
-  readonly admin = inject(AuthService).isAdmin();
+  private readonly auth = inject(AuthService);
+  readonly admin = this.auth.isAdmin();
   readonly content = toSignal(inject(ContentService).loadJson<NessQuotasContent>('ness-quotas'));
   readonly view = computed(() => this.content()?.views[this.viewKey]);
 
-  readonly agencyId = signal<number | null>(inject(AuthService).agencyId());
+  readonly allAgencies = signal(false);
   readonly rows = signal<string[][]>([]);
   readonly total = signal(0);
   readonly page = signal(0);
@@ -88,7 +89,7 @@ export class NessQuotasComponent {
         ...done,
       });
     } else {
-      this.vendorService.nessQuotaBalances(this.agencyId()).subscribe({
+      this.vendorService.nessQuotaBalances(this.allAgencies() ? null : this.auth.agencyId()).subscribe({
         next: (rows) => this.show(rows.map(quotaCells), rows.length),
         ...done,
       });

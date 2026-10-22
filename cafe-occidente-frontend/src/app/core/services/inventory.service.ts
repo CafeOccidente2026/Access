@@ -17,8 +17,8 @@ import {
 export class InventoryService {
   private readonly http = inject(HttpClient);
 
-  listMovements(agencyId: number): Observable<InventoryMovementResponse[]> {
-    return this.http.get<InventoryMovementResponse[]>(`${API_BASE_URL}/inventory-movements?agencyId=${agencyId}`);
+  listMovements(): Observable<InventoryMovementResponse[]> {
+    return this.http.get<InventoryMovementResponse[]>(`${API_BASE_URL}/inventory-movements`);
   }
 
   createRemission(request: RemissionRequest): Observable<RemissionResponse> {
@@ -26,15 +26,15 @@ export class InventoryService {
   }
 
   /** "Reimprimir Remision": busca por numero correlativo (0 o 1 resultado). */
-  findRemissionByNumber(agencyId: number, remissionNumber: string): Observable<RemissionResponse[]> {
+  findRemissionByNumber(remissionNumber: string): Observable<RemissionResponse[]> {
     return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions`, {
-      params: new HttpParams().set('agencyId', agencyId).set('remissionNumber', remissionNumber),
+      params: new HttpParams().set('remissionNumber', remissionNumber),
     });
   }
 
   /** "Genera Remesa"/"Genera Remesa Otros": remisiones aun no incluidas en una remesa. */
-  listPendingExportRemissions(agencyId: number): Observable<RemissionResponse[]> {
-    return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions?agencyId=${agencyId}&pendingExport=true`);
+  listPendingExportRemissions(): Observable<RemissionResponse[]> {
+    return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions?pendingExport=true`);
   }
 
   markRemissionsExported(remissionIds: number[]): Observable<RemissionResponse[]> {
@@ -42,8 +42,8 @@ export class InventoryService {
   }
 
   /** Reporte Inventario por Cod. (productCode) o por Esp. (specialType); año en curso. */
-  inventoryReport(agencyId: number, filter: { productCode: string } | { specialType: string }): Observable<InventoryReportRow[]> {
-    let params = new HttpParams().set('agencyId', agencyId);
+  inventoryReport(filter: { productCode: string } | { specialType: string }): Observable<InventoryReportRow[]> {
+    let params = new HttpParams();
     for (const [key, value] of Object.entries(filter)) {
       params = params.set(key, value);
     }

@@ -45,7 +45,6 @@ export interface OtherCoffeePurchaseCalculation {
 /** Campos de entrada manual del formulario Cafés Otros (COMPRASESP). Sin Pr_AlmDefec: a diferencia
  *  de Café Seco, este módulo no tiene el término de la almendra defectuosa en la fórmula. */
 export interface OtherCoffeePurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
   readonly invoiceNumber: number;
   readonly specialType: string;

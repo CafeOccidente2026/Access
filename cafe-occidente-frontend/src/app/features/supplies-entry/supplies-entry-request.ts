@@ -28,11 +28,9 @@ const orNull = (value: string | undefined) => (value ?? '').trim() || null;
 export function buildRequest(
   screen: SuppliesScreen,
   values: Record<string, string>,
-  agencyId: number | null,
 ): LedgerEntryRequest | PackagingEntryRequest {
   const common = {
     transactionId: values['transactionId'].trim(),
-    agencyId,
     entryDate: orNull(values['entryDate']),
     idNumber: values['idNumber'],
     detail: orNull(values['detail']),

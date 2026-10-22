@@ -39,7 +39,6 @@ export interface SuppliesReportContent {
   readonly cancelLabel: string;
   readonly downloadLabel: string;
   readonly agencyLabel: string;
-  readonly allAgenciesHint: string;
   readonly messages: Record<'empty' | 'error' | 'required', string>;
   readonly text: SuppliesReportText;
   readonly reports: Record<string, SuppliesReport>;

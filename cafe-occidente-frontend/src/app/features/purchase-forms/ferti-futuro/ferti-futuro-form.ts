@@ -296,13 +296,12 @@ export class FertiFuturoFormComponent {
   }
 
   private loadAnnouncementInfo(): void {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const specialType = this.model['special'];
-    if (!agencyId || !fundId || !specialType) {
+    if (!fundId || !specialType) {
       return;
     }
-    this.announcementService.latest(agencyId, fundId, specialType).subscribe({
+    this.announcementService.latest(fundId, specialType).subscribe({
       next: (info) => {
         this.announcementInfo.set(info);
         this.tick.update((n) => n + 1);
@@ -341,16 +340,14 @@ export class FertiFuturoFormComponent {
   }
 
   private buildRequest(): FertiFuturoPurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     const futurePurchaseId = (this.model['futurePurchaseId'] ?? '').trim();
     return {
-      agencyId,
       fundId,
       invoiceNumber,
       specialType: this.model['special'],
@@ -461,7 +458,6 @@ export class FertiFuturoFormComponent {
   private canPrint(): boolean {
     return (
       !!this.payment() && !this.result() &&
-      !!this.authService.agencyId() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

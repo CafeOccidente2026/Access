@@ -5,17 +5,22 @@
     "src": "assets/images/cafe-occidente-logo.png",
     "alt": "CaféOccidente - Cooperativa de caficultores de occidente de Nariño Ltda."
   },
+  "agencies": {
+    "label": "Agencias",
+    "errorMessage": "No se pudo cambiar la agencia de trabajo"
+  },
   "options": [
-    { "label": "Registro de Control", "route": "/registro-control", "adminOnly": true },
-    { "label": "Usuarios", "route": "/usuarios", "adminOnly": true },
-    { "label": "Actualizar Anuncios", "route": "/anuncios", "adminOnly": true },
-    { "label": "Compras", "route": "/compras", "emphasis": true },
-    { "label": "Suministros", "route": "/suministros" },
-    { "label": "Vendedores", "route": "/vendedores" },
-    { "label": "Exportar Informacion", "route": "/exportar-informacion", "adminOnly": true },
-    { "label": "Importar Información", "route": "/importar-informacion" },
-    { "label": "Exportado Especial", "route": "/exportado-especial", "adminOnly": true },
-    { "label": "Volver Acceso Principal", "route": "/acceso-principal" },
+    { "label": "Registro de Control", "route": "/registro-control", "roles": ["ADMINISTRADOR"] },
+    { "label": "Usuarios", "route": "/usuarios", "roles": ["ADMINISTRADOR"] },
+    { "label": "Actualizar Anuncios", "route": "/anuncios", "roles": ["ADMINISTRADOR", "OPERACIONES"] },
+    { "label": "Compras", "route": "/compras", "emphasis": true, "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Suministros", "route": "/suministros", "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Vendedores", "route": "/vendedores", "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Contabilizado", "disabled": true, "hint": "Pendiente de levantamiento", "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Exportar Informacion", "route": "/exportar-informacion", "roles": ["ADMINISTRADOR"] },
+    { "label": "Importar Información", "route": "/importar-informacion", "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Exportado Especial", "route": "/exportado-especial", "roles": ["ADMINISTRADOR"] },
+    { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Salir de la aplicación", "route": "/login" }
   ]
 }

@@ -119,7 +119,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_OPS, get, "/api/announcements/history");
         add(ALL, get, "/api/funds");
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
-        add(ADMIN_USER, get, "/api/agencies");
+        add(ADMIN, get, "/api/agencies");
 
         // Compras: RF-13 a RF-20 (seco, verde, pasilla) y Cafes Otros (Q5).
         for (String module : List.of("dry-coffee", "green-coffee", "husk", "other-coffee", "ferti-futuro")) {
@@ -136,8 +136,8 @@ class EndpointAuthorizationTest {
         }
         add(ADMIN_USER, get, "/api/purchases/green-coffee/announcement-info");
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
-        // RF-24 Generar Reporte Anuncio: solo el Administrador.
-        add(ADMIN, get, "/api/purchases/dry-coffee/by-date", "/api/purchases/dry-coffee/by-date?date=2026-01-01");
+        // Generar Reporte Anuncio: Administrador y Usuario (área de compras, 22 oct; prima sobre RF-24).
+        add(ADMIN_USER, get, "/api/purchases/dry-coffee/by-date", "/api/purchases/dry-coffee/by-date?date=2026-01-01");
         // RN-23.1 Anular Documento: solo el Administrador.
         add(ADMIN, get, "/api/purchases/annulment", "/api/purchases/annulment?invoiceNumber=1");
         add(ADMIN, post, "/api/purchases/annulment/{module}/{id}", "/api/purchases/annulment/DRY/1");

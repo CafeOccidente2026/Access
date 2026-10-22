@@ -289,14 +289,12 @@ export class GreenCoffeeFormComponent {
   }
 
   private buildRequest(): GreenCoffeePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!agencyId || !invoiceNumber || !info) {
+    if (!invoiceNumber || !info) {
       return null;
     }
     return {
-      agencyId,
       fundId: info.fundId,
       invoiceNumber,
       idNumber: this.model['idPart1'],
@@ -410,7 +408,6 @@ export class GreenCoffeeFormComponent {
   private canPrint(): boolean {
     return (
       !!this.payment() && !this.result() &&
-      !!this.authService.agencyId() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

@@ -79,7 +79,6 @@ export interface DryCoffeePurchaseCalculation {
 
 /** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: lo trae el anuncio). */
 export interface DryCoffeePurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
   readonly invoiceNumber: number;
   readonly specialType: string;

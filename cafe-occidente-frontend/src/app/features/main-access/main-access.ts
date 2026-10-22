@@ -8,7 +8,8 @@ import { NavigationService } from '../../core/services/navigation.service';
 import { AccessWindowComponent, AppButtonComponent, MenuButtonGridComponent } from '../../shared/ui';
 import { MainAccessContent } from './main-access.model';
 
-/** Panel "Acceso Principal": bienvenida y navegacion a los modulos raiz. */
+/** Panel "Acceso Principal": bienvenida con el usuario de la sesion y navegacion a los modulos raiz.
+ *  Usuarios, Acceso a Tablas, Menu Habilitacion y Permisos son solo del Administrador (RN-01.1). */
 @Component({
   selector: 'app-main-access',
   standalone: true,
@@ -19,7 +20,7 @@ import { MainAccessContent } from './main-access.model';
 export class MainAccessComponent {
   private readonly content = inject(ContentService);
   private readonly navigation = inject(NavigationService);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
 
   readonly data = toSignal(this.content.loadJson<MainAccessContent>('main-access'));
 

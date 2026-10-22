@@ -25,7 +25,6 @@ export interface FertiFuturoPurchaseCalculation {
 /** Campos de entrada manual de FERTIFUTURO. Sin cellphone (el formulario real no lo captura) y sin
  *  Peso Tot Alm/Pasilla (a diferencia de Seco, Peso Alm Sana/Peso Alm Defec son inputs directos). */
 export interface FertiFuturoPurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
   readonly invoiceNumber: number;
   readonly specialType: string;

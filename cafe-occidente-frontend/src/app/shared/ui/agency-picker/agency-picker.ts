@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 
 import { Agency } from '../../../core/models/agency.model';
 import { AgencyService } from '../../../core/services/agency.service';
@@ -7,9 +7,10 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ComboboxComponent } from '../combobox/combobox';
 
 /**
- * Agencia de las pantallas de Inventarios: USER ve la de su sesion, fija y de solo lectura; ADMIN la
- * elige con el combobox de Compras (filtra mientras escribe). Emite el id solo cuando el texto
- * coincide con una agencia real, si no emite null. El backend igual fuerza la agencia para USER.
+ * Campo Agencia de las pantallas: muestra la agencia de trabajo sin poder editarla, para todos los
+ * roles (RN-05.1.3); el Administrador la cambia con el boton Agencias del menu principal. Solo con
+ * selectable (Exportar Informacion, que se eliminara) el Administrador elige otra con el combobox;
+ * emite el id cuando el texto coincide con una agencia real, si no emite null.
  */
 @Component({
   selector: 'app-agency-picker',
@@ -17,7 +18,7 @@ import { ComboboxComponent } from '../combobox/combobox';
   imports: [CommonModule, ComboboxComponent],
   template: `
     <app-combobox
-      *ngIf="admin; else fixed"
+      *ngIf="admin && selectable; else fixed"
       [options]="names()"
       [value]="auth.agencyName() ?? ''"
       [inputClass]="inputClass"
@@ -29,19 +30,22 @@ import { ComboboxComponent } from '../combobox/combobox';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AgencyPickerComponent {
+export class AgencyPickerComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly admin = this.auth.isAdmin();
 
   @Input() inputClass = 'w-full rounded border border-slate-300 px-2 py-1 text-sm';
+  @Input() selectable = false;
   @Output() readonly agencyChange = new EventEmitter<number | null>();
 
   readonly names = signal<string[]>([]);
   private agencies: Agency[] = [];
 
-  constructor() {
-    if (this.admin) {
-      inject(AgencyService).list().subscribe((list) => {
+  private readonly agencyService = inject(AgencyService);
+
+  ngOnInit(): void {
+    if (this.admin && this.selectable) {
+      this.agencyService.list().subscribe((list) => {
         this.agencies = list;
         this.names.set(list.map((a) => a.name));
       });

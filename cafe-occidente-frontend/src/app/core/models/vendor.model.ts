@@ -6,7 +6,6 @@ export interface VendorCreateRequest {
   readonly secondName: string | null;
   readonly lastName: string | null;
   readonly secondLastName: string | null;
-  readonly agencyId: number | null;
   readonly sex: string | null;
   readonly phone: string | null;
   readonly address: string | null;

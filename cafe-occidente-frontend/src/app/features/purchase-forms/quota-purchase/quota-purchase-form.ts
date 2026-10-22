@@ -194,13 +194,12 @@ export class QuotaPurchaseFormComponent {
   }
 
   private loadSpecialInfo(): void {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const specialType = this.model['special'];
-    if (!agencyId || !fundId || !specialType) {
+    if (!fundId || !specialType) {
       return;
     }
-    this.service.specialInfo(agencyId, fundId, specialType).subscribe({
+    this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
@@ -310,15 +309,13 @@ export class QuotaPurchaseFormComponent {
   }
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     return {
-      agencyId,
       fundId,
       invoiceNumber,
       specialType: this.model['special'],

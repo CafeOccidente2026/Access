@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { RemissionResponse } from '../../core/models/inventory.model';
-import { AuthService } from '../../core/services/auth.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
@@ -22,7 +21,6 @@ import { formatDisplayNumber } from '../../shared/utils/number-format';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RemesaExportComponent {
-  private readonly authService = inject(AuthService);
   private readonly inventoryService = inject(InventoryService);
 
   readonly remissions = signal<RemissionResponse[]>([]);
@@ -38,13 +36,10 @@ export class RemesaExportComponent {
   }
 
   private reload(): void {
-    const agencyId = this.authService.agencyId();
-    if (agencyId) {
-      this.inventoryService.listPendingExportRemissions(agencyId).subscribe((list) => {
-        this.remissions.set(list);
-        this.selectedIds.set(new Set());
-      });
-    }
+    this.inventoryService.listPendingExportRemissions().subscribe((list) => {
+      this.remissions.set(list);
+      this.selectedIds.set(new Set());
+    });
   }
 
   kg(value: number): string {

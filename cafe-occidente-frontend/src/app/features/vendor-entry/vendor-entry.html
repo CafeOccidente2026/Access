@@ -27,7 +27,7 @@
       <div class="flex flex-col gap-2 text-sm">
         <div *ngFor="let field of fields()" class="flex items-center gap-2">
           <span class="w-32 shrink-0 font-bold text-blue-900">{{ field.label }}{{ field.required ? ' *' : '' }}</span>
-          <app-agency-picker *ngIf="field.key === 'agency'; else text" class="w-44" (agencyChange)="agencyId.set($event)"></app-agency-picker>
+          <app-agency-picker *ngIf="field.key === 'agency'; else text" class="w-44" ></app-agency-picker>
           <ng-template #text>
             <input
               class="rounded border border-slate-300 px-2 py-1"

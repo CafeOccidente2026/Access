@@ -295,14 +295,12 @@ export class HuskFormComponent {
   }
 
   private buildRequest(): HuskPurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!agencyId || !invoiceNumber || !info) {
+    if (!invoiceNumber || !info) {
       return null;
     }
     return {
-      agencyId,
       fundId: info.fundId,
       invoiceNumber,
       idNumber: this.model['idPart1'],
@@ -422,7 +420,6 @@ export class HuskFormComponent {
   private canPrint(): boolean {
     return (
       !!this.payment() && !this.result() &&
-      !!this.authService.agencyId() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

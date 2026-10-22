@@ -5,7 +5,7 @@
         <ng-container *ngFor="let field of s.fields">
           <label *ngIf="field.key === 'agency'" class="flex items-center gap-2 text-sm">
             <span class="w-32 shrink-0 font-medium text-blue-900">{{ field.label }}:</span>
-            <app-agency-picker class="w-56" (agencyChange)="agencyId.set($event)"></app-agency-picker>
+            <app-agency-picker class="w-56" ></app-agency-picker>
           </label>
 
           <label *ngIf="field.key === 'idNumber'" class="flex items-center gap-2 text-sm">
