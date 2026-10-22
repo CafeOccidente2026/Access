@@ -51,8 +51,8 @@
           </div>
         </div>
 
-        <div *ngIf="prompt() === 'exported'" class="flex max-w-xl flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-3">
-          <p class="font-bold text-amber-900">{{ c.exportedMessage }}</p>
+        <div *ngIf="prompt() === 'locked'" class="flex max-w-xl flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-3">
+          <p class="font-bold text-amber-900">{{ c.lockedMessage }}</p>
           <div>
             <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="prompt.set(null)">{{ c.acceptLabel }}</button>
           </div>

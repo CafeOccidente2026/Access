@@ -67,20 +67,20 @@ class PurchaseAnnulmentIntegrationTest {
         SecurityContextHolder.clearContext();
     }
 
-    /** Una compra real de El Tambo, valida, todavia sin exportar y con pago mixto (efectivo + cheque). */
+    /** Una compra real de El Tambo, valida, anulable y con pago mixto (efectivo + cheque). */
     private Map<String, Object> pendingMixedPurchase() {
         return jdbc.queryForMap("SELECT p.id, p.numero_factura, p.peso_tot_alm, p.pr_base_cps,"
                 + " p.producto_id, p.especial, p.fecha_compra, p.kilos_netos FROM compras_cafe_seco p"
                 + " JOIN formas_pago_compras s ON s.origen = 'DRY' AND s.origen_id = p.id"
-                + " WHERE p.agencia_id = ? AND p.estado = 'VALIDA' AND NOT p.exportado AND s.cheque > 0"
+                + " WHERE p.agencia_id = ? AND p.estado = 'VALIDA' AND NOT p.anulacion_bloqueada AND s.cheque > 0"
                 + " ORDER BY p.id LIMIT 1", agencyId);
     }
 
     private void inventoryEntry(Map<String, Object> p, BigDecimal remainingKg) {
         jdbc.update("INSERT INTO inventarios (modulo_compra, compra_id, agencia_id, producto_id,"
                         + " especial, numero_factura, fecha_compra, sacos, kilos_brutos, kilos_netos, saldo_kilos,"
-                        + " factor, vr_inventario, creado_en, exportado)"
-                        + " VALUES ('DRY_COFFEE', ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 90, 1, now(), false)",
+                        + " factor, vr_inventario, creado_en)"
+                        + " VALUES ('DRY_COFFEE', ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 90, 1, now())",
                 p.get("id"), agencyId, p.get("producto_id"), p.get("especial"), p.get("numero_factura"),
                 p.get("fecha_compra"), p.get("kilos_netos"), p.get("kilos_netos"), remainingKg);
     }
@@ -128,12 +128,12 @@ class PurchaseAnnulmentIntegrationTest {
     }
 
     @Test
-    void cannotAnnulWhatWasAlreadyExported() {
+    void cannotAnnulAPurchaseLockedFromAccess() {
         Long id = jdbc.queryForObject("SELECT id FROM compras_cafe_seco WHERE agencia_id = ? AND estado = 'VALIDA'"
-                + " AND exportado ORDER BY id LIMIT 1", Long.class, agencyId);
+                + " AND anulacion_bloqueada ORDER BY id LIMIT 1", Long.class, agencyId);
         assertThatThrownBy(() -> service.annul(agencyId, AnnulmentModule.DRY, id))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("IMPOSIBLE ANULAR EL DOCUMENTO SOPORTE PORQUE YA EXPORTO LA INFORMACION.");
+                .hasMessage("IMPOSIBLE ANULAR: ES UNA COMPRA CERRADA EN EL SISTEMA ANTERIOR.");
     }
 
     @Test
@@ -147,7 +147,7 @@ class PurchaseAnnulmentIntegrationTest {
     @Test
     void cannotAnnulTwiceNorFromAnotherAgency() {
         Long annulled = jdbc.queryForObject("SELECT id FROM compras_cafe_seco WHERE agencia_id = ? AND estado = 'ANULADA'"
-                + " AND NOT exportado ORDER BY id LIMIT 1", Long.class, agencyId);
+                + " AND NOT anulacion_bloqueada ORDER BY id LIMIT 1", Long.class, agencyId);
         assertThatThrownBy(() -> service.annul(agencyId, AnnulmentModule.DRY, annulled))
                 .isInstanceOf(BusinessRuleException.class).hasMessage("El documento soporte ya esta anulado");
         Long pending = ((Number) pendingMixedPurchase().get("id")).longValue();

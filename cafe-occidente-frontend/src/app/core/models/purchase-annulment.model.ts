@@ -18,6 +18,6 @@ export interface AnnulmentCandidate {
   readonly netToPay: number;
   readonly paymentMethod: string;
   readonly status: 'VALIDA' | 'ANULADA';
-  readonly exported: boolean;
+  readonly annulmentLocked: boolean;
   readonly annulledAt: string | null;
 }

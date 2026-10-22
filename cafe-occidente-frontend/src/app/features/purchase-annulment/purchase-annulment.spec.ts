@@ -10,7 +10,7 @@ const candidate = {
   module: 'DRY', id: 1, agencyId: 4, agencyName: 'El Tambo', prefix: 'SDTA', invoiceNumber: 43388,
   purchaseDate: '2026-06-03', fundCode: 'RP', idNumber: '79374104', firstName: 'JESUS', lastName: null,
   specialType: 'NESPRESSO - FTUSA', netKg: 1200.5, netToPay: 9267436, paymentMethod: 'MIXTO', status: 'VALIDA',
-  exported: false, annulledAt: null,
+  annulmentLocked: false, annulledAt: null,
 } as AnnulmentCandidate;
 
 describe('purchase annulment', () => {
@@ -28,8 +28,8 @@ describe('purchase annulment', () => {
     expect(v('netToPay')).toBe('9.267.436');
   });
 
-  it('keeps the Access confirmation and export texts', () => {
+  it('keeps the Access confirmation and explains why a purchase closed in Access cannot be annulled', () => {
     expect(data.confirmMessage).toContain('ESTA SEGURO QUE DESEA ANULAR ESTE DOCUMENTO SOPORTE?');
-    expect(data.exportedMessage).toBe('IMPOSIBLE ANULAR EL DOCUMENTO SOPORTE PORQUE YA EXPORTO LA INFORMACION.');
+    expect(data.lockedMessage).toBe('IMPOSIBLE ANULAR: ES UNA COMPRA CERRADA EN EL SISTEMA ANTERIOR.');
   });
 });

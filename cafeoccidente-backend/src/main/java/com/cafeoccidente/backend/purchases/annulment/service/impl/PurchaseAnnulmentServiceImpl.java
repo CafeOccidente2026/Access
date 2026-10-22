@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
 
-    /** Etiqueta98 de Cns_ComprasParaAnular. */
-    static final String ALREADY_EXPORTED = "IMPOSIBLE ANULAR EL DOCUMENTO SOPORTE PORQUE YA EXPORTO LA INFORMACION.";
+    /** Compra cerrada en Access (alli marcada Exportado = Si, Etiqueta98 de Cns_ComprasParaAnular). */
+    static final String ANNULMENT_LOCKED = "IMPOSIBLE ANULAR: ES UNA COMPRA CERRADA EN EL SISTEMA ANTERIOR.";
     static final String ALREADY_ANNULLED = "El documento soporte ya esta anulado";
     /** Decision del usuario 2026-10-02 (P4): una remision real depende de esa entrada de inventario. */
     static final String HAS_INVENTORY_EXITS = "La compra ya tiene salidas de inventario";
@@ -34,7 +34,8 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
     }
 
     /**
-     * Comando87_Click: con Exportado = Si no deja anular. AnularFactura no devuelve el saldo de Compras
+     * Comando87_Click: no deja anular una compra cerrada en Access (anulacion_bloqueada, que en Access era
+     * Exportado = Si); las compras nuevas solo se bloquean si ya hubo salida de inventario (Q11). AnularFactura no devuelve el saldo de Compras
      * a Futuro ni el cupo del anuncio (P7: se replica literal).
      */
     @Override
@@ -46,8 +47,8 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
         if ("ANULADA".equals(purchase.status())) {
             throw new BusinessRuleException(ALREADY_ANNULLED);
         }
-        if (purchase.exported()) {
-            throw new BusinessRuleException(ALREADY_EXPORTED);
+        if (purchase.annulmentLocked()) {
+            throw new BusinessRuleException(ANNULMENT_LOCKED);
         }
         if (repository.hasInventoryExits(module, id)) {
             throw new BusinessRuleException(HAS_INVENTORY_EXITS);
