@@ -21,7 +21,7 @@ public class CorsConfig {
         configuration.setAllowedOrigins(List.of(allowedOrigin));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowCredentials(true);
+        // Sin allowCredentials: el JWT viaja en la cabecera Authorization y no hay cookies que permitir.
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

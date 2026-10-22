@@ -1,8 +1,10 @@
 package com.cafeoccidente.backend.purchases.shared.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.shared.dto.AgencyResponse;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Solo lectura: la administracion de agencias no esta expuesta todavia (no fue solicitada). */
 @RestController
 @RequestMapping("/api/agencies")
+@PreAuthorize(Roles.ADMIN_USER)
 public class AgencyController {
 
     private final AgencyRepository agencyRepository;

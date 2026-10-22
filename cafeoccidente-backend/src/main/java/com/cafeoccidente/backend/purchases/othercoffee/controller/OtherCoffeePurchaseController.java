@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.othercoffee.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.othercoffee.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.othercoffee.dto.OtherCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.othercoffee.dto.OtherCoffeePurchaseResponse;
@@ -10,6 +11,7 @@ import com.cafeoccidente.backend.purchases.othercoffee.service.OtherCoffeePurcha
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/purchases/other-coffee")
+@PreAuthorize(Roles.ADMIN_USER)
 public class OtherCoffeePurchaseController {
 
     private final OtherCoffeePurchaseService otherCoffeePurchaseService;

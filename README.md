@@ -75,9 +75,9 @@ que vas a entrar por primera vez** a `http://localhost:4200/login`. Son valores
 que **cada persona define en su propio `.env`** — nunca se comparten ni se suben
 a Git, y no tienen que coincidir entre los miembros del equipo.
 
-Cómo funciona: la primera vez que el backend arranca con la tabla `users`
-completamente vacía, crea automáticamente un usuario con rol `ADMIN` usando esos
-dos valores (lo hace `AdminUserInitializer`). No hay que registrar nada a mano.
+Cómo funciona: cuando el backend arranca y no existe un usuario con ese nombre,
+crea automáticamente un usuario con rol `ADMINISTRADOR` usando esos dos valores
+(lo hace `AdminUserSeeder`). No hay que registrar nada a mano.
 
 **Cada persona del equipo tiene su propia base de datos local** (su propio
 Docker) — el admin de una persona no tiene ninguna relación con el admin de

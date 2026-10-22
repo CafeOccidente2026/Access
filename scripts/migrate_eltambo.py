@@ -769,12 +769,12 @@ def load_ness(cur):
 # ---------- usuario de pruebas ----------
 
 def ensure_admin_eltambo(cur, el_tambo_id):
-    """admin_eltambo (ADMIN, El Tambo) para los tests de integracion. Contrasena aleatoria en cada corrida:
+    """admin_eltambo (ADMINISTRADOR, El Tambo) para los tests de integracion. Contrasena aleatoria en cada corrida:
     no queda en el codigo ni se imprime; si se necesita entrar con ese usuario, se cambia desde la app."""
     password = secrets.token_urlsafe(32).encode()
     cur.execute(
         "INSERT INTO usuarios (usuario, contrasena_hash, activo, rol_id, agencia_id)"
-        " SELECT 'admin_eltambo', %s, true, id, %s FROM roles WHERE nombre = 'ADMIN'"
+        " SELECT 'admin_eltambo', %s, true, id, %s FROM roles WHERE nombre = 'ADMINISTRADOR'"
         " ON CONFLICT (usuario) DO NOTHING",
         (bcrypt.hashpw(password, bcrypt.gensalt()).decode(), el_tambo_id),
     )

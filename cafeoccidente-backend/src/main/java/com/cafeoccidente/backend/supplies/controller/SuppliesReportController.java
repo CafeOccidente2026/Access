@@ -1,11 +1,13 @@
 package com.cafeoccidente.backend.supplies.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.supplies.dto.SuppliesReportRow;
 import com.cafeoccidente.backend.supplies.service.SuppliesReportService;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/supplies/reports")
+@PreAuthorize(Roles.ADMIN_USER)
 public class SuppliesReportController {
 
     private final SuppliesReportService suppliesReportService;

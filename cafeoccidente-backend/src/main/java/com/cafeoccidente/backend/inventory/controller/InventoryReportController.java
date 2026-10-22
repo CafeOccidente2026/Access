@@ -1,11 +1,13 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.inventory.dto.InventoryReportRow;
 import com.cafeoccidente.backend.inventory.dto.ProductCodeOption;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/inventory-report")
+@PreAuthorize(Roles.ADMIN_USER)
 public class InventoryReportController {
 
     private final InventoryReportService inventoryReportService;

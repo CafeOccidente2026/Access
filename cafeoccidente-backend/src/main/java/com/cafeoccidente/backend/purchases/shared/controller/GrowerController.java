@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.shared.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Busqueda de caficultor por cedula (paso "Cedula" del formulario Compras Cafe Seco) y alta de conductores. */
 @RestController
 @RequestMapping("/api/growers")
+@PreAuthorize(Roles.ADMIN_USER)
 public class GrowerController {
 
     private final GrowerService growerService;

@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.users.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.users.dto.RoleResponse;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import java.util.List;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Solo lectura: los roles son fijos (ADMIN/USER, sembrados por Flyway), no hay CRUD. */
 @RestController
 @RequestMapping("/api/roles")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(Roles.ADMIN)
 public class RoleController {
 
     private final RoleRepository roleRepository;

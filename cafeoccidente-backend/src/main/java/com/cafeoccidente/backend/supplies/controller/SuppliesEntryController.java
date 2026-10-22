@@ -1,11 +1,13 @@
 package com.cafeoccidente.backend.supplies.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.supplies.dto.EntryResponse;
 import com.cafeoccidente.backend.supplies.dto.LedgerEntryRequest;
 import com.cafeoccidente.backend.supplies.dto.PackagingEntryRequest;
 import com.cafeoccidente.backend.supplies.service.SuppliesEntryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/supplies")
 @ResponseStatus(HttpStatus.CREATED)
+@PreAuthorize(Roles.ADMIN_USER)
 public class SuppliesEntryController {
 
     private final SuppliesEntryService suppliesEntryService;

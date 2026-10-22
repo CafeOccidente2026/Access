@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.controlrecord.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Pantalla "Registro de Control" (RegControl): ver/crear/editar los parametros por agencia. Solo ADMIN. */
 @RestController
 @RequestMapping("/api/control-records")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(Roles.ADMIN)
 public class ControlRecordController {
 
     private final ControlRecordService controlRecordService;

@@ -1,8 +1,10 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.inventory.dto.InventoryMovementResponse;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Solo lectura: las filas se crean automaticamente desde cada *PurchaseServiceImpl.create(). */
 @RestController
 @RequestMapping("/api/inventory-movements")
+@PreAuthorize(Roles.ADMIN_USER)
 public class InventoryMovementController {
 
     private final InventoryMovementService inventoryMovementService;

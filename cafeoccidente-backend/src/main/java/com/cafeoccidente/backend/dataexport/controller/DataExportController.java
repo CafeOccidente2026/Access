@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.dataexport.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.dataexport.service.DataExportService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/data-export")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(Roles.ADMIN)
 public class DataExportController {
 
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");

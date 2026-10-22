@@ -1,4 +1,5 @@
-export type UserRole = 'ADMIN' | 'PURCHASE_AGENT';
+/** Roles del RF (RF-01): los mismos nombres de la tabla roles. */
+export type UserRole = 'ADMINISTRADOR' | 'USUARIO' | 'OPERACIONES';
 
 export interface AuthSession {
   readonly username: string;

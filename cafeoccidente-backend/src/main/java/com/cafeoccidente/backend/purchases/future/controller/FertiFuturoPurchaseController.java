@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.FertiFuturoPurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FertiFuturoPurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.NextInvoiceNumberResponse;
@@ -7,6 +8,7 @@ import com.cafeoccidente.backend.purchases.future.service.FertiFuturoPurchaseCal
 import com.cafeoccidente.backend.purchases.future.service.FertiFuturoPurchaseService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/purchases/ferti-futuro")
+@PreAuthorize(Roles.ADMIN_USER)
 public class FertiFuturoPurchaseController {
 
     private final FertiFuturoPurchaseService fertiFuturoPurchaseService;

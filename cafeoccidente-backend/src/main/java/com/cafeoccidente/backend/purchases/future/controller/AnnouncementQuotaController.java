@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Pantalla "Asignar Cupo" (Access "ACTUALIZA CUPOS"). Solo ADMIN. */
 @RestController
 @RequestMapping("/api/announcement-quotas/{agencyId}")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(Roles.ADMIN_USER)
 public class AnnouncementQuotaController {
 
     private final AnnouncementQuotaService announcementQuotaService;
