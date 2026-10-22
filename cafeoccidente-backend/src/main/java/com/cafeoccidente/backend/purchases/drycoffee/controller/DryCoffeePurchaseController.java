@@ -45,7 +45,6 @@ public class DryCoffeePurchaseController {
     }
 
     @GetMapping("/by-date")
-    @PreAuthorize(Roles.ADMIN)
     public List<DryCoffeePurchaseResponse> findByDate(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return dryCoffeePurchaseService.findByDate(date);

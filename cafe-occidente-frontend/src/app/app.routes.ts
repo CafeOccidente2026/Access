@@ -57,6 +57,7 @@ function vendorsRoutes(): Routes {
 }
 
 const ADMIN: readonly UserRole[] = ['ADMINISTRADOR'];
+const ADMIN_USER: readonly UserRole[] = ['ADMINISTRADOR', 'USUARIO'];
 const ADMIN_OPS: readonly UserRole[] = ['ADMINISTRADOR', 'OPERACIONES'];
 const ALL: readonly UserRole[] = ['ADMINISTRADOR', 'USUARIO', 'OPERACIONES'];
 
@@ -160,6 +161,7 @@ export const routes: Routes = [
       },
       {
         path: 'compras/futuro/asignar-cupo',
+        data: { roles: ADMIN_USER },
         loadComponent: () =>
           import('./features/quota-assignment/quota-assignment').then(
             (m) => m.QuotaAssignmentComponent,
@@ -239,7 +241,7 @@ export const routes: Routes = [
       },
       {
         path: 'compras/reporte-anuncio',
-        data: { roles: ADMIN },
+        data: { roles: ADMIN_USER },
         loadComponent: () =>
           import('./features/announcement-report/announcement-report').then((m) => m.AnnouncementReportComponent),
       },
