@@ -6,7 +6,10 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Campos editables del ControlRecord (pantalla "RegControl"). agencyId va en la URL, no aqui. */
+/**
+ * Campos editables del ControlRecord (pantalla "RegControl"). agencyId va en la URL y Punto de Compra
+ * lo pone el servidor (RN-06.3): si el cliente lo manda, se ignora.
+ */
 public record ControlRecordRequest(
         @NotNull Integer controlNumber,
         @NotNull @PositiveOrZero BigDecimal baseFactor,
@@ -15,7 +18,6 @@ public record ControlRecordRequest(
         @NotNull @PositiveOrZero BigDecimal withholdingPercentage,
         @NotNull @PositiveOrZero BigDecimal baseHusk,
         @NotNull @PositiveOrZero BigDecimal avgHuskPercentage,
-        @NotBlank String purchasePoint,
         @NotBlank String prefix,
         @NotNull @PositiveOrZero BigDecimal costs,
         @NotNull @PositiveOrZero BigDecimal sampleSize,

@@ -148,7 +148,6 @@ export class ControlRecordComponent {
       withholdingPercentage: num('withholdingPercentage'),
       baseHusk: num('baseHusk'),
       avgHuskPercentage: num('avgHuskPercentage'),
-      purchasePoint: str('purchasePoint'),
       prefix: str('prefix'),
       costs: num('costs'),
       sampleSize: num('sampleSize'),
@@ -180,7 +179,7 @@ export class ControlRecordComponent {
     return base.map((f) => ({
       ...f,
       value: model[f.key] ?? '',
-      readonly: !agencySelected,
+      readonly: !agencySelected || !!f.readonly,
     }));
   }
 }

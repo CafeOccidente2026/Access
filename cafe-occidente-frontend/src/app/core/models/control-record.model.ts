@@ -32,4 +32,5 @@ export interface ControlRecordResponse {
   readonly greenDefectiveUnitPrice: number;
 }
 
-export type ControlRecordRequest = Omit<ControlRecordResponse, 'id' | 'agencyId' | 'agencyName' | 'active'>;
+/** Punto de Compra lo pone el servidor (RN-06.3). */
+export type ControlRecordRequest = Omit<ControlRecordResponse, 'id' | 'agencyId' | 'agencyName' | 'active' | 'purchasePoint'>;

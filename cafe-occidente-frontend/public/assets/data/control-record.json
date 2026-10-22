@@ -14,7 +14,7 @@
     { "key": "withholdingPercentage", "label": "Porcentaje Rete Fuente", "type": "percentage" },
     { "key": "baseHusk", "label": "Base Pasilla", "type": "currency" },
     { "key": "avgHuskPercentage", "label": "% Kg de Pasilla Promedio", "type": "percentage" },
-    { "key": "purchasePoint", "label": "Punto de Compra", "type": "text" },
+    { "key": "purchasePoint", "label": "Punto de Compra", "type": "text", "readonly": true },
     { "key": "prefix", "label": "Prefijo", "type": "text" },
     { "key": "costs", "label": "Costos", "type": "currency" },
     { "key": "sampleSize", "label": "Tamaño Muestra", "type": "count" },
