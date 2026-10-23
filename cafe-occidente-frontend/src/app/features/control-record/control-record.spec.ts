@@ -118,6 +118,22 @@ describe('ControlRecordComponent', () => {
     expect(input.inputValue).toBe('12,5');
   });
 
+  it('D2: an agency without record gets its suggested prefix prefilled', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '2');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 2, name: 'Ancuya', hasControlRecord: false, suggestedPrefix: 'DCAN' }]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => throwError(() => new HttpErrorResponse({ status: 404 })) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    expect(component.isCreate()).toBe(true);
+    expect(component.leftFields().find((f) => f.key === 'prefix')?.value).toBe('DCAN');
+  });
+
   it('shows the empty create form when the session agency has no record yet', () => {
     const component = setup(() => throwError(() => new HttpErrorResponse({ status: 404 })));
     expect(component.agencyId()).toBe(3);

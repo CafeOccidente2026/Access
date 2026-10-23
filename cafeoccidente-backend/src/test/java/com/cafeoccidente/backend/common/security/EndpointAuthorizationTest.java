@@ -18,6 +18,7 @@ import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
+import com.cafeoccidente.backend.purchases.shared.service.AgencyService;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.supplies.service.SuppliesEntryService;
@@ -108,6 +109,8 @@ class EndpointAuthorizationTest {
         add(ADMIN, put, "/api/control-records/{agencyId}", "/api/control-records/1");
         add(ADMIN, get, "/api/users");
         add(ADMIN, post, "/api/users");
+        // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
+        add(ADMIN, put, "/api/users/{id}", "/api/users/1");
         add(ADMIN, get, "/api/roles");
 
         // Actualizar Anuncios: RF-08 y RF-09 (Administrador y Operaciones).
@@ -117,6 +120,8 @@ class EndpointAuthorizationTest {
         add(ALL, get, "/api/funds");
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
         add(ADMIN, get, "/api/agencies");
+        // HU-09 (RF-07): crear agencias, solo el Administrador.
+        add(ADMIN, post, "/api/agencies");
 
         // Compras: RF-13 a RF-20 (seco, verde, pasilla).
         for (String module : List.of("dry-coffee", "green-coffee", "husk")) {
@@ -203,6 +208,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private CurrentAgencyProvider currentAgencyProvider;
     @MockitoBean private WorkingAgencyService workingAgencyService;
     @MockitoBean private AgencyRepository agencyRepository;
+    @MockitoBean private AgencyService agencyService;
     @MockitoBean private FundRepository fundRepository;
     @MockitoBean private RoleRepository roleRepository;
     @MockitoBean private AuthService authService;

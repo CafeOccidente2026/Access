@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { CreateUserRequest, User } from '../models/user.model';
+import { CreateUserRequest, UpdateUserRequest, User } from '../models/user.model';
 
 /** Unica responsabilidad: llamadas HTTP al backend para el recurso User. */
 @Injectable({ providedIn: 'root' })
@@ -16,5 +16,9 @@ export class UserService {
 
   create(request: CreateUserRequest): Observable<User> {
     return this.http.post<User>(`${API_BASE_URL}/users`, request);
+  }
+
+  update(id: number, request: UpdateUserRequest): Observable<User> {
+    return this.http.put<User>(`${API_BASE_URL}/users/${id}`, request);
   }
 }

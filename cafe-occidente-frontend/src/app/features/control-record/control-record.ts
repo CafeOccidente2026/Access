@@ -44,11 +44,14 @@ export class ControlRecordComponent {
   readonly rightFields = computed(() => this.buildFields(this.page()?.rightColumn));
 
   constructor() {
-    this.agencyService.list().subscribe((agencies) => this.agencies.set(agencies));
+    // La lista primero: el prefijo sugerido de una agencia sin registro sale de ella.
     const sessionAgencyId = this.authService.agencyId();
-    if (sessionAgencyId !== null) {
-      this.onAgencyChange(String(sessionAgencyId));
-    }
+    this.agencyService.list().subscribe((agencies) => {
+      this.agencies.set(agencies);
+      if (sessionAgencyId !== null) {
+        this.onAgencyChange(String(sessionAgencyId));
+      }
+    });
   }
 
   onAgencyChange(value: string): void {
@@ -77,7 +80,9 @@ export class ControlRecordComponent {
         }
         if (err.status === 404) {
           this.isCreate.set(true);
-          this.model.set({});
+          // D2: si la agencia traia prefijo de Access, el Prefijo aparece prellenado.
+          const suggested = this.agencies().find((a) => a.id === id)?.suggestedPrefix;
+          this.model.set(suggested ? { prefix: suggested } : {});
         } else {
           this.errorMessage.set(this.page()?.errorMessage ?? null);
         }

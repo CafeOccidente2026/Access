@@ -103,18 +103,14 @@ def parse_bool(value):
 def load_agency_el_tambo(cur):
     reg = read_csv("regcontrol_migrar.csv")[0]
     access_value = s(reg, "agencia")
-    prefix = s(reg, "prefijo")
-    cur.execute("SELECT id, prefijo_factura FROM agencias WHERE nombre_access = %s", (access_value,))
+    # El prefijo va en registros_control (load_control_record), no en la agencia (D2, V7).
+    cur.execute("SELECT id FROM agencias WHERE nombre_access = %s", (access_value,))
     row = cur.fetchone()
     if row:
-        agency_id, current_prefix = row
-        if current_prefix != prefix:
-            cur.execute("UPDATE agencias SET prefijo_factura = %s WHERE id = %s", (prefix, agency_id))
-        return agency_id
+        return row[0]
     cur.execute(
-        "INSERT INTO agencias (nombre, nombre_access, prefijo_factura, activa) "
-        "VALUES (%s, %s, %s, true) RETURNING id",
-        ("El Tambo", access_value, prefix),
+        "INSERT INTO agencias (nombre, nombre_access, activa) VALUES (%s, %s, true) RETURNING id",
+        ("El Tambo", access_value),
     )
     return cur.fetchone()[0]
 
@@ -201,8 +197,7 @@ def resolve_agencies(cur, raw_values):
             value_to_id[value] = by_name[value]
         else:
             cur.execute(
-                "INSERT INTO agencias (nombre, nombre_access, prefijo_factura, activa) "
-                "VALUES (%s, %s, '', true) RETURNING id",
+                "INSERT INTO agencias (nombre, nombre_access, activa) VALUES (%s, %s, true) RETURNING id",
                 (value, value),
             )
             new_id = cur.fetchone()[0]
