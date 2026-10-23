@@ -13,7 +13,7 @@ public record UserUpdateRequest(
         @NotNull Long roleId,
         @NotNull Long agencyId,
         @NotNull Boolean active,
-        @Pattern(regexp = "^$|" + UserRequest.PASSWORD_PATTERN, message = UserRequest.PASSWORD_MESSAGE)
+        @Pattern(regexp = "^$|" + UserRequest.SECURE_KEY_PATTERN, message = UserRequest.SECURE_KEY_MESSAGE)
                 String password,
         @Size(max = 30) @Pattern(regexp = "^$|\\d+", message = "La cedula solo acepta numeros") String idNumber) {
 }

@@ -103,6 +103,39 @@ describe('UserManagementComponent', () => {
     expect(component.editing()).not.toBeNull();
   });
 
+  it('CA-2: a weak password is not sent, neither when creating nor when editing', () => {
+    const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+    userService.update = vi.fn();
+    const component = TestBed.createComponent(UserManagementComponent).componentInstance;
+    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'abcd', roleId: 1, agencyId: 1 });
+    component.createUser();
+    expect(userService.create).not.toHaveBeenCalled();
+    expect(component.userError()).toBe(content.passwordInvalidMessage);
+
+    component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    component.editPassword = '1234';
+    component.saveEdit();
+    expect(userService.update).not.toHaveBeenCalled();
+    expect(component.editError()).toBe(content.passwordInvalidMessage);
+
+    component.cancelEdit();
+    expect(component.editing()).toBeNull();
+  });
+
+  it('Enter on the last field creates the user and the server message is shown', () => {
+    const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn> };
+    userService.create.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 400, error: { message: 'Ya existe un usuario con esa cedula' } })));
+    const component = TestBed.createComponent(UserManagementComponent).componentInstance;
+    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'ab12', roleId: 1, agencyId: 1 });
+    component.onEnter('username');
+    component.onEnter('desconocido');
+    expect(userService.create).not.toHaveBeenCalled();
+    component.onEnter('agencyId');
+    expect(userService.create).toHaveBeenCalled();
+    expect(component.userError()).toBe('Ya existe un usuario con esa cedula');
+  });
+
   it('creating an agency is optional: an empty name does nothing', () => {
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
     component.createAgency();
