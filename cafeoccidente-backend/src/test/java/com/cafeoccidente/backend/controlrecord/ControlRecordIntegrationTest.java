@@ -86,7 +86,7 @@ class ControlRecordIntegrationTest {
     void ca1ChoosingTheAgencyFillsThePurchasePointAndLoadsItsParameters() throws Exception {
         mockMvc.perform(get(BUESACO).header("Authorization", admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.agencyName").value("Buesaco"))
+                .andExpect(jsonPath("$.agencyName").value("Buesaco 1"))
                 .andExpect(jsonPath("$.purchasePoint").value("BUESACO1 OCCIDENTE"))
                 .andExpect(jsonPath("$.excelsoKg").value(70))
                 .andExpect(jsonPath("$.baseFactor").value(94.0));

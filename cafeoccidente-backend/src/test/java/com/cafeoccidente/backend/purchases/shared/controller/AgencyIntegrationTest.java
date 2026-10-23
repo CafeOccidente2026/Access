@@ -88,7 +88,7 @@ class AgencyIntegrationTest {
     @Test
     void theNameIsRequiredAndUnique() throws Exception {
         create(" ").andExpect(status().isBadRequest());
-        create("buesaco").andExpect(status().isBadRequest())
+        create("buesaco 1").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Ya existe una agencia con ese nombre"));
     }
 

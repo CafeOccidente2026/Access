@@ -179,32 +179,76 @@ def load_control_record(cur, el_tambo_id):
     print("  registros_control de El Tambo insertado.")
 
 
+# Valor de la columna Agencia de asociados_migrar.csv -> nombre_access de la agencia real. Los valores
+# que ya son un nombre_access no van aqui; uno que no este en ningun lado aborta la carga.
+AGENCY_ALIASES = {
+    # Mayusculas o tildes distintas a la semilla
+    "Ancuya": "ANCUYA",
+    "Buesaco": "BUESACO1 OCCIDENTE",
+    "Chachagui": "CHACHAGUI",
+    "Consaca": "CONSACA",
+    "El Tambo": "EL TAMBO",
+    "Guaitarilla": "GUAITARILLA",
+    "La Florida": "LA FLORIDA",
+    "Linares": "LINARES",
+    "Samaniego": "SAMANIEGO",
+    # Errores de escritura
+    "BUESACO2 OCCIDEN TE": "BUESACO2",
+    "BUESACO2 OCCIDENTE": "BUESACO2",
+    "BUESACO2 OCCIDENTEÇ": "BUESACO2",
+    "EL INGNENIO": "EL INGENIO",
+    "INGENIO": "EL INGENIO",
+    "EL TAMB0": "EL TAMBO",
+    "EL TAMO": "EL TAMBO",
+    "EL TAMBO (N)": "EL TAMBO",
+    "LA FLORIDA (N)": "LA FLORIDA",
+    "SAMANEIGO": "SAMANIEGO",
+    # Otro nombre del mismo punto
+    "PASTO SEDE": "PASTO",
+    "SOTOMAYOR": "LOS ANDES",
+    "Sotomayor": "LOS ANDES",
+    "LOS ANDES SOTOMAYOR": "LOS ANDES",
+}
+
+# Puntos de Access que no estan entre los 20 de la semilla (V2): nombre_access -> (nombre, activa).
+# BUESACO sin numero queda inactiva hasta que el area de compras diga si es Buesaco 1 o Buesaco 2.
+EXTRA_AGENCIES = {
+    "BUESACO2": ("Buesaco 2", True),
+    "BUESACO": ("BUESACO sin número (pendiente)", False),
+    "GUAITARILLA": ("Guaitarilla", True),
+    "Santacruz": ("Santacruz", True),
+    "POLICARPA": ("Policarpa", True),
+    "TANGUA": ("Tangua", True),
+}
+
+
+def canonical_access_value(value, known_access_values):
+    """nombre_access de la agencia real de un valor crudo de Access; None si no tiene equivalencia."""
+    target = AGENCY_ALIASES.get(value, value)
+    return target if target in known_access_values or target in EXTRA_AGENCIES else None
+
+
 def resolve_agencies(cur, raw_values):
-    """Resuelve/crea una Agency por cada valor crudo distinto de 'agencia' en asociados_migrar.csv."""
-    cur.execute("SELECT id, nombre, nombre_access FROM agencias")
-    by_access = {}
-    by_name = {}
-    for agency_id, name, access_value in cur.fetchall():
-        by_access[access_value] = agency_id
-        by_name[name] = agency_id
+    """Agencia real de cada valor de 'agencia' en asociados_migrar.csv. Solo crea las de EXTRA_AGENCIES."""
+    cur.execute("SELECT nombre_access, id FROM agencias WHERE nombre_access IS NOT NULL")
+    by_access = dict(cur.fetchall())
+    unknown = sorted(v for v in raw_values if canonical_access_value(v, by_access) is None)
+    if unknown:
+        raise SystemExit(f"Valores de Agencia sin equivalencia (agregarlos a AGENCY_ALIASES): {unknown}")
 
     value_to_id = {}
     created = []
     for value in sorted(raw_values):
-        if value in by_access:
-            value_to_id[value] = by_access[value]
-        elif value in by_name:
-            value_to_id[value] = by_name[value]
-        else:
+        target = canonical_access_value(value, by_access)
+        if target not in by_access:
+            name, active = EXTRA_AGENCIES[target]
             cur.execute(
-                "INSERT INTO agencias (nombre, nombre_access, activa) VALUES (%s, %s, true) RETURNING id",
-                (value, value),
+                "INSERT INTO agencias (nombre, nombre_access, activa) VALUES (%s, %s, %s) RETURNING id",
+                (name, target, active),
             )
-            new_id = cur.fetchone()[0]
-            by_access[value] = new_id
-            by_name[value] = new_id
-            value_to_id[value] = new_id
-            created.append(value)
+            by_access[target] = cur.fetchone()[0]
+            created.append(name)
+        value_to_id[value] = by_access[target]
     return value_to_id, created
 
 

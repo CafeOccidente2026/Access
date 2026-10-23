@@ -3,7 +3,7 @@
   "heading": "Registro de Control",
   "agencyLabel": "Agencia",
   "saveButton": "Guardar",
-  "createNotice": "Esta agencia todavia no tiene ControlRecord: complete los campos y guarde para crearlo.",
+  "createNotice": "Esta agencia todavía no tiene Registro de Control: complete los campos y guarde para crearlo.",
   "savedMessage": "Guardado correctamente.",
   "errorMessage": "Ocurrio un error. Verifique los datos e intente de nuevo.",
   "leftColumn": [
