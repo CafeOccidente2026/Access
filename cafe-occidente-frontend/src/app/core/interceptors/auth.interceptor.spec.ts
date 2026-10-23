@@ -28,6 +28,11 @@ describe('authInterceptor', () => {
     expect(backend.expectOne('/api/funds').request.headers.get('Authorization')).toBe('Bearer jwt');
   });
 
+  it('does not send a previous JWT with the login', () => {
+    http.post('/api/auth/login', {}).subscribe();
+    expect(backend.expectOne('/api/auth/login').request.headers.has('Authorization')).toBe(false);
+  });
+
   it('closes the session and goes to the login when the server answers 401', () => {
     http.get('/api/funds').subscribe({ error: () => undefined });
     backend.expectOne('/api/funds').flush(null, { status: 401, statusText: 'Unauthorized' });
