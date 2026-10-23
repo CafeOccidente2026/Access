@@ -9,6 +9,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -33,8 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(jwtService.extractUsername(token));
+            UserDetails userDetails = jwtService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null
+                    ? findEnabledUser(jwtService.extractUsername(token))
+                    : null;
+            // Usuario borrado o desactivado: el request sigue sin sesion (el login entra; lo demas, 401).
+            if (userDetails != null) {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -42,5 +46,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    /** El usuario del token si sigue existiendo y activo; si no, null y el token deja de valer de inmediato. */
+    private UserDetails findEnabledUser(String username) {
+        try {
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            return userDetails.isEnabled() ? userDetails : null;
+        } catch (UsernameNotFoundException ex) {
+            return null;
+        }
     }
 }
