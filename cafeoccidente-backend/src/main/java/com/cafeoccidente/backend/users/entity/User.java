@@ -25,6 +25,10 @@ public class User {
     @Column(name = "usuario", nullable = false, unique = true)
     private String username;
 
+    /** Cedula del fiel de compra (RN-07.6); null en los usuarios creados antes de V7. */
+    @Column(name = "cedula", unique = true)
+    private String idNumber;
+
     @Column(name = "contrasena_hash", nullable = false)
     private String passwordHash;
 

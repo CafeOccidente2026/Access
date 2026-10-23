@@ -1,6 +1,8 @@
 export interface User {
   readonly id: number;
   readonly username: string;
+  /** Cedula del fiel de compra; null en los usuarios creados antes de V7. */
+  readonly idNumber: string | null;
   readonly active: boolean;
   readonly roleId: number;
   readonly roleName: string;
@@ -27,7 +29,17 @@ export interface LoginResponse extends SessionResponse {
 
 export interface CreateUserRequest {
   readonly username: string;
+  readonly idNumber: string;
   readonly password: string;
   readonly roleId: number;
   readonly agencyId: number;
+}
+
+/** Edicion por el Administrador: password e idNumber vacios o null no cambian nada. */
+export interface UpdateUserRequest {
+  readonly roleId: number;
+  readonly agencyId: number;
+  readonly active: boolean;
+  readonly password: string | null;
+  readonly idNumber: string | null;
 }

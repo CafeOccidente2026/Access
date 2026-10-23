@@ -2,10 +2,14 @@ package com.cafeoccidente.backend.users.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
+import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
+import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.users.dto.UserRequest;
 import com.cafeoccidente.backend.users.dto.UserResponse;
+import com.cafeoccidente.backend.users.dto.UserUpdateRequest;
 import com.cafeoccidente.backend.users.entity.Role;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.mapper.UserMapper;
@@ -15,13 +19,23 @@ import com.cafeoccidente.backend.users.service.UserService;
 import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserServiceImpl implements UserService {
 
+    static final String SELF_CHANGE = "No puede desactivarse ni quitarse el rol de Administrador a si mismo";
+    static final String LAST_ADMIN = "Debe quedar al menos un Administrador activo";
+    static final String DUPLICATE_ID_NUMBER = "Ya existe un usuario con esa cedula";
+    static final String ID_NUMBER_FIXED = "La cedula del usuario no se puede cambiar";
+    /** Tipo del tercero que se crea para un usuario: no asociado (fase 3, C5; confirmado por Operaciones). */
+    static final String USER_GROWER_TYPE = "C";
+    private static final String NO_DATA = "-";
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final AgencyRepository agencyRepository;
+    private final GrowerRepository growerRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
@@ -29,11 +43,13 @@ public class UserServiceImpl implements UserService {
             UserRepository userRepository,
             RoleRepository roleRepository,
             AgencyRepository agencyRepository,
+            GrowerRepository growerRepository,
             PasswordEncoder passwordEncoder,
             UserMapper userMapper) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.agencyRepository = agencyRepository;
+        this.growerRepository = growerRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
     }
@@ -44,22 +60,89 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserResponse create(UserRequest request) {
         if (userRepository.findByUsername(request.username()).isPresent()) {
             throw new BusinessRuleException("Ya existe un usuario con ese nombre de usuario");
         }
-        Role role = roleRepository.findById(request.roleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
-        Agency agency = agencyRepository.findById(request.agencyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
-
+        if (userRepository.existsByIdNumber(request.idNumber())) {
+            throw new BusinessRuleException(DUPLICATE_ID_NUMBER);
+        }
         User user = new User();
         user.setUsername(request.username());
+        user.setIdNumber(request.idNumber());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(role);
-        user.setAgency(agency);
+        user.setRole(role(request.roleId()));
+        user.setAgency(agency(request.agencyId()));
         user.setActive(true);
-
+        ensureGrower(user);
         return userMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse update(Long id, UserUpdateRequest request, Long currentUserId) {
+        List<User> activeAdmins = userRepository.lockActiveByRole(Roles.ADMINISTRADOR);
+        User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        Role role = role(request.roleId());
+        boolean staysActiveAdmin = request.active() && Roles.ADMINISTRADOR.equals(role.getName());
+        if (!staysActiveAdmin && id.equals(currentUserId)) {
+            throw new BusinessRuleException(SELF_CHANGE);
+        }
+        boolean isActiveAdmin = activeAdmins.stream().anyMatch(a -> a.getId().equals(id));
+        if (!staysActiveAdmin && isActiveAdmin && activeAdmins.size() == 1) {
+            throw new BusinessRuleException(LAST_ADMIN);
+        }
+        user.setRole(role);
+        user.setAgency(agency(request.agencyId()));
+        user.setActive(request.active());
+        if (request.password() != null && !request.password().isEmpty()) {
+            user.setPasswordHash(passwordEncoder.encode(request.password()));
+        }
+        addIdNumber(user, request.idNumber());
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    /** Los usuarios creados antes de V7 no tienen cedula: se agrega una vez y no se cambia. */
+    private void addIdNumber(User user, String idNumber) {
+        if (idNumber == null || idNumber.isEmpty() || idNumber.equals(user.getIdNumber())) {
+            return;
+        }
+        if (user.getIdNumber() != null) {
+            throw new BusinessRuleException(ID_NUMBER_FIXED);
+        }
+        if (userRepository.existsByIdNumber(idNumber)) {
+            throw new BusinessRuleException(DUPLICATE_ID_NUMBER);
+        }
+        user.setIdNumber(idNumber);
+        ensureGrower(user);
+    }
+
+    /**
+     * RN-07.5 (fase 3, C5): si la cedula ya es un tercero (por ejemplo un asociado) esa fila no se toca;
+     * si no, se crea con lo minimo, Tipo 'C' y la agencia del usuario.
+     */
+    private void ensureGrower(User user) {
+        if (growerRepository.findByIdNumber(user.getIdNumber()).isPresent()) {
+            return;
+        }
+        Grower grower = new Grower();
+        grower.setIdNumber(user.getIdNumber());
+        grower.setFirstName(user.getUsername());
+        grower.setAddress(NO_DATA);
+        grower.setPhone(NO_DATA);
+        grower.setGrowerType(USER_GROWER_TYPE);
+        grower.setAgency(user.getAgency());
+        grower.setExported(false);
+        growerRepository.save(grower);
+    }
+
+    private Role role(Long roleId) {
+        return roleRepository.findById(roleId).orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
+    }
+
+    private Agency agency(Long agencyId) {
+        return agencyRepository.findById(agencyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
     }
 }
