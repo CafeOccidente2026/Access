@@ -93,6 +93,10 @@ No se pasa a la siguiente historia hasta que la actual cumpla todos sus criterio
 **Antes de cualquier cosa irreversible** (migraciones, borrar datos, renombrar, push, merge):
 detenerse y pedir confirmación.
 
+**Al terminar una prueba en el Chrome del usuario:** borrar los usuarios temporales y además
+cerrar la sesión o borrar el localStorage de `localhost:4200`. Un token guardado de un usuario
+ya borrado deja al navegador mandándolo en cada petición.
+
 ## Aprendizajes técnicos
 
 - **Flyway:** Spring Boot 4.1.1 no trae autoconfiguración de Flyway. Las migraciones las corre
