@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.cafeoccidente.backend.common.config.CorsConfig;
 import com.cafeoccidente.backend.common.config.SecurityConfig;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
@@ -108,6 +109,8 @@ class EndpointAuthorizationTest {
         add(ADMIN, post, "/api/control-records/{agencyId}", "/api/control-records/1");
         add(ADMIN, put, "/api/control-records/{agencyId}", "/api/control-records/1");
         add(ADMIN, get, "/api/users");
+        // Historial de cambios (area de compras, 2026-10-22): solo el Administrador.
+        add(ADMIN, get, "/api/history");
         add(ADMIN, post, "/api/users");
         // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
         add(ADMIN, put, "/api/users/{id}", "/api/users/1");
@@ -209,6 +212,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private WorkingAgencyService workingAgencyService;
     @MockitoBean private AgencyRepository agencyRepository;
     @MockitoBean private AgencyService agencyService;
+    @MockitoBean private ChangeHistoryService changeHistoryService;
     @MockitoBean private FundRepository fundRepository;
     @MockitoBean private RoleRepository roleRepository;
     @MockitoBean private AuthService authService;

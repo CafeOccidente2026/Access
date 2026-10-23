@@ -8,9 +8,14 @@ import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
+import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,14 +25,17 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     private final ControlRecordRepository controlRecordRepository;
     private final AgencyRepository agencyRepository;
     private final ControlRecordMapper mapper;
+    private final ChangeHistoryService history;
 
     public ControlRecordServiceImpl(
             ControlRecordRepository controlRecordRepository,
             AgencyRepository agencyRepository,
-            ControlRecordMapper mapper) {
+            ControlRecordMapper mapper,
+            ChangeHistoryService history) {
         this.controlRecordRepository = controlRecordRepository;
         this.agencyRepository = agencyRepository;
         this.mapper = mapper;
+        this.history = history;
     }
 
     @Override
@@ -62,15 +70,24 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setActive(true);
         applyRequest(controlRecord, request);
 
-        return mapper.toResponse(controlRecordRepository.save(controlRecord));
+        ControlRecordResponse created = mapper.toResponse(controlRecordRepository.save(controlRecord));
+        history.record(Entity.REGISTRO_CONTROL, created.id(), Action.CREAR, agencyId, null, snapshot(created));
+        return created;
     }
 
     @Override
     @Transactional
     public ControlRecordResponse update(Long agencyId, ControlRecordRequest request) {
         ControlRecord controlRecord = getActive(agencyId);
+        Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
         applyRequest(controlRecord, request);
-        return mapper.toResponse(controlRecordRepository.save(controlRecord));
+        ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
+        history.record(Entity.REGISTRO_CONTROL, updated.id(), Action.MODIFICAR, agencyId, before, snapshot(updated));
+        return updated;
+    }
+
+    private static Map<String, String> snapshot(ControlRecordResponse record) {
+        return Snapshots.of(record, "id", "agencyId", "agencyName");
     }
 
     /** RN-06.3: el punto de compra es el nombre de la agencia en Access (o su nombre si no viene de Access). */

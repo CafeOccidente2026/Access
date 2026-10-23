@@ -1,5 +1,7 @@
 package com.cafeoccidente.backend.common.security;
 
+import java.util.Optional;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +15,14 @@ public class SecurityUtils {
             return securityUser.getUserId();
         }
         throw new IllegalStateException("No hay un usuario autenticado en el contexto actual");
+    }
+
+    /** Id del usuario autenticado, o vacio en tareas del sistema (seeder, arranque) que corren sin sesion. */
+    public Optional<Long> findCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getPrincipal() instanceof SecurityUser securityUser
+                ? Optional.of(securityUser.getUserId())
+                : Optional.empty();
     }
 
     public boolean isAdmin() {
