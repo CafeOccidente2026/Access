@@ -42,3 +42,20 @@ describe('FormFieldComponent formatWhenIdle', () => {
     expect(component.inputValue).toBe('70');
   });
 });
+
+describe('FormFieldComponent numeric input (HU-07 CA-3)', () => {
+  it('a letter typed after a valid digit does not stay visible in the input', async () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'baseLoad', label: 'Base Carga', type: 'number', value: '' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    for (const typed of ['1', '1a', '12', '12b', '125']) {
+      input.value = typed;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(input.value, `after typing "${typed}"`).toBe(typed.replace(/[^0-9]/g, ''));
+    }
+  });
+});

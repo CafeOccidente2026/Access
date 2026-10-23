@@ -136,27 +136,25 @@ def load_control_record(cur, el_tambo_id):
         INSERT INTO registros_control (
             agencia_id, activo, numero_registro_control, kg_excelso, base_retencion, base_carga,
             porcentaje_retencion, base_pasilla, porc_kg_pasilla_promedio, punto_compra,
-            prefijo, costos, tamano_muestra, kg_excelso_copia, porcentaje_cafe_verde,
+            prefijo, costos, tamano_muestra, umbral_cafes_especiales, porcentaje_cafe_verde,
             factor_base, porc_aportes_asociados, porc_desc_coop_no_asociados,
             cedula_fiel, resolucion_dian, fecha_resolucion, desde_resolucion,
-            hasta_resolucion, vigencia
+            hasta_resolucion, vigencia, peso_tot_alm_cv, peso_tot_pasilla_cv,
+            peso_alm_sana_cv, pr_alm_sana_cv, pr_alm_defec_cv
         ) VALUES (
             %s, true, %s, %s, %s, %s,
             %s, %s, %s, %s,
             %s, %s, %s, %s, %s,
             %s, %s, %s,
             %s, %s, %s, %s,
-            %s, %s
+            %s, %s, 0, 0,
+            0, 0, 0
         )
         """,
         (
             el_tambo_id,
             parse_int(reg["numregistro"]),
-            # NOTE: nombres de columnas del CSV estan cruzados respecto al orden de
-            # los campos en ControlRecord - validado contra compras_migrar.csv real
-            # (columna kg_excelso = 70 = kgexcelso, campo Java baseFactor;
-            # columna factor_base = 94 = factorbase, campo Java specialtyThreshold).
-            parse_int(reg["kgexcelso"]),  # -> kg_excelso
+            parse_int(reg["kgexcelso"]),  # -> kg_excelso (70)
             parse_decimal(reg["baseretefte"]),
             parse_int(reg["basecarga"]),
             parse_decimal(reg["porcretefte"]),
@@ -166,11 +164,9 @@ def load_control_record(cur, el_tambo_id):
             prefix,
             parse_decimal(reg["costos"]),
             parse_decimal(reg["muestra"]),
-            # kg_excelso_copia no se usa en ningun calculo (ver DryCoffeePurchaseCalculator);
-            # se deja igual a kgexcelso ya que no hay evidencia de su fuente real correcta.
-            parse_decimal(reg["kgexcelso"]),
+            parse_decimal(reg["umbralespeciales"]),  # -> umbral_cafes_especiales (93,33)
             parse_decimal(reg["porcverde"]),
-            parse_decimal(reg["factorbase"]),  # -> factor_base
+            parse_decimal(reg["factorbase"]),  # -> factor_base (94); cafe verde en 0 (Access no lo tiene)
             # NOTE: nombres de columnas del CSV estan cruzados respecto al orden de
             # los campos en ControlRecord - validado contra compras_migrar.csv real
             # (descuento_coop observado = 0.8% = porcdesccoop, no porcasociados).

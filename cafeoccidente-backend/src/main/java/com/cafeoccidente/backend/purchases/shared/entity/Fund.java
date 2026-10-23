@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Fondo de compra (ej: RP = Resolucion Propia, LF = Libre Formacion). */
+/** Fondo de compra (ej: RP = Recursos Propios, LF = Linea de Formacion). */
 @Entity
 @Table(name = "fondos")
 @Getter

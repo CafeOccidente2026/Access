@@ -72,8 +72,13 @@ export class FormFieldComponent {
       : raw;
   }
 
-  onInput(value: string | number): void {
+  onInput(value: string | number, input?: HTMLInputElement): void {
     const sanitized = this.sanitize(value);
+    // Si el modelo ya tenia el valor limpio (p. ej. "1" y se escribe "1a"), ngModel no repinta y la
+    // letra quedaba visible aunque no se guardara: se corrige el input a mano.
+    if (input && sanitized !== value) {
+      input.value = String(sanitized);
+    }
     this.inputValue = sanitized;
     this.valueChange.emit(sanitized);
   }

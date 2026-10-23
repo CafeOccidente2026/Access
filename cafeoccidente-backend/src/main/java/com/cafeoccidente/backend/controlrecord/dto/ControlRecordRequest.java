@@ -6,22 +6,23 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Campos editables del ControlRecord (pantalla "RegControl"). agencyId va en la URL, no aqui. */
+/**
+ * Campos editables del ControlRecord (pantalla "RegControl"). agencyId va en la URL y Punto de Compra
+ * lo pone el servidor (RN-06.3): si el cliente lo manda, se ignora.
+ */
 public record ControlRecordRequest(
         @NotNull Integer controlNumber,
-        @NotNull Integer baseFactor,
+        @NotNull @PositiveOrZero BigDecimal baseFactor,
         @NotNull @PositiveOrZero BigDecimal baseWithholding,
         @NotNull Integer baseLoad,
         @NotNull @PositiveOrZero BigDecimal withholdingPercentage,
         @NotNull @PositiveOrZero BigDecimal baseHusk,
         @NotNull @PositiveOrZero BigDecimal avgHuskPercentage,
-        @NotBlank String purchasePoint,
         @NotBlank String prefix,
         @NotNull @PositiveOrZero BigDecimal costs,
         @NotNull @PositiveOrZero BigDecimal sampleSize,
-        @NotNull @PositiveOrZero BigDecimal excelsoKg,
+        @NotNull @PositiveOrZero Integer excelsoKg,
         @NotNull @PositiveOrZero BigDecimal greenCoffeePercentage,
-        @NotNull @PositiveOrZero BigDecimal specialtyThreshold,
         @NotNull @PositiveOrZero BigDecimal associatePercentage,
         @NotNull @PositiveOrZero BigDecimal nonAssociateDiscount,
         @NotBlank String trustedId,
@@ -29,5 +30,11 @@ public record ControlRecordRequest(
         @NotNull LocalDate resolutionDate,
         @NotNull Integer resolutionFrom,
         @NotNull Integer resolutionTo,
-        @NotNull Integer validity) {
+        @NotNull Integer validity,
+        @NotNull @PositiveOrZero BigDecimal specialtyThreshold,
+        @NotNull @PositiveOrZero BigDecimal greenTotalStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal greenTotalHuskWeight,
+        @NotNull @PositiveOrZero BigDecimal greenHealthyStoredWeight,
+        @NotNull @PositiveOrZero BigDecimal greenHealthyUnitPrice,
+        @NotNull @PositiveOrZero BigDecimal greenDefectiveUnitPrice) {
 }

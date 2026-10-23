@@ -16,7 +16,6 @@ export interface ControlRecordResponse {
   readonly sampleSize: number;
   readonly excelsoKg: number;
   readonly greenCoffeePercentage: number;
-  readonly specialtyThreshold: number;
   readonly associatePercentage: number;
   readonly nonAssociateDiscount: number;
   readonly trustedId: string;
@@ -25,6 +24,13 @@ export interface ControlRecordResponse {
   readonly resolutionFrom: number;
   readonly resolutionTo: number;
   readonly validity: number;
+  readonly specialtyThreshold: number;
+  readonly greenTotalStoredWeight: number;
+  readonly greenTotalHuskWeight: number;
+  readonly greenHealthyStoredWeight: number;
+  readonly greenHealthyUnitPrice: number;
+  readonly greenDefectiveUnitPrice: number;
 }
 
-export type ControlRecordRequest = Omit<ControlRecordResponse, 'id' | 'agencyId' | 'agencyName' | 'active'>;
+/** Punto de Compra lo pone el servidor (RN-06.3). */
+export type ControlRecordRequest = Omit<ControlRecordResponse, 'id' | 'agencyId' | 'agencyName' | 'active' | 'purchasePoint'>;

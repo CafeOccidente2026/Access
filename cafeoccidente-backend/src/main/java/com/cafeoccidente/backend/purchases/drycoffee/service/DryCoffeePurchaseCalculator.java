@@ -82,7 +82,7 @@ public class DryCoffeePurchaseCalculator {
         if (healthyPercentageRaw.signum() == 0) {
             throw new BusinessRuleException("El porcentaje de almendra sana no puede ser cero");
         }
-        BigDecimal var2 = controlRecord.getSpecialtyThreshold().divide(healthyPercentageRaw, MathContext.DECIMAL64);
+        BigDecimal var2 = controlRecord.getBaseFactor().divide(healthyPercentageRaw, MathContext.DECIMAL64);
         BigDecimal var3 =
                 healthyPercentageRaw.multiply(defectivePercentageRaw).divide(HUNDRED, MathContext.DECIMAL64);
         // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec.
@@ -182,7 +182,7 @@ public class DryCoffeePurchaseCalculator {
         if (healthyStoredWeight.signum() == 0) {
             throw new BusinessRuleException("La almendra sana no puede ser cero");
         }
-        return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getBaseFactor()))
+        return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getExcelsoKg()))
                 .divide(healthyStoredWeight, MathContext.DECIMAL64);
     }
 

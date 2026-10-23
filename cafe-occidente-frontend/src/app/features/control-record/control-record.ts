@@ -148,13 +148,11 @@ export class ControlRecordComponent {
       withholdingPercentage: num('withholdingPercentage'),
       baseHusk: num('baseHusk'),
       avgHuskPercentage: num('avgHuskPercentage'),
-      purchasePoint: str('purchasePoint'),
       prefix: str('prefix'),
       costs: num('costs'),
       sampleSize: num('sampleSize'),
       excelsoKg: num('excelsoKg'),
       greenCoffeePercentage: num('greenCoffeePercentage'),
-      specialtyThreshold: num('specialtyThreshold'),
       associatePercentage: num('associatePercentage'),
       nonAssociateDiscount: num('nonAssociateDiscount'),
       trustedId: str('trustedId'),
@@ -163,6 +161,12 @@ export class ControlRecordComponent {
       resolutionFrom: num('resolutionFrom'),
       resolutionTo: num('resolutionTo'),
       validity: num('validity'),
+      specialtyThreshold: num('specialtyThreshold'),
+      greenTotalStoredWeight: num('greenTotalStoredWeight'),
+      greenTotalHuskWeight: num('greenTotalHuskWeight'),
+      greenHealthyStoredWeight: num('greenHealthyStoredWeight'),
+      greenHealthyUnitPrice: num('greenHealthyUnitPrice'),
+      greenDefectiveUnitPrice: num('greenDefectiveUnitPrice'),
     };
   }
 
@@ -175,7 +179,7 @@ export class ControlRecordComponent {
     return base.map((f) => ({
       ...f,
       value: model[f.key] ?? '',
-      readonly: !agencySelected,
+      readonly: !agencySelected || !!f.readonly,
     }));
   }
 }

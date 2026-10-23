@@ -9,7 +9,7 @@ public record ControlRecordResponse(
         String agencyName,
         boolean active,
         Integer controlNumber,
-        Integer baseFactor,
+        BigDecimal baseFactor,
         BigDecimal baseWithholding,
         Integer baseLoad,
         BigDecimal withholdingPercentage,
@@ -19,9 +19,8 @@ public record ControlRecordResponse(
         String prefix,
         BigDecimal costs,
         BigDecimal sampleSize,
-        BigDecimal excelsoKg,
+        Integer excelsoKg,
         BigDecimal greenCoffeePercentage,
-        BigDecimal specialtyThreshold,
         BigDecimal associatePercentage,
         BigDecimal nonAssociateDiscount,
         String trustedId,
@@ -29,5 +28,11 @@ public record ControlRecordResponse(
         LocalDate resolutionDate,
         Integer resolutionFrom,
         Integer resolutionTo,
-        Integer validity) {
+        Integer validity,
+        BigDecimal specialtyThreshold,
+        BigDecimal greenTotalStoredWeight,
+        BigDecimal greenTotalHuskWeight,
+        BigDecimal greenHealthyStoredWeight,
+        BigDecimal greenHealthyUnitPrice,
+        BigDecimal greenDefectiveUnitPrice) {
 }

@@ -39,12 +39,9 @@ public class ControlRecord {
     @Column(name = "numero_registro_control", nullable = false)
     private Integer controlNumber;
 
-    /**
-     * Cruce heredado de la carga de Access, pendiente hasta HU-07: el campo Java se llama baseFactor
-     * pero guarda KgExcelso (70) y el Factor lo usa como tal. La columna ya se llama por lo que guarda.
-     */
+    /** KgExcelso (ej. 70): entra en PorcAlmSana = TamMuestra x KgExcelso / Peso Alm Sana. */
     @Column(name = "kg_excelso", nullable = false)
-    private Integer baseFactor;
+    private Integer excelsoKg;
 
     @Column(name = "base_retencion", nullable = false, precision = 15, scale = 2)
     private BigDecimal baseWithholding;
@@ -73,16 +70,12 @@ public class ControlRecord {
     @Column(name = "tamano_muestra", nullable = false, precision = 10, scale = 2)
     private BigDecimal sampleSize;
 
-    /** Copia de KgExcelso que no se usa en ningun calculo; HU-07 decide si se borra o es el umbral (Q15). */
-    @Column(name = "kg_excelso_copia", nullable = false, precision = 10, scale = 2)
-    private BigDecimal excelsoKg;
-
     @Column(name = "porcentaje_cafe_verde", nullable = false, precision = 5, scale = 2)
     private BigDecimal greenCoffeePercentage;
 
-    /** Cruce pendiente hasta HU-07: specialtyThreshold guarda FactorBase (94) y el Vr. Kilo lo usa como tal. */
+    /** FactorBase (ej. 94, varia por agencia): entra en el Vr. Kilo como FactorBase / PorcAlmSana. */
     @Column(name = "factor_base", nullable = false, precision = 5, scale = 2)
-    private BigDecimal specialtyThreshold;
+    private BigDecimal baseFactor;
 
     @Column(name = "porc_aportes_asociados", nullable = false, precision = 5, scale = 2)
     private BigDecimal associatePercentage;
@@ -107,4 +100,24 @@ public class ControlRecord {
 
     @Column(name = "vigencia", nullable = false)
     private Integer validity;
+
+    /** Umbral Cafes Especiales (Access: UmbralEspeciales, 93,33). La regla que lo usa es de Compras. */
+    @Column(name = "umbral_cafes_especiales", nullable = false, precision = 5, scale = 2)
+    private BigDecimal specialtyThreshold;
+
+    /** RN-06.7: valores de cafe verde que se cargan en Compras Cafe Verde (0 = sin configurar). */
+    @Column(name = "peso_tot_alm_cv", nullable = false, precision = 10, scale = 2)
+    private BigDecimal greenTotalStoredWeight;
+
+    @Column(name = "peso_tot_pasilla_cv", nullable = false, precision = 10, scale = 2)
+    private BigDecimal greenTotalHuskWeight;
+
+    @Column(name = "peso_alm_sana_cv", nullable = false, precision = 10, scale = 2)
+    private BigDecimal greenHealthyStoredWeight;
+
+    @Column(name = "pr_alm_sana_cv", nullable = false, precision = 15, scale = 2)
+    private BigDecimal greenHealthyUnitPrice;
+
+    @Column(name = "pr_alm_defec_cv", nullable = false, precision = 15, scale = 2)
+    private BigDecimal greenDefectiveUnitPrice;
 }

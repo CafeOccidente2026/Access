@@ -73,6 +73,12 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         return mapper.toResponse(controlRecordRepository.save(controlRecord));
     }
 
+    /** RN-06.3: el punto de compra es el nombre de la agencia en Access (o su nombre si no viene de Access). */
+    private static String purchasePoint(Agency agency) {
+        String accessName = agency.getAccessAgencyValue();
+        return accessName == null || accessName.isBlank() ? agency.getName() : accessName;
+    }
+
     private void applyRequest(ControlRecord controlRecord, ControlRecordRequest request) {
         controlRecord.setControlNumber(request.controlNumber());
         controlRecord.setBaseFactor(request.baseFactor());
@@ -81,13 +87,12 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setWithholdingPercentage(request.withholdingPercentage());
         controlRecord.setBaseHusk(request.baseHusk());
         controlRecord.setAvgHuskPercentage(request.avgHuskPercentage());
-        controlRecord.setPurchasePoint(request.purchasePoint());
+        controlRecord.setPurchasePoint(purchasePoint(controlRecord.getAgency()));
         controlRecord.setPrefix(request.prefix());
         controlRecord.setCosts(request.costs());
         controlRecord.setSampleSize(request.sampleSize());
         controlRecord.setExcelsoKg(request.excelsoKg());
         controlRecord.setGreenCoffeePercentage(request.greenCoffeePercentage());
-        controlRecord.setSpecialtyThreshold(request.specialtyThreshold());
         controlRecord.setAssociatePercentage(request.associatePercentage());
         controlRecord.setNonAssociateDiscount(request.nonAssociateDiscount());
         controlRecord.setTrustedId(request.trustedId());
@@ -96,5 +101,11 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setResolutionFrom(request.resolutionFrom());
         controlRecord.setResolutionTo(request.resolutionTo());
         controlRecord.setValidity(request.validity());
+        controlRecord.setSpecialtyThreshold(request.specialtyThreshold());
+        controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
+        controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
+        controlRecord.setGreenHealthyStoredWeight(request.greenHealthyStoredWeight());
+        controlRecord.setGreenHealthyUnitPrice(request.greenHealthyUnitPrice());
+        controlRecord.setGreenDefectiveUnitPrice(request.greenDefectiveUnitPrice());
     }
 }
