@@ -41,6 +41,12 @@ class ControlRecordSeedTest {
     }
 
     @Test
+    void agencyOneIsBuesaco1() {
+        // V9: Buesaco 1 y Buesaco 2 son puntos distintos.
+        assertThat(jdbc.queryForObject("SELECT nombre FROM agencias WHERE id = 1", String.class)).isEqualTo("Buesaco 1");
+    }
+
+    @Test
     void fundsHaveTheirRfNames() {
         assertThat(jdbc.queryForObject("SELECT nombre FROM fondos WHERE codigo = 'RP'", String.class))
                 .isEqualTo("Recursos Propios");
