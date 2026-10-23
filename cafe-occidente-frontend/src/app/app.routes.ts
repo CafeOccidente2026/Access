@@ -96,6 +96,11 @@ export const routes: Routes = [
           import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
       },
       {
+        path: 'historial',
+        data: { roles: ADMIN },
+        loadComponent: () => import('./features/history/history').then((m) => m.HistoryComponent),
+      },
+      {
         path: 'anuncios',
         data: { roles: ADMIN_OPS },
         loadComponent: () =>

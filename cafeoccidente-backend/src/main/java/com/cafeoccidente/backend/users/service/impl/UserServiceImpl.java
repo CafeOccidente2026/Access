@@ -3,6 +3,10 @@ package com.cafeoccidente.backend.users.service.impl;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.Roles;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
+import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
@@ -17,6 +21,7 @@ import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import com.cafeoccidente.backend.users.service.UserService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +36,9 @@ public class UserServiceImpl implements UserService {
     /** Tipo del tercero que se crea para un usuario: no asociado (fase 3, C5; confirmado por Operaciones). */
     static final String USER_GROWER_TYPE = "C";
     private static final String NO_DATA = "-";
+    /** En el historial solo consta que la contrasena cambio, nunca su valor. */
+    static final String PASSWORD_FIELD = "password";
+    static final String PASSWORD_CHANGED = "cambiada";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -38,6 +46,7 @@ public class UserServiceImpl implements UserService {
     private final GrowerRepository growerRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final ChangeHistoryService history;
 
     public UserServiceImpl(
             UserRepository userRepository,
@@ -45,13 +54,15 @@ public class UserServiceImpl implements UserService {
             AgencyRepository agencyRepository,
             GrowerRepository growerRepository,
             PasswordEncoder passwordEncoder,
-            UserMapper userMapper) {
+            UserMapper userMapper,
+            ChangeHistoryService history) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.agencyRepository = agencyRepository;
         this.growerRepository = growerRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.history = history;
     }
 
     @Override
@@ -76,7 +87,9 @@ public class UserServiceImpl implements UserService {
         user.setAgency(agency(request.agencyId()));
         user.setActive(true);
         ensureGrower(user);
-        return userMapper.toResponse(userRepository.save(user));
+        UserResponse created = userMapper.toResponse(userRepository.save(user));
+        history.record(Entity.USUARIO, created.id(), Action.CREAR, created.agencyId(), null, snapshot(created));
+        return created;
     }
 
     @Override
@@ -93,14 +106,34 @@ public class UserServiceImpl implements UserService {
         if (!staysActiveAdmin && isActiveAdmin && activeAdmins.size() == 1) {
             throw new BusinessRuleException(LAST_ADMIN);
         }
+        UserResponse before = userMapper.toResponse(user);
         user.setRole(role);
         user.setAgency(agency(request.agencyId()));
         user.setActive(request.active());
-        if (request.password() != null && !request.password().isEmpty()) {
+        boolean passwordChanged = request.password() != null && !request.password().isEmpty();
+        if (passwordChanged) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         addIdNumber(user, request.idNumber());
-        return userMapper.toResponse(userRepository.save(user));
+        UserResponse after = userMapper.toResponse(userRepository.save(user));
+        Map<String, String> afterValues = snapshot(after);
+        if (passwordChanged) {
+            afterValues.put(PASSWORD_FIELD, PASSWORD_CHANGED);
+        }
+        history.record(Entity.USUARIO, id, action(before, after), after.agencyId(), snapshot(before), afterValues);
+        return after;
+    }
+
+    /** La accion que mejor describe el cambio: activar/desactivar, reasignar agencia o modificar. */
+    private static Action action(UserResponse before, UserResponse after) {
+        if (before.active() != after.active()) {
+            return after.active() ? Action.ACTIVAR : Action.DESACTIVAR;
+        }
+        return before.agencyId().equals(after.agencyId()) ? Action.MODIFICAR : Action.REASIGNAR;
+    }
+
+    private static Map<String, String> snapshot(UserResponse user) {
+        return Snapshots.of(user, "id", "roleId", "agencyId");
     }
 
     /** Los usuarios creados antes de V7 no tienen cedula: se agrega una vez y no se cambia. */

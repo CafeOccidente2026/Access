@@ -5,6 +5,10 @@ import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
+import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.HuskAnnouncementRequest;
@@ -18,7 +22,9 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +49,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private final ControlRecordRepository controlRecordRepository;
     private final ControlRecordService controlRecordService;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final ChangeHistoryService history;
 
     public AnnouncementServiceImpl(
             AnnouncementRepository announcementRepository,
@@ -50,13 +57,15 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             FundRepository fundRepository,
             ControlRecordRepository controlRecordRepository,
             ControlRecordService controlRecordService,
-            CurrentAgencyProvider currentAgencyProvider) {
+            CurrentAgencyProvider currentAgencyProvider,
+            ChangeHistoryService history) {
         this.announcementRepository = announcementRepository;
         this.agencyAnnouncementNumberRepository = agencyAnnouncementNumberRepository;
         this.fundRepository = fundRepository;
         this.controlRecordRepository = controlRecordRepository;
         this.controlRecordService = controlRecordService;
         this.currentAgencyProvider = currentAgencyProvider;
+        this.history = history;
     }
 
     @Override
@@ -111,8 +120,23 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         return publish(master, fund);
     }
 
+    private static Map<String, String> published(Announcement master, Fund fund) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("fund", fund.getCode());
+        values.put("specialType", master.getSpecialType());
+        values.put("announcementDate", Snapshots.text(master.getAnnouncementDate()));
+        values.put("basePriceLoad", Snapshots.text(master.getBasePriceLoad()));
+        values.put("defectiveUnitPrice", Snapshots.text(master.getDefectiveUnitPrice()));
+        values.put("specialSurcharge", Snapshots.text(master.getSpecialSurcharge()));
+        values.put("pointPrice", Snapshots.text(master.getPointPrice()));
+        values.put("qualityIncrement", Snapshots.text(master.getQualityIncrement()));
+        return values;
+    }
+
     private AnnouncementResponse publish(Announcement master, Fund fund) {
         announcementRepository.save(master);
+        // Historial: el anuncio es comun a todas las agencias, asi que no lleva agencia.
+        history.record(Entity.ANUNCIO, master.getId(), Action.PUBLICAR, null, null, published(master, fund));
 
         Long callerAgencyId = currentAgencyProvider.currentAgencyId();
         AgencyAnnouncementNumber callerNumbering = null;
