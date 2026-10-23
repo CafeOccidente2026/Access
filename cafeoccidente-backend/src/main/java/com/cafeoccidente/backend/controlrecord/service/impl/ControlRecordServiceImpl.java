@@ -34,7 +34,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public ControlRecord getActive(Long agencyId) {
         return controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Esta agencia no tiene parametros de compra (ControlRecord) configurados todavia"));
+                        "La agencia no tiene Registro de Control; pídale al Administrador que lo configure"));
     }
 
     @Override

@@ -24,10 +24,11 @@ public class PurchaseAnnulmentRepository {
     }
 
     private static String select(AnnulmentModule module) {
-        return "SELECT '" + module.name() + "' AS module, p.id, p.agencia_id, a.nombre AS agency_name, a.prefijo_factura,"
+        return "SELECT '" + module.name() + "' AS module, p.id, p.agencia_id, a.nombre AS agency_name, rc.prefijo AS prefijo_factura,"
                 + " p.numero_factura, p.fecha_compra, f.codigo AS fund_code, p.cedula, p.nombres, p.apellidos,"
                 + " p.especial, p.kilos_netos, p.neto_a_pagar, p.forma_pago, p.estado, p.anulacion_bloqueada, p.anulado_en"
-                + " FROM " + module.table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
+                + " FROM " + module.table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id"
+                + " LEFT JOIN registros_control rc ON rc.agencia_id = p.agencia_id AND rc.activo";
     }
 
     /** Cns_Compras por numero de factura; cada modulo numera aparte, asi que puede haber mas de una. */

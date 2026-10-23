@@ -32,12 +32,8 @@ public class Agency {
      * (ej: "BUESACO1 OCCIDENTE" para el punto de compra "Buesaco"). No siempre coincide con el
      * nombre visible.
      */
-    @Column(name = "nombre_access", nullable = false, unique = true)
+    @Column(name = "nombre_access", unique = true)
     private String accessAgencyValue;
-
-    /** Prefijo de factura (ej: "SDBU"). */
-    @Column(name = "prefijo_factura", nullable = false)
-    private String invoicePrefix;
 
     @Column(name = "activa", nullable = false)
     private boolean active = true;

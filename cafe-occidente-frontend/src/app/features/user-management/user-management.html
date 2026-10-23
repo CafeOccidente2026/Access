@@ -57,5 +57,23 @@
         <app-button [label]="p.createUserButton" variant="access" (pressed)="createUser()"></app-button>
       </div>
     </section>
+
+    <section class="flex flex-col gap-3">
+      <h2 class="text-sm font-semibold text-slate-700">{{ p.agencySectionTitle }}</h2>
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.newAgencyLabel }}:</span>
+        <input
+          data-field-key="newAgencyName"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="newAgencyName"
+          (keydown.enter)="createAgency()"
+        />
+      </label>
+      <p *ngIf="agencyNotice()" class="text-sm text-amber-700">{{ agencyNotice() }}</p>
+      <p *ngIf="agencyError()" class="text-sm text-red-600">{{ agencyError() }}</p>
+      <div class="flex justify-end">
+        <app-button [label]="p.createAgencyButton" variant="access" (pressed)="createAgency()"></app-button>
+      </div>
+    </section>
   </div>
 </app-access-window>

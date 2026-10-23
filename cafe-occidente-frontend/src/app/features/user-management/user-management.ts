@@ -10,6 +10,12 @@ const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{4,}$/;
 /** Orden de captura y de avance de foco al presionar Enter. */
 const FOCUS_ORDER: readonly string[] = ['username', 'password', 'roleId', 'agencyId'];
 
+/** Mensaje del backend: el de la validacion de campo o el de la regla de negocio. */
+function apiError(err: HttpErrorResponse): string | undefined {
+  const fieldError = err.error?.fieldErrors && Object.values(err.error.fieldErrors)[0];
+  return (fieldError as string | undefined) ?? err.error?.message;
+}
+
 /** Ruta a la que vuelve la pantalla al crear el usuario con exito (misma que closeRoute del access-window). */
 const CLOSE_ROUTE = '/menu-principal';
 
@@ -49,6 +55,10 @@ export class UserManagementComponent {
   agencyId: number | null = null;
   readonly userError = signal<string | null>(null);
 
+  newAgencyName = '';
+  readonly agencyNotice = signal<string | null>(null);
+  readonly agencyError = signal<string | null>(null);
+
   constructor() {
     this.roleService.list().subscribe((roles) => this.roles.set(roles));
     this.agencyService.list().subscribe((agencies) => this.agencies.set(agencies));
@@ -77,6 +87,25 @@ export class UserManagementComponent {
     setTimeout(() => {
       const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
       el?.focus();
+    });
+  }
+
+  /** HU-09: la agencia nueva entra de inmediato a la lista y queda elegida para el usuario. */
+  createAgency(): void {
+    this.agencyNotice.set(null);
+    this.agencyError.set(null);
+    const name = this.newAgencyName.trim();
+    if (!name) {
+      return;
+    }
+    this.agencyService.create(name).subscribe({
+      next: (agency) => {
+        this.agencies.update((list) => [...list, agency]);
+        this.agencyId = agency.id;
+        this.newAgencyName = '';
+        this.agencyNotice.set(this.page()?.agencyCreatedNotice ?? null);
+      },
+      error: (err: HttpErrorResponse) => this.agencyError.set(apiError(err) ?? this.page()?.errorMessage ?? null),
     });
   }
 

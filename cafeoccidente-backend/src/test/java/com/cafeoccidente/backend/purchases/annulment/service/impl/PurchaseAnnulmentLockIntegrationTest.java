@@ -69,6 +69,8 @@ class PurchaseAnnulmentLockIntegrationTest {
     void aPurchaseClosedInAccessCannotBeAnnulled() {
         AnnulmentCandidate locked = find(LOCKED);
         assertThat(locked.annulmentLocked()).isTrue();
+        // D2 (V7): el prefijo sale del Registro de Control de la agencia, ya no de agencias.
+        assertThat(locked.prefix()).isEqualTo("SDBU");
         assertThatThrownBy(() -> service.annul(agencyId, AnnulmentModule.DRY, locked.id()))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage(PurchaseAnnulmentServiceImpl.ANNULMENT_LOCKED);

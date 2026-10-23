@@ -8,5 +8,9 @@
   "roleLabel": "Rol",
   "agencyLabel": "Agencia",
   "createUserButton": "Crear usuario",
+  "agencySectionTitle": "Crear agencia (opcional)",
+  "newAgencyLabel": "Nombre",
+  "createAgencyButton": "Crear agencia",
+  "agencyCreatedNotice": "Agencia creada y seleccionada. Configure su Registro de Control antes de operar en ella.",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
 }

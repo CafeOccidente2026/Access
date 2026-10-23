@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.supplies.service.impl;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
+import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
@@ -51,6 +52,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private final AgencyRepository agencyRepository;
     private final FundRepository fundRepository;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final ControlRecordService controlRecordService;
     private final SuppliesMapper mapper;
 
     public SuppliesEntryServiceImpl(
@@ -62,6 +64,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
             AgencyRepository agencyRepository,
             FundRepository fundRepository,
             CurrentAgencyProvider currentAgencyProvider,
+            ControlRecordService controlRecordService,
             SuppliesMapper mapper) {
         this.cashEntryRepository = cashEntryRepository;
         this.pettyCashEntryRepository = pettyCashEntryRepository;
@@ -71,6 +74,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
         this.currentAgencyProvider = currentAgencyProvider;
+        this.controlRecordService = controlRecordService;
         this.mapper = mapper;
     }
 
@@ -185,9 +189,14 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         return entry;
     }
 
-    /** Agencia de trabajo (RF-05.1): nunca la que mande el cliente. */
+    /**
+     * Agencia de trabajo (RF-05.1): nunca la que mande el cliente. Sin Registro de Control la agencia no
+     * opera todavia (fase 3, C6): getActive avisa que falta.
+     */
     private Agency agency() {
-        return agencyRepository.findById(currentAgencyProvider.currentAgencyId())
+        Long agencyId = currentAgencyProvider.currentAgencyId();
+        controlRecordService.getActive(agencyId);
+        return agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
     }
 

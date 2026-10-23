@@ -8,5 +8,9 @@ export interface UserManagementContent {
   readonly roleLabel: string;
   readonly agencyLabel: string;
   readonly createUserButton: string;
+  readonly agencySectionTitle: string;
+  readonly newAgencyLabel: string;
+  readonly createAgencyButton: string;
+  readonly agencyCreatedNotice: string;
   readonly errorMessage: string;
 }
