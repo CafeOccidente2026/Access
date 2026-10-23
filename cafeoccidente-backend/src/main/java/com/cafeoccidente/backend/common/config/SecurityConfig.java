@@ -3,7 +3,11 @@ package com.cafeoccidente.backend.common.config;
 import com.cafeoccidente.backend.common.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -51,6 +55,22 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Login con usuario y contrasena. La regla de usuario desactivado se revisa despues de la
+     * contrasena (no antes, como hace Spring por defecto): asi solo quien sabe la contrasena se entera
+     * de que esta desactivado, y una contrasena equivocada da el mensaje de siempre.
+     */
+    @Bean
+    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setPreAuthenticationChecks(user -> {
+            // Nada antes de la contrasena: el estado del usuario se revisa despues.
+        });
+        provider.setPostAuthenticationChecks(new AccountStatusUserDetailsChecker());
+        return provider;
     }
 
     @Bean

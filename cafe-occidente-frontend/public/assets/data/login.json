@@ -8,5 +8,6 @@
   "userSuccessRoute": "/menu-principal",
   "showPasswordLabel": "Mostrar contraseña",
   "hidePasswordLabel": "Ocultar contraseña",
-  "invalidCredentialsError": "Usuario o contraseña incorrectos"
+  "invalidCredentialsError": "Usuario o contraseña incorrectos",
+  "userDisabledError": "Su usuario está desactivado. Comuníquese con el Administrador."
 }
