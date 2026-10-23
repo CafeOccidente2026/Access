@@ -9,7 +9,7 @@ import { AccessWindowComponent, AppButtonComponent, MenuButtonGridComponent } fr
 import { MainAccessContent } from './main-access.model';
 
 /** Panel "Acceso Principal": bienvenida con el usuario de la sesion y navegacion a los modulos raiz.
- *  Usuarios, Acceso a Tablas, Menu Habilitacion y Permisos son solo del Administrador (RN-01.1). */
+ *  Usuarios, Acceso a Tablas, Menu Habilitacion, Permisos e Historial son solo del Administrador (RN-01.1). */
 @Component({
   selector: 'app-main-access',
   standalone: true,

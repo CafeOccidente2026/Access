@@ -35,7 +35,7 @@ describe('MainAccessComponent', () => {
     Array.from(el.querySelectorAll('app-menu-button-grid app-button')).map((b) => b.textContent?.trim());
 
   it('the Administrator sees the administration options', () => {
-    expect(labels(render('ADMINISTRADOR'))).toEqual(['Menú Principal', 'Usuarios', 'Acceso a Tablas', 'Menú Habilitación', 'Permisos']);
+    expect(labels(render('ADMINISTRADOR'))).toEqual(['Menú Principal', 'Usuarios', 'Acceso a Tablas', 'Menú Habilitación', 'Permisos', 'Historial']);
   });
 
   it('the User only sees the way to the main menu', () => {

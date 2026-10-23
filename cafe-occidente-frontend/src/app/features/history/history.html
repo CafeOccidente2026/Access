@@ -1,0 +1,76 @@
+<app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/acceso-principal">
+  <div class="flex flex-col gap-4 p-6">
+    <h1 class="text-xl font-semibold text-slate-700">{{ p.heading }}</h1>
+
+    <div class="flex flex-wrap items-end gap-3 text-sm">
+      <label class="flex flex-col gap-1">
+        <span class="font-medium text-slate-700">{{ p.entityLabel }}</span>
+        <select class="rounded border border-slate-300 bg-white px-2 py-1" data-testid="entity" [(ngModel)]="entity">
+          <option value="">{{ p.all }}</option>
+          <option *ngFor="let e of p.entities | keyvalue" [value]="e.key">{{ e.value }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="font-medium text-slate-700">{{ p.agencyLabel }}</span>
+        <select class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="agencyId">
+          <option [ngValue]="null">{{ p.all }}</option>
+          <option *ngFor="let agency of agencies()" [ngValue]="agency.id">{{ agency.name }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="font-medium text-slate-700">{{ p.userLabel }}</span>
+        <select class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="userId">
+          <option [ngValue]="null">{{ p.all }}</option>
+          <option *ngFor="let user of users()" [ngValue]="user.id">{{ user.username }}</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="font-medium text-slate-700">{{ p.fromLabel }}</span>
+        <input type="date" class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="from" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="font-medium text-slate-700">{{ p.toLabel }}</span>
+        <input type="date" class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="to" />
+      </label>
+      <app-button [label]="p.searchButton" variant="access" (pressed)="search()"></app-button>
+    </div>
+
+    <p *ngIf="error()" class="text-sm text-red-600">{{ p.errorMessage }}</p>
+
+    <ng-container *ngIf="result() as r">
+      <p *ngIf="r.total === 0" class="text-sm text-slate-600">{{ p.emptyMessage }}</p>
+      <table *ngIf="r.total > 0" class="w-full text-left text-sm" data-testid="history">
+        <thead class="text-slate-600">
+          <tr>
+            <th class="py-1">{{ p.columns.at }}</th>
+            <th class="py-1">{{ p.columns.user }}</th>
+            <th class="py-1">{{ p.columns.entity }}</th>
+            <th class="py-1">{{ p.columns.action }}</th>
+            <th class="py-1">{{ p.columns.agency }}</th>
+            <th class="py-1">{{ p.columns.detail }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of r.items" class="border-t border-slate-200 align-top">
+            <td class="py-1 whitespace-nowrap">{{ entry.at | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td class="py-1">{{ entry.username }}</td>
+            <td class="py-1">{{ p.entities[entry.entity] ?? entry.entity }}</td>
+            <td class="py-1">{{ p.actions[entry.action] ?? entry.action }}</td>
+            <td class="py-1">{{ entry.agencyName }}</td>
+            <td class="py-1">
+              <div *ngFor="let d of details(entry)">
+                <span class="font-medium">{{ d.field }}: </span>
+                <ng-container *ngIf="!d.created && d.before !== null">{{ d.before }} → </ng-container>{{ d.after }}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="r.total > 0" class="flex items-center justify-end gap-3 text-sm">
+        <span class="text-slate-600">{{ r.total }} {{ p.totalLabel }}</span>
+        <app-button *ngIf="pageIndex() > 0" [label]="p.previousButton" variant="access" (pressed)="search(pageIndex() - 1)"></app-button>
+        <app-button *ngIf="pageIndex() < lastPage()" [label]="p.nextButton" variant="access" (pressed)="search(pageIndex() + 1)"></app-button>
+      </div>
+    </ng-container>
+  </div>
+</app-access-window>
