@@ -14,13 +14,13 @@ public record UserRequest(
                 String idNumber,
         @NotBlank
                 @Pattern(
-                        regexp = UserRequest.SECURE_KEY_PATTERN,
-                        message = UserRequest.SECURE_KEY_MESSAGE)
+                        regexp = UserRequest.PASSWORD_PATTERN,
+                        message = UserRequest.PASSWORD_MESSAGE)
                 String password,
         @NotNull Long roleId,
         @NotNull Long agencyId) {
 
     /** RN-07.1: minimo 4 caracteres, combinando letras y numeros. */
-    public static final String SECURE_KEY_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{4,}$";
-    public static final String SECURE_KEY_MESSAGE = "La contrasena debe tener minimo 4 caracteres y combinar letras y numeros";
+    public static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{4,}$";
+    public static final String PASSWORD_MESSAGE = "La contrasena debe tener minimo 4 caracteres y combinar letras y numeros";
 }
