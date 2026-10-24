@@ -15,6 +15,7 @@ import com.cafeoccidente.backend.permissions.service.PermissionService;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PermissionServiceImpl implements PermissionService {
 
-    /** En el Historial: "Pantalla: Anular Documento", con la accion Conceder o Retirar. */
+    /** En el Historial: "Usuario: jperez, Pantalla: Anular Documento", con la accion Conceder o Retirar. */
+    static final String USER_FIELD = "username";
     static final String SCREEN_FIELD = "screen";
 
     private final PermissionRepository permissionRepository;
@@ -88,7 +90,9 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     private void record(User user, Action action, Screen screen) {
-        history.record(Entity.PERMISO, user.getId(), action, user.getAgency().getId(), null,
-                Map.of(SCREEN_FIELD, screen.getLabel()));
+        Map<String, String> detail = new LinkedHashMap<>();
+        detail.put(USER_FIELD, user.getUsername());
+        detail.put(SCREEN_FIELD, screen.getLabel());
+        history.record(Entity.PERMISO, user.getId(), action, user.getAgency().getId(), null, detail);
     }
 }

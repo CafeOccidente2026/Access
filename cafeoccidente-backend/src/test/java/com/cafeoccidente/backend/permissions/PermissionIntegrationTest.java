@@ -148,7 +148,7 @@ class PermissionIntegrationTest {
         assertThat(rows).allSatisfy(row -> {
             assertThat(row.get("usuario")).isEqualTo("hu03_admin");
             assertThat(row.get("agencia_id")).isEqualTo(1L);
-            assertThat((String) row.get("despues")).contains("Anular Documento");
+            assertThat((String) row.get("despues")).contains("Anular Documento").contains("hu03_usuario");
         });
     }
 
