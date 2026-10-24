@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.controlrecord;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -57,6 +59,8 @@ class ControlRecordIntegrationTest {
     private JwtService jwtService;
     @Autowired
     private ControlRecordService service;
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private String admin;
 
@@ -90,6 +94,17 @@ class ControlRecordIntegrationTest {
                 .andExpect(jsonPath("$.purchasePoint").value("BUESACO1 OCCIDENTE"))
                 .andExpect(jsonPath("$.excelsoKg").value(70))
                 .andExpect(jsonPath("$.baseFactor").value(94.0));
+    }
+
+    @Test
+    void aSecondControlRecordForTheSameAgencyIsRejected() throws Exception {
+        mockMvc.perform(post(BUESACO).header("Authorization", admin)
+                        .contentType(MediaType.APPLICATION_JSON).content(current().toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        "Esta agencia ya tiene un Registro de Control activo; use editar en vez de crear uno nuevo"));
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM registros_control WHERE agencia_id = 1 AND activo", Long.class)).isEqualTo(1L);
     }
 
     @Test
