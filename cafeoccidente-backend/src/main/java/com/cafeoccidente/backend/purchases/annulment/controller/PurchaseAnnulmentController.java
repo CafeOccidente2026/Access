@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** "Anular Documento" del menu Compras: USER solo su agencia, ADMIN cualquiera (decision P6). */
 @RestController
 @RequestMapping("/api/purchases/annulment")
-@PreAuthorize(Roles.ADMIN)
+@PreAuthorize(Roles.ANNUL)
 public class PurchaseAnnulmentController {
 
     private final PurchaseAnnulmentService service;

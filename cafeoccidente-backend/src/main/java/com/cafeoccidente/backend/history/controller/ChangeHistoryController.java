@@ -1,6 +1,8 @@
 package com.cafeoccidente.backend.history.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
+import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.history.dto.ChangeHistoryFilter;
 import com.cafeoccidente.backend.history.dto.ChangeHistoryPage;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService;
@@ -12,18 +14,26 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Pantalla Historial (Acceso Principal), solo para el Administrador. */
+/**
+ * Pantalla Historial (Acceso Principal). El Administrador ve todas las agencias; quien tiene el permiso
+ * (RF-02), solo los cambios de la suya.
+ */
 @RestController
 @RequestMapping("/api/history")
-@PreAuthorize(Roles.ADMIN)
+@PreAuthorize(Roles.HISTORY)
 public class ChangeHistoryController {
 
     private static final int MAX_PAGE_SIZE = 200;
 
     private final ChangeHistoryService service;
+    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public ChangeHistoryController(ChangeHistoryService service) {
+    public ChangeHistoryController(ChangeHistoryService service, SecurityUtils securityUtils,
+            CurrentAgencyProvider currentAgencyProvider) {
         this.service = service;
+        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @GetMapping
@@ -35,7 +45,8 @@ public class ChangeHistoryController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return service.search(new ChangeHistoryFilter(entity, agencyId, userId, from, to,
+        Long agency = securityUtils.isAdmin() ? agencyId : currentAgencyProvider.currentAgencyId();
+        return service.search(new ChangeHistoryFilter(entity, agency, userId, from, to,
                 Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE)));
     }
 }

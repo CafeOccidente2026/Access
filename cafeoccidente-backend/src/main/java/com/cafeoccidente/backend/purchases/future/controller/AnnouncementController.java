@@ -39,7 +39,7 @@ public class AnnouncementController {
 
     /** "Actualizar Anuncio con Factor" (Administrador y Operaciones, RF-08): siempre crea un anuncio nuevo. */
     @PostMapping
-    @PreAuthorize(Roles.ADMIN_OPS)
+    @PreAuthorize(Roles.ANNOUNCEMENTS)
     @ResponseStatus(HttpStatus.CREATED)
     public AnnouncementResponse create(@Valid @RequestBody AnnouncementRequest request) {
         return announcementService.create(request);
@@ -47,14 +47,14 @@ public class AnnouncementController {
 
     /** "Actualizar Anuncio Pasilla" (RF-09): Fondo RP y Especial PASILLA van fijos. */
     @PostMapping("/husk")
-    @PreAuthorize(Roles.ADMIN_OPS)
+    @PreAuthorize(Roles.ANNOUNCEMENTS)
     @ResponseStatus(HttpStatus.CREATED)
     public AnnouncementResponse createHusk(@Valid @RequestBody HuskAnnouncementRequest request) {
         return announcementService.createHusk(request);
     }
 
     @GetMapping("/history")
-    @PreAuthorize(Roles.ADMIN_OPS)
+    @PreAuthorize(Roles.ANNOUNCEMENTS)
     public List<AnnouncementResponse> history() {
         return announcementService.history();
     }
