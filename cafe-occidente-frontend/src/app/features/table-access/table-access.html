@@ -1,0 +1,45 @@
+<app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/acceso-principal">
+  <div class="flex flex-col gap-4 p-6 text-sm">
+    <ng-container *ngIf="table() === null; else sheet">
+      <div class="grid max-w-md grid-cols-1 gap-2" data-testid="tables">
+        <app-button *ngFor="let t of tables()" [label]="p.tables[t]" variant="access" (pressed)="open(t)"></app-button>
+        <app-button [label]="p.closeButton" variant="access" (pressed)="close()"></app-button>
+      </div>
+    </ng-container>
+
+    <ng-template #sheet>
+      <div class="flex items-center justify-between gap-3">
+        <h1 class="text-lg font-semibold text-slate-700" data-testid="table-title">{{ p.tables[table()!] }}</h1>
+        <span class="text-slate-600">
+          {{ table() === 'PRODUCTOS' ? p.allAgenciesNote : p.agencyNote + ' ' + auth.agencyName() }}
+        </span>
+        <app-button [label]="p.backButton" variant="access" (pressed)="back()"></app-button>
+      </div>
+
+      <p *ngIf="error()" class="text-red-600">{{ p.errorMessage }}</p>
+
+      <ng-container *ngIf="result() as r">
+        <p *ngIf="r.total === 0" class="text-slate-600">{{ p.emptyMessage }}</p>
+        <div *ngIf="r.total > 0" class="overflow-x-auto">
+          <table class="w-full whitespace-nowrap text-left text-xs" data-testid="sheet">
+            <thead class="text-slate-600">
+              <tr>
+                <th *ngFor="let h of headers()" class="border-b border-slate-300 px-2 py-1">{{ h }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of r.rows" class="border-b border-slate-200">
+                <td *ngFor="let cell of row" class="px-2 py-1">{{ cell }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="r.total > 0" class="flex items-center justify-end gap-3">
+          <span class="text-slate-600">{{ r.total }} {{ p.totalLabel }}</span>
+          <app-button *ngIf="pageIndex() > 0" [label]="p.previousButton" variant="access" (pressed)="open(table()!, pageIndex() - 1)"></app-button>
+          <app-button *ngIf="pageIndex() < lastPage()" [label]="p.nextButton" variant="access" (pressed)="open(table()!, pageIndex() + 1)"></app-button>
+        </div>
+      </ng-container>
+    </ng-template>
+  </div>
+</app-access-window>
