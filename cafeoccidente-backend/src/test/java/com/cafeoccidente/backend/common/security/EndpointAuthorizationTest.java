@@ -26,6 +26,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.supplies.service.SuppliesEntryService;
 import com.cafeoccidente.backend.supplies.service.SuppliesReportService;
+import com.cafeoccidente.backend.tables.service.TableAccessService;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.service.AuthService;
 import com.cafeoccidente.backend.users.service.UserService;
@@ -130,6 +131,9 @@ class EndpointAuthorizationTest {
         add(ADMIN, get, "/api/permissions", "/api/permissions?userId=1");
         add(ADMIN, post, "/api/permissions");
         add(ADMIN, delete, "/api/permissions/{userId}/{screen}", "/api/permissions/1/HISTORIAL");
+        // RF-03 Acceso a Tablas, solo lectura: el Administrador o con el permiso.
+        add(ADMIN, "ACCESO_TABLAS", get, "/api/tables", "/api/tables");
+        add(ADMIN, "ACCESO_TABLAS", get, "/api/tables/{code}", "/api/tables/CAJA");
         add(ADMIN, post, "/api/users");
         // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
         add(ADMIN, put, "/api/users/{id}", "/api/users/1");
@@ -253,6 +257,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private VendorService vendorService;
     @MockitoBean private VendorReportService vendorReportService;
     @MockitoBean private PermissionService permissionService;
+    @MockitoBean private TableAccessService tableAccessService;
 
     /** Los controladores que limitan a la propia agencia preguntan si es Administrador y cual es su agencia. */
     @BeforeEach

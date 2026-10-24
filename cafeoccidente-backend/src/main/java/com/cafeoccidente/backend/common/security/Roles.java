@@ -17,6 +17,7 @@ public final class Roles {
     public static final String ANNUL = ADMIN + " or hasAuthority('SCREEN_ANULAR_DOCUMENTO')";
     public static final String CONTROL_RECORD = ADMIN + " or hasAuthority('SCREEN_REGISTRO_CONTROL')";
     public static final String HISTORY = ADMIN + " or hasAuthority('SCREEN_HISTORIAL')";
+    public static final String TABLES = ADMIN + " or hasAuthority('SCREEN_ACCESO_TABLAS')";
     public static final String ANNOUNCEMENTS = ADMIN_OPS + " or hasAuthority('SCREEN_ACTUALIZAR_ANUNCIOS')";
 
     private Roles() {
