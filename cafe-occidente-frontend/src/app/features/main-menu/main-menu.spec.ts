@@ -1,12 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import menu from '../../../../public/assets/data/main-menu.json';
-import { UserRole } from '../../core/models';
+import { Screen, UserRole } from '../../core/models';
+import { API_BASE_URL } from '../../core/config/api.config';
 import { AgencyService } from '../../core/services/agency.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
@@ -19,10 +20,13 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
 
   beforeEach(() => localStorage.clear());
 
-  function render(role: UserRole): HTMLElement {
+  let fixtureRef: { detectChanges(): void } | null = null;
+
+  function render(role: UserRole, screens: readonly Screen[] = []): HTMLElement {
     localStorage.setItem('cafeoccidente.token', 'jwt');
     localStorage.setItem('cafeoccidente.role', role);
     localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.screens', JSON.stringify(screens));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -37,6 +41,7 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
       .mockReturnValue(of({ username: 'x', roleName: role, agencyId: 4, agencyName: 'El Tambo' }));
     const fixture = TestBed.createComponent(MainMenuComponent);
     fixture.detectChanges();
+    fixtureRef = fixture;
     return fixture.nativeElement as HTMLElement;
   }
 
@@ -59,6 +64,32 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
 
   it('CA-3: Operaciones only sees Actualizar Anuncios (plus leaving the application)', () => {
     expect(labels(render('OPERACIONES'))).toEqual(['Actualizar Anuncios', 'Salir de la aplicación']);
+  });
+
+  it('HU-01 CA-4: a granted screen shows its option, and the menu that holds it, to a role without it', () => {
+    expect(labels(render('USUARIO', ['REGISTRO_CONTROL']))).toContain('Registro de Control');
+    TestBed.resetTestingModule();
+    expect(labels(render('OPERACIONES', ['ANULAR_DOCUMENTO']))).toEqual(['Actualizar Anuncios', 'Compras', 'Salir de la aplicación']);
+  });
+
+  it('C6: Operaciones with Acceso a Tablas gets the way back to Acceso Principal', () => {
+    expect(labels(render('OPERACIONES', ['ACCESO_TABLAS']))).toEqual([
+      'Actualizar Anuncios',
+      'Volver Acceso Principal',
+      'Salir de la aplicación',
+    ]);
+  });
+
+  it('HU-03 CA-3: opening the menu rereads the permissions, so a revoked screen disappears', () => {
+    const el = render('USUARIO', ['REGISTRO_CONTROL']);
+    expect(labels(el)).toContain('Registro de Control');
+
+    TestBed.inject(HttpTestingController)
+      .expectOne(`${API_BASE_URL}/me`)
+      .flush({ username: 'x', roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco 1', screens: [] });
+    fixtureRef?.detectChanges();
+
+    expect(labels(el)).not.toContain('Registro de Control');
   });
 
   it('RF-05 / Q22: Contabilizado is there, disabled and marked as pending, for Administrator and User', () => {

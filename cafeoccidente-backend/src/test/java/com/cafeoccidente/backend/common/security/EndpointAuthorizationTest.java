@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.common.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
 import com.cafeoccidente.backend.common.config.CorsConfig;
@@ -11,6 +12,7 @@ import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
+import com.cafeoccidente.backend.permissions.service.PermissionService;
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -47,6 +50,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -76,7 +81,8 @@ class EndpointAuthorizationTest {
     private static final Set<String> ADMIN_OPS = Set.of(A, O);
     private static final Set<String> ALL = Set.of(A, U, O);
 
-    record Endpoint(HttpMethod method, String pattern, String url, Set<String> roles) {
+    /** {@code screen}: la pantalla concedible (RF-02) que tambien abre el endpoint, o null. */
+    record Endpoint(HttpMethod method, String pattern, String url, Set<String> roles, String screen) {
         @Override
         public String toString() {
             return method + " " + pattern;
@@ -90,36 +96,49 @@ class EndpointAuthorizationTest {
             "/api/remissions/mark-exported", "[]",
             "/api/vendors", "{\"association\": false}");
 
+    /** Las 5 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
+    private static final List<String> SCREENS =
+            List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS", "REGISTRO_CONTROL", "HISTORIAL");
+
     private static void add(Set<String> roles, HttpMethod method, String pattern, String url) {
-        MATRIX.add(new Endpoint(method, pattern, url, roles));
+        MATRIX.add(new Endpoint(method, pattern, url, roles, null));
     }
 
     private static void add(Set<String> roles, HttpMethod method, String pattern) {
         add(roles, method, pattern, pattern);
     }
 
+    private static void add(Set<String> roles, String screen, HttpMethod method, String pattern, String url) {
+        MATRIX.add(new Endpoint(method, pattern, url, roles, screen));
+    }
+
     static {
         HttpMethod get = HttpMethod.GET;
         HttpMethod post = HttpMethod.POST;
         HttpMethod put = HttpMethod.PUT;
+        HttpMethod delete = HttpMethod.DELETE;
 
         // Administracion: RF-06 Registro de Control, RF-07 usuarios.
         add(ADMIN, get, "/api/control-records");
-        add(ADMIN, get, "/api/control-records/{agencyId}", "/api/control-records/1");
-        add(ADMIN, post, "/api/control-records/{agencyId}", "/api/control-records/1");
-        add(ADMIN, put, "/api/control-records/{agencyId}", "/api/control-records/1");
+        add(ADMIN, "REGISTRO_CONTROL", get, "/api/control-records/{agencyId}", "/api/control-records/1");
+        add(ADMIN, "REGISTRO_CONTROL", post, "/api/control-records/{agencyId}", "/api/control-records/1");
+        add(ADMIN, "REGISTRO_CONTROL", put, "/api/control-records/{agencyId}", "/api/control-records/1");
         add(ADMIN, get, "/api/users");
-        // Historial de cambios (area de compras, 2026-10-22): solo el Administrador.
-        add(ADMIN, get, "/api/history");
+        // Historial de cambios (area de compras, 2026-10-22): el Administrador o con el permiso.
+        add(ADMIN, "HISTORIAL", get, "/api/history", "/api/history");
+        // RF-02 Permisos temporales: solo el Administrador los concede y retira.
+        add(ADMIN, get, "/api/permissions", "/api/permissions?userId=1");
+        add(ADMIN, post, "/api/permissions");
+        add(ADMIN, delete, "/api/permissions/{userId}/{screen}", "/api/permissions/1/HISTORIAL");
         add(ADMIN, post, "/api/users");
         // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
         add(ADMIN, put, "/api/users/{id}", "/api/users/1");
         add(ADMIN, get, "/api/roles");
 
         // Actualizar Anuncios: RF-08 y RF-09 (Administrador y Operaciones).
-        add(ADMIN_OPS, post, "/api/announcements");
-        add(ADMIN_OPS, post, "/api/announcements/husk");
-        add(ADMIN_OPS, get, "/api/announcements/history");
+        add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", post, "/api/announcements", "/api/announcements");
+        add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", post, "/api/announcements/husk", "/api/announcements/husk");
+        add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", get, "/api/announcements/history", "/api/announcements/history");
         add(ALL, get, "/api/funds");
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
         add(ADMIN, get, "/api/agencies");
@@ -140,9 +159,9 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
         // Generar Reporte Anuncio: Administrador y Usuario (área de compras, 22 oct; prima sobre RF-24).
         add(ADMIN_USER, get, "/api/purchases/dry-coffee/by-date", "/api/purchases/dry-coffee/by-date?date=2026-01-01");
-        // RN-23.1 Anular Documento: solo el Administrador.
-        add(ADMIN, get, "/api/purchases/annulment", "/api/purchases/annulment?invoiceNumber=1");
-        add(ADMIN, post, "/api/purchases/annulment/{module}/{id}", "/api/purchases/annulment/DRY/1");
+        // RN-23.1 Anular Documento: el Administrador o con el permiso (RF-02).
+        add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment", "/api/purchases/annulment?invoiceNumber=1");
+        add(ADMIN, "ANULAR_DOCUMENTO", post, "/api/purchases/annulment/{module}/{id}", "/api/purchases/annulment/DRY/1");
 
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
         add(ADMIN_USER, post, "/api/purchases/future");
@@ -233,25 +252,48 @@ class EndpointAuthorizationTest {
     @MockitoBean private SuppliesReportService suppliesReportService;
     @MockitoBean private VendorService vendorService;
     @MockitoBean private VendorReportService vendorReportService;
+    @MockitoBean private PermissionService permissionService;
 
+    /** Los controladores que limitan a la propia agencia preguntan si es Administrador y cual es su agencia. */
+    @BeforeEach
+    void currentUser() {
+        when(securityUtils.isAdmin()).thenAnswer(invocation -> SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_" + A)));
+        when(currentAgencyProvider.currentAgencyId()).thenReturn(1L);
+    }
+
+    /**
+     * Cada rol, y ademas Usuario y Operaciones con las 5 pantallas concedidas: solo entran a los
+     * endpoints de su rol o de una pantalla concedida.
+     */
     static Stream<Arguments> matrix() {
-        return MATRIX.stream().flatMap(endpoint -> ROLES.stream().map(role -> Arguments.of(endpoint, role)));
+        List<String> profiles = new ArrayList<>(ROLES);
+        profiles.add(U + "+" + String.join(",", SCREENS));
+        profiles.add(O + "+" + String.join(",", SCREENS));
+        return MATRIX.stream().flatMap(endpoint -> profiles.stream().map(profile -> Arguments.of(endpoint, profile)));
     }
 
     @ParameterizedTest(name = "{1} {0}")
     @MethodSource("matrix")
-    void eachRoleReachesOnlyItsEndpoints(Endpoint endpoint, String role) throws Exception {
+    void eachRoleReachesOnlyItsEndpoints(Endpoint endpoint, String profile) throws Exception {
+        String[] parts = profile.split("\\+");
+        String role = parts[0];
+        List<String> screens = parts.length > 1 ? List.of(parts[1].split(",")) : List.of();
+        List<String> authorities = new ArrayList<>(List.of("ROLE_" + role));
+        screens.forEach(screen -> authorities.add("SCREEN_" + screen));
+
         String body = BODIES.getOrDefault(endpoint.pattern(), "{}");
         int status = mockMvc.perform(request(endpoint.method(), endpoint.url())
-                        .with(user("prueba").roles(role))
+                        .with(user("prueba").authorities(authorities.stream()
+                                .map(SimpleGrantedAuthority::new).toList()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andReturn().getResponse().getStatus();
 
-        if (endpoint.roles().contains(role)) {
-            assertThat(status).as("%s con %s", endpoint, role).isBetween(200, 299);
+        if (endpoint.roles().contains(role) || endpoint.screen() != null && screens.contains(endpoint.screen())) {
+            assertThat(status).as("%s con %s", endpoint, profile).isBetween(200, 299);
         } else {
-            assertThat(status).as("%s con %s", endpoint, role).isEqualTo(403);
+            assertThat(status).as("%s con %s", endpoint, profile).isEqualTo(403);
         }
     }
 

@@ -17,7 +17,7 @@
           <option *ngFor="let agency of agencies()" [ngValue]="agency.id">{{ agency.name }}</option>
         </select>
       </label>
-      <label class="flex flex-col gap-1">
+      <label *ngIf="isAdmin" class="flex flex-col gap-1">
         <span class="font-medium text-slate-700">{{ p.userLabel }}</span>
         <select class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="userId">
           <option [ngValue]="null">{{ p.all }}</option>

@@ -10,14 +10,14 @@
     "errorMessage": "No se pudo cambiar la agencia de trabajo"
   },
   "options": [
-    { "label": "Registro de Control", "route": "/registro-control", "roles": ["ADMINISTRADOR"] },
+    { "label": "Registro de Control", "route": "/registro-control", "roles": ["ADMINISTRADOR"], "screens": ["REGISTRO_CONTROL"] },
     { "label": "Usuarios", "route": "/usuarios", "roles": ["ADMINISTRADOR"] },
-    { "label": "Actualizar Anuncios", "route": "/anuncios", "roles": ["ADMINISTRADOR", "OPERACIONES"] },
-    { "label": "Compras", "route": "/compras", "emphasis": true, "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Actualizar Anuncios", "route": "/anuncios", "roles": ["ADMINISTRADOR", "OPERACIONES"], "screens": ["ACTUALIZAR_ANUNCIOS"] },
+    { "label": "Compras", "route": "/compras", "emphasis": true, "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ANULAR_DOCUMENTO"] },
     { "label": "Suministros", "route": "/suministros", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Vendedores", "route": "/vendedores", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Contabilizado", "disabled": true, "hint": "Pendiente de levantamiento", "roles": ["ADMINISTRADOR", "USUARIO"] },
-    { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"] },
+    { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ACCESO_TABLAS", "HISTORIAL"] },
     { "label": "Salir de la aplicación", "route": "/login" }
   ]
 }

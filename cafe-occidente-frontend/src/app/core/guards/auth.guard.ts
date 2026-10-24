@@ -1,14 +1,15 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateChildFn, Router } from '@angular/router';
 
-import { UserRole } from '../models';
+import { Screen, UserRole } from '../models';
 import { AuthService } from '../services/auth.service';
 
 /** Roles de una pantalla de operacion cuando la ruta no dice otra cosa (RN-01.2: Operaciones no entra). */
 export const DEFAULT_ROUTE_ROLES: readonly UserRole[] = ['ADMINISTRADOR', 'USUARIO'];
 
 /**
- * Toda pantalla salvo el login exige sesion, y cada ruta solo deja entrar a sus roles (data.roles).
+ * Toda pantalla salvo el login exige sesion, y cada ruta solo deja entrar a sus roles (data.roles) o a
+ * quien tenga concedida alguna de sus pantallas (data.screens, RF-02).
  * Sin sesion va al login; con un rol que no corresponde, a su menu principal. El backend igual lo
  * rechaza con @PreAuthorize: esto evita que el usuario vea la pantalla antes del 403.
  */
@@ -19,5 +20,6 @@ export const authGuard: CanActivateChildFn = (route: ActivatedRouteSnapshot) => 
     return router.parseUrl('/login');
   }
   const roles = (route.data['roles'] as readonly UserRole[] | undefined) ?? DEFAULT_ROUTE_ROLES;
-  return auth.hasRole(roles) ? true : router.parseUrl('/menu-principal');
+  const screens = route.data['screens'] as readonly Screen[] | undefined;
+  return auth.canAccess(roles, screens) ? true : router.parseUrl('/menu-principal');
 };

@@ -6,7 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { NavigationService } from '../../../core/services/navigation.service';
 
 /** Lista/rejilla de botones de navegacion, usada en todas las pantallas de menu. Solo muestra las
- *  opciones del rol de la sesion (RF-01, RN-05.1). */
+ *  opciones del rol de la sesion (RF-01, RN-05.1) o de una pantalla concedida (RF-02). */
 @Component({
   selector: 'app-menu-button-grid',
   standalone: true,
@@ -21,7 +21,9 @@ export class MenuButtonGridComponent {
   private readonly navigation = inject(NavigationService);
   private readonly auth = inject(AuthService);
 
-  readonly visibleOptions = computed(() => this.options().filter((option) => this.auth.hasRole(option.roles)));
+  readonly visibleOptions = computed(() =>
+    this.options().filter((option) => this.auth.canAccess(option.roles, option.screens)),
+  );
 
   onSelect(option: MenuOption): void {
     this.navigation.goTo(option.route);

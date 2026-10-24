@@ -1,6 +1,9 @@
 /** Roles del RF (RF-01): los mismos nombres de la tabla roles. */
 export type UserRole = 'ADMINISTRADOR' | 'USUARIO' | 'OPERACIONES';
 
+/** Pantallas que el Administrador puede conceder a un Usuario u Operaciones (RF-02). */
+export type Screen = 'ANULAR_DOCUMENTO' | 'ACCESO_TABLAS' | 'ACTUALIZAR_ANUNCIOS' | 'REGISTRO_CONTROL' | 'HISTORIAL';
+
 export interface AuthSession {
   readonly username: string;
   readonly role: UserRole;

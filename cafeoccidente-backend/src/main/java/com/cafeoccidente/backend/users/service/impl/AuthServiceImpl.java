@@ -31,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
         String roleName = user.getAuthorities().iterator().next().getAuthority().replace("ROLE_", "");
         // RN-05.1.5: el Administrador entra con la ultima agencia que uso.
         Agency agency = CurrentAgencyProvider.workingAgency(user.getUser());
-        return new LoginResponse(token, user.getUsername(), roleName, agency.getId(), agency.getName());
+        return new LoginResponse(token, user.getUsername(), roleName, agency.getId(), agency.getName(),
+                user.getScreens().stream().sorted().toList());
     }
 }

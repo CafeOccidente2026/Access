@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import access from '../../../../public/assets/data/main-access.json';
-import { UserRole } from '../../core/models';
+import { Screen, UserRole } from '../../core/models';
 import { ContentService } from '../../core/services/content.service';
 import { MainAccessComponent } from './main-access';
 
@@ -14,7 +14,8 @@ import { MainAccessComponent } from './main-access';
 describe('MainAccessComponent', () => {
   beforeEach(() => localStorage.clear());
 
-  function render(role: UserRole): HTMLElement {
+  function render(role: UserRole, screens: readonly Screen[] = []): HTMLElement {
+    localStorage.setItem('cafeoccidente.screens', JSON.stringify(screens));
     localStorage.setItem('cafeoccidente.token', 'jwt');
     localStorage.setItem('cafeoccidente.role', role);
     localStorage.setItem('cafeoccidente.username', 'jperez');
@@ -40,6 +41,10 @@ describe('MainAccessComponent', () => {
 
   it('the User only sees the way to the main menu', () => {
     expect(labels(render('USUARIO'))).toEqual(['Menú Principal']);
+  });
+
+  it('C6: Operaciones with Acceso a Tablas only sees that option (and the way back to the main menu)', () => {
+    expect(labels(render('OPERACIONES', ['ACCESO_TABLAS']))).toEqual(['Menú Principal', 'Acceso a Tablas']);
   });
 
   it('welcomes the user of the session', () => {

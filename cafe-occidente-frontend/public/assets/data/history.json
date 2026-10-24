@@ -20,7 +20,8 @@
     "REGISTRO_CONTROL": "Registro de Control",
     "ANUNCIO": "Anuncio",
     "USUARIO": "Usuario",
-    "AGENCIA": "Agencia"
+    "AGENCIA": "Agencia",
+    "PERMISO": "Permiso"
   },
   "actions": {
     "CREAR": "Crear",
@@ -28,9 +29,12 @@
     "REASIGNAR": "Reasignar",
     "ACTIVAR": "Activar",
     "DESACTIVAR": "Desactivar",
-    "PUBLICAR": "Publicar"
+    "PUBLICAR": "Publicar",
+    "CONCEDER": "Conceder",
+    "RETIRAR": "Retirar"
   },
   "fields": {
+    "screen": "Pantalla",
     "username": "Usuario",
     "idNumber": "Cédula",
     "active": "Activo",

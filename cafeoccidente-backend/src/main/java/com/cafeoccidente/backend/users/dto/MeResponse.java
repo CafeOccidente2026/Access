@@ -1,5 +1,8 @@
 package com.cafeoccidente.backend.users.dto;
 
-/** Sesion actual: usuario, rol y agencia de trabajo (RF-05.1). */
-public record MeResponse(String username, String roleName, Long agencyId, String agencyName) {
+import com.cafeoccidente.backend.permissions.entity.Screen;
+import java.util.List;
+
+/** Sesion actual: usuario, rol, agencia de trabajo (RF-05.1) y pantallas concedidas (RF-02). */
+public record MeResponse(String username, String roleName, Long agencyId, String agencyName, List<Screen> screens) {
 }

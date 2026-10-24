@@ -25,6 +25,8 @@ export class MainMenuComponent {
   readonly auth = inject(AuthService);
 
   readonly data = toSignal(this.content.loadJson<MainMenuContent>('main-menu'));
+  /** Al abrir el menu se releen los permisos (RF-02): uno concedido o retirado se ve sin recargar. */
+  readonly session = toSignal(this.auth.refreshSession());
   readonly isAdmin = this.auth.isAdmin();
   /** RN-05.1.1: lista desplegable con todas las agencias. */
   readonly agencies = toSignal(this.isAdmin ? inject(AgencyService).list() : of([]), { initialValue: [] });

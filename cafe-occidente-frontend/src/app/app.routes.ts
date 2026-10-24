@@ -85,7 +85,7 @@ export const routes: Routes = [
       },
       {
         path: 'registro-control',
-        data: { roles: ADMIN },
+        data: { roles: ADMIN, screens: ['REGISTRO_CONTROL'] },
         loadComponent: () =>
           import('./features/control-record/control-record').then((m) => m.ControlRecordComponent),
       },
@@ -96,13 +96,18 @@ export const routes: Routes = [
           import('./features/user-management/user-management').then((m) => m.UserManagementComponent),
       },
       {
-        path: 'historial',
+        path: 'permisos',
         data: { roles: ADMIN },
+        loadComponent: () => import('./features/permissions/permissions').then((m) => m.PermissionsComponent),
+      },
+      {
+        path: 'historial',
+        data: { roles: ADMIN, screens: ['HISTORIAL'] },
         loadComponent: () => import('./features/history/history').then((m) => m.HistoryComponent),
       },
       {
         path: 'anuncios',
-        data: { roles: ADMIN_OPS },
+        data: { roles: ADMIN_OPS, screens: ['ACTUALIZAR_ANUNCIOS'] },
         loadComponent: () =>
           import('./features/announcements-menu/announcements-menu').then(
             (m) => m.AnnouncementsMenuComponent,
@@ -110,7 +115,7 @@ export const routes: Routes = [
       },
       {
         path: 'anuncios/actualizar',
-        data: { roles: ADMIN_OPS },
+        data: { roles: ADMIN_OPS, screens: ['ACTUALIZAR_ANUNCIOS'] },
         loadComponent: () =>
           import('./features/announcement-update/announcement-update').then(
             (m) => m.AnnouncementUpdateComponent,
@@ -118,7 +123,7 @@ export const routes: Routes = [
       },
       {
         path: 'anuncios/actualizar-pasilla',
-        data: { roles: ADMIN_OPS },
+        data: { roles: ADMIN_OPS, screens: ['ACTUALIZAR_ANUNCIOS'] },
         loadComponent: () =>
           import('./features/announcement-update-husk/announcement-update-husk').then(
             (m) => m.AnnouncementUpdateHuskComponent,
@@ -126,6 +131,8 @@ export const routes: Routes = [
       },
       {
         path: 'compras',
+        // Quien solo tiene Anular Documento concedido entra al menu y ve solo esa opcion (RF-02).
+        data: { screens: ['ANULAR_DOCUMENTO'] },
         loadComponent: () =>
           import('./features/purchases-menu/purchases-menu').then((m) => m.PurchasesMenuComponent),
       },
@@ -243,7 +250,7 @@ export const routes: Routes = [
       },
       {
         path: 'compras/anular',
-        data: { roles: ADMIN },
+        data: { roles: ADMIN, screens: ['ANULAR_DOCUMENTO'] },
         loadComponent: () =>
           import('./features/purchase-annulment/purchase-annulment').then((m) => m.PurchaseAnnulmentComponent),
       },

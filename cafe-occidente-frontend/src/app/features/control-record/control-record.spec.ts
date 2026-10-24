@@ -2,7 +2,7 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/control-record.json';
 import { FormFieldDefinition } from '../../core/models';
@@ -120,6 +120,7 @@ describe('ControlRecordComponent', () => {
 
   it('D2: an agency without record gets its suggested prefix prefilled', () => {
     localStorage.setItem('cafeoccidente.agencyId', '2');
+    localStorage.setItem('cafeoccidente.role', 'ADMINISTRADOR');
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -132,6 +133,26 @@ describe('ControlRecordComponent', () => {
     const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
     expect(component.isCreate()).toBe(true);
     expect(component.leftFields().find((f) => f.key === 'prefix')?.value).toBe('DCAN');
+  });
+
+  it('RF-02: with the screen granted, a non administrator only gets their own agency', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    localStorage.setItem('cafeoccidente.role', 'USUARIO');
+    const list = vi.fn(() => of([]));
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco 1', active: true }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    expect(list).not.toHaveBeenCalled();
+    expect(component.agencies()).toEqual([{ id: 1, name: 'Buesaco 1' }]);
+    expect(component.agencyId()).toBe(1);
   });
 
   it('shows the empty create form when the session agency has no record yet', () => {
