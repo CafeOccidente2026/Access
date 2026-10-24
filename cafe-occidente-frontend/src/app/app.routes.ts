@@ -101,6 +101,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/permissions/permissions').then((m) => m.PermissionsComponent),
       },
       {
+        path: 'acceso-tablas',
+        data: { roles: ADMIN, screens: ['ACCESO_TABLAS'] },
+        loadComponent: () => import('./features/table-access/table-access').then((m) => m.TableAccessComponent),
+      },
+      {
         path: 'historial',
         data: { roles: ADMIN, screens: ['HISTORIAL'] },
         loadComponent: () => import('./features/history/history').then((m) => m.HistoryComponent),
