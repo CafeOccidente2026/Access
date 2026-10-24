@@ -60,7 +60,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public ControlRecordResponse create(Long agencyId, ControlRecordRequest request) {
         if (controlRecordRepository.existsByAgencyIdAndActiveTrue(agencyId)) {
             throw new BusinessRuleException(
-                    "Esta agencia ya tiene un ControlRecord activo; use editar en vez de crear uno nuevo");
+                    "Esta agencia ya tiene un Registro de Control activo; use editar en vez de crear uno nuevo");
         }
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));

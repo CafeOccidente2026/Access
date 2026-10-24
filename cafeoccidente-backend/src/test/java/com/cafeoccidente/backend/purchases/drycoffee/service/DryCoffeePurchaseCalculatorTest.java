@@ -162,6 +162,21 @@ class DryCoffeePurchaseCalculatorTest {
     }
 
     @Test
+    void aNegativeMoneyValueInTheCascadeBlocksThePurchase() {
+        // Base Carga mal digitada en el Registro de Control (2000 en vez de 125):
+        // Precio Base Carga PC = 1200000 - (692 * 2000) = -184000.
+        ControlRecord wrongBaseLoad = controlRecord();
+        wrongBaseLoad.setBaseLoad(2000);
+
+        assertThatThrownBy(() -> calculator.calculate(
+                request("S", false), wrongBaseLoad, ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
+                BigDecimal.ZERO, BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("\"Precio Base Carga PC\" dio un valor negativo (-184000.00). Revise el anuncio"
+                        + " vigente o el Registro de Control de la agencia antes de continuar.");
+    }
+
+    @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(
                 request("F", false), controlRecord(), ANNOUNCEMENT_BASE, ANNOUNCEMENT_DEFECTIVE_PRICE,
