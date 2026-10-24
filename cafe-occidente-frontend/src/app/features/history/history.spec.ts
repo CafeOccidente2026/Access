@@ -68,9 +68,22 @@ describe('HistoryComponent', () => {
     expect(component.error()).toBe(true);
   });
 
+  it('RF-02: with the screen granted, a non administrator only filters by their own agency, without users', () => {
+    localStorage.setItem('cafeoccidente.role', 'USUARIO');
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    const fixture = TestBed.createComponent(HistoryComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.agencies()).toEqual([{ id: 1, name: 'Buesaco 1' }]);
+    expect(fixture.componentInstance.users()).toEqual([]);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('select')).toHaveLength(2); // Que y Agencia, sin Usuario
+    localStorage.clear();
+  });
+
   it('only the Administrator can open the route', () => {
     const shell = routes.find((r) => r.children?.some((c) => c.path === 'historial'));
     expect(shell?.children?.find((c) => c.path === 'historial')?.data?.['roles']).toEqual(['ADMINISTRADOR']);
+    expect(shell?.children?.find((c) => c.path === 'historial')?.data?.['screens']).toEqual(['HISTORIAL']);
   });
 });
 

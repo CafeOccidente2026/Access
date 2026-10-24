@@ -1,3 +1,5 @@
+import { Screen } from './auth.model';
+
 export interface User {
   readonly id: number;
   readonly username: string;
@@ -15,12 +17,13 @@ export interface LoginRequest {
   readonly password: string;
 }
 
-/** Sesion del servidor (GET /api/me): rol y agencia de trabajo (RF-05.1). */
+/** Sesion del servidor (GET /api/me): rol, agencia de trabajo (RF-05.1) y pantallas concedidas (RF-02). */
 export interface SessionResponse {
   readonly username: string;
   readonly roleName: string;
   readonly agencyId: number;
   readonly agencyName: string;
+  readonly screens?: readonly Screen[];
 }
 
 export interface LoginResponse extends SessionResponse {

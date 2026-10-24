@@ -1,0 +1,21 @@
+{
+  "windowTitle": "Permisos",
+  "userLabel": "Usuario Registrado:",
+  "choose": "Seleccione un usuario",
+  "instructions": "Marque la opción que desea que el usuario tenga acceso",
+  "saveButton": "Guardar",
+  "currentHeading": "Permisos vigentes",
+  "noneMessage": "Este usuario no tiene permisos temporales.",
+  "revokeButton": "Retirar",
+  "grantedSince": "desde",
+  "savedMessage": "Permisos guardados.",
+  "revokedMessage": "Permiso retirado.",
+  "errorMessage": "No se pudo guardar el permiso.",
+  "screens": {
+    "ANULAR_DOCUMENTO": "Anular Documento",
+    "ACCESO_TABLAS": "Acceso a Tablas",
+    "ACTUALIZAR_ANUNCIOS": "Actualizar Anuncios",
+    "REGISTRO_CONTROL": "Registro de Control (solo su agencia)",
+    "HISTORIAL": "Historial (solo su agencia)"
+  }
+}

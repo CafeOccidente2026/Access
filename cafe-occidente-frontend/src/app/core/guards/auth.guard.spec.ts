@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { UserRole } from '../models';
+import { Screen, UserRole } from '../models';
 import { authGuard } from './auth.guard';
 
 /** Guard de sesion y de rol (RF-01): toda pantalla salvo el login. */
@@ -19,11 +19,21 @@ describe('authGuard', () => {
     localStorage.setItem('cafeoccidente.role', role);
   }
 
-  function run(roles?: readonly UserRole[]): true | string {
-    const route = { data: roles ? { roles } : {} } as unknown as ActivatedRouteSnapshot;
+  function run(roles?: readonly UserRole[], screens?: readonly Screen[]): true | string {
+    const route = { data: { ...(roles ? { roles } : {}), ...(screens ? { screens } : {}) } } as unknown as ActivatedRouteSnapshot;
     const result = TestBed.runInInjectionContext(() => authGuard(route, {} as RouterStateSnapshot));
     return result === true ? true : TestBed.inject(Router).serializeUrl(result as UrlTree);
   }
+
+  it('HU-01 CA-4: a granted screen opens its route even if the role does not (RF-02)', () => {
+    signIn('OPERACIONES');
+    expect(run(['ADMINISTRADOR'], ['ANULAR_DOCUMENTO'])).toBe('/menu-principal');
+    localStorage.setItem('cafeoccidente.screens', JSON.stringify(['ANULAR_DOCUMENTO']));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    expect(run(['ADMINISTRADOR'], ['ANULAR_DOCUMENTO'])).toBe(true);
+    expect(run(['ADMINISTRADOR'], ['HISTORIAL'])).toBe('/menu-principal');
+  });
 
   it('sends to the login when there is no session', () => {
     expect(run()).toBe('/login');

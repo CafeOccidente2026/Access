@@ -2,11 +2,13 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { of } from 'rxjs';
 
 import { Agency } from '../../core/models/agency.model';
 import { ChangeHistoryEntry, ChangeHistoryPage } from '../../core/models/history.model';
 import { User } from '../../core/models/user.model';
 import { AgencyService } from '../../core/services/agency.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { HistoryService } from '../../core/services/history.service';
 import { UserService } from '../../core/services/user.service';
@@ -40,8 +42,14 @@ export class HistoryComponent {
   private readonly historyService = inject(HistoryService);
 
   readonly page = toSignal(this.content.loadJson<HistoryContent>('history'));
-  readonly agencies = toSignal(inject(AgencyService).list(), { initialValue: [] as Agency[] });
-  readonly users = toSignal(inject(UserService).list(), { initialValue: [] as User[] });
+  private readonly auth = inject(AuthService);
+  /** Con el permiso de la pantalla (RF-02), quien no es Administrador solo ve los cambios de su agencia. */
+  readonly isAdmin = this.auth.isAdmin();
+  readonly agencies = toSignal(
+    this.isAdmin ? inject(AgencyService).list() : of<Agency[]>([{ id: this.auth.agencyId() ?? 0, name: this.auth.agencyName() ?? '' }]),
+    { initialValue: [] as Agency[] },
+  );
+  readonly users = toSignal(this.isAdmin ? inject(UserService).list() : of<User[]>([]), { initialValue: [] as User[] });
   readonly result = signal<ChangeHistoryPage | null>(null);
   readonly pageIndex = signal(0);
   readonly error = signal(false);

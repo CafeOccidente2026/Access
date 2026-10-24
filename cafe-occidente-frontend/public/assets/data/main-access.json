@@ -4,10 +4,10 @@
   "options": [
     { "label": "Menú Principal", "route": "/menu-principal" },
     { "label": "Usuarios", "route": "/usuarios", "roles": ["ADMINISTRADOR"] },
-    { "label": "Acceso a Tablas", "route": "/acceso-tablas", "roles": ["ADMINISTRADOR"] },
+    { "label": "Acceso a Tablas", "route": "/acceso-tablas", "roles": ["ADMINISTRADOR"], "screens": ["ACCESO_TABLAS"] },
     { "label": "Menú Habilitación", "route": "/menu-habilitacion", "roles": ["ADMINISTRADOR"] },
     { "label": "Permisos", "route": "/permisos", "roles": ["ADMINISTRADOR"] },
-    { "label": "Historial", "route": "/historial", "roles": ["ADMINISTRADOR"] }
+    { "label": "Historial", "route": "/historial", "roles": ["ADMINISTRADOR"], "screens": ["HISTORIAL"] }
   ],
   "exitLabel": "Salir"
 }

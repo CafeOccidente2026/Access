@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
 
 import { FormFieldDefinition } from '../../core/models';
 import { Agency } from '../../core/models/agency.model';
@@ -44,9 +45,13 @@ export class ControlRecordComponent {
   readonly rightFields = computed(() => this.buildFields(this.page()?.rightColumn));
 
   constructor() {
-    // La lista primero: el prefijo sugerido de una agencia sin registro sale de ella.
+    // La lista primero: el prefijo sugerido de una agencia sin registro sale de ella. Con el permiso de
+    // la pantalla (RF-02), quien no es Administrador solo ve su agencia.
     const sessionAgencyId = this.authService.agencyId();
-    this.agencyService.list().subscribe((agencies) => {
+    const agencies$ = this.authService.isAdmin()
+      ? this.agencyService.list()
+      : of<Agency[]>(sessionAgencyId === null ? [] : [{ id: sessionAgencyId, name: this.authService.agencyName() ?? '' }]);
+    agencies$.subscribe((agencies) => {
       this.agencies.set(agencies);
       if (sessionAgencyId !== null) {
         this.onAgencyChange(String(sessionAgencyId));

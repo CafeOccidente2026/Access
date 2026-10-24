@@ -1,0 +1,39 @@
+<app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/acceso-principal">
+  <div class="flex flex-col gap-4 p-6 text-sm" data-testid="permissions">
+    <label class="flex items-center gap-3">
+      <span class="font-medium text-slate-700">{{ p.userLabel }}</span>
+      <select class="rounded border border-slate-300 bg-white px-2 py-1" data-testid="user"
+        (change)="onUserChange($any($event.target).value)">
+        <option value="">{{ p.choose }}</option>
+        <option *ngFor="let user of users()" [value]="user.id">{{ user.username }} ({{ user.roleName }})</option>
+      </select>
+    </label>
+
+    <ng-container *ngIf="userId() !== null">
+      <p class="text-slate-700">{{ p.instructions }}</p>
+      <div class="flex flex-col gap-2" data-testid="catalog">
+        <label *ngFor="let screen of catalog()" class="flex items-center gap-2">
+          <input type="checkbox" [disabled]="isGranted(screen)" [checked]="isGranted(screen) || selected().has(screen)"
+            (change)="toggle(screen, $any($event.target).checked)" />
+          <span>{{ p.screens[screen] }}</span>
+        </label>
+      </div>
+      <div>
+        <app-button [label]="p.saveButton" variant="access" (pressed)="save()"></app-button>
+      </div>
+
+      <h2 class="font-semibold text-slate-700">{{ p.currentHeading }}</h2>
+      <p *ngIf="current().length === 0" class="text-slate-600">{{ p.noneMessage }}</p>
+      <ul class="flex flex-col gap-2" data-testid="current">
+        <li *ngFor="let permission of current()" class="flex items-center gap-3">
+          <span>{{ p.screens[permission.screen] }}</span>
+          <span class="text-slate-500">{{ p.grantedSince }} {{ permission.grantedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+          <app-button [label]="p.revokeButton" variant="access" (pressed)="revoke(permission.screen)"></app-button>
+        </li>
+      </ul>
+    </ng-container>
+
+    <p *ngIf="message()" class="text-slate-700">{{ message() }}</p>
+    <p *ngIf="error()" class="text-red-600">{{ p.errorMessage }}</p>
+  </div>
+</app-access-window>

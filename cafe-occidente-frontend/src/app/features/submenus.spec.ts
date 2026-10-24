@@ -65,7 +65,7 @@ describe('submenus (HU-02)', () => {
   });
 
   it('Generar Reporte Anuncio is for Administrator and User (area de compras, 22 oct; prevails over RF-24)', () => {
-    expect(option(purchases, 'Generar Reporte Anuncio')?.roles).toBeUndefined();
+    expect(option(purchases, 'Generar Reporte Anuncio')?.roles).toEqual(ADMIN_USER);
     expect(routeRoles('compras/reporte-anuncio')).toEqual(ADMIN_USER);
   });
 
