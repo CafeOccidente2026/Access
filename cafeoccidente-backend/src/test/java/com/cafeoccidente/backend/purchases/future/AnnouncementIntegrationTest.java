@@ -189,6 +189,27 @@ class AnnouncementIntegrationTest {
     }
 
     @Test
+    void hu12Ca1ThePasillaAnnouncementIsAvailableToEveryAgency() throws Exception {
+        int buesaco = maxNumber(1);
+        int tambo = maxNumber(4);
+
+        mockMvc.perform(post("/api/announcements/husk").header("Authorization", operations)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"basePriceLoad\": 1200000, \"pointPrice\": 9600}"))
+                .andExpect(status().isCreated());
+
+        // RF-09: Fondo RP y Especial PASILLA fijos; Pr Por Punto es el precio que usa la compra de pasilla.
+        for (long agency : new long[] {1, 4}) {
+            AnnouncementResponse pasilla = announcementService.findLatest(agency, rp, "PASILLA");
+            assertThat(pasilla.basePriceLoad()).isEqualByComparingTo("1200000");
+            assertThat(pasilla.healthyUnitPrice()).isEqualByComparingTo("9600");
+        }
+        assertThat(maxNumber(1)).isEqualTo(buesaco + 1);
+        assertThat(maxNumber(4)).isEqualTo(tambo + 1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios WHERE entidad = 'ANUNCIO'"
+                + " AND despues->>'specialType' = 'PASILLA' AND despues->>'pointPrice' = '9600'", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
     void theBonusIsTheSurchargePerLoadOverTheBaseLoadOfTheAgency() {
         // RF-08: SobrePr Carga Esp 80.000; Base Carga de Buesaco 1 = 125 -> Bonificacion 640 por kilo.
         previous("RN", "80000", "6000");
