@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.cafeoccidente.backend.common.security.JwtService;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUser;
+import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
@@ -18,6 +19,7 @@ import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,6 +96,60 @@ class ControlRecordIntegrationTest {
                 .andExpect(jsonPath("$.purchasePoint").value("BUESACO1 OCCIDENTE"))
                 .andExpect(jsonPath("$.excelsoKg").value(70))
                 .andExpect(jsonPath("$.baseFactor").value(94.0));
+    }
+
+    private static final String GREEN_VALUES = "{\"greenTotalStoredWeight\": 140, \"greenTotalHuskWeight\": 7.1,"
+            + " \"greenHealthyStoredWeight\": 132.9, \"greenHealthyUnitPrice\": 12000, \"greenDefectiveUnitPrice\": 6000}";
+
+    private ResultActions applyGreenCoffee(String token, String body) throws Exception {
+        return mockMvc.perform(put("/api/control-records/green-coffee").header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void greenCoffeeValuesAreAppliedToEveryAgencyWithAControlRecord() throws Exception {
+        long active = jdbc.queryForObject("SELECT count(*) FROM registros_control WHERE activo", Long.class);
+
+        applyGreenCoffee(admin, GREEN_VALUES)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agencies").value(active));
+
+        for (long agencyId : new long[] {1, 4}) {
+            ControlRecord record = service.getActive(agencyId);
+            assertThat(record.getGreenTotalStoredWeight()).isEqualByComparingTo("140");
+            assertThat(record.getGreenTotalHuskWeight()).isEqualByComparingTo("7.1");
+            assertThat(record.getGreenHealthyStoredWeight()).isEqualByComparingTo("132.9");
+            assertThat(record.getGreenHealthyUnitPrice()).isEqualByComparingTo("12000");
+            assertThat(record.getGreenDefectiveUnitPrice()).isEqualByComparingTo("6000");
+        }
+        // Una fila de historial por agencia, con su agencia y el antes y el despues.
+        List<Long> agencies = jdbc.queryForList("SELECT agencia_id FROM historial_cambios WHERE entidad = 'REGISTRO_CONTROL'"
+                + " AND accion = 'MODIFICAR' AND despues->>'greenHealthyUnitPrice' = '12000' ORDER BY agencia_id", Long.class);
+        assertThat(agencies).hasSize((int) active).contains(1L, 4L);
+    }
+
+    @Test
+    void applyingTheSameGreenCoffeeValuesAgainLeavesNoNewHistory() throws Exception {
+        applyGreenCoffee(admin, GREEN_VALUES).andExpect(status().isOk());
+        long rows = jdbc.queryForObject("SELECT count(*) FROM historial_cambios", Long.class);
+        applyGreenCoffee(admin, GREEN_VALUES).andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios", Long.class)).isEqualTo(rows);
+    }
+
+    @Test
+    void onlyTheAdministratorAppliesGreenCoffeeToAllAgencies() throws Exception {
+        User clerk = new User();
+        clerk.setUsername("verde_usuario");
+        clerk.setPasswordHash(passwordEncoder.encode("clave-verde1"));
+        clerk.setRole(roles.findByName(Roles.USUARIO).orElseThrow());
+        clerk.setAgency(agencies.findById(1L).orElseThrow());
+        Long clerkId = users.save(clerk).getId();
+        // Con el permiso de la pantalla Registro de Control (RF-02) solo trabaja su propia agencia.
+        jdbc.update("INSERT INTO permisos (usuario_id, pantalla, concedido_por) VALUES (?, 'REGISTRO_CONTROL', ?)", clerkId, clerkId);
+
+        applyGreenCoffee("Bearer " + jwtService.generateToken(new SecurityUser(clerk)), GREEN_VALUES)
+                .andExpect(status().isForbidden());
+        applyGreenCoffee(admin, GREEN_VALUES.replace("140", "-1")).andExpect(status().isBadRequest());
     }
 
     @Test

@@ -4,6 +4,8 @@ import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
@@ -84,6 +86,28 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
         history.record(Entity.REGISTRO_CONTROL, updated.id(), Action.MODIFICAR, agencyId, before, snapshot(updated));
         return updated;
+    }
+
+    /**
+     * Area de compras, 2026-10-26: los 5 valores de cafe verde se aplican a todos los Registros de Control
+     * activos a la vez (para una sola agencia esta update()). Una fila de historial por agencia que cambio.
+     */
+    @Override
+    @Transactional
+    public GreenCoffeeAppliedResponse applyGreenCoffeeToAll(GreenCoffeeValuesRequest request) {
+        List<ControlRecord> records = controlRecordRepository.findByActiveTrue();
+        for (ControlRecord controlRecord : records) {
+            Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
+            controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
+            controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
+            controlRecord.setGreenHealthyStoredWeight(request.greenHealthyStoredWeight());
+            controlRecord.setGreenHealthyUnitPrice(request.greenHealthyUnitPrice());
+            controlRecord.setGreenDefectiveUnitPrice(request.greenDefectiveUnitPrice());
+            ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
+            history.record(Entity.REGISTRO_CONTROL, updated.id(), Action.MODIFICAR, updated.agencyId(), before,
+                    snapshot(updated));
+        }
+        return new GreenCoffeeAppliedResponse(records.size());
     }
 
     private static Map<String, String> snapshot(ControlRecordResponse record) {
