@@ -182,11 +182,13 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
     }
 
     private Announcement findHistoricalAnnouncement(DryCoffeePurchase historical) {
+        // Las compras migradas guardan "3416"; las de la web, "SDTA-3416".
+        String number = historical.getAnnouncementNumber();
         // El numero de Access vive en anuncios_agencias (V11 borro las columnas viejas de anuncios).
         List<Announcement> matches = entityManager.createQuery(
                         "SELECT n.masterAnnouncement FROM AgencyAnnouncementNumber n WHERE n.announcementNumber = :number "
                                 + "AND n.agency.id = :agencyId", Announcement.class)
-                .setParameter("number", Integer.valueOf(historical.getAnnouncementNumber().replaceAll(".*-", "")))
+                .setParameter("number", Integer.valueOf(number.substring(number.lastIndexOf('-') + 1)))
                 .setParameter("agencyId", historical.getAgency().getId())
                 .getResultList();
         return matches.isEmpty() ? null : matches.get(0);
