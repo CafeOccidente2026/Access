@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/announcement-update.json';
@@ -144,6 +144,47 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     component.saveRow(changed);
     expect(service.publishType).toHaveBeenLastCalledWith(expect.objectContaining({ basePriceLoad: 1700000 }));
     expect(component.message()).toBe('Anuncio actualizado');
+  });
+
+  it('double submit: while saving, a second click or Enter does not send again and the buttons are disabled', () => {
+    const pending = new Subject<unknown[]>();
+    service.publishAll.mockReturnValue(pending);
+    const { fixture, component, el } = render();
+    component.fundId = 1;
+    component.onPriceInput('1546900');
+
+    component.save();
+    component.save();
+    component.onEnter('basePriceLoad');
+    fixture.detectChanges();
+    expect(service.publishAll).toHaveBeenCalledTimes(1);
+    const saveButton = Array.from(el.querySelectorAll('app-button button')).find((b) => b.textContent?.trim() === 'Guardar');
+    expect((saveButton as HTMLButtonElement).disabled).toBe(true);
+
+    pending.next([]);
+    pending.complete();
+    fixture.detectChanges();
+    expect(component.saving()).toBe(false);
+    expect((saveButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('double submit: a row of the list is saved only once while the first request is in progress', () => {
+    const pending = new Subject<unknown>();
+    service.publishType.mockReturnValue(pending);
+    const { component } = render();
+    component.fundId = 1;
+    component.openList();
+    const rn = component.rows()![0];
+
+    component.saveRow(rn);
+    component.saveRow(rn);
+    component.saveRow(component.rows()![1]);
+    expect(service.publishType).toHaveBeenCalledTimes(1);
+
+    pending.error({});
+    expect(component.saving()).toBe(false);
+    component.saveRow(rn);
+    expect(service.publishType).toHaveBeenCalledTimes(2);
   });
 
   it('shows the message of the server when it rejects the request', () => {

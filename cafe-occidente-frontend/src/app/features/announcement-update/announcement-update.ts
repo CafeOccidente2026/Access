@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { AnnouncementType, Fund } from '../../core/models/dry-coffee-purchase.model';
 import { AnnouncementService } from '../../core/services/announcement.service';
@@ -47,6 +48,8 @@ export class AnnouncementUpdateComponent {
   readonly rows = signal<TypeRow[] | null>(null);
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  /** Hay un guardado en curso: los botones quedan deshabilitados y Enter no vuelve a enviar. */
+  readonly saving = signal(false);
 
   fundId: number | null = null;
   basePriceLoad = '';
@@ -94,13 +97,20 @@ export class AnnouncementUpdateComponent {
 
   /** RN-08.3: el precio del dia para todos los tipos de cafe del fondo. */
   save(): void {
+    if (this.saving()) {
+      return;
+    }
     const price = this.priceError ? null : amount(this.basePriceLoad);
     if (this.fundId == null || price == null) {
       this.focusField(this.fundId == null ? 'fundId' : 'basePriceLoad');
       return;
     }
     this.error.set(null);
-    this.announcementService.publishAll({ fundId: this.fundId, basePriceLoad: price }).subscribe({
+    this.saving.set(true);
+    this.announcementService
+      .publishAll({ fundId: this.fundId, basePriceLoad: price })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
       next: () => {
         this.done();
         if (this.rows()) {
@@ -132,6 +142,9 @@ export class AnnouncementUpdateComponent {
    * digitado arriba (o el vigente del tipo, que resuelve el servidor, si arriba no hay precio).
    */
   saveRow(row: TypeRow): void {
+    if (this.saving()) {
+      return;
+    }
     const surcharge = amount(row.specialSurcharge);
     const pasilla = amount(row.defectiveUnitPrice);
     if (this.fundId == null || surcharge == null || pasilla == null) {
@@ -139,6 +152,7 @@ export class AnnouncementUpdateComponent {
     }
     const price = row.basePriceLoad === row.originalBasePriceLoad ? amount(this.basePriceLoad) : amount(row.basePriceLoad);
     this.error.set(null);
+    this.saving.set(true);
     this.announcementService
       .publishType({
         fundId: this.fundId,
@@ -147,6 +161,7 @@ export class AnnouncementUpdateComponent {
         specialSurcharge: surcharge,
         defectiveUnitPrice: pasilla,
       })
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
           this.done();

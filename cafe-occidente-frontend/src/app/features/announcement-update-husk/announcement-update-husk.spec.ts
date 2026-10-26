@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/announcement-update-husk.json';
@@ -123,6 +123,27 @@ describe('AnnouncementUpdateHuskComponent (HU-12)', () => {
     component.onFocus('pointPrice');
     vi.runOnlyPendingTimers();
     expect(document.activeElement).toBe(field(el, 'basePriceLoad'));
+  });
+
+  it('double submit: while saving, a second click or Enter does not send again and the button is disabled', () => {
+    const pending = new Subject<unknown>();
+    createHusk.mockReturnValue(pending);
+    const { fixture, component, el } = render();
+    component.onNumericInput('basePriceLoad', '1200000');
+    component.onNumericInput('pointPrice', '9600');
+
+    component.update();
+    component.update();
+    component.onEnter('pointPrice');
+    fixture.detectChanges();
+    expect(createHusk).toHaveBeenCalledTimes(1);
+    const button = el.querySelector('app-button button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    pending.next({ announcementNumber: 'SDBU-8' });
+    pending.complete();
+    fixture.detectChanges();
+    expect(button.disabled).toBe(false);
   });
 
   it('CA-1: publishes and shows "Anuncio actualizado" for 3 seconds', () => {

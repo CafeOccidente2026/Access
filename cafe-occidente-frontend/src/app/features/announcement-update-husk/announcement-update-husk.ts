@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
@@ -36,6 +37,8 @@ export class AnnouncementUpdateHuskComponent {
   readonly page = toSignal(this.content.loadJson<AnnouncementUpdateHuskContent>('announcement-update-husk'));
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  /** Hay un guardado en curso: el boton queda deshabilitado y Enter no vuelve a enviar. */
+  readonly saving = signal(false);
 
   /** Valores formateados con puntos de miles, tal como se muestran en el input. */
   numeric: Record<NumericField, string> = { basePriceLoad: '', pointPrice: '' };
@@ -106,6 +109,9 @@ export class AnnouncementUpdateHuskComponent {
   }
 
   update(): void {
+    if (this.saving()) {
+      return;
+    }
     this.message.set(null);
     this.error.set(null);
     clearTimeout(this.successMessageTimeout);
@@ -114,7 +120,11 @@ export class AnnouncementUpdateHuskComponent {
     if (basePriceLoad == null || pointPrice == null) {
       return;
     }
-    this.announcementService.createHusk({ basePriceLoad, pointPrice }).subscribe({
+    this.saving.set(true);
+    this.announcementService
+      .createHusk({ basePriceLoad, pointPrice })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
       // RN-09.2: "Anuncio actualizado" durante 3 segundos.
       next: () => {
         this.message.set(this.page()?.successMessage ?? null);
