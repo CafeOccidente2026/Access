@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
-import { ControlRecordRequest, ControlRecordResponse } from '../models/control-record.model';
+import { ControlRecordRequest, ControlRecordResponse, GreenCoffeeValues } from '../models/control-record.model';
 
 /** Unica responsabilidad: llamadas HTTP al backend para el recurso ControlRecord (RegControl), por agencia. */
 @Injectable({ providedIn: 'root' })
@@ -20,5 +20,10 @@ export class ControlRecordService {
 
   update(agencyId: number, request: ControlRecordRequest): Observable<ControlRecordResponse> {
     return this.http.put<ControlRecordResponse>(`${API_BASE_URL}/control-records/${agencyId}`, request);
+  }
+
+  /** Los 5 valores de cafe verde en todos los Registros de Control activos (solo Administrador). */
+  applyGreenCoffeeToAll(values: GreenCoffeeValues): Observable<{ agencies: number }> {
+    return this.http.put<{ agencies: number }>(`${API_BASE_URL}/control-records/green-coffee`, values);
   }
 }
