@@ -47,7 +47,9 @@
       <div class="flex justify-end">
         <button
           *ngIf="agencyId()"
-          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200"
+          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50"
+          data-testid="save"
+          [disabled]="saving()"
           (click)="save()"
         >
           {{ p.saveButton }}
