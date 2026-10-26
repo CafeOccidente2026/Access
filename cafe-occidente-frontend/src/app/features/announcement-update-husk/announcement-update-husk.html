@@ -37,18 +37,19 @@
             [class.bg-white]="!fieldErrors.pointPrice"
             [value]="numeric.pointPrice"
             (input)="onNumericInput('pointPrice', $any($event.target).value)"
+            (focus)="onFocus('pointPrice')"
             (keydown.enter)="onEnter('pointPrice')"
           />
         </label>
         <p *ngIf="fieldErrors.pointPrice" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.pointPrice }}</p>
       </div>
 
-      <p *ngIf="message()" class="text-sm text-green-700">{{ message() }}</p>
       <p *ngIf="error()" class="text-sm text-red-600">{{ error() }}</p>
 
       <div class="flex justify-end">
-        <app-button [label]="p.updateButton" variant="access" (pressed)="update()"></app-button>
+        <app-button [label]="p.updateButton" variant="access" [disabled]="saving()" (pressed)="update()"></app-button>
       </div>
     </section>
   </div>
+  <app-success-overlay [message]="message()"></app-success-overlay>
 </app-access-window>
