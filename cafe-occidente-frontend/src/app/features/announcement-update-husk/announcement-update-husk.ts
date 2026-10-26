@@ -5,20 +5,18 @@ import { FormsModule } from '@angular/forms';
 
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
 import { AnnouncementUpdateHuskContent } from './announcement-update-husk.model';
 
 type NumericField = 'basePriceLoad' | 'pointPrice';
 
-/** Orden de captura (paso 1a) y de avance de foco al presionar Enter (paso 1b/1d). */
+/** RN-09.1: orden de captura; Enter pasa al siguiente campo solo si el actual esta diligenciado. */
 const FOCUS_ORDER: readonly NumericField[] = ['basePriceLoad', 'pointPrice'];
 
-/** Tiempo que se muestra el mensaje de confirmacion antes de cerrarse solo. */
-const SUCCESS_MESSAGE_DURATION_MS = 2000;
-
 /**
- * Pantalla ADMIN: "Actualizar Anuncio Pasilla" (ANUNCIOS PASILLA) - siempre crea un anuncio nuevo.
+ * "Actualizar Anuncio Pasilla" (ANUNCIOS PASILLA, RF-09, HU-12) - siempre crea un anuncio nuevo, comun a todas
+ * las agencias. Administrador, Operaciones o con el permiso Actualizar Anuncios.
  * A diferencia de "Actualizar Anuncio con Factor" (ver announcement-update), Form_ANUNCIOS
  * PASILLA.bas solo tiene dos campos reales (Pr_Base_CPS y Pr_AlmSana/"Pr Punto"); Fondo (RP) y
  * Especial (PASILLA) van fijos, no hay selector.
@@ -26,7 +24,7 @@ const SUCCESS_MESSAGE_DURATION_MS = 2000;
 @Component({
   selector: 'app-announcement-update-husk',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
+  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, SuccessOverlayComponent],
   templateUrl: './announcement-update-husk.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -67,14 +65,27 @@ export class AnnouncementUpdateHuskComponent {
     this.numeric[field] = formatThousands(digits);
   }
 
-  /** Enter avanza al siguiente campo; en el ultimo (Pr Por Punto) dispara la actualizacion. */
+  /** RN-09.1: Enter avanza al siguiente campo si el actual esta diligenciado; en el ultimo (Pr Por Punto)
+   *  dispara la actualizacion. */
   onEnter(field: NumericField): void {
+    if (this.numberValue(field) == null) {
+      this.focusField(field);
+      return;
+    }
     const idx = FOCUS_ORDER.indexOf(field);
     if (idx === FOCUS_ORDER.length - 1) {
       this.update();
       return;
     }
     this.focusField(FOCUS_ORDER[idx + 1]);
+  }
+
+  /** RN-09.1: no se salta con el mouse a un campo si uno anterior esta vacio. */
+  onFocus(field: NumericField): void {
+    const firstEmpty = FOCUS_ORDER.slice(0, FOCUS_ORDER.indexOf(field)).find((f) => this.numberValue(f) == null);
+    if (firstEmpty) {
+      this.focusField(firstEmpty);
+    }
   }
 
   private focusField(key: string): void {
@@ -104,8 +115,9 @@ export class AnnouncementUpdateHuskComponent {
       return;
     }
     this.announcementService.createHusk({ basePriceLoad, pointPrice }).subscribe({
-      next: (announcement) => {
-        this.message.set(`${this.page()?.successMessage ?? ''} ${announcement.announcementNumber}`);
+      // RN-09.2: "Anuncio actualizado" durante 3 segundos.
+      next: () => {
+        this.message.set(this.page()?.successMessage ?? null);
         this.successMessageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
       },
       error: (err) => {
