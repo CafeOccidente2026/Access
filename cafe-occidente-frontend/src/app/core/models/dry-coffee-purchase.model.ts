@@ -20,13 +20,28 @@ export interface Announcement {
   readonly specialType: string;
 }
 
-/** Los campos que llena el admin en "Actualizar Anuncio con Factor" (el resto se resuelve en el backend). */
+/** "Actualizar Anuncio con Factor" (RN-08.2, RN-08.3): un precio para todos los tipos de cafe del fondo. */
 export interface AnnouncementRequest {
-  readonly basePriceLoad: number;
-  readonly defectiveUnitPrice: number;
-  readonly specialSurcharge: number;
-  readonly specialType: string;
   readonly fundId: number;
+  readonly basePriceLoad: number;
+}
+
+/** Fila del listado "Actualizar" (HU-11): el tipo de cafe con su anuncio vigente (null si no tiene). */
+export interface AnnouncementType {
+  readonly specialType: string;
+  readonly basePriceLoad: number | null;
+  readonly specialSurcharge: number | null;
+  readonly defectiveUnitPrice: number | null;
+  readonly announcementDate: string | null;
+}
+
+/** Guardar un solo tipo desde el listado (RN-08.6); sin precio se usa el vigente del tipo. */
+export interface AnnouncementTypeRequest {
+  readonly fundId: number;
+  readonly specialType: string;
+  readonly basePriceLoad: number | null;
+  readonly specialSurcharge: number;
+  readonly defectiveUnitPrice: number;
 }
 
 /** Los dos campos que llena el admin en "Actualizar Anuncio Pasilla" (Fondo/Especial van fijos). */

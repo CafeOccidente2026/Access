@@ -113,12 +113,12 @@ class ChangeHistoryIntegrationTest {
 
     @Test
     void publishingAnAnnouncementIsRecordedWithoutAgency() throws Exception {
-        send(post("/api/announcements"), "{\"basePriceLoad\": 1500000, \"defectiveUnitPrice\": 0,"
-                + " \"specialSurcharge\": 0, \"specialType\": \"CORRIENTE\", \"fundId\": 1}")
+        // RF-08: un precio para todos los tipos; cada tipo publicado deja su fila.
+        send(post("/api/announcements"), "{\"basePriceLoad\": 1500000, \"fundId\": 1}")
                 .andExpect(status().isCreated());
         Map<String, Object> row = last("ANUNCIO");
         assertThat(row).containsEntry("accion", "PUBLICAR").containsEntry("agencia_id", null);
-        assertThat((String) row.get("despues")).contains("\"specialType\": \"CORRIENTE\"").contains("\"fund\": \"RP\"")
+        assertThat((String) row.get("despues")).contains("\"specialType\": ").contains("\"fund\": \"RP\"")
                 .contains("\"basePriceLoad\": \"1500000\"");
         assertThat(row.get("antes")).isNull();
     }

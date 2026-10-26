@@ -11,3 +11,4 @@ export * from './purchase-form-view/purchase-form-view';
 export * from './confirm-dialog/confirm-dialog';
 export * from './agency-picker/agency-picker';
 export * from './form-flow/form-flow';
+export * from './success-overlay/success-overlay';

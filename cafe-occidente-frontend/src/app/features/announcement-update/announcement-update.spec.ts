@@ -2,102 +2,165 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AnnouncementUpdateComponent } from './announcement-update';
+import content from '../../../../public/assets/data/announcement-update.json';
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
+import { SUCCESS_MESSAGE_DURATION_MS } from '../../shared/ui';
+import { AnnouncementUpdateComponent } from './announcement-update';
 
-/**
- * Antes de este fix, escribir letras o un negativo en estos campos los borraba en silencio (el
- * [value] de un solo sentido volvia a mostrar '' apenas Angular re-renderizaba) - sin ningun aviso
- * al usuario de por que. Ahora el campo muestra el error puntual y deja ver lo que se escribio.
- */
-describe('AnnouncementUpdateComponent - validación numérica en vivo', () => {
-  const page = {
-    windowTitle: 'ACTUALIZAR ANUNCIO CON FACTOR',
-    sectionTitle: 'Actualizar precios',
-    basePriceLoadLabel: 'Pr Base Carg Perg Seco',
-    defectiveUnitPriceLabel: 'Precio Pasilla',
-    specialSurchargeLabel: 'SobrePr Carga Esp',
-    specialTypeLabel: 'Especial',
-    fundLabel: 'Fondo',
-    updateButton: 'Actualizar',
-    successMessage: 'Anuncio actualizado. Número asignado:',
-    errorMessage: 'Ocurrió un error. Verifique los datos e intente de nuevo.',
-    specialOptions: ['RN', 'ILLY'],
-  };
+const TYPES = [
+  { specialType: 'RN', basePriceLoad: 1546900, specialSurcharge: 80000, defectiveUnitPrice: 6000, announcementDate: '2026-10-26' },
+  { specialType: 'ILLY', basePriceLoad: null, specialSurcharge: null, defectiveUnitPrice: null, announcementDate: null },
+];
 
-  let createSpy: ReturnType<typeof vi.fn>;
-  let component: AnnouncementUpdateComponent;
+describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
+  let service: { funds: ReturnType<typeof vi.fn>; publishAll: ReturnType<typeof vi.fn>; types: ReturnType<typeof vi.fn>; publishType: ReturnType<typeof vi.fn> };
 
-  function setup() {
-    createSpy = vi.fn(() => of({ announcementNumber: 'SDBU-33' }));
+  beforeEach(() => {
+    vi.useFakeTimers();
+    service = {
+      funds: vi.fn(() => of([{ id: 1, code: 'RP' }, { id: 2, code: 'LF' }])),
+      publishAll: vi.fn(() => of([{ announcementNumber: 'SDBU-33' }])),
+      types: vi.fn(() => of(TYPES)),
+      publishType: vi.fn(() => of({ announcementNumber: 'SDBU-34' })),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ContentService, useValue: { loadJson: () => of(page) } },
-        {
-          provide: AnnouncementService,
-          useValue: { funds: () => of([{ id: 1, code: 'RP', name: 'Resolución Propia' }]), create: createSpy },
-        },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+        { provide: AnnouncementService, useValue: service },
       ],
     });
-    component = TestBed.createComponent(AnnouncementUpdateComponent).componentInstance;
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  function render() {
+    const fixture = TestBed.createComponent(AnnouncementUpdateComponent);
+    fixture.detectChanges();
+    vi.runOnlyPendingTimers();
+    return { fixture, component: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
   }
 
-  it('flags letters with the specific message and keeps showing what was typed', () => {
-    setup();
-    component.onNumericInput('basePriceLoad', '12a3');
+  const field = (el: HTMLElement, key: string) => el.querySelector(`[data-field-key="${key}"]`) as HTMLElement;
 
-    expect(component.fieldErrors.basePriceLoad).toBe('No se aceptan letras, solo números');
-    expect(component.numeric.basePriceLoad).toBe('12a3');
-  });
+  it('RN-08.1: the cursor starts on Fondo, and Enter only moves on when the field is filled', () => {
+    const { component, el } = render();
+    expect(document.activeElement).toBe(field(el, 'fundId'));
 
-  it('flags a negative value with the specific message', () => {
-    setup();
-    component.onNumericInput('specialSurcharge', '-500');
+    component.onEnter('fundId');
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(field(el, 'fundId'));
 
-    expect(component.fieldErrors.specialSurcharge).toBe('No se aceptan valores negativos en este campo');
-    expect(component.numeric.specialSurcharge).toBe('-500');
-  });
-
-  it('clears the error and formats with thousands dots once the value becomes valid', () => {
-    setup();
-    component.onNumericInput('defectiveUnitPrice', 'abc');
-    expect(component.fieldErrors.defectiveUnitPrice).not.toBeNull();
-
-    component.onNumericInput('defectiveUnitPrice', '4000');
-
-    expect(component.fieldErrors.defectiveUnitPrice).toBeNull();
-    expect(component.numeric.defectiveUnitPrice).toBe('4.000');
-  });
-
-  it('does not submit while any field still has an invalid value', () => {
-    setup();
-    component.onNumericInput('basePriceLoad', '1200000');
-    component.onNumericInput('specialSurcharge', 'abc');
-    component.onNumericInput('defectiveUnitPrice', '4000');
-    component.specialType = 'RN';
     component.fundId = 1;
+    component.onEnter('fundId');
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(field(el, 'basePriceLoad'));
 
-    component.update();
-
-    expect(createSpy).not.toHaveBeenCalled();
+    component.onEnter('basePriceLoad'); // vacio: no guarda
+    expect(service.publishAll).not.toHaveBeenCalled();
   });
 
-  it('shows the real backend error message instead of the generic one on a failed update', () => {
-    setup();
-    createSpy.mockReturnValue(throwError(() => ({ error: { message: 'Ya existe un anuncio activo con estos datos' } })));
-    component.onNumericInput('basePriceLoad', '1200000');
-    component.onNumericInput('specialSurcharge', '5000');
-    component.onNumericInput('defectiveUnitPrice', '4000');
-    component.specialType = 'RN';
+  it('RN-08.1: the mouse cannot skip an empty Fondo', () => {
+    const { component, el } = render();
+    component.onFocus('basePriceLoad');
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(field(el, 'fundId'));
+  });
+
+  it('HU-10 CA-1 and CA-2: one price for every type, then "Anuncio actualizado" for 3 seconds', () => {
+    const { fixture, component, el } = render();
     component.fundId = 1;
+    component.onPriceInput('1546900');
+    expect(component.basePriceLoad).toBe('1.546.900');
 
-    component.update();
+    component.onEnter('basePriceLoad');
+    expect(service.publishAll).toHaveBeenCalledWith({ fundId: 1, basePriceLoad: 1546900 });
 
-    expect(component.error()).toBe('Ya existe un anuncio activo con estos datos');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="success-overlay"]')?.textContent).toContain('Anuncio actualizado');
+    vi.advanceTimersByTime(SUCCESS_MESSAGE_DURATION_MS - 1);
+    expect(component.message()).toBe('Anuncio actualizado');
+    vi.advanceTimersByTime(1);
+    expect(component.message()).toBeNull();
+    expect(SUCCESS_MESSAGE_DURATION_MS).toBe(3000);
+  });
+
+  it('HU-11 CA-1: Actualizar lists each type with its price, bonus and pasilla price', () => {
+    const { fixture, component, el } = render();
+    component.openList();
+    expect(service.types).not.toHaveBeenCalled(); // sin Fondo no hay listado
+
+    component.fundId = 1;
+    component.openList();
+    fixture.detectChanges();
+    expect(service.types).toHaveBeenCalledWith(1);
+    const cells = Array.from(el.querySelectorAll('[data-testid="types"] tbody tr')).map((tr) =>
+      Array.from(tr.querySelectorAll('input')).map((i) => i.value),
+    );
+    expect(el.querySelector('[data-testid="types"]')?.textContent).toContain('RN');
+    expect(cells[0]).toEqual(['1.546.900', '80.000', '6.000']);
+    expect(cells[1]).toEqual(['', '0', '0']);
+
+    component.onFundChange();
+    expect(component.rows()).toBeNull();
+  });
+
+  it('accessibility: each input of the list has its own id and a label that says what it is', () => {
+    const { fixture, component, el } = render();
+    component.fundId = 1;
+    component.openList();
+    fixture.detectChanges();
+    const inputs = Array.from(el.querySelectorAll<HTMLInputElement>('[data-testid="types"] input'));
+    expect(new Set(inputs.map((i) => i.id)).size).toBe(inputs.length);
+    expect(inputs.map((i) => i.labels?.[0]?.textContent?.trim())).toEqual([
+      'Pr Base Carg Perg Seco de RN', 'SobrePr Carga Esp de RN', 'Precio Pasilla de RN',
+      'Pr Base Carg Perg Seco de ILLY', 'SobrePr Carga Esp de ILLY', 'Precio Pasilla de ILLY',
+    ]);
+    expect(inputs[1].labels?.[0]?.htmlFor).toBe(inputs[1].id);
+  });
+
+  it('HU-11 CA-2: saving a row sends only that type; an unchanged price takes the price of the day', () => {
+    const { component } = render();
+    component.fundId = 1;
+    component.openList();
+    const rn = component.rows()![0];
+
+    component.onRowInput(rn, 'specialSurcharge', '100000');
+    component.saveRow(rn);
+    expect(service.publishType).toHaveBeenLastCalledWith({
+      fundId: 1, specialType: 'RN', basePriceLoad: null, specialSurcharge: 100000, defectiveUnitPrice: 6000,
+    });
+
+    component.onPriceInput('1600000'); // precio del dia digitado arriba
+    component.saveRow(component.rows()![0]);
+    expect(service.publishType).toHaveBeenLastCalledWith(expect.objectContaining({ basePriceLoad: 1600000 }));
+
+    const changed = component.rows()![0];
+    component.onRowInput(changed, 'basePriceLoad', '1700000');
+    component.saveRow(changed);
+    expect(service.publishType).toHaveBeenLastCalledWith(expect.objectContaining({ basePriceLoad: 1700000 }));
+    expect(component.message()).toBe('Anuncio actualizado');
+  });
+
+  it('shows the message of the server when it rejects the request', () => {
+    service.publishAll.mockReturnValue(throwError(() => ({ error: { message: 'Fondo no encontrado' } })));
+    service.types.mockReturnValue(throwError(() => ({})));
+    const { component } = render();
+    component.fundId = 9;
+    component.onPriceInput('1000');
+    component.save();
+    expect(component.error()).toBe('Fondo no encontrado');
+
+    component.openList();
+    expect(component.error()).toBe('Ocurrió un error. Verifique los datos e intente de nuevo.');
+
+    component.onPriceInput('abc');
+    expect(component.priceError).not.toBeNull();
+    component.save();
+    expect(service.publishAll).toHaveBeenCalledTimes(1);
   });
 });

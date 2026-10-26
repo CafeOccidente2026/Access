@@ -11,4 +11,7 @@ public interface ProductCodeRepository extends JpaRepository<ProductCode, Long> 
 
     /** Cuadro "Cód Producto" del reporte de inventario, ordenado por codigo. */
     List<ProductCode> findAllByOrderByCodeAsc();
+
+    /** Tipos de cafe (Especial) de un fondo: los que publica "Actualizar Anuncio con Factor" (RN-08.3). */
+    List<ProductCode> findByFundIdOrderByCodeAsc(Long fundId);
 }
