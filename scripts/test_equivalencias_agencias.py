@@ -32,7 +32,12 @@ def main():
     assert canonical_access_value("Buesaco", seed) == "BUESACO1 OCCIDENTE"
     assert canonical_access_value("BUESACO2 OCCIDENTE", seed) == "BUESACO2"
     assert canonical_access_value("SANDONA", seed) == "SANDONA"
-    assert canonical_access_value("TANGUA", seed) == "TANGUA"
+    assert canonical_access_value("BUESACO", seed) == "BUESACO"
+    # Area de compras, 2026-10-26: no son puntos de compra, sus asociados se facturan como Pasto.
+    for not_a_point in ("GUAITARILLA", "Guaitarilla", "Santacruz", "POLICARPA", "TANGUA"):
+        assert canonical_access_value(not_a_point, seed) == "PASTO", not_a_point
+    assert EXTRA_AGENCIES["BUESACO2"] == ("Buesaco 2", True, "SDB2")
+    assert EXTRA_AGENCIES["BUESACO"] == ("BUESACO", False, None)
     assert canonical_access_value("EL TAMBITO", seed) is None
 
     # Todo valor de Agencia del CSV de Access tiene equivalencia (docs/ es local: si falta, se salta).
