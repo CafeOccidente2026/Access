@@ -1,6 +1,5 @@
 package com.cafeoccidente.backend.purchases.future.entity;
 
-import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,12 +19,9 @@ import lombok.Setter;
  * compartido por TODAS las agencias con ControlRecord activo (ver docs/diseno-anuncios-compartidos.md).
  * Se crea desde "Actualizar Anuncio con Factor" (ADMIN); cada actualizacion de precio inserta un
  * anuncio nuevo, nunca edita uno existente. La numeracion propia de cada agencia vive en
- * {@link AgencyAnnouncementNumber}, no aqui.
- *
- * <p>announcementNumber/agency/healthyUnitPrice/bonus/costs quedan SIN USAR por el codigo nuevo
- * (Costos/Pr Sustentacion/Bonificacion ahora se calculan en el momento de la compra con el
- * ControlRecord vivo de la agencia que compra, ver AnnouncementServiceImpl) - se conservan solo para
- * no perder los anuncios historicos que ya los tenian poblados.
+ * {@link AgencyAnnouncementNumber}, no aqui. Costos, Pr Sustentacion y Bonificacion se calculan en el
+ * momento de la compra con el ControlRecord vivo de la agencia que compra (AnnouncementServiceImpl); las
+ * columnas viejas que los guardaban se borraron en V11 (D5).
  */
 @Entity
 @Table(name = "anuncios")
@@ -36,13 +32,6 @@ public class Announcement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    /** @deprecated sin usar desde el anuncio compartido - la numeracion vive en
-     *  {@link AgencyAnnouncementNumber}, una por agencia. Se conserva sin usar solo para no perder
-     *  los anuncios historicos que ya lo tenian poblado. */
-    @Deprecated
-    @Column(name = "numero_anuncio")
-    private String announcementNumber;
 
     @Column(name = "fecha_anuncio", nullable = false)
     private LocalDate announcementDate;
@@ -86,33 +75,12 @@ public class Announcement {
     @Column(name = "pr_inc_calidad", precision = 15, scale = 2)
     private BigDecimal qualityIncrement;
 
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @Column(name = "pr_alm_sana", precision = 15, scale = 2)
-    private BigDecimal healthyUnitPrice;
-
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @Column(name = "bonificacion", precision = 15, scale = 2)
-    private BigDecimal bonus;
-
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @Column(name = "costos", precision = 15, scale = 2)
-    private BigDecimal costs;
-
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @ManyToOne
-    @JoinColumn(name = "agencia_id")
-    private Agency agency;
-
     @ManyToOne
     @JoinColumn(name = "fondo_id", nullable = false)
     private Fund fund;
 
     /** Especial (Cod_Prod): tipo especial de cafe al que aplica este anuncio (ESTANDAR si no aplica
-     * ninguno especifico). Junto con agencia/fondo identifica el anuncio vigente a consultar. */
+     * ninguno especifico). Junto con el fondo identifica el anuncio vigente a consultar. */
     @Column(name = "especial", nullable = false)
     private String specialType;
 

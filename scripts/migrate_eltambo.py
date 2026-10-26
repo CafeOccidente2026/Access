@@ -368,9 +368,10 @@ def load_announcements(cur, el_tambo_id, rp_fund_id):
     for row in rows:
         number = s(row, "anuncio")
         special_type = s(row, "especial")
+        # El numero de Access vive en anuncios_agencias (las columnas viejas de anuncios se borraron en V11).
         cur.execute(
-            "SELECT id FROM anuncios WHERE agencia_id = %s AND numero_anuncio = %s",
-            (el_tambo_id, number),
+            "SELECT anuncio_id FROM anuncios_agencias WHERE agencia_id = %s AND numero_anuncio = %s",
+            (el_tambo_id, int(number)),
         )
         existing = cur.fetchone()
         if existing:
@@ -381,7 +382,7 @@ def load_announcements(cur, el_tambo_id, rp_fund_id):
             announcement_id = existing[0]
             updated += 1
         else:
-            announcement_id = insert_announcement(cur, row, number, special_type, el_tambo_id, rp_fund_id)
+            announcement_id = insert_announcement(cur, row, special_type, rp_fund_id)
             inserted += 1
         # La numeracion por agencia que V16 sacaba de los anuncios ya cargados: el numero de Access.
         cur.execute(
@@ -393,25 +394,24 @@ def load_announcements(cur, el_tambo_id, rp_fund_id):
     print(f"  {inserted} anuncios insertados, {updated} actualizados (especial), {numbered} numeros en anuncios_agencias.")
 
 
-def insert_announcement(cur, row, number, special_type, el_tambo_id, rp_fund_id):
+def insert_announcement(cur, row, special_type, rp_fund_id):
+    # Pr Sustentacion, Bonificacion por kilo y Costos no se guardan: las compras los calculan con el
+    # Registro de Control vivo (AnnouncementServiceImpl.toResponse). SobrePr_CPS (bonificacion por carga)
+    # y VrIncCalidad si son del anuncio.
     cur.execute(
         """
         INSERT INTO anuncios (
-            numero_anuncio, fecha_anuncio, pr_base_cps,
-            pr_alm_defec, pr_alm_sana, bonificacion, costos,
-            agencia_id, fondo_id, especial, activo
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, true)
+            fecha_anuncio, pr_base_cps, pr_alm_defec, sobrepr_carga_esp, pr_inc_calidad,
+            fondo_id, especial, activo
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, true)
         RETURNING id
         """,
         (
-            number,
             parse_date(row["fecha"]),
             parse_decimal(row["pr_base_cps"]),
             parse_decimal(row["pr_almdefec"]),
-            parse_decimal(row["pr_almsana"]),
-            parse_decimal(row["bonificacion"]),
-            parse_decimal(row["costos"]),
-            el_tambo_id,
+            parse_decimal(row["sobrepr_cps"]),
+            parse_decimal(row["vrinccalidad"]),
             rp_fund_id,
             special_type,
         ),
