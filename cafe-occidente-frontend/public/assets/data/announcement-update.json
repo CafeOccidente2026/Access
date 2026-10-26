@@ -13,6 +13,7 @@
     "defectiveUnitPrice": "Precio Pasilla"
   },
   "rowSaveButton": "Guardar",
+  "of": "de",
   "successMessage": "Anuncio actualizado",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
 }

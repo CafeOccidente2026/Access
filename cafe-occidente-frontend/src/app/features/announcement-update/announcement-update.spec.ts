@@ -109,6 +109,20 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(component.rows()).toBeNull();
   });
 
+  it('accessibility: each input of the list has its own id and a label that says what it is', () => {
+    const { fixture, component, el } = render();
+    component.fundId = 1;
+    component.openList();
+    fixture.detectChanges();
+    const inputs = Array.from(el.querySelectorAll<HTMLInputElement>('[data-testid="types"] input'));
+    expect(new Set(inputs.map((i) => i.id)).size).toBe(inputs.length);
+    expect(inputs.map((i) => i.labels?.[0]?.textContent?.trim())).toEqual([
+      'Pr Base Carg Perg Seco de RN', 'SobrePr Carga Esp de RN', 'Precio Pasilla de RN',
+      'Pr Base Carg Perg Seco de ILLY', 'SobrePr Carga Esp de ILLY', 'Precio Pasilla de ILLY',
+    ]);
+    expect(inputs[1].labels?.[0]?.htmlFor).toBe(inputs[1].id);
+  });
+
   it('HU-11 CA-2: saving a row sends only that type; an unchanged price takes the price of the day', () => {
     const { component } = render();
     component.fundId = 1;

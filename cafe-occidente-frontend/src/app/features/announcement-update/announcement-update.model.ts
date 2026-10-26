@@ -8,6 +8,8 @@ export interface AnnouncementUpdateContent {
   readonly listTitle: string;
   readonly columns: Record<'specialType' | 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice', string>;
   readonly rowSaveButton: string;
+  /** Une el campo y el tipo en la etiqueta oculta de cada casilla: "SobrePr Carga Esp de RN". */
+  readonly of: string;
   readonly successMessage: string;
   readonly errorMessage: string;
 }

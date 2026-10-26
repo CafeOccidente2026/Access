@@ -57,19 +57,28 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of list" class="border-t border-slate-200">
+          <tr *ngFor="let row of list; let i = index" class="border-t border-slate-200">
             <td class="py-1 pr-2">{{ row.specialType }}</td>
             <td class="py-1 pr-2">
-              <input type="text" inputmode="numeric" class="w-32 rounded border border-slate-300 px-2 py-1"
-                [value]="row.basePriceLoad" (input)="onRowInput(row, 'basePriceLoad', $any($event.target).value)" />
+              <label for="type-price-{{ i }}">
+                <span class="sr-only">{{ p.columns.basePriceLoad }} {{ p.of }} {{ row.specialType }}</span>
+                <input id="type-price-{{ i }}" type="text" inputmode="numeric" class="w-32 rounded border border-slate-300 px-2 py-1"
+                  [value]="row.basePriceLoad" (input)="onRowInput(row, 'basePriceLoad', $any($event.target).value)" />
+              </label>
             </td>
             <td class="py-1 pr-2">
-              <input type="text" inputmode="numeric" class="w-28 rounded border border-slate-300 px-2 py-1"
-                [value]="row.specialSurcharge" (input)="onRowInput(row, 'specialSurcharge', $any($event.target).value)" />
+              <label for="type-surcharge-{{ i }}">
+                <span class="sr-only">{{ p.columns.specialSurcharge }} {{ p.of }} {{ row.specialType }}</span>
+                <input id="type-surcharge-{{ i }}" type="text" inputmode="numeric" class="w-28 rounded border border-slate-300 px-2 py-1"
+                  [value]="row.specialSurcharge" (input)="onRowInput(row, 'specialSurcharge', $any($event.target).value)" />
+              </label>
             </td>
             <td class="py-1 pr-2">
-              <input type="text" inputmode="numeric" class="w-28 rounded border border-slate-300 px-2 py-1"
-                [value]="row.defectiveUnitPrice" (input)="onRowInput(row, 'defectiveUnitPrice', $any($event.target).value)" />
+              <label for="type-pasilla-{{ i }}">
+                <span class="sr-only">{{ p.columns.defectiveUnitPrice }} {{ p.of }} {{ row.specialType }}</span>
+                <input id="type-pasilla-{{ i }}" type="text" inputmode="numeric" class="w-28 rounded border border-slate-300 px-2 py-1"
+                  [value]="row.defectiveUnitPrice" (input)="onRowInput(row, 'defectiveUnitPrice', $any($event.target).value)" />
+              </label>
             </td>
             <td class="py-1">
               <app-button [label]="p.rowSaveButton" variant="access" (pressed)="saveRow(row)"></app-button>
