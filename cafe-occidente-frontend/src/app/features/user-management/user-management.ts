@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { finalize } from 'rxjs';
 
 /** Misma regla que UserRequest.password en el backend (Pattern): minimo 4 caracteres, letras y numeros. */
 const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{4,}$/;
@@ -76,6 +77,9 @@ export class UserManagementComponent {
   readonly editError = signal<string | null>(null);
   readonly editNotice = signal<string | null>(null);
 
+  /** Hay un guardado en curso: los botones que guardan quedan deshabilitados y Enter no vuelve a enviar. */
+  readonly saving = signal(false);
+
   newAgencyName = '';
   readonly agencyNotice = signal<string | null>(null);
   readonly agencyError = signal<string | null>(null);
@@ -114,13 +118,17 @@ export class UserManagementComponent {
 
   /** HU-09: la agencia nueva entra de inmediato a la lista y queda elegida para el usuario. */
   createAgency(): void {
+    if (this.saving()) {
+      return;
+    }
     this.agencyNotice.set(null);
     this.agencyError.set(null);
     const name = this.newAgencyName.trim();
     if (!name) {
       return;
     }
-    this.agencyService.create(name).subscribe({
+    this.saving.set(true);
+    this.agencyService.create(name).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (agency) => {
         this.agencies.update((list) => [...list, agency]);
         this.agencyId = agency.id;
@@ -132,6 +140,9 @@ export class UserManagementComponent {
   }
 
   createUser(): void {
+    if (this.saving()) {
+      return;
+    }
     this.userError.set(null);
     if (!this.roleId || !this.agencyId) {
       return;
@@ -144,6 +155,7 @@ export class UserManagementComponent {
       this.userError.set(this.page()?.passwordInvalidMessage ?? null);
       return;
     }
+    this.saving.set(true);
     this.userService
       .create({
         username: this.username,
@@ -152,6 +164,7 @@ export class UserManagementComponent {
         roleId: this.roleId,
         agencyId: this.agencyId,
       })
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => this.navigation.goTo(CLOSE_ROUTE),
         // El mensaje del backend (validacion de campo o regla) dice que corregir; el generico no.
@@ -176,6 +189,9 @@ export class UserManagementComponent {
 
   /** Las reglas del ultimo Administrador y de no desactivarse a si mismo las aplica el servidor. */
   saveEdit(): void {
+    if (this.saving()) {
+      return;
+    }
     const user = this.editing();
     if (!user || !this.editRoleId || !this.editAgencyId) {
       return;
@@ -185,6 +201,7 @@ export class UserManagementComponent {
       this.editError.set(this.page()?.passwordInvalidMessage ?? null);
       return;
     }
+    this.saving.set(true);
     this.userService
       .update(user.id, {
         roleId: this.editRoleId,
@@ -193,6 +210,7 @@ export class UserManagementComponent {
         password: this.editPassword || null,
         idNumber: this.editIdNumber || null,
       })
+      .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: (saved) => {
           this.users.update((list) => list.map((u) => (u.id === saved.id ? saved : u)));

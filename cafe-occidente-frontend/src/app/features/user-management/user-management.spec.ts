@@ -2,7 +2,7 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/user-management.json';
@@ -48,6 +48,42 @@ describe('UserManagementComponent', () => {
     component.newAgencyName = 'Buesaco';
     component.createAgency();
     expect(component.agencyError()).toBe('Ya existe una agencia con ese nombre');
+  });
+
+  it('double submit: while saving, creating a user, an agency or saving an edit sends only once', () => {
+    const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+    const pendingUser = new Subject<unknown>();
+    userService.create.mockReturnValue(pendingUser);
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    const component = fixture.componentInstance;
+    Object.assign(component, { username: 'fiel1', idNumber: '1061699481', password: 'ab12', roleId: 1, agencyId: 1 });
+
+    component.createUser();
+    component.createUser();
+    component.onEnter('agencyId'); // Enter en el ultimo campo tambien crea
+    expect(userService.create).toHaveBeenCalledTimes(1);
+    fixture.detectChanges();
+    const createButton = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-button button'))
+      .find((b) => b.textContent?.trim() === content.createUserButton) as HTMLButtonElement;
+    expect(createButton.disabled).toBe(true);
+    pendingUser.error(new HttpErrorResponse({ status: 500 }));
+    fixture.detectChanges();
+    expect(createButton.disabled).toBe(false);
+
+    const pendingAgency = new Subject<unknown>();
+    createAgency.mockReturnValue(pendingAgency);
+    component.newAgencyName = 'Nueva';
+    component.createAgency();
+    component.createAgency();
+    expect(createAgency).toHaveBeenCalledTimes(1);
+    pendingAgency.error(new HttpErrorResponse({ status: 500 }));
+
+    const pendingEdit = new Subject<unknown>();
+    userService.update = vi.fn(() => pendingEdit);
+    component.startEdit({ id: 9, username: 'fiel1', idNumber: '1', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    component.saveEdit();
+    component.saveEdit();
+    expect(userService.update).toHaveBeenCalledTimes(1);
   });
 
   it('HU-08: the Cedula only keeps digits, also in the input itself', () => {

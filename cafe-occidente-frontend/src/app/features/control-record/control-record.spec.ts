@@ -161,3 +161,39 @@ describe('ControlRecordComponent', () => {
     expect(component.isCreate()).toBe(true);
   });
 });
+
+describe('ControlRecordComponent - double submit', () => {
+  it('while saving, Guardar sends only once and is disabled until the answer arrives', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '3');
+    const pending = new Subject<unknown>();
+    const update = vi.fn(() => pending);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 3, name: 'El Tambo' }]) } },
+        {
+          provide: ControlRecordService,
+          useValue: { getByAgency: () => of({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true, baseLoad: 125 }), update },
+        },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ControlRecordComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.save();
+    component.save();
+    fixture.detectChanges();
+    expect(update).toHaveBeenCalledTimes(1);
+    const button = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="save"]') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    pending.next({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true, baseLoad: 125 });
+    pending.complete();
+    fixture.detectChanges();
+    expect(button.disabled).toBe(false);
+    localStorage.clear();
+  });
+});

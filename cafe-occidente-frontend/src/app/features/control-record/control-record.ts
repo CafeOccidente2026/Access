@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { of } from 'rxjs';
+import { finalize, of } from 'rxjs';
 
 import { FormFieldDefinition } from '../../core/models';
 import { Agency } from '../../core/models/agency.model';
@@ -37,6 +37,8 @@ export class ControlRecordComponent {
   readonly isCreate = signal(false);
   readonly savedMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  /** Hay un guardado en curso: los botones que guardan quedan deshabilitados y Enter no vuelve a enviar. */
+  readonly saving = signal(false);
   private readonly model = signal<Record<string, string>>({});
 
   /** Recalculan solo cuando cambian sus dependencias (model/agencyId/page) - nunca en cada
@@ -107,7 +109,7 @@ export class ControlRecordComponent {
 
   save(): void {
     const id = this.agencyId();
-    if (!id) {
+    if (this.saving() || !id) {
       return;
     }
     this.savedMessage.set(null);
@@ -116,7 +118,8 @@ export class ControlRecordComponent {
     const call = this.isCreate()
       ? this.controlRecordService.create(id, request)
       : this.controlRecordService.update(id, request);
-    call.subscribe({
+    this.saving.set(true);
+    call.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (record) => {
         if (this.agencyId() !== id) {
           return; // ya se guardo contra su agencia; no pintarlo sobre la que se eligio despues

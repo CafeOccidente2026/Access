@@ -66,7 +66,7 @@
       <p *ngIf="userError()" class="text-sm text-red-600">{{ userError() }}</p>
 
       <div class="flex justify-end">
-        <app-button [label]="p.createUserButton" variant="access" (pressed)="createUser()"></app-button>
+        <app-button [label]="p.createUserButton" variant="access" [disabled]="saving()" (pressed)="createUser()"></app-button>
       </div>
     </section>
 
@@ -142,7 +142,7 @@
         <p *ngIf="editError()" class="text-sm text-red-600">{{ editError() }}</p>
         <div class="flex justify-end gap-2">
           <app-button [label]="p.cancelButton" variant="access" (pressed)="cancelEdit()"></app-button>
-          <app-button [label]="p.saveButton" variant="access" (pressed)="saveEdit()"></app-button>
+          <app-button [label]="p.saveButton" variant="access" [disabled]="saving()" (pressed)="saveEdit()"></app-button>
         </div>
       </div>
       <p *ngIf="editNotice()" class="text-sm text-green-700">{{ editNotice() }}</p>
@@ -162,7 +162,7 @@
       <p *ngIf="agencyNotice()" class="text-sm text-amber-700">{{ agencyNotice() }}</p>
       <p *ngIf="agencyError()" class="text-sm text-red-600">{{ agencyError() }}</p>
       <div class="flex justify-end">
-        <app-button [label]="p.createAgencyButton" variant="access" (pressed)="createAgency()"></app-button>
+        <app-button [label]="p.createAgencyButton" variant="access" [disabled]="saving()" (pressed)="createAgency()"></app-button>
       </div>
     </section>
   </div>

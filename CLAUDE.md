@@ -30,6 +30,11 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
 - Sin colores fijos: los tokens viven en `src/styles.css` (`@theme`). Esto incluye los
   generadores de PDF.
 - Reusar `shared/ui/` y `shared/utils/` antes de crear algo nuevo.
+- **Todo botón que guarde se deshabilita mientras la petición está en curso, y Enter no vuelve a
+  enviar.** El método que guarda sale si ya hay un guardado en curso (señal `saving` + `finalize`)
+  y el botón lleva `[disabled]="saving()"`. Test por pantalla: dos clics seguidos hacen una sola
+  petición. Es obligatorio en las pantallas de compras (fase 6), donde un envío doble podría crear
+  dos facturas.
 
 ## Base de datos (en español)
 

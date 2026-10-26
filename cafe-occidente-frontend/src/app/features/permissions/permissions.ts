@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { finalize, map } from 'rxjs';
 
 import { Screen } from '../../core/models';
 import { Permission } from '../../core/models/permission.model';
@@ -37,6 +37,8 @@ export class PermissionsComponent {
   readonly selected = signal<ReadonlySet<Screen>>(new Set());
   readonly message = signal<string | null>(null);
   readonly error = signal(false);
+  /** Hay un guardado en curso: los botones que guardan quedan deshabilitados y Enter no vuelve a enviar. */
+  readonly saving = signal(false);
 
   private readonly user = computed(() => this.users().find((user) => user.id === this.userId()));
 
@@ -75,10 +77,11 @@ export class PermissionsComponent {
   /** RN-02.2: concede las pantallas marcadas. */
   save(): void {
     const id = this.userId();
-    if (id === null || this.selected().size === 0) {
+    if (this.saving() || id === null || this.selected().size === 0) {
       return;
     }
-    this.permissionService.grant(id, [...this.selected()]).subscribe({
+    this.saving.set(true);
+    this.permissionService.grant(id, [...this.selected()]).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (permissions) => {
         this.current.set(permissions);
         this.selected.set(new Set());
@@ -91,10 +94,11 @@ export class PermissionsComponent {
   /** RN-02.3: el usuario vuelve a su acceso normal segun su rol. */
   revoke(screen: Screen): void {
     const id = this.userId();
-    if (id === null) {
+    if (this.saving() || id === null) {
       return;
     }
-    this.permissionService.revoke(id, screen).subscribe({
+    this.saving.set(true);
+    this.permissionService.revoke(id, screen).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
         this.current.set(this.current().filter((permission) => permission.screen !== screen));
         this.done(this.page()?.revokedMessage);
