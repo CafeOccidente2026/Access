@@ -3,54 +3,57 @@ import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 
-import { Fund } from '../../core/models/dry-coffee-purchase.model';
+import { AnnouncementType, Fund } from '../../core/models/dry-coffee-purchase.model';
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, AppButtonComponent, ComboboxComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
-import { AnnouncementUpdateContent } from './announcement-update.model';
+import { AnnouncementUpdateContent, TypeRow } from './announcement-update.model';
 
-type NumericField = 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice';
+type Field = 'fundId' | 'basePriceLoad';
+type RowField = 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice';
 
-/** Orden de captura (paso 1a) y de avance de foco al presionar Enter (paso 1b/1d). */
-const FOCUS_ORDER: readonly string[] = ['basePriceLoad', 'specialSurcharge', 'defectiveUnitPrice', 'specialType'];
+/** RN-08.1: Fondo primero; Enter pasa al siguiente solo si el actual esta diligenciado. */
+const FOCUS_ORDER: readonly Field[] = ['fundId', 'basePriceLoad'];
 
-/** Tiempo que se muestra el mensaje de confirmacion antes de cerrarse solo. */
-const SUCCESS_MESSAGE_DURATION_MS = 2000;
+/** "123.456" -> 123456; vacio -> null. */
+function amount(text: string): number | null {
+  const digits = text.replace(/\D/g, '');
+  return digits === '' ? null : Number(digits);
+}
 
-/** Pantalla ADMIN: "Actualizar Anuncio con Factor" (ANUNCIOS CORRF) - siempre crea un anuncio nuevo. */
+function shown(value: number | null): string {
+  return value == null ? '' : formatThousands(String(Math.trunc(value)));
+}
+
+/**
+ * "Actualizar Anuncio con Factor" (RF-08, HU-10 y HU-11): un solo precio del dia para todos los tipos de
+ * cafe del fondo (RN-08.3), y el listado "Actualizar" para cambiar el precio, la bonificacion o el precio de
+ * pasilla de un solo tipo (RN-08.5, RN-08.6). Cada guardado muestra "Anuncio actualizado" 3 s (RN-08.7).
+ */
 @Component({
   selector: 'app-announcement-update',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, ComboboxComponent],
+  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, SuccessOverlayComponent],
   templateUrl: './announcement-update.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AnnouncementUpdateComponent {
-  private readonly content = inject(ContentService);
   private readonly announcementService = inject(AnnouncementService);
   private readonly elementRef = inject(ElementRef);
 
-  readonly page = toSignal(this.content.loadJson<AnnouncementUpdateContent>('announcement-update'));
-  readonly funds = signal<Fund[]>([]);
+  readonly page = toSignal(inject(ContentService).loadJson<AnnouncementUpdateContent>('announcement-update'));
+  readonly funds = toSignal(this.announcementService.funds(), { initialValue: [] as Fund[] });
+  readonly rows = signal<TypeRow[] | null>(null);
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
-  /** Valores formateados con puntos de miles, tal como se muestran en el input. */
-  numeric: Record<NumericField, string> = { basePriceLoad: '', specialSurcharge: '', defectiveUnitPrice: '' };
-  /** Mensaje de error puntual a mostrar cerca del campo, o null si lo que hay escrito es valido. */
-  fieldErrors: Record<NumericField, string | null> = {
-    basePriceLoad: null,
-    specialSurcharge: null,
-    defectiveUnitPrice: null,
-  };
-  specialType = '';
   fundId: number | null = null;
-  private successMessageTimeout?: ReturnType<typeof setTimeout>;
+  basePriceLoad = '';
+  priceError: string | null = null;
+  private messageTimeout?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    this.announcementService.funds().subscribe((list) => this.funds.set(list));
-    // Paso 1c: foco en el primer campo apenas la pantalla termina de cargar su contenido.
     effect(() => {
       if (this.page()) {
         this.focusField(FOCUS_ORDER[0]);
@@ -58,83 +61,132 @@ export class AnnouncementUpdateComponent {
     });
   }
 
-  /** Valida en vivo mientras se escribe. Si hay error, deja ver tal cual lo que el usuario tipeó
-   *  (no lo pisa con el formateo) para que el mensaje cerca del campo tenga sentido; si es válido,
-   *  formatea con puntos de miles como antes. */
-  onNumericInput(field: NumericField, value: string): void {
-    const error = validateWholeNumberField(value);
-    this.fieldErrors[field] = error;
-    if (error) {
-      this.numeric[field] = value;
-      return;
-    }
-    const digits = value.replace(/\D/g, '');
-    this.numeric[field] = formatThousands(digits);
+  onFundChange(): void {
+    this.rows.set(null);
   }
 
-  /** Enter avanza al siguiente campo; en el ultimo (Especial) dispara la actualizacion. */
-  onEnter(field: string): void {
-    const idx = FOCUS_ORDER.indexOf(field);
-    if (idx === -1) {
+  onPriceInput(value: string): void {
+    this.priceError = validateWholeNumberField(value);
+    this.basePriceLoad = this.priceError ? value : formatThousands(value.replace(/\D/g, ''));
+  }
+
+  /** RN-08.1: con Enter pasa al siguiente campo si el actual esta diligenciado; en el ultimo, guarda. */
+  onEnter(field: Field): void {
+    if (!this.isFilled(field)) {
+      this.focusField(field);
       return;
     }
+    const idx = FOCUS_ORDER.indexOf(field);
     if (idx === FOCUS_ORDER.length - 1) {
-      this.update();
+      this.save();
       return;
     }
     this.focusField(FOCUS_ORDER[idx + 1]);
   }
 
-  private focusField(key: string): void {
-    setTimeout(() => {
-      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
-      el?.focus();
-      el?.classList.add('field-flash');
-      setTimeout(() => el?.classList.remove('field-flash'), 1000);
+  /** RN-08.1: no se salta con el mouse a un campo si uno anterior esta vacio. */
+  onFocus(field: Field): void {
+    const firstEmpty = FOCUS_ORDER.slice(0, FOCUS_ORDER.indexOf(field)).find((f) => !this.isFilled(f));
+    if (firstEmpty) {
+      this.focusField(firstEmpty);
+    }
+  }
+
+  /** RN-08.3: el precio del dia para todos los tipos de cafe del fondo. */
+  save(): void {
+    const price = this.priceError ? null : amount(this.basePriceLoad);
+    if (this.fundId == null || price == null) {
+      this.focusField(this.fundId == null ? 'fundId' : 'basePriceLoad');
+      return;
+    }
+    this.error.set(null);
+    this.announcementService.publishAll({ fundId: this.fundId, basePriceLoad: price }).subscribe({
+      next: () => {
+        this.done();
+        if (this.rows()) {
+          this.openList();
+        }
+      },
+      error: (err) => this.fail(err),
     });
   }
 
-  private numberValue(field: NumericField): number | null {
-    if (this.fieldErrors[field]) {
-      return null;
-    }
-    const digits = this.numeric[field].replace(/\./g, '');
-    return digits === '' ? null : Number(digits);
-  }
-
-  update(): void {
-    this.message.set(null);
-    this.error.set(null);
-    clearTimeout(this.successMessageTimeout);
-    const basePriceLoad = this.numberValue('basePriceLoad');
-    const specialSurcharge = this.numberValue('specialSurcharge');
-    const defectiveUnitPrice = this.numberValue('defectiveUnitPrice');
-    if (
-      basePriceLoad == null ||
-      specialSurcharge == null ||
-      defectiveUnitPrice == null ||
-      !this.specialType ||
-      this.fundId == null
-    ) {
+  /** RN-08.5: el listado de los tipos de cafe del fondo con su anuncio vigente. */
+  openList(): void {
+    if (this.fundId == null) {
+      this.focusField('fundId');
       return;
     }
+    this.announcementService.types(this.fundId).subscribe({
+      next: (types) => this.rows.set(types.map((type) => this.toRow(type))),
+      error: (err) => this.fail(err),
+    });
+  }
+
+  onRowInput(row: TypeRow, field: RowField, value: string): void {
+    row[field] = validateWholeNumberField(value) ? value : formatThousands(value.replace(/\D/g, ''));
+  }
+
+  /**
+   * RN-08.6: guarda solo ese tipo, con el precio modificado o, si no lo cambio, con el precio del dia
+   * digitado arriba (o el vigente del tipo, que resuelve el servidor, si arriba no hay precio).
+   */
+  saveRow(row: TypeRow): void {
+    const surcharge = amount(row.specialSurcharge);
+    const pasilla = amount(row.defectiveUnitPrice);
+    if (this.fundId == null || surcharge == null || pasilla == null) {
+      return;
+    }
+    const price = row.basePriceLoad === row.originalBasePriceLoad ? amount(this.basePriceLoad) : amount(row.basePriceLoad);
+    this.error.set(null);
     this.announcementService
-      .create({
-        basePriceLoad,
-        defectiveUnitPrice,
-        specialSurcharge,
-        specialType: this.specialType,
+      .publishType({
         fundId: this.fundId,
+        specialType: row.specialType,
+        basePriceLoad: price,
+        specialSurcharge: surcharge,
+        defectiveUnitPrice: pasilla,
       })
       .subscribe({
-        next: (announcement) => {
-          this.message.set(`${this.page()?.successMessage ?? ''} ${announcement.announcementNumber}`);
-          this.successMessageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
+        next: () => {
+          this.done();
+          this.openList();
         },
-        error: (err) => {
-          const message = (err as { error?: { message?: string } })?.error?.message;
-          this.error.set(message ?? this.page()?.errorMessage ?? null);
-        },
+        error: (err) => this.fail(err),
       });
+  }
+
+  private isFilled(field: Field): boolean {
+    return field === 'fundId' ? this.fundId != null : !this.priceError && amount(this.basePriceLoad) != null;
+  }
+
+  private toRow(type: AnnouncementType): TypeRow {
+    const price = shown(type.basePriceLoad);
+    return {
+      specialType: type.specialType,
+      basePriceLoad: price,
+      specialSurcharge: shown(type.specialSurcharge ?? 0),
+      defectiveUnitPrice: shown(type.defectiveUnitPrice ?? 0),
+      originalBasePriceLoad: price,
+    };
+  }
+
+  /** RN-08.7: "Anuncio actualizado" durante 3 segundos. */
+  private done(): void {
+    clearTimeout(this.messageTimeout);
+    this.message.set(this.page()?.successMessage ?? null);
+    this.messageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
+  }
+
+  private fail(err: unknown): void {
+    const message = (err as { error?: { message?: string } })?.error?.message;
+    this.error.set(message ?? this.page()?.errorMessage ?? null);
+  }
+
+  private focusField(key: Field): void {
+    setTimeout(() => {
+      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
+      el?.focus();
+    });
   }
 }

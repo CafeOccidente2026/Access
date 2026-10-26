@@ -1,13 +1,16 @@
 <app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/menu-principal">
-  <div class="flex flex-col gap-8 p-6">
-    <section class="flex flex-col gap-3">
+  <div class="flex flex-col gap-6 p-6">
+    <section class="flex max-w-xl flex-col gap-3">
       <h2 class="text-sm font-semibold text-slate-700">{{ p.sectionTitle }}</h2>
 
       <label class="flex items-center gap-2 text-sm">
         <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.fundLabel }}:</span>
         <select
+          data-field-key="fundId"
           class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
           [(ngModel)]="fundId"
+          (ngModelChange)="onFundChange()"
+          (keydown.enter)="onEnter('fundId')"
         >
           <option [ngValue]="null"></option>
           <option *ngFor="let fund of funds()" [ngValue]="fund.id">{{ fund.code }}</option>
@@ -22,76 +25,59 @@
             inputmode="numeric"
             data-field-key="basePriceLoad"
             class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-            [class.border-red-500]="fieldErrors.basePriceLoad"
-            [class.bg-red-50]="fieldErrors.basePriceLoad"
-            [class.border-slate-300]="!fieldErrors.basePriceLoad"
-            [class.bg-white]="!fieldErrors.basePriceLoad"
-            [value]="numeric.basePriceLoad"
-            (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+            [class.border-red-500]="priceError"
+            [class.border-slate-300]="!priceError"
+            [value]="basePriceLoad"
+            (input)="onPriceInput($any($event.target).value)"
+            (focus)="onFocus('basePriceLoad')"
             (keydown.enter)="onEnter('basePriceLoad')"
           />
         </label>
-        <p *ngIf="fieldErrors.basePriceLoad" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.basePriceLoad }}</p>
+        <p *ngIf="priceError" class="ml-48 pl-2 text-xs text-red-600">{{ priceError }}</p>
       </div>
 
-      <div class="flex flex-col gap-1">
-        <label class="flex items-center gap-2 text-sm">
-          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialSurchargeLabel }}:</span>
-          <input
-            type="text"
-            inputmode="numeric"
-            data-field-key="specialSurcharge"
-            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:outline-none"
-            [class.border-red-500]="fieldErrors.specialSurcharge"
-            [class.bg-red-50]="fieldErrors.specialSurcharge"
-            [class.border-slate-300]="!fieldErrors.specialSurcharge"
-            [class.bg-white]="!fieldErrors.specialSurcharge"
-            [value]="numeric.specialSurcharge"
-            (input)="onNumericInput('specialSurcharge', $any($event.target).value)"
-            (keydown.enter)="onEnter('specialSurcharge')"
-          />
-        </label>
-        <p *ngIf="fieldErrors.specialSurcharge" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.specialSurcharge }}</p>
-      </div>
+      <p *ngIf="error()" class="text-sm text-red-600" data-testid="error">{{ error() }}</p>
 
-      <div class="flex flex-col gap-1">
-        <label class="flex items-center gap-2 text-sm">
-          <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.defectiveUnitPriceLabel }}:</span>
-          <input
-            type="text"
-            inputmode="numeric"
-            data-field-key="defectiveUnitPrice"
-            class="w-full min-w-[100px] rounded border px-2 py-1 text-sm text-slate-800 shadow-sm focus:outline-none"
-            [class.border-red-500]="fieldErrors.defectiveUnitPrice"
-            [class.bg-red-50]="fieldErrors.defectiveUnitPrice"
-            [class.border-slate-300]="!fieldErrors.defectiveUnitPrice"
-            [class.bg-white]="!fieldErrors.defectiveUnitPrice"
-            [value]="numeric.defectiveUnitPrice"
-            (input)="onNumericInput('defectiveUnitPrice', $any($event.target).value)"
-            (keydown.enter)="onEnter('defectiveUnitPrice')"
-          />
-        </label>
-        <p *ngIf="fieldErrors.defectiveUnitPrice" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.defectiveUnitPrice }}</p>
-      </div>
-
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-48 shrink-0 font-medium text-slate-700">{{ p.specialTypeLabel }}:</span>
-        <app-combobox
-          dataFieldKey="specialType"
-          inputClass="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-          [options]="p.specialOptions"
-          [value]="specialType"
-          (valueChange)="specialType = $event"
-          (committed)="onEnter('specialType')"
-        ></app-combobox>
-      </label>
-
-      <p *ngIf="message()" class="text-sm text-green-700">{{ message() }}</p>
-      <p *ngIf="error()" class="text-sm text-red-600">{{ error() }}</p>
-
-      <div class="flex justify-end">
-        <app-button [label]="p.updateButton" variant="access" (pressed)="update()"></app-button>
+      <div class="flex justify-end gap-3">
+        <app-button [label]="p.saveButton" variant="access" (pressed)="save()"></app-button>
+        <app-button [label]="p.updateButton" variant="access" (pressed)="openList()"></app-button>
       </div>
     </section>
+
+    <section *ngIf="rows() as list" class="flex flex-col gap-2" data-testid="types">
+      <h2 class="text-sm font-semibold text-slate-700">{{ p.listTitle }}</h2>
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-600">
+          <tr>
+            <th class="py-1">{{ p.columns.specialType }}</th>
+            <th class="py-1">{{ p.columns.basePriceLoad }}</th>
+            <th class="py-1">{{ p.columns.specialSurcharge }}</th>
+            <th class="py-1">{{ p.columns.defectiveUnitPrice }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of list" class="border-t border-slate-200">
+            <td class="py-1 pr-2">{{ row.specialType }}</td>
+            <td class="py-1 pr-2">
+              <input type="text" inputmode="numeric" class="w-32 rounded border border-slate-300 px-2 py-1"
+                [value]="row.basePriceLoad" (input)="onRowInput(row, 'basePriceLoad', $any($event.target).value)" />
+            </td>
+            <td class="py-1 pr-2">
+              <input type="text" inputmode="numeric" class="w-28 rounded border border-slate-300 px-2 py-1"
+                [value]="row.specialSurcharge" (input)="onRowInput(row, 'specialSurcharge', $any($event.target).value)" />
+            </td>
+            <td class="py-1 pr-2">
+              <input type="text" inputmode="numeric" class="w-28 rounded border border-slate-300 px-2 py-1"
+                [value]="row.defectiveUnitPrice" (input)="onRowInput(row, 'defectiveUnitPrice', $any($event.target).value)" />
+            </td>
+            <td class="py-1">
+              <app-button [label]="p.rowSaveButton" variant="access" (pressed)="saveRow(row)"></app-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   </div>
+  <app-success-overlay [message]="message()"></app-success-overlay>
 </app-access-window>
