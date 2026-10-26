@@ -114,6 +114,31 @@ describe('PermissionsComponent (HU-03)', () => {
     expect(component.error()).toBe(true);
   });
 
+  it('double submit: while saving, Guardar and Retirar send only once and are disabled', () => {
+    const { fixture, component, el } = render();
+    choose(component, 5, [{ screen: 'HISTORIAL', grantedAt: '2026-10-24T09:00:00-05:00' }]);
+    component.toggle('ANULAR_DOCUMENTO', true);
+
+    component.save();
+    component.save();
+    http.expectOne(`${API_BASE_URL}/permissions`);
+    fixture.detectChanges();
+    const buttons = Array.from(el.querySelectorAll('app-button button')) as HTMLButtonElement[];
+    expect(buttons.every((b) => b.disabled)).toBe(true);
+
+    component.revoke('HISTORIAL');
+    http.expectNone(`${API_BASE_URL}/permissions/5/HISTORIAL`);
+  });
+
+  it('double submit: Retirar twice in a row removes the permission only once', () => {
+    const { component } = render();
+    choose(component, 5, [{ screen: 'HISTORIAL', grantedAt: '2026-10-24T09:00:00-05:00' }]);
+    component.revoke('HISTORIAL');
+    component.revoke('HISTORIAL');
+    http.expectOne(`${API_BASE_URL}/permissions/5/HISTORIAL`).flush(null);
+    expect(component.saving()).toBe(false);
+  });
+
   it('only the Administrator can open the route', () => {
     const shell = routes.find((r) => r.children?.some((c) => c.path === 'permisos'));
     expect(shell?.children?.find((c) => c.path === 'permisos')?.data?.['roles']).toEqual(['ADMINISTRADOR']);

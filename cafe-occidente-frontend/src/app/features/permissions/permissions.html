@@ -19,7 +19,7 @@
         </label>
       </div>
       <div>
-        <app-button [label]="p.saveButton" variant="access" (pressed)="save()"></app-button>
+        <app-button [label]="p.saveButton" variant="access" [disabled]="saving()" (pressed)="save()"></app-button>
       </div>
 
       <h2 class="font-semibold text-slate-700">{{ p.currentHeading }}</h2>
@@ -28,7 +28,7 @@
         <li *ngFor="let permission of current()" class="flex items-center gap-3">
           <span>{{ p.screens[permission.screen] }}</span>
           <span class="text-slate-500">{{ p.grantedSince }} {{ permission.grantedAt | date: 'dd/MM/yyyy HH:mm' }}</span>
-          <app-button [label]="p.revokeButton" variant="access" (pressed)="revoke(permission.screen)"></app-button>
+          <app-button [label]="p.revokeButton" variant="access" [disabled]="saving()" (pressed)="revoke(permission.screen)"></app-button>
         </li>
       </ul>
     </ng-container>
