@@ -143,6 +143,8 @@ class EndpointAuthorizationTest {
         add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", post, "/api/announcements", "/api/announcements");
         add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", post, "/api/announcements/husk", "/api/announcements/husk");
         add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", get, "/api/announcements/history", "/api/announcements/history");
+        add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", get, "/api/announcements/types", "/api/announcements/types?fundId=1");
+        add(ADMIN_OPS, "ACTUALIZAR_ANUNCIOS", post, "/api/announcements/types", "/api/announcements/types");
         add(ALL, get, "/api/funds");
         add(ADMIN_USER, get, "/api/announcements/latest", "/api/announcements/latest?fundId=1&specialType=X");
         add(ADMIN, get, "/api/agencies");
