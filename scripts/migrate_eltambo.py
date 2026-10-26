@@ -188,7 +188,6 @@ AGENCY_ALIASES = {
     "Chachagui": "CHACHAGUI",
     "Consaca": "CONSACA",
     "El Tambo": "EL TAMBO",
-    "Guaitarilla": "GUAITARILLA",
     "La Florida": "LA FLORIDA",
     "Linares": "LINARES",
     "Samaniego": "SAMANIEGO",
@@ -208,17 +207,21 @@ AGENCY_ALIASES = {
     "SOTOMAYOR": "LOS ANDES",
     "Sotomayor": "LOS ANDES",
     "LOS ANDES SOTOMAYOR": "LOS ANDES",
+    # No son puntos de compra: sus asociados se facturan como Pasto (area de compras, 2026-10-26)
+    "GUAITARILLA": "PASTO",
+    "Guaitarilla": "PASTO",
+    "Santacruz": "PASTO",
+    "POLICARPA": "PASTO",
+    "TANGUA": "PASTO",
 }
 
-# Puntos de Access que no estan entre los 20 de la semilla (V2): nombre_access -> (nombre, activa).
-# BUESACO sin numero queda inactiva hasta que el area de compras diga si es Buesaco 1 o Buesaco 2.
+# Agencias de Access que no estan entre los 20 de la semilla (V2):
+# nombre_access -> (nombre, activa, prefijo de factura sugerido para su Registro de Control).
+# Buesaco 2 es punto de compra; BUESACO (sin numero) no lo es: queda inactiva con sus asociados como en
+# Access (area de compras, 2026-10-26).
 EXTRA_AGENCIES = {
-    "BUESACO2": ("Buesaco 2", True),
-    "BUESACO": ("BUESACO sin número (pendiente)", False),
-    "GUAITARILLA": ("Guaitarilla", True),
-    "Santacruz": ("Santacruz", True),
-    "POLICARPA": ("Policarpa", True),
-    "TANGUA": ("Tangua", True),
+    "BUESACO2": ("Buesaco 2", True, "SDB2"),
+    "BUESACO": ("BUESACO", False, None),
 }
 
 
@@ -241,7 +244,7 @@ def resolve_agencies(cur, raw_values):
     for value in sorted(raw_values):
         target = canonical_access_value(value, by_access)
         if target not in by_access:
-            name, active = EXTRA_AGENCIES[target]
+            name, active, _ = EXTRA_AGENCIES[target]
             cur.execute(
                 "INSERT INTO agencias (nombre, nombre_access, activa) VALUES (%s, %s, %s) RETURNING id",
                 (name, target, active),
@@ -249,7 +252,18 @@ def resolve_agencies(cur, raw_values):
             by_access[target] = cur.fetchone()[0]
             created.append(name)
         value_to_id[value] = by_access[target]
+    insert_suggested_prefixes(cur, by_access)
     return value_to_id, created
+
+
+def insert_suggested_prefixes(cur, by_access):
+    """El prefijo sugerido de las agencias extra que son punto de compra (lo prellena su Registro de Control)."""
+    for access_value, (_, _, prefix) in EXTRA_AGENCIES.items():
+        if prefix and access_value in by_access:
+            cur.execute(
+                "INSERT INTO prefijos_sugeridos (agencia_id, prefijo) VALUES (%s, %s) ON CONFLICT (agencia_id) DO NOTHING",
+                (by_access[access_value], prefix),
+            )
 
 
 def load_growers(cur):

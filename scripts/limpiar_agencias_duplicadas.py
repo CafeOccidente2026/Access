@@ -16,7 +16,7 @@ import sys
 import psycopg2
 from dotenv import dotenv_values
 
-from migrate_eltambo import AGENCY_ALIASES, BACKEND_DIR, EXTRA_AGENCIES
+from migrate_eltambo import AGENCY_ALIASES, BACKEND_DIR, EXTRA_AGENCIES, insert_suggested_prefixes
 
 
 def other_references(cur):
@@ -58,11 +58,15 @@ def clean(cur):
         cur.execute("DELETE FROM agencias WHERE id = %s", (alias_id,))
 
     # Despues de borrar las alias: 'Guaitarilla' era el nombre de una de ellas (UNIQUE nombre).
-    for access_value, (name, active) in EXTRA_AGENCIES.items():
+    for access_value, (name, active, _) in EXTRA_AGENCIES.items():
         if access_value in by_access:
             cur.execute("UPDATE agencias SET nombre = %s, activa = %s WHERE id = %s",
                         (name, active, by_access[access_value]))
             print(f"  {access_value!r} (id {by_access[access_value]}) queda como {name!r}, activa={active}")
+
+    prefixes = count(cur, "SELECT count(*) FROM prefijos_sugeridos")
+    insert_suggested_prefixes(cur, by_access)
+    print(f"  Prefijos sugeridos nuevos: {count(cur, 'SELECT count(*) FROM prefijos_sugeridos') - prefixes}")
 
     assert count(cur, "SELECT count(*) FROM terceros") == growers, "cambio el total de terceros"
     assert not count(cur, "SELECT count(*) FROM agencias WHERE nombre_access = ANY (%s)", list(AGENCY_ALIASES)), \
