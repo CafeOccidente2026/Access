@@ -124,6 +124,8 @@ class EndpointAuthorizationTest {
         add(ADMIN, "REGISTRO_CONTROL", get, "/api/control-records/{agencyId}", "/api/control-records/1");
         add(ADMIN, "REGISTRO_CONTROL", post, "/api/control-records/{agencyId}", "/api/control-records/1");
         add(ADMIN, "REGISTRO_CONTROL", put, "/api/control-records/{agencyId}", "/api/control-records/1");
+        // Cafe verde en todas las agencias a la vez (area de compras, 2026-10-26): solo el Administrador.
+        add(ADMIN, put, "/api/control-records/green-coffee");
         add(ADMIN, get, "/api/users");
         // Historial de cambios (area de compras, 2026-10-22): el Administrador o con el permiso.
         add(ADMIN, "HISTORIAL", get, "/api/history", "/api/history");

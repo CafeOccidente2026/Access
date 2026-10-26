@@ -11,7 +11,7 @@ import { AgencyService } from '../../core/services/agency.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { ControlRecordService } from '../../core/services/control-record.service';
-import { AccessWindowComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent } from '../../shared/ui';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
 import { ControlRecordContent } from './control-record.model';
 
@@ -21,7 +21,7 @@ import { ControlRecordContent } from './control-record.model';
 @Component({
   selector: 'app-control-record',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent],
   templateUrl: './control-record.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -134,6 +134,44 @@ export class ControlRecordComponent {
         this.errorMessage.set(specific ?? this.page()?.errorMessage ?? null);
       },
     });
+  }
+
+  /** Agencias con Registro de Control activo: las que reciben el cafe verde de "Aplicar a todas". */
+  readonly agenciesWithRecord = computed(() => this.agencies().filter((agency) => agency.hasControlRecord).length);
+  readonly confirmingGreen = signal(false);
+  /** "Aplicar a todas" es solo del Administrador; con el permiso de la pantalla (RF-02) se trabaja solo la propia agencia. */
+  readonly isAdmin = this.authService.isAdmin();
+
+  /** Area de compras, 2026-10-26: los 5 valores de cafe verde a todas las agencias, previa confirmacion. */
+  askApplyGreenToAll(): void {
+    if (!this.saving()) {
+      this.confirmingGreen.set(true);
+    }
+  }
+
+  applyGreenToAll(): void {
+    this.confirmingGreen.set(false);
+    if (this.saving()) {
+      return;
+    }
+    const request = this.buildRequest();
+    this.savedMessage.set(null);
+    this.errorMessage.set(null);
+    this.saving.set(true);
+    this.controlRecordService
+      .applyGreenCoffeeToAll({
+        greenTotalStoredWeight: request.greenTotalStoredWeight,
+        greenTotalHuskWeight: request.greenTotalHuskWeight,
+        greenHealthyStoredWeight: request.greenHealthyStoredWeight,
+        greenHealthyUnitPrice: request.greenHealthyUnitPrice,
+        greenDefectiveUnitPrice: request.greenDefectiveUnitPrice,
+      })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (result) =>
+          this.savedMessage.set(this.page()?.applyGreenDone.replace('{count}', String(result.agencies)) ?? null),
+        error: (err: HttpErrorResponse) => this.errorMessage.set(err.error?.message ?? this.page()?.errorMessage ?? null),
+      });
   }
 
   private toModel(record: ControlRecordResponse): Record<string, string> {

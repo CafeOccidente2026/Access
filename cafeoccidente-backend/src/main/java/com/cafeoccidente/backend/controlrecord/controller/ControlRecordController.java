@@ -5,6 +5,8 @@ import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -60,6 +62,16 @@ public class ControlRecordController {
     @PutMapping("/{agencyId}")
     public ControlRecordResponse update(@PathVariable Long agencyId, @Valid @RequestBody ControlRecordRequest request) {
         return controlRecordService.update(allowed(agencyId), request);
+    }
+
+    /**
+     * Cafe verde en todas las agencias a la vez (area de compras, 2026-10-26). Solo el Administrador: el
+     * permiso de la pantalla (RF-02) esta limitado a la propia agencia.
+     */
+    @PutMapping("/green-coffee")
+    @PreAuthorize(Roles.ADMIN)
+    public GreenCoffeeAppliedResponse applyGreenCoffeeToAll(@Valid @RequestBody GreenCoffeeValuesRequest request) {
+        return controlRecordService.applyGreenCoffeeToAll(request);
     }
 
     /** Con el permiso de la pantalla (no Administrador), solo la propia agencia (RN-01.3). */

@@ -2,7 +2,7 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/control-record.json';
 import { FormFieldDefinition } from '../../core/models';
@@ -195,5 +195,89 @@ describe('ControlRecordComponent - double submit', () => {
     fixture.detectChanges();
     expect(button.disabled).toBe(false);
     localStorage.clear();
+  });
+});
+
+describe('ControlRecordComponent - cafe verde en todas las agencias', () => {
+  const RECORD = {
+    id: 1, agencyId: 1, agencyName: 'Buesaco 1', active: true, baseLoad: 125,
+    greenTotalStoredWeight: 140, greenTotalHuskWeight: 7.1, greenHealthyStoredWeight: 132.9,
+    greenHealthyUnitPrice: 12000, greenDefectiveUnitPrice: 6000,
+  };
+  let apply: ReturnType<typeof vi.fn>;
+
+  function setup(role: string) {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    localStorage.setItem('cafeoccidente.role', role);
+    apply = vi.fn(() => of({ agencies: 2 }));
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AgencyService,
+          useValue: { list: () => of([
+            { id: 1, name: 'Buesaco 1', hasControlRecord: true },
+            { id: 4, name: 'El Tambo', hasControlRecord: true },
+            { id: 22, name: 'Buesaco 2', hasControlRecord: false },
+          ]) },
+        },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of(RECORD), applyGreenCoffeeToAll: apply } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ControlRecordComponent);
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  afterEach(() => localStorage.clear());
+
+  it('only the Administrator sees the button', () => {
+    expect(setup('ADMINISTRADOR').el.querySelector('[data-testid="apply-green"]')).not.toBeNull();
+    TestBed.resetTestingModule();
+    expect(setup('USUARIO').el.querySelector('[data-testid="apply-green"]')).toBeNull();
+  });
+
+  it('asks before applying, with the number of agencies; cancelling sends nothing', () => {
+    const { fixture, component, el } = setup('ADMINISTRADOR');
+    (el.querySelector('[data-testid="apply-green"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Se cambiarán los 5 valores de café verde en las 2 agencias con Registro de Control.');
+
+    component.confirmingGreen.set(false);
+    fixture.detectChanges();
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it('confirming sends the 5 green coffee values of the form and says how many agencies got them', () => {
+    const { component } = setup('ADMINISTRADOR');
+    component.askApplyGreenToAll();
+    component.applyGreenToAll();
+    expect(apply).toHaveBeenCalledWith({
+      greenTotalStoredWeight: 140, greenTotalHuskWeight: 7.1, greenHealthyStoredWeight: 132.9,
+      greenHealthyUnitPrice: 12000, greenDefectiveUnitPrice: 6000,
+    });
+    expect(component.savedMessage()).toBe('Café verde aplicado a 2 agencias.');
+  });
+
+  it('double submit: while applying, a second confirmation does not send again and the buttons are disabled', () => {
+    const { fixture, component, el } = setup('ADMINISTRADOR');
+    const pending = new Subject<{ agencies: number }>();
+    apply.mockReturnValue(pending);
+
+    component.applyGreenToAll();
+    component.applyGreenToAll();
+    component.askApplyGreenToAll();
+    fixture.detectChanges();
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(component.confirmingGreen()).toBe(false);
+    expect((el.querySelector('[data-testid="apply-green"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((el.querySelector('[data-testid="save"]') as HTMLButtonElement).disabled).toBe(true);
+
+    pending.error({ error: { message: 'Datos invalidos' } });
+    expect(component.errorMessage()).toBe('Datos invalidos');
+    expect(component.saving()).toBe(false);
   });
 });
