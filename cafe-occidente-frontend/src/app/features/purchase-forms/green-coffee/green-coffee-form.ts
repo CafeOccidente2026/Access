@@ -1,7 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -17,6 +16,7 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
@@ -90,7 +90,7 @@ export class GreenCoffeeFormComponent {
   private readonly base = toSignal(this.content.loadJson<GreenCoffeeContent>('purchase-form-green'));
   readonly messages = computed<GreenCoffeeMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<GreenAnnouncementInfo | null>(null);
-  /** true mientras se guarda: print() sale y el boton Imprimir no se ofrece (una sola factura). */
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
   readonly saving = signal(false);
   readonly invoiceReservation = signal<GreenNextInvoiceNumber | null>(null);
   readonly calc = signal<GreenCoffeePurchaseCalculation | null>(null);
@@ -293,8 +293,8 @@ export class GreenCoffeeFormComponent {
 
   private buildRequest(): GreenCoffeePurchaseRequest | null {
     const info = this.announcementInfo();
-    // El numero lo asigna el servidor al guardar (HU-15); el encabezado debe estar cargado igual.
-    if (!this.invoiceReservation() || !info) {
+    const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
+    if (!invoiceNumber || !info) {
       return null;
     }
     return {
@@ -328,8 +328,7 @@ export class GreenCoffeeFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.saving.set(true);
-    this.service.create(request).pipe(finalize(() => this.saving.set(false))).subscribe({
+    saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
@@ -410,7 +409,7 @@ export class GreenCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() && !this.saving() &&
+      !!this.payment() && !this.result() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

@@ -1,7 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
@@ -21,6 +20,7 @@ import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
@@ -96,7 +96,7 @@ export class HuskFormComponent {
   private readonly base = toSignal(this.content.loadJson<HuskContent>('purchase-form-husk'));
   readonly messages = computed<HuskMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<HuskAnnouncementInfo | null>(null);
-  /** true mientras se guarda: print() sale y el boton Imprimir no se ofrece (una sola factura). */
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
   readonly saving = signal(false);
   readonly invoiceReservation = signal<HuskNextInvoiceNumber | null>(null);
   readonly calc = signal<HuskPurchaseCalculation | null>(null);
@@ -299,8 +299,8 @@ export class HuskFormComponent {
 
   private buildRequest(): HuskPurchaseRequest | null {
     const info = this.announcementInfo();
-    // El numero lo asigna el servidor al guardar (HU-15); el encabezado debe estar cargado igual.
-    if (!this.invoiceReservation() || !info) {
+    const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
+    if (!invoiceNumber || !info) {
       return null;
     }
     return {
@@ -332,8 +332,7 @@ export class HuskFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.saving.set(true);
-    this.service.create(request).pipe(finalize(() => this.saving.set(false))).subscribe({
+    saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
@@ -422,7 +421,7 @@ export class HuskFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() && !this.saving() &&
+      !!this.payment() && !this.result() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

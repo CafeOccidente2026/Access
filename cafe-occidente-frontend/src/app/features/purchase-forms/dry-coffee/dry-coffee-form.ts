@@ -1,7 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
@@ -21,6 +20,7 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
 
@@ -102,7 +102,7 @@ export class DryCoffeeFormComponent {
   readonly messages = computed<DryCoffeeMessages | undefined>(() => this.base()?.messages);
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
-  /** true mientras se guarda: print() sale y el boton Imprimir no se ofrece (una sola factura). */
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
   readonly saving = signal(false);
   readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
   readonly qualityCalc = signal<QualityPercentages>({
@@ -411,13 +411,13 @@ export class DryCoffeeFormComponent {
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     // Sin este chequeo, recalculate() dispara un preview cada vez que se confirma un peso (para que
     // Kilos Netos/Vr. Kilo nunca queden obsoletos, ver runSideEffects) - pero a mitad de captura,
     // con healthyStoredWeight todavia en 0, el backend rechaza el calculo (no se puede dividir por
     // almendra sana = 0) y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    // El numero lo asigna el servidor al guardar (HU-15); el encabezado debe estar cargado igual.
-    if (!fundId || !this.invoiceReservation() || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
@@ -455,8 +455,7 @@ export class DryCoffeeFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.saving.set(true);
-    this.service.create(request).pipe(finalize(() => this.saving.set(false))).subscribe({
+    saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
@@ -545,7 +544,7 @@ export class DryCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() && !this.saving() &&
+      !!this.payment() && !this.result() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
