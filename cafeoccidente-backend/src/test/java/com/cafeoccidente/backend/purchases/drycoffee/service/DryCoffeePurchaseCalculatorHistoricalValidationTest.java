@@ -1,12 +1,15 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
+import com.cafeoccidente.backend.purchases.shared.service.SpecialtyThresholdRule;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.entity.Announcement;
@@ -24,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,6 +72,18 @@ import org.springframework.boot.test.context.SpringBootTest;
  *   <li>Filas con {@code forma_de_pago = ANULADA} ya fueron excluidas por el script de migracion,
  *       no llegan a estar en {@code dry_coffee_purchase}.</li>
  * </ul>
+ *
+ * <p><b>Lista de excepciones (fase 6c):</b> filas que una regla nueva del area de compras cambia a
+ * proposito frente a Access. No entran al porcentaje; cada una verifica que la diferencia es la
+ * esperada y el conteo por motivo queda fijado en {@link #EXPECTED_EXCEPTIONS}:
+ * <ul>
+ *   <li><b>Q2</b> (pesos que no suman): Access acepto Peso Tot Alm distinto de Pasilla + Alm Sana; ahora
+ *       Alm Sana = Tot - Pasilla, asi que la Alm Sana (y el Factor) recalculados cambian.</li>
+ *   <li><b>Q15</b> (umbral de especiales, no existia en Access): NESPRESSO con Factor mayor que el umbral
+ *       del Registro de Control; hoy se rechazarian.</li>
+ * </ul>
+ * Castigo (Q1), retencion conjunta (Q10) y decimales (Q3) no dejan excepciones: en El Tambo el castigo
+ * siempre es 0, solo hay cafe seco y el guardado no cambio.
  */
 @SpringBootTest
 class DryCoffeePurchaseCalculatorHistoricalValidationTest {
@@ -83,6 +99,11 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
      *  (42.72%/35.20%, de un script no reproducible). Subir este piso si una mejora real lo supera
      *  con margen, nunca bajarlo para que un cambio que empeora las cosas pase el test. */
     private static final double MINIMUM_ALL_FIELDS_MATCH_PERCENTAGE = 35.0;
+
+    private static final String Q2 = "Q2 pesos que no suman";
+    private static final String Q15 = "Q15 umbral de especiales";
+    /** Conteo de la lista de excepciones (ver Javadoc). Si cambia, algo cambio en la regla o en los datos. */
+    private static final Map<String, Integer> EXPECTED_EXCEPTIONS = Map.of(Q2, 6, Q15, 76);
 
     @Autowired
     private DryCoffeePurchaseCalculator calculator;
@@ -122,6 +143,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
         int netToPayMatch = 0;
         int calculationErrors = 0;
         Map<String, Integer> mismatchesByField = new HashMap<>();
+        Map<String, Integer> exceptionsByReason = new TreeMap<>();
 
         for (DryCoffeePurchase historical : historicalPurchases) {
             ControlRecord controlRecord = controlRecordByAgencyId.computeIfAbsent(
@@ -149,6 +171,11 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                         .add(new DailyEntry(purchaseDate, historical.getGrossValue(), historical.getWithholding()));
             }
 
+            List<String> reasons = exceptionReasons(historical, recalculated, controlRecord);
+            if (!reasons.isEmpty()) {
+                reasons.forEach(reason -> exceptionsByReason.merge(reason, 1, Integer::sum));
+                continue;
+            }
             rowsCompared++;
             List<String> mismatches = fieldMismatches(historical, recalculated);
             if (mismatches.isEmpty()) {
@@ -172,15 +199,40 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 allFieldsPct, allFieldsMatch, rowsCompared);
         System.out.printf("Coincidencia exacta solo Neto a Pagar: %.2f%% (%d/%d)%n",
                 netToPayPct, netToPayMatch, rowsCompared);
+        System.out.println("Excepciones por regla nueva (no entran al porcentaje):");
+        exceptionsByReason.forEach((reason, count) -> System.out.printf("  %-26s %d%n", reason, count));
         System.out.println("Filas que fallaron cada campo (una fila puede fallar mas de uno):");
         mismatchesByField.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .forEach(e -> System.out.printf("  %-24s %d%n", e.getKey(), e.getValue()));
 
+        assertThat(exceptionsByReason).as("Lista de excepciones de El Tambo").isEqualTo(EXPECTED_EXCEPTIONS);
         assertThat(allFieldsPct)
                 .as("Piso de regresion historica (ver Javadoc de esta clase) - si esto baja, algo "
                         + "empeoro la precision de la cascada de Cafe Seco frente a Access")
                 .isGreaterThanOrEqualTo(MINIMUM_ALL_FIELDS_MATCH_PERCENTAGE);
+    }
+
+    /** Motivos por los que esta fila es una excepcion (vacio si no lo es); cada motivo verifica su diferencia. */
+    private static List<String> exceptionReasons(
+            DryCoffeePurchase historical, DryCoffeePurchaseCalculation recalculated, ControlRecord controlRecord) {
+        List<String> reasons = new ArrayList<>();
+        BigDecimal typedSum = historical.getDefectiveStoredWeight().add(historical.getHealthyStoredWeight());
+        if (historical.getTotalStoredWeight().compareTo(typedSum) != 0) {
+            assertThat(recalculated.healthyStoredWeight())
+                    .isEqualByComparingTo(historical.getTotalStoredWeight().subtract(historical.getDefectiveStoredWeight()))
+                    .isNotEqualByComparingTo(historical.getHealthyStoredWeight());
+            reasons.add(Q2);
+        }
+        BigDecimal threshold = controlRecord.getSpecialtyThreshold();
+        if (historical.getProductCode().isAppliesSpecialtyThreshold()
+                && recalculated.healthyPercentage().compareTo(threshold) > 0) {
+            assertThatThrownBy(() -> SpecialtyThresholdRule.check(true, recalculated.healthyPercentage(), threshold))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .extracting("code").isEqualTo(SpecialtyThresholdRule.CODE);
+            reasons.add(Q15);
+        }
+        return reasons;
     }
 
     private Announcement findHistoricalAnnouncement(DryCoffeePurchase historical) {
