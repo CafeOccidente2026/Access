@@ -35,20 +35,15 @@ export interface GreenCoffeePurchaseCalculation {
 }
 
 /** Campos de entrada manual del formulario Compras Cafe Verde (VERDES). */
+/** Solo lo que digita el cajero: precios, costos, factura y vendedor los pone el servidor (6b). */
 export interface GreenCoffeePurchaseRequest {
   readonly fundId: number;
   readonly idNumber: string;
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly growerType: string;
   readonly address: string;
   readonly cellphone: string;
   readonly bagsCount: number;
   readonly grossKg: number;
   readonly tareKg: number;
-  readonly healthyUnitPrice: number;
-  readonly bonus: number;
-  readonly costs: number;
   readonly penalty: number;
   readonly compKgPrice: number;
   readonly shrinkageDiscount: number;

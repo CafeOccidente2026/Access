@@ -420,14 +420,10 @@ export class DryCoffeeFormComponent {
     if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
-    const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
       fundId,
       specialType: this.model['special'],
       idNumber: this.model['idPart1'],
-      firstName,
-      lastName,
-      growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'],
       cellphone: this.model['cellphone'],
       bagsCount: num(this.model['bags']),
@@ -436,10 +432,7 @@ export class DryCoffeeFormComponent {
       totalStoredWeight: num(this.model['totalStoredWeight']),
       defectiveStoredWeight: num(this.model['totalHuskWeight']),
       healthyStoredWeight: num(this.model['healthyStoredWeight']),
-      healthyUnitPrice: this.specialInfo()?.healthyUnitPrice ?? 0,
-      bonus: this.specialInfo()?.bonus ?? 0,
       penalty: num(this.model['penalty']),
-      costs: this.specialInfo()?.costs ?? 0,
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
@@ -551,18 +544,6 @@ export class DryCoffeeFormComponent {
       this.locked.has('otherDiscounts') &&
       REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '')
     );
-  }
-
-  private splitName(full: string): [string, string] {
-    const parts = full.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) {
-      return ['', ''];
-    }
-    if (parts.length === 1) {
-      return [parts[0], parts[0]];
-    }
-    const mid = Math.ceil(parts.length / 2);
-    return [parts.slice(0, mid).join(' '), parts.slice(mid).join(' ')];
   }
 
   private buildContent(base: DryCoffeeContent): PurchaseFormContent {

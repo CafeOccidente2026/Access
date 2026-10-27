@@ -93,13 +93,11 @@ export interface DryCoffeePurchaseCalculation {
 }
 
 /** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: lo trae el anuncio). */
+/** Solo lo que digita el cajero: precios, costos, factura y vendedor los pone el servidor (6b). */
 export interface DryCoffeePurchaseRequest {
   readonly fundId: number;
   readonly specialType: string;
   readonly idNumber: string;
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly growerType: string;
   readonly address: string;
   readonly cellphone: string;
   readonly bagsCount: number;
@@ -108,10 +106,7 @@ export interface DryCoffeePurchaseRequest {
   readonly totalStoredWeight: number;
   readonly defectiveStoredWeight: number;
   readonly healthyStoredWeight: number;
-  readonly healthyUnitPrice: number;
-  readonly bonus: number;
   readonly penalty: number;
-  readonly costs: number;
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
   /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
