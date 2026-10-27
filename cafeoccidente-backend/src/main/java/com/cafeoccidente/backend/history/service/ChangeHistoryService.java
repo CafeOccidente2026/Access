@@ -11,7 +11,7 @@ import java.util.Map;
 public interface ChangeHistoryService {
 
     /** Entidades que se registran (ck_historial_cambios_entidad). */
-    enum Entity { REGISTRO_CONTROL, ANUNCIO, USUARIO, AGENCIA, PERMISO }
+    enum Entity { REGISTRO_CONTROL, ANUNCIO, USUARIO, AGENCIA, PERMISO, TERCERO }
 
     /** Acciones que se registran (ck_historial_cambios_accion). */
     enum Action { CREAR, MODIFICAR, REASIGNAR, ACTIVAR, DESACTIVAR, PUBLICAR, CONCEDER, RETIRAR }
