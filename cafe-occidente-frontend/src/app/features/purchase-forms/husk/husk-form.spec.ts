@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { HuskFormComponent } from './husk-form';
@@ -13,7 +13,7 @@ import { PurchaseFormContent } from '../../../core/models/purchase-form-content.
 
 /**
  * Husk (Pasilla) usa un gate distinto al de Café Seco: buildRequest() no exige los campos REQUIRED
- * (solo agencyId/invoiceNumber/announcementInfo, que ya estan listos desde el constructor) - el
+ * (solo agencyId/invoiceReservation/announcementInfo, que ya estan listos desde el constructor) - el
  * REQUIRED array solo gatea canPrint(). Igual comparte el mismo mecanismo de auto-lock en
  * lookupGrower() donde vivia el bug del celular bloqueado (ver dry-coffee-form.spec.ts).
  */
@@ -78,6 +78,7 @@ describe('HuskFormComponent - gates de captura', () => {
   };
 
   let previewSpy: ReturnType<typeof vi.fn>;
+  let createSpy: ReturnType<typeof vi.fn>;
   let component: HuskFormComponent;
 
   function setup(grower: Grower) {
@@ -86,7 +87,7 @@ describe('HuskFormComponent - gates de captura', () => {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
       announcementInfo: () => of(announcementInfo),
       preview: previewSpy,
-      create: vi.fn(() => of({})),
+      create: (createSpy = vi.fn(() => of({}))),
     };
     const fakeGrowerService = { findByIdNumber: vi.fn(() => of(grower)) };
 
@@ -176,5 +177,26 @@ describe('HuskFormComponent - gates de captura', () => {
     expect(component.blockedByDeceased()).toBe(true);
     expect(component.errorMessage()).toBe(content.messages['deceasedBlocked']);
     expect((component as any).canPrint()).toBe(false);
+  });
+
+  it('HU-15: two clicks on Imprimir create a single purchase, without sending the invoice number', () => {
+    setup(growerWithPhone);
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const pending = new Subject<never>();
+    createSpy.mockReturnValue(pending);
+
+    component.print();
+    component.print();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    // El numero lo asigna el servidor al guardar; el encabezado solo lo muestra.
+    expect(createSpy.mock.calls[0][0]).not.toHaveProperty('invoiceNumber');
+    expect(component.saving()).toBe(true);
+
+    pending.error(new Error('fallo'));
+    expect(component.saving()).toBe(false);
   });
 });

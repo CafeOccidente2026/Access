@@ -3,7 +3,7 @@ package com.cafeoccidente.backend.purchases.greencoffee.service;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.greencoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 
 public interface GreenCoffeePurchaseService {
     GreenCoffeePurchaseResponse create(GreenCoffeePurchaseRequest request);

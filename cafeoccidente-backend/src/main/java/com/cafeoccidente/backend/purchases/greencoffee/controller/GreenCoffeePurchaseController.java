@@ -4,7 +4,7 @@ import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.greencoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import jakarta.validation.Valid;

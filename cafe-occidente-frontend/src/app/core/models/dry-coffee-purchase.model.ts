@@ -62,7 +62,7 @@ export interface SpecialInfo {
   readonly costs: number;
 }
 
-/** Siguiente factura a reservar al confirmar "Fondo" (paso 3). */
+/** Proxima factura del punto, solo para mostrarla: la asigna el servidor al guardar (HU-15). */
 export interface NextInvoiceNumber {
   readonly invoiceNumber: number;
   readonly prefix: string;
@@ -95,7 +95,6 @@ export interface DryCoffeePurchaseCalculation {
 /** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: lo trae el anuncio). */
 export interface DryCoffeePurchaseRequest {
   readonly fundId: number;
-  readonly invoiceNumber: number;
   readonly specialType: string;
   readonly idNumber: string;
   readonly firstName: string;

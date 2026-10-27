@@ -28,7 +28,7 @@ class HuskPurchaseCalculatorTest {
 
     private HuskPurchaseRequest request(String growerType, boolean withholdingExempt) {
         return new HuskPurchaseRequest(
-                1L, 27867, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                1L, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("8908"), new BigDecimal("692"),
                 withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, null);
@@ -119,7 +119,7 @@ class HuskPurchaseCalculatorTest {
     @Test
     void negativePointPriceIsRejected() {
         HuskPurchaseRequest negative = new HuskPurchaseRequest(
-                1L, 27867, "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
+                1L, "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
                 new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("-100"), new BigDecimal("692"),
                 false, BigDecimal.ZERO, BigDecimal.ZERO, null);

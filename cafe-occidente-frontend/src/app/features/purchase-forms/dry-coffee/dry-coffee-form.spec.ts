@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DryCoffeeFormComponent } from './dry-coffee-form';
@@ -71,6 +71,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   };
 
   let previewSpy: ReturnType<typeof vi.fn>;
+  let createSpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
 
   function setup(grower: Grower) {
@@ -91,7 +92,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
         }),
       qualityPercentages: () => of({ wastePercentage: 12, defectivePercentage: 8, healthyPercentage: 90.9 }),
       preview: previewSpy,
-      create: vi.fn(() => of({})),
+      create: (createSpy = vi.fn(() => of({}))),
     };
     const fakeGrowerService = {
       findByIdNumber: vi.fn(() => of(grower)),
@@ -207,5 +208,29 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     expect(component.blockedByDeceased()).toBe(true);
     expect(component.errorMessage()).toBe(content.messages['deceasedBlocked']);
     expect(component.model['cellphone']).toBeUndefined();
+  });
+
+  it('HU-15: two clicks on Imprimir create a single purchase, without sending the invoice number', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const pending = new Subject<never>();
+    createSpy.mockReturnValue(pending);
+
+    component.print();
+    component.print();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    // El numero lo asigna el servidor al guardar; el encabezado solo lo muestra.
+    expect(createSpy.mock.calls[0][0]).not.toHaveProperty('invoiceNumber');
+    expect(component.saving()).toBe(true);
+
+    pending.error(new Error('fallo'));
+    expect(component.saving()).toBe(false);
   });
 });

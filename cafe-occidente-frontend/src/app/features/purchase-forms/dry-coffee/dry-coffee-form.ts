@@ -20,6 +20,7 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
 
@@ -101,6 +102,8 @@ export class DryCoffeeFormComponent {
   readonly messages = computed<DryCoffeeMessages | undefined>(() => this.base()?.messages);
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
+  readonly saving = signal(false);
   readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
   readonly qualityCalc = signal<QualityPercentages>({
     wastePercentage: null,
@@ -420,7 +423,6 @@ export class DryCoffeeFormComponent {
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
       fundId,
-      invoiceNumber,
       specialType: this.model['special'],
       idNumber: this.model['idPart1'],
       firstName,
@@ -453,7 +455,7 @@ export class DryCoffeeFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.service.create(request).subscribe({
+    saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);

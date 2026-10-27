@@ -35,7 +35,7 @@ class DryCoffeePurchaseCalculatorTest {
 
     private DryCoffeePurchaseRequest request(String growerType, boolean withholdingExempt) {
         return new DryCoffeePurchaseRequest(
-                1L, 27867, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                1L, "RN", "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
@@ -65,7 +65,7 @@ class DryCoffeePurchaseCalculatorTest {
         ControlRecord controlRecordWithChangedCosts = controlRecord();
         controlRecordWithChangedCosts.setCosts(new BigDecimal("692.00"));
         DryCoffeePurchaseRequest requestWithFrozenAnnouncementCosts = new DryCoffeePurchaseRequest(
-                1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
+                1L, "RN", "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),
@@ -99,7 +99,7 @@ class DryCoffeePurchaseCalculatorTest {
         // Kilos_Netos con decimales (1250.3 - 50 = 1200.3): Vr_Bruto es DecimalPlaces=0 en
         // COMPRAS.txt -> Access lo muestra/guarda entero, no 2.233.473,6.
         DryCoffeePurchaseRequest fractionalKg = new DryCoffeePurchaseRequest(
-                1L, 27867, "RN", "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
+                1L, "RN", "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
                 10, new BigDecimal("1250.3"), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
                 new BigDecimal("12000"),

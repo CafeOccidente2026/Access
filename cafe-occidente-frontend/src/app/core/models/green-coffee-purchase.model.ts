@@ -13,7 +13,7 @@ export interface GreenAnnouncementInfo {
   readonly costs: number;
 }
 
-/** Factura: "Para asignar # factura verdes" (siguiente consecutivo propio de VERDES). */
+/** Proxima factura del punto (Q7: consecutivo compartido con seco y pasilla); la asigna el servidor al guardar. */
 export interface GreenNextInvoiceNumber {
   readonly invoiceNumber: number;
   readonly prefix: string;
@@ -37,7 +37,6 @@ export interface GreenCoffeePurchaseCalculation {
 /** Campos de entrada manual del formulario Compras Cafe Verde (VERDES). */
 export interface GreenCoffeePurchaseRequest {
   readonly fundId: number;
-  readonly invoiceNumber: number;
   readonly idNumber: string;
   readonly firstName: string;
   readonly lastName: string;

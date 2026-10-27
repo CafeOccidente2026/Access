@@ -16,6 +16,7 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
@@ -89,6 +90,8 @@ export class GreenCoffeeFormComponent {
   private readonly base = toSignal(this.content.loadJson<GreenCoffeeContent>('purchase-form-green'));
   readonly messages = computed<GreenCoffeeMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<GreenAnnouncementInfo | null>(null);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
+  readonly saving = signal(false);
   readonly invoiceReservation = signal<GreenNextInvoiceNumber | null>(null);
   readonly calc = signal<GreenCoffeePurchaseCalculation | null>(null);
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
@@ -296,7 +299,6 @@ export class GreenCoffeeFormComponent {
     }
     return {
       fundId: info.fundId,
-      invoiceNumber,
       idNumber: this.model['idPart1'],
       firstName: this.model['firstName'] ?? '',
       lastName: this.model['lastName'] ?? '',
@@ -326,7 +328,7 @@ export class GreenCoffeeFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.service.create(request).subscribe({
+    saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
