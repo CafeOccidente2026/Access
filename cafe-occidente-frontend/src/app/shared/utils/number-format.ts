@@ -9,8 +9,19 @@ export function formatDisplayNumber(value: string | number, decimals: 'currency'
     return typeof value === 'string' ? value : '';
   }
   return decimals === 'currency'
-    ? num.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? truncateToCents(num).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : num.toLocaleString('es-CO');
+}
+
+/**
+ * Q3: en pantalla los calculados van con 2 decimales SIN redondear, cortando hacia cero
+ * (92,118 -> 92,11; -235,569 -> -235,56). Se corta sobre el texto, no con Math.trunc(x * 100), para
+ * que errores de coma flotante (1,005 * 100 = 100,49999...) no quiten un centavo.
+ */
+function truncateToCents(num: number): number {
+  const [whole, fraction = ''] = Math.abs(num).toFixed(12).split('.');
+  const cut = Number(`${whole}.${fraction.slice(0, 2)}`);
+  return num < 0 && cut !== 0 ? -cut : cut;
 }
 
 function normalizeDecimalComma(value: string): string {

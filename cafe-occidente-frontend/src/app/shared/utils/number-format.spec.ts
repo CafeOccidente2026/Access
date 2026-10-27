@@ -38,6 +38,16 @@ describe('formatDisplayNumber', () => {
     expect(formatDisplayNumber(1113500, 'currency')).toBe('1.113.500,00');
   });
 
+  it('Q3: truncates calculated values to 2 decimals instead of rounding', () => {
+    expect(formatDisplayNumber(92.118, 'currency')).toBe('92,11');
+    expect(formatDisplayNumber(-235.569, 'currency')).toBe('-235,56');
+    expect(formatDisplayNumber(1.005, 'currency')).toBe('1,00');
+    expect(formatDisplayNumber(94.0001, 'currency')).toBe('94,00');
+    expect(formatDisplayNumber(0.009, 'currency')).toBe('0,00');
+    expect(formatDisplayNumber(-0.004, 'currency')).toBe('0,00');
+    expect(formatDisplayNumber('12,999', 'currency')).toBe('12,99');
+  });
+
   it('formats count without forcing decimals', () => {
     expect(formatDisplayNumber(1250, 'count')).toBe('1.250');
   });
