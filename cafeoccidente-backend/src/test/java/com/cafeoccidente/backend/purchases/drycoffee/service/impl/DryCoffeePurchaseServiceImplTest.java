@@ -15,13 +15,11 @@ import com.cafeoccidente.backend.purchases.drycoffee.mapper.DryCoffeePurchaseMap
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
-import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
-import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -34,10 +32,10 @@ class DryCoffeePurchaseServiceImplTest {
 
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class);
     private final DryCoffeePurchaseServiceImpl service = new DryCoffeePurchaseServiceImpl(
-            repository, mock(AgencyRepository.class), mock(FundRepository.class), mock(ProductCodeResolver.class),
+            repository, mock(ProductCodeResolver.class),
             mock(AnnouncementService.class), controlRecordService, new DryCoffeePurchaseCalculator(),
             new DryCoffeePurchaseMapper(), securityUtils, currentAgencyProvider, mock(GrowerService.class),
-            mock(PurchaseSellerService.class),
+            mock(PurchaseContextService.class),
             mock(InvoiceConsecutiveService.class), mock(InventoryMovementService.class),
             mock(PurchasePaymentService.class));
 

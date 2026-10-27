@@ -3,7 +3,6 @@ package com.cafeoccidente.backend.purchases.husk.service.impl;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
-import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
@@ -20,17 +19,16 @@ import com.cafeoccidente.backend.purchases.husk.repository.MonthlyGrowerTotals;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseCalculation;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseCalculator;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
-import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
-import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -45,7 +43,6 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private static final String FUND_CODE = "RP";
 
     private final HuskPurchaseRepository huskPurchaseRepository;
-    private final AgencyRepository agencyRepository;
     private final FundRepository fundRepository;
     private final ProductCodeResolver productCodeResolver;
     private final AnnouncementService announcementService;
@@ -55,14 +52,13 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
-    private final PurchaseSellerService purchaseSellerService;
+    private final PurchaseContextService purchaseContextService;
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
 
     public HuskPurchaseServiceImpl(
             HuskPurchaseRepository huskPurchaseRepository,
-            AgencyRepository agencyRepository,
             FundRepository fundRepository,
             ProductCodeResolver productCodeResolver,
             AnnouncementService announcementService,
@@ -71,12 +67,11 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             HuskPurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
-            PurchaseSellerService purchaseSellerService,
+            PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
         this.huskPurchaseRepository = huskPurchaseRepository;
-        this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
         this.announcementService = announcementService;
@@ -86,7 +81,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
-        this.purchaseSellerService = purchaseSellerService;
+        this.purchaseContextService = purchaseContextService;
         this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
@@ -95,27 +90,23 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     @Override
     @Transactional
     public HuskPurchaseResponse create(HuskPurchaseRequest request) {
-        // Q8: el vendedor sale de TERCEROS; lo digitado solo completa direccion o celular vacios.
-        PurchaseSeller seller = purchaseSellerService.resolveAndComplete(
-                request.idNumber(), request.address(), request.cellphone());
-        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
-        Fund fund = fundRepository.findById(request.fundId())
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
-        ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
-        AnnouncementResponse announcement = announcementService.findLatest(agency.getId(), fund.getId(), SPECIAL_TYPE);
-        HuskPurchaseCalculation calculation = runCalculation(request, announcement, seller);
+        // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
+        PurchaseContext context = purchaseContextService.forSave(
+                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+        AnnouncementResponse announcement = context.announcement();
+        PurchaseSeller seller = context.seller();
+        HuskPurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
         HuskPurchase purchase = new HuskPurchase();
         purchase.setPurchaseDate(LocalDate.now());
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
-        purchase.setInvoiceNumber(invoiceConsecutiveService.take(agency.getId(), controlRecordService.getActive(agency.getId())));
-        purchase.setAgency(agency);
-        purchase.setFund(fund);
+        purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
+        purchase.setAgency(context.agency());
+        purchase.setFund(context.fund());
         purchase.setSpecialType(SPECIAL_TYPE);
-        purchase.setProductCode(productCode);
+        purchase.setProductCode(context.productCode());
         purchase.setAnnouncementNumber(announcement.announcementNumber());
         purchase.setAnnouncementDate(announcement.announcementDate());
         purchase.setBasePriceDryLoad(announcement.basePriceLoad());
@@ -155,11 +146,12 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
 
         inventoryMovementService.recordFromPurchaseSafely(
                 InventoryMovement.PurchaseModule.HUSK, savedPurchase.getId(),
-                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
+                purchase.getInvoiceNumber(),
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 purchase.getAlmondPercentage(), purchase.getInventoryValue());
 
-        return mapper.toResponse(savedPurchase, controlRecordService.getActive(agency.getId()));
+        return mapper.toResponse(savedPurchase, context.controlRecord());
     }
 
     @Override
@@ -171,22 +163,18 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
 
     @Override
     public HuskPurchaseCalculation preview(HuskPurchaseRequest request) {
-        PurchaseSeller seller = purchaseSellerService.resolve(request.idNumber(), request.address(), request.cellphone());
-        AnnouncementResponse announcement =
-                announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), SPECIAL_TYPE);
-        return runCalculation(request, announcement, seller);
+        return runCalculation(request, purchaseContextService.forPreview(
+                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone()));
     }
 
-    private HuskPurchaseCalculation runCalculation(
-            HuskPurchaseRequest request, AnnouncementResponse announcement, PurchaseSeller seller) {
-        ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
-
+    private HuskPurchaseCalculation runCalculation(HuskPurchaseRequest request, PurchaseContext context) {
         MonthlyGrowerTotals dailyTotals = huskPurchaseRepository.sumDailyTotalsByIdNumber(
                 request.idNumber(), LocalDate.now());
 
         HuskPurchaseCalculation calculation =
                 calculator.calculate(
-                request, controlRecord, announcement, seller, dailyTotals.grossValue(), dailyTotals.withholding());
+                request, context.controlRecord(), context.announcement(), context.seller(),
+                dailyTotals.grossValue(), dailyTotals.withholding());
         // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("PASILLA") nunca matchea
         // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
         growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());
