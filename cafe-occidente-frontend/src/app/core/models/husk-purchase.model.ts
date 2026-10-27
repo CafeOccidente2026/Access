@@ -11,7 +11,7 @@ export interface HuskAnnouncementInfo {
   readonly costs: number;
 }
 
-/** Factura: "Para asignar # factura pasilla" (siguiente consecutivo propio de PASILLA). */
+/** Proxima factura del punto (Q7: consecutivo compartido con seco y verde); la asigna el servidor al guardar. */
 export interface HuskNextInvoiceNumber {
   readonly invoiceNumber: number;
   readonly prefix: string;
@@ -34,7 +34,6 @@ export interface HuskPurchaseCalculation {
 /** Campos de entrada manual del formulario Compra Pasilla (PASILLA). */
 export interface HuskPurchaseRequest {
   readonly fundId: number;
-  readonly invoiceNumber: number;
   readonly idNumber: string;
   readonly firstName: string;
   readonly lastName: string;

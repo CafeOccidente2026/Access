@@ -1,6 +1,7 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
@@ -95,6 +96,8 @@ export class HuskFormComponent {
   private readonly base = toSignal(this.content.loadJson<HuskContent>('purchase-form-husk'));
   readonly messages = computed<HuskMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<HuskAnnouncementInfo | null>(null);
+  /** true mientras se guarda: print() sale y el boton Imprimir no se ofrece (una sola factura). */
+  readonly saving = signal(false);
   readonly invoiceReservation = signal<HuskNextInvoiceNumber | null>(null);
   readonly calc = signal<HuskPurchaseCalculation | null>(null);
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
@@ -296,13 +299,12 @@ export class HuskFormComponent {
 
   private buildRequest(): HuskPurchaseRequest | null {
     const info = this.announcementInfo();
-    const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!invoiceNumber || !info) {
+    // El numero lo asigna el servidor al guardar (HU-15); el encabezado debe estar cargado igual.
+    if (!this.invoiceReservation() || !info) {
       return null;
     }
     return {
       fundId: info.fundId,
-      invoiceNumber,
       idNumber: this.model['idPart1'],
       firstName: this.model['firstName'] ?? '',
       lastName: this.model['lastName'] ?? '',
@@ -330,7 +332,8 @@ export class HuskFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.service.create(request).subscribe({
+    this.saving.set(true);
+    this.service.create(request).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
@@ -419,7 +422,7 @@ export class HuskFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() &&
+      !!this.payment() && !this.result() && !this.saving() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&

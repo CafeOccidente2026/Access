@@ -278,7 +278,6 @@ export class QuotaBillingFormComponent {
     }
     return {
       fundId,
-      invoiceNumber,
       specialType: this.model['special'],
       idNumber: this.model['idPart1'],
       firstName: this.model['firstNames'] ?? '',

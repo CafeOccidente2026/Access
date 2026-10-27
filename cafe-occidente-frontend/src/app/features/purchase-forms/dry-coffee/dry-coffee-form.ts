@@ -1,6 +1,7 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
@@ -101,6 +102,8 @@ export class DryCoffeeFormComponent {
   readonly messages = computed<DryCoffeeMessages | undefined>(() => this.base()?.messages);
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
+  /** true mientras se guarda: print() sale y el boton Imprimir no se ofrece (una sola factura). */
+  readonly saving = signal(false);
   readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
   readonly qualityCalc = signal<QualityPercentages>({
     wastePercentage: null,
@@ -408,19 +411,18 @@ export class DryCoffeeFormComponent {
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
-    const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     // Sin este chequeo, recalculate() dispara un preview cada vez que se confirma un peso (para que
     // Kilos Netos/Vr. Kilo nunca queden obsoletos, ver runSideEffects) - pero a mitad de captura,
     // con healthyStoredWeight todavia en 0, el backend rechaza el calculo (no se puede dividir por
     // almendra sana = 0) y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    // El numero lo asigna el servidor al guardar (HU-15); el encabezado debe estar cargado igual.
+    if (!fundId || !this.invoiceReservation() || !hasRequiredCascadeInputs) {
       return null;
     }
     const [firstName, lastName] = this.splitName(this.model['fullName'] ?? '');
     return {
       fundId,
-      invoiceNumber,
       specialType: this.model['special'],
       idNumber: this.model['idPart1'],
       firstName,
@@ -453,7 +455,8 @@ export class DryCoffeeFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    this.service.create(request).subscribe({
+    this.saving.set(true);
+    this.service.create(request).pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (res) => {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
@@ -542,7 +545,7 @@ export class DryCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() &&
+      !!this.payment() && !this.result() && !this.saving() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
