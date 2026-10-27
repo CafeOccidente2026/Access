@@ -3,6 +3,8 @@ package com.cafeoccidente.backend.purchases.husk.service;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -22,6 +24,9 @@ public class HuskPurchaseCalculator {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     /**
+     * @param announcement anuncio de pasilla vigente (lo resuelve el servidor): Pr Punto
+     *     (healthyUnitPrice) y Costos - nunca los del navegador
+     * @param seller vendedor desde TERCEROS (tipo S/C/F y si es asociacion)
      * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado en PASILLA para esta cedula
      *     en el dia de la compra (Texto105 / macro CalculoReteFteMesPas)
      * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada en PASILLA a esta cedula en
@@ -30,13 +35,15 @@ public class HuskPurchaseCalculator {
     public HuskPurchaseCalculation calculate(
             HuskPurchaseRequest request,
             ControlRecord controlRecord,
+            AnnouncementResponse announcement,
+            PurchaseSeller seller,
             BigDecimal dailyAccumulatedGrossValue,
             BigDecimal dailyAccumulatedWithholding) {
         // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
         // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
         // directo (sin pasar por el bloqueo del frontend) para facturarle Pasilla a un caficultor
         // fallecido.
-        if ("F".equalsIgnoreCase(request.growerType())) {
+        if ("F".equalsIgnoreCase(seller.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
 
@@ -55,7 +62,7 @@ public class HuskPurchaseCalculator {
         // Pr Sustentacion en Pasilla = Pr_AlmSana (Punto de Compra) tal cual, sin formula propia
         // (ver docs/informe-auditoria-completa-2026-09-22.md seccion 2) - se valida igual porque
         // alimenta Vr_Kilo mas abajo.
-        MoneyValidation.requireNonNegative(request.pointPrice(), "Pr Sustentación");
+        MoneyValidation.requireNonNegative(announcement.healthyUnitPrice(), "Pr Sustentación");
 
         // Destare_LostFocus: sin split Kilos_Verdes, resta directa.
         BigDecimal netKg = request.grossKg().subtract(request.tareKg()).setScale(SCALE, RoundingMode.HALF_UP);
@@ -67,10 +74,10 @@ public class HuskPurchaseCalculator {
         // Form_COMPRAS.bas. No hay CSV historico de Pasilla para confirmarlo empiricamente (a
         // diferencia de Seco, ver docs/informe-auditoria-completa-2026-09-22.md seccion 3), pero la
         // firma del control es identica y la convencion de peso entero es del COP, no del formulario.
-        BigDecimal unitPrice = roundToWholePeso(request.pointPrice()
+        BigDecimal unitPrice = roundToWholePeso(announcement.healthyUnitPrice()
                 .multiply(almondPercentageRaw)
                 .divide(controlRecord.getBaseHusk(), MathContext.DECIMAL64)
-                .subtract(request.costs()));
+                .subtract(announcement.costs()));
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
         BigDecimal grossValue = roundToWholePeso(unitPrice.multiply(netKg));
@@ -79,10 +86,10 @@ public class HuskPurchaseCalculator {
 
         BigDecimal associateContribution = BigDecimal.ZERO;
         BigDecimal cooperativeDiscount = BigDecimal.ZERO;
-        if ("S".equalsIgnoreCase(request.growerType())) {
+        if ("S".equalsIgnoreCase(seller.growerType())) {
             associateContribution = roundToWholePeso(grossValue.multiply(controlRecord.getAssociatePercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64));
-        } else if ("C".equalsIgnoreCase(request.growerType())) {
+        } else if ("C".equalsIgnoreCase(seller.growerType())) {
             cooperativeDiscount = roundToWholePeso(grossValue.multiply(controlRecord.getNonAssociateDiscount())
                     .divide(HUNDRED, MathContext.DECIMAL64));
         }
@@ -93,7 +100,7 @@ public class HuskPurchaseCalculator {
         // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
         BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!Boolean.TRUE.equals(request.withholdingExempt()) && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
+        if (!seller.association() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .subtract(dailyAccumulatedWithholding));

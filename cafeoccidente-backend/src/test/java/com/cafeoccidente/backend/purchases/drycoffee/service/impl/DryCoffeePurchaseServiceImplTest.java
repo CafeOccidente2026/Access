@@ -21,6 +21,7 @@ import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ class DryCoffeePurchaseServiceImplTest {
             repository, mock(AgencyRepository.class), mock(FundRepository.class), mock(ProductCodeResolver.class),
             mock(AnnouncementService.class), controlRecordService, new DryCoffeePurchaseCalculator(),
             new DryCoffeePurchaseMapper(), securityUtils, currentAgencyProvider, mock(GrowerService.class),
+            mock(PurchaseSellerService.class),
             mock(InvoiceConsecutiveService.class), mock(InventoryMovementService.class),
             mock(PurchasePaymentService.class));
 

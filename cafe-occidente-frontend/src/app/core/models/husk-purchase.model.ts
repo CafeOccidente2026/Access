@@ -32,20 +32,16 @@ export interface HuskPurchaseCalculation {
 }
 
 /** Campos de entrada manual del formulario Compra Pasilla (PASILLA). */
+/** Solo lo que digita el cajero: precios, costos, factura y vendedor los pone el servidor (6b). */
 export interface HuskPurchaseRequest {
   readonly fundId: number;
   readonly idNumber: string;
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly growerType: string;
   readonly address: string;
   readonly cellphone: string;
   readonly almondWeight: number;
   readonly bagsCount: number;
   readonly grossKg: number;
   readonly tareKg: number;
-  readonly pointPrice: number;
-  readonly costs: number;
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
   /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */

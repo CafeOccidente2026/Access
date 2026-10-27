@@ -28,7 +28,9 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -53,6 +55,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
+    private final PurchaseSellerService purchaseSellerService;
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
@@ -68,6 +71,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             HuskPurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
+            PurchaseSellerService purchaseSellerService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
@@ -82,6 +86,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
+        this.purchaseSellerService = purchaseSellerService;
         this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
@@ -90,14 +95,16 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     @Override
     @Transactional
     public HuskPurchaseResponse create(HuskPurchaseRequest request) {
-        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
+        // Q8: el vendedor sale de TERCEROS; lo digitado solo completa direccion o celular vacios.
+        PurchaseSeller seller = purchaseSellerService.resolveAndComplete(
+                request.idNumber(), request.address(), request.cellphone());
         Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agency.getId(), fund.getId(), SPECIAL_TYPE);
-        HuskPurchaseCalculation calculation = runCalculation(request, announcement);
+        HuskPurchaseCalculation calculation = runCalculation(request, announcement, seller);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
@@ -113,13 +120,13 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         purchase.setAnnouncementDate(announcement.announcementDate());
         purchase.setBasePriceDryLoad(announcement.basePriceLoad());
         purchase.setIdNumber(request.idNumber());
-        purchase.setFirstName(request.firstName());
-        purchase.setLastName(request.lastName());
-        purchase.setGrowerType(request.growerType());
-        purchase.setAddress(request.address());
-        purchase.setCellphone(request.cellphone());
-        purchase.setPointPrice(request.pointPrice());
-        purchase.setCosts(request.costs());
+        purchase.setFirstName(seller.firstName());
+        purchase.setLastName(seller.lastName());
+        purchase.setGrowerType(seller.growerType());
+        purchase.setAddress(seller.address());
+        purchase.setCellphone(seller.cellphone());
+        purchase.setPointPrice(announcement.healthyUnitPrice());
+        purchase.setCosts(announcement.costs());
         purchase.setAlmondWeight(request.almondWeight());
         purchase.setAlmondPercentage(calculation.almondPercentage());
         purchase.setBagsCount(request.bagsCount());
@@ -131,7 +138,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         purchase.setInventoryValue(calculation.inventoryValue());
         purchase.setAssociateContribution(calculation.associateContribution());
         purchase.setCooperativeDiscount(calculation.cooperativeDiscount());
-        purchase.setWithholdingExempt(request.withholdingExempt());
+        purchase.setWithholdingExempt(seller.association());
         purchase.setWithholding(calculation.withholding());
         purchase.setShrinkageDiscount(request.shrinkageDiscount());
         purchase.setOtherDiscounts(request.otherDiscounts());
@@ -164,20 +171,22 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
 
     @Override
     public HuskPurchaseCalculation preview(HuskPurchaseRequest request) {
-        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
+        PurchaseSeller seller = purchaseSellerService.resolve(request.idNumber(), request.address(), request.cellphone());
         AnnouncementResponse announcement =
                 announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), SPECIAL_TYPE);
-        return runCalculation(request, announcement);
+        return runCalculation(request, announcement, seller);
     }
 
-    private HuskPurchaseCalculation runCalculation(HuskPurchaseRequest request, AnnouncementResponse announcement) {
+    private HuskPurchaseCalculation runCalculation(
+            HuskPurchaseRequest request, AnnouncementResponse announcement, PurchaseSeller seller) {
         ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
 
         MonthlyGrowerTotals dailyTotals = huskPurchaseRepository.sumDailyTotalsByIdNumber(
                 request.idNumber(), LocalDate.now());
 
         HuskPurchaseCalculation calculation =
-                calculator.calculate(request, controlRecord, dailyTotals.grossValue(), dailyTotals.withholding());
+                calculator.calculate(
+                request, controlRecord, announcement, seller, dailyTotals.grossValue(), dailyTotals.withholding());
         // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("PASILLA") nunca matchea
         // SPECIAL_TO_PROGRAMA hoy, pero queda enganchado para cuando se migren mas programas.
         growerService.checkQuota(request.idNumber(), SPECIAL_TYPE, calculation.netKg());

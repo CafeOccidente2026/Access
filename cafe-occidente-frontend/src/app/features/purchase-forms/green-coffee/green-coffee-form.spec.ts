@@ -108,6 +108,10 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     expect(createSpy).toHaveBeenCalledTimes(1);
     // El numero lo asigna el servidor al guardar; el encabezado solo lo muestra.
     expect(createSpy.mock.calls[0][0]).not.toHaveProperty('invoiceNumber');
+    // 6b: precios, costos y datos del vendedor los pone el servidor (anuncio vigente y TERCEROS).
+    for (const key of ['healthyUnitPrice', 'bonus', 'costs', 'pointPrice', 'firstName', 'lastName', 'growerType']) {
+      expect(createSpy.mock.calls[0][0]).not.toHaveProperty(key);
+    }
     expect(component.saving()).toBe(true);
 
     pending.error(new Error('fallo'));

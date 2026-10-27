@@ -21,7 +21,8 @@
     "ANUNCIO": "Anuncio",
     "USUARIO": "Usuario",
     "AGENCIA": "Agencia",
-    "PERMISO": "Permiso"
+    "PERMISO": "Permiso",
+    "TERCERO": "Tercero"
   },
   "actions": {
     "CREAR": "Crear",
@@ -76,6 +77,8 @@
     "greenTotalHuskWeight": "Peso Tot Pasilla Café Verde",
     "greenHealthyStoredWeight": "Peso Alm Sana Café Verde",
     "greenHealthyUnitPrice": "Pr Alm Sana Café Verde",
-    "greenDefectiveUnitPrice": "Pr_AlmDefec Café Verde"
+    "greenDefectiveUnitPrice": "Pr_AlmDefec Café Verde",
+    "address": "Dirección",
+    "phone": "Celular"
   }
 }

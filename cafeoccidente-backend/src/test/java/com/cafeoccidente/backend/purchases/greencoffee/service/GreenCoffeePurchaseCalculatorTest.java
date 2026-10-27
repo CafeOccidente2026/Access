@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
@@ -25,47 +27,41 @@ class GreenCoffeePurchaseCalculatorTest {
         return cr;
     }
 
-    private GreenCoffeePurchaseRequest request(BigDecimal costs) {
-        return request("S", costs);
+    /** Anuncio CV vigente: Pr Alm Sana 1200, Bonificacion 0 y los Costos dados. */
+    private static AnnouncementResponse announcement(String costs) {
+        return new AnnouncementResponse(1L, "1", null, new BigDecimal("1200000.00"), BigDecimal.ZERO,
+                new BigDecimal("1200"), BigDecimal.ZERO, new BigDecimal(costs), 1L, 1L, "CV", null);
     }
 
-    private GreenCoffeePurchaseRequest request(String growerType, BigDecimal costs) {
+    private static PurchaseSeller seller(String growerType) {
+        return new PurchaseSeller("123456", "Juan", "Perez", growerType, "Vereda", "3001234567", false);
+    }
+
+    private static GreenCoffeePurchaseRequest request(String grossKg, String compKgPrice) {
         return new GreenCoffeePurchaseRequest(
-                1L, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
-                10, new BigDecimal("1250"), new BigDecimal("50"),
-                new BigDecimal("1200"), BigDecimal.ZERO, costs, BigDecimal.ZERO,
-                new BigDecimal("1300"), false, BigDecimal.ZERO, BigDecimal.ZERO, null);
+                1L, "123456", null, null,
+                10, new BigDecimal(grossKg), new BigDecimal("50"),
+                BigDecimal.ZERO, new BigDecimal(compKgPrice), BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test
-    void basePriceLoadUsesTheFrozenAnnouncementCostsNotTheLiveControlRecord() {
-        // Mismo caso que Dry Coffee: si el RegControl de la agencia cambio DESPUES de publicado el
-        // anuncio, Form_VERDES.bas (Cedula_AfterUpdate) sigue usando el "Costos" que quedo fijado en
-        // el textbox al elegir el anuncio -> request.costs() (700), no controlRecord.getCosts() (692).
-        ControlRecord controlRecordWithChangedCosts = controlRecord(new BigDecimal("692.00"));
-
+    void basePriceLoadUsesTheAnnouncementCostsNotTheControlRecordOnes() {
+        // Form_VERDES.bas (Cedula_AfterUpdate) usa el "Costos" que fija la macro del anuncio CV:
+        // announcement.costs() (700), no controlRecord.getCosts() (692).
         GreenCoffeePurchaseCalculation result = calculator.calculate(
-                request(new BigDecimal("700")), controlRecordWithChangedCosts,
-                new BigDecimal("1200000.00"), BigDecimal.ZERO, BigDecimal.ZERO);
+                request("1250", "1300"), controlRecord(new BigDecimal("692.00")), announcement("700"), seller("S"),
+                BigDecimal.ZERO, BigDecimal.ZERO);
 
-        // 1200000 - (700 * 125) = 1200000 - 87500 = 1112500 (NO 1113500, que seria con el 692 vivo)
+        // 1200000 - (700 * 125) = 1200000 - 87500 = 1112500 (NO 1113500, que seria con el 692)
         assertThat(result.basePriceLoad()).isEqualByComparingTo("1112500.00");
-    }
-
-    private GreenCoffeePurchaseRequest fractionalRequest(String growerType) {
-        return new GreenCoffeePurchaseRequest(
-                1L, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
-                10, new BigDecimal("1250.3"), new BigDecimal("50"),
-                new BigDecimal("1200"), BigDecimal.ZERO, new BigDecimal("692"), BigDecimal.ZERO,
-                new BigDecimal("1300.6"), false, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     @Test
     void wholePesoControlsAreRoundedLikeAccess() {
         // Vr_Kilo, Aporte_Socio, Retefuente y Neto_a_Pagar son DecimalPlaces=0 en VERDES.txt.
         GreenCoffeePurchaseCalculation result = calculator.calculate(
-                fractionalRequest("S"), controlRecord(new BigDecimal("692.00")),
-                new BigDecimal("1200000.00"), new BigDecimal("8000000"), BigDecimal.ZERO);
+                request("1250.3", "1300.6"), controlRecord(new BigDecimal("692.00")), announcement("692"),
+                seller("S"), new BigDecimal("8000000"), BigDecimal.ZERO);
 
         assertThat(result.unitPrice()).isEqualByComparingTo("1301");               // 1300.6
         assertThat(result.grossValue()).isEqualByComparingTo("1561590");           // 1301 * 1200.3
@@ -77,8 +73,8 @@ class GreenCoffeePurchaseCalculatorTest {
     @Test
     void cooperativeDiscountIsRoundedToWholePeso() {
         GreenCoffeePurchaseCalculation result = calculator.calculate(
-                fractionalRequest("C"), controlRecord(new BigDecimal("692.00")),
-                new BigDecimal("1200000.00"), BigDecimal.ZERO, BigDecimal.ZERO);
+                request("1250.3", "1300.6"), controlRecord(new BigDecimal("692.00")), announcement("692"),
+                seller("C"), BigDecimal.ZERO, BigDecimal.ZERO);
 
         assertThat(result.cooperativeDiscount()).isEqualByComparingTo("12493");    // 1561590 * 0.8% = 12492.72
         assertThat(result.netToPay()).isEqualByComparingTo("1549097");
@@ -87,8 +83,8 @@ class GreenCoffeePurchaseCalculatorTest {
     @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(
-                request("F", new BigDecimal("692")), controlRecord(new BigDecimal("692.00")),
-                new BigDecimal("1200000.00"), BigDecimal.ZERO, BigDecimal.ZERO))
+                request("1250", "1300"), controlRecord(new BigDecimal("692.00")), announcement("692"), seller("F"),
+                BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);
     }
 }

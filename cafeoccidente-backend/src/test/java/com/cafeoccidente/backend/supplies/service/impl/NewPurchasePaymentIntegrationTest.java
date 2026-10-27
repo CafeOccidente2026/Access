@@ -9,7 +9,6 @@ import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import com.cafeoccidente.backend.users.repository.UserRepository;
@@ -73,11 +72,11 @@ class NewPurchasePaymentIntegrationTest {
 
     private DryCoffeePurchaseRequest request(PurchasePaymentRequest payment) {
         Long fundId = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
-        SpecialInfoResponse info = purchases.specialInfo(agencyId, fundId, "NESPRESSO - FTUSA");
-        return new DryCoffeePurchaseRequest(fundId, "NESPRESSO - FTUSA", GROWER, "PRUEBA", "PAGO",
-                "C", "VEREDA", "3000000000", 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"),
-                new BigDecimal("10"), new BigDecimal("190"), info.healthyUnitPrice(), info.bonus(), BigDecimal.ZERO,
-                info.costs(), false, BigDecimal.ZERO, BigDecimal.ZERO, payment);
+        // Precios, costos y datos del vendedor los pone el servidor (anuncio vigente y TERCEROS).
+        return new DryCoffeePurchaseRequest(fundId, "NESPRESSO - FTUSA", GROWER, null, null,
+                5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"),
+                new BigDecimal("10"), new BigDecimal("190"), BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, payment);
     }
 
     @Test

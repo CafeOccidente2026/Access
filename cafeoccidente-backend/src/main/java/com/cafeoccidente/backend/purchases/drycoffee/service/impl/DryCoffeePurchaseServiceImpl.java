@@ -29,7 +29,9 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -51,6 +53,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
+    private final PurchaseSellerService purchaseSellerService;
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
@@ -66,6 +69,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             DryCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
+            PurchaseSellerService purchaseSellerService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
@@ -80,6 +84,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
+        this.purchaseSellerService = purchaseSellerService;
         this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
@@ -88,7 +93,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     @Transactional
     public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request) {
-        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
+        // Q8: el vendedor sale de TERCEROS; lo digitado solo completa direccion o celular vacios.
+        PurchaseSeller seller = purchaseSellerService.resolveAndComplete(
+                request.idNumber(), request.address(), request.cellphone());
         Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(request.fundId())
@@ -97,7 +104,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         AnnouncementResponse announcement =
                 announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
         ControlRecord controlRecord = controlRecordService.getActive(agency.getId());
-        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement, controlRecord);
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement, controlRecord, seller);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
@@ -113,11 +120,11 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setAnnouncementDate(announcement.announcementDate());
         purchase.setBasePriceLoad(calculation.basePriceLoad());
         purchase.setIdNumber(request.idNumber());
-        purchase.setFirstName(request.firstName());
-        purchase.setLastName(request.lastName());
-        purchase.setGrowerType(request.growerType());
-        purchase.setAddress(request.address());
-        purchase.setCellphone(request.cellphone());
+        purchase.setFirstName(seller.firstName());
+        purchase.setLastName(seller.lastName());
+        purchase.setGrowerType(seller.growerType());
+        purchase.setAddress(seller.address());
+        purchase.setCellphone(seller.cellphone());
         purchase.setBagsCount(request.bagsCount());
         purchase.setGrossKg(request.grossKg());
         purchase.setTareKg(request.tareKg());
@@ -128,17 +135,17 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setDefectivePercentage(calculation.defectivePercentage());
         purchase.setHealthyStoredWeight(request.healthyStoredWeight());
         purchase.setHealthyPercentage(calculation.healthyPercentage());
-        purchase.setHealthyUnitPrice(request.healthyUnitPrice());
+        purchase.setHealthyUnitPrice(announcement.healthyUnitPrice());
         purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
-        purchase.setBonus(request.bonus());
+        purchase.setBonus(announcement.bonus());
         purchase.setPenalty(request.penalty());
-        purchase.setCosts(request.costs());
+        purchase.setCosts(announcement.costs());
         purchase.setUnitPrice(calculation.unitPrice());
         purchase.setGrossValue(calculation.grossValue());
         purchase.setInventoryValue(calculation.inventoryValue());
         purchase.setAssociateContribution(calculation.associateContribution());
         purchase.setCooperativeDiscount(calculation.cooperativeDiscount());
-        purchase.setWithholdingExempt(request.withholdingExempt());
+        purchase.setWithholdingExempt(seller.association());
         purchase.setWithholding(calculation.withholding());
         purchase.setFreightDiscount(request.freightDiscount());
         purchase.setOtherDiscounts(request.otherDiscounts());
@@ -184,23 +191,24 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
-        request = request.withWithholdingExempt(growerService.isAssociation(request.idNumber()));
+        PurchaseSeller seller = purchaseSellerService.resolve(request.idNumber(), request.address(), request.cellphone());
         AnnouncementResponse announcement = announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), request.specialType());
         ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
-        return runCalculation(request, announcement, controlRecord);
+        return runCalculation(request, announcement, controlRecord, seller);
     }
 
     /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
     private DryCoffeePurchaseCalculation runCalculation(
-            DryCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord) {
+            DryCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord,
+            PurchaseSeller seller) {
         MonthlyGrowerTotals dailyTotals = dryCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
                 request.idNumber(), LocalDate.now());
 
         DryCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
                 controlRecord,
-                announcement.basePriceLoad(),
-                announcement.defectiveUnitPrice(),
+                announcement,
+                seller,
                 dailyTotals.grossValue(),
                 dailyTotals.withholding());
         // Item C (cupo, Form_COMPRAS.bas lineas 412/465/518/571/624) - ver GrowerService.checkQuota.
