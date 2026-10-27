@@ -5,12 +5,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 
 class HuskPurchaseCalculatorTest {
+
+    private static final HuskPurchaseRequest REQUEST = new HuskPurchaseRequest(
+            1L, "123456", null, null,
+            new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
+            BigDecimal.ZERO, BigDecimal.ZERO, null);
 
     private final HuskPurchaseCalculator calculator = new HuskPurchaseCalculator();
 
@@ -26,38 +33,36 @@ class HuskPurchaseCalculatorTest {
         return cr;
     }
 
-    private HuskPurchaseRequest request(String growerType, boolean withholdingExempt) {
-        return new HuskPurchaseRequest(
-                1L, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
-                new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
-                new BigDecimal("8908"), new BigDecimal("692"),
-                withholdingExempt, BigDecimal.ZERO, BigDecimal.ZERO, null);
+    /** Anuncio de pasilla vigente: Pr Punto (healthyUnitPrice) dado y Costos 692. */
+    private static AnnouncementResponse announcement(String pointPrice) {
+        return new AnnouncementResponse(1L, "1", null, BigDecimal.ZERO, BigDecimal.ZERO,
+                new BigDecimal(pointPrice), BigDecimal.ZERO, new BigDecimal("692"), 1L, 1L, "PASILLA", null);
+    }
+
+    private static PurchaseSeller seller(String growerType, boolean association) {
+        return new PurchaseSeller("123456", "Juan", "Perez", growerType, "Vereda", "3001234567", association);
+    }
+
+    private HuskPurchaseCalculation calculate(String growerType, boolean association) {
+        return calculator.calculate(REQUEST, controlRecord(), announcement("8908"), seller(growerType, association),
+                BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     @Test
     void netKgIsGrossMinusTareWithoutAnySplit() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
-
-        assertThat(result.netKg()).isEqualByComparingTo("1200.00");
+        assertThat(calculate("S", false).netKg()).isEqualByComparingTo("1200.00");
     }
 
     @Test
     void almondPercentageIsAlmondWeightTimesHundredOverSampleSize() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
-
         // 200 * 100 / 250 = 80.00
-        assertThat(result.almondPercentage()).isEqualByComparingTo("80.00");
+        assertThat(calculate("S", false).almondPercentage()).isEqualByComparingTo("80.00");
     }
 
     @Test
     void unitPriceIsPointPriceTimesAlmondPercentageOverBaseHuskMinusCosts() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
-
         // (8908 * 80 / 12.5) - 692 = 57011.2 - 692 = 56319.2 -> redondeado a peso entero: 56319
-        assertThat(result.unitPrice()).isEqualByComparingTo("56319.00");
+        assertThat(calculate("S", false).unitPrice()).isEqualByComparingTo("56319.00");
     }
 
     @Test
@@ -66,14 +71,13 @@ class HuskPurchaseCalculatorTest {
         zeroSample.setSampleSize(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> calculator.calculate(
-                request("S", false), zeroSample, BigDecimal.ZERO, BigDecimal.ZERO))
+                REQUEST, zeroSample, announcement("8908"), seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);
     }
 
     @Test
     void associateGrowerPaysContributionNotCooperativeDiscount() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
+        HuskPurchaseCalculation result = calculate("S", false);
 
         assertThat(result.associateContribution()).isGreaterThan(BigDecimal.ZERO);
         assertThat(result.cooperativeDiscount()).isEqualByComparingTo("0");
@@ -81,8 +85,7 @@ class HuskPurchaseCalculatorTest {
 
     @Test
     void nonAssociateGrowerPaysCooperativeDiscountNotContribution() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("C", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
+        HuskPurchaseCalculation result = calculate("C", false);
 
         assertThat(result.cooperativeDiscount()).isGreaterThan(BigDecimal.ZERO);
         assertThat(result.associateContribution()).isEqualByComparingTo("0");
@@ -90,8 +93,7 @@ class HuskPurchaseCalculatorTest {
 
     @Test
     void firstPurchaseOfDayWithholdsOnItsOwnGrossValue() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("S", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO);
+        HuskPurchaseCalculation result = calculate("S", false);
 
         BigDecimal expected = result.grossValue()
                 .multiply(new BigDecimal("0.5"))
@@ -102,29 +104,22 @@ class HuskPurchaseCalculatorTest {
     }
 
     @Test
-    void exemptGrowerNeverWithholds() {
-        HuskPurchaseCalculation result = calculator.calculate(
-                request("S", true), controlRecord(), new BigDecimal("50000000"), new BigDecimal("250000"));
+    void anAssociationNeverWithholds() {
+        HuskPurchaseCalculation result = calculator.calculate(REQUEST, controlRecord(), announcement("8908"),
+                seller("S", true), new BigDecimal("50000000"), new BigDecimal("250000"));
 
         assertThat(result.withholding()).isEqualByComparingTo("0");
     }
 
     @Test
     void deadGrowerIsRejected() {
-        assertThatThrownBy(() -> calculator.calculate(
-                request("F", false), controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO))
-                .isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(() -> calculate("F", false)).isInstanceOf(BusinessRuleException.class);
     }
 
     @Test
     void negativePointPriceIsRejected() {
-        HuskPurchaseRequest negative = new HuskPurchaseRequest(
-                1L, "123456", "Juan", "Perez", "S", "Vereda", "3001234567",
-                new BigDecimal("200"), 10, new BigDecimal("1250"), new BigDecimal("50"),
-                new BigDecimal("-100"), new BigDecimal("692"),
-                false, BigDecimal.ZERO, BigDecimal.ZERO, null);
-
-        assertThatThrownBy(() -> calculator.calculate(negative, controlRecord(), BigDecimal.ZERO, BigDecimal.ZERO))
+        assertThatThrownBy(() -> calculator.calculate(REQUEST, controlRecord(), announcement("-100"),
+                seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);
     }
 }

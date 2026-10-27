@@ -3,6 +3,8 @@ package com.cafeoccidente.backend.purchases.drycoffee.service;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -23,9 +25,9 @@ public class DryCoffeePurchaseCalculator {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     /**
-     * @param announcementBasePriceLoad valor crudo del anuncio (vrcps en el VBA)
-     * @param announcementDefectiveUnitPrice Pr_AlmDefec vigente en el anuncio (ver
-     *     Announcement.defectiveUnitPrice)
+     * @param announcement anuncio vigente (lo resuelve el servidor): Pr_Base_CPS crudo (vrcps en el
+     *     VBA), Pr_AlmDefec, Pr Sustentacion, Bonificacion y Costos - nunca los del navegador
+     * @param seller vendedor desde TERCEROS (tipo S/C/F y si es asociacion)
      * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
      *     dia de la compra (Texto105 en el VBA / macro CalculoReteFteMes)
      * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el dia
@@ -34,11 +36,11 @@ public class DryCoffeePurchaseCalculator {
     public DryCoffeePurchaseCalculation calculate(
             DryCoffeePurchaseRequest request,
             ControlRecord controlRecord,
-            BigDecimal announcementBasePriceLoad,
-            BigDecimal announcementDefectiveUnitPrice,
+            AnnouncementResponse announcement,
+            PurchaseSeller seller,
             BigDecimal dailyAccumulatedGrossValue,
             BigDecimal dailyAccumulatedWithholding) {
-        if ("F".equalsIgnoreCase(request.growerType())) {
+        if ("F".equalsIgnoreCase(seller.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
 
@@ -46,14 +48,14 @@ public class DryCoffeePurchaseCalculator {
         // El textbox "Costos" del VBA lo fija la macro "Asignar numero anuncio * PCompras" con el
         // valor CONGELADO del anuncio vigente al elegir el producto; en todo Form_COMPRAS.bas no hay
         // ninguna otra escritura de Costos (grep confirma solo esa macro + resets a 0 por cupo
-        // excedido) -> request.costs(), no ControlRecord.costos (que si es vivo para BaseCarga).
-        BigDecimal basePriceLoad = announcementBasePriceLoad
-                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+        // excedido) -> announcement.costs(), no ControlRecord.costos (que si es vivo para BaseCarga).
+        BigDecimal basePriceLoad = announcement.basePriceLoad()
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
         MoneyValidation.requireNonNegative(basePriceLoad, "Precio Base Carga PC");
         // Pr Sustentacion (Texto190 en el VBA): no se recalcula aca, llega ya resuelto por el
         // anuncio/specialInfo() - se valida igual porque alimenta var5/var1 mas abajo.
-        MoneyValidation.requireNonNegative(request.healthyUnitPrice(), "Pr Sustentación");
+        MoneyValidation.requireNonNegative(announcement.healthyUnitPrice(), "Pr Sustentación");
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
@@ -77,8 +79,8 @@ public class DryCoffeePurchaseCalculator {
         BigDecimal healthyPercentage = healthyPercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
         // Sacos_LostFocus: precios unitarios intermedios (Texto190/Texto191 en el VBA original).
-        BigDecimal var5 = request.healthyUnitPrice().subtract(request.penalty());
-        BigDecimal var1 = var5.add(request.bonus());
+        BigDecimal var5 = announcement.healthyUnitPrice().subtract(request.penalty());
+        BigDecimal var1 = var5.add(announcement.bonus());
         if (healthyPercentageRaw.signum() == 0) {
             throw new BusinessRuleException("El porcentaje de almendra sana no puede ser cero");
         }
@@ -90,7 +92,7 @@ public class DryCoffeePurchaseCalculator {
         // Pr_AlmDefec = Announcement.defectiveUnitPrice (lo trae el anuncio vigente).
         BigDecimal var4 = var3.subtract(controlRecord.getAvgHuskPercentage())
                 .divide(healthyPercentageRaw, MathContext.DECIMAL64)
-                .multiply(announcementDefectiveUnitPrice);
+                .multiply(announcement.defectiveUnitPrice());
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
         // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191). Vr_Kilo, Vr_Bruto,
@@ -107,10 +109,10 @@ public class DryCoffeePurchaseCalculator {
 
         BigDecimal associateContribution = BigDecimal.ZERO;
         BigDecimal cooperativeDiscount = BigDecimal.ZERO;
-        if ("S".equalsIgnoreCase(request.growerType())) {
+        if ("S".equalsIgnoreCase(seller.growerType())) {
             associateContribution = roundToWholePeso(grossValue.multiply(controlRecord.getAssociatePercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64));
-        } else if ("C".equalsIgnoreCase(request.growerType())) {
+        } else if ("C".equalsIgnoreCase(seller.growerType())) {
             cooperativeDiscount = roundToWholePeso(grossValue.multiply(controlRecord.getNonAssociateDiscount())
                     .divide(HUNDRED, MathContext.DECIMAL64));
         }
@@ -126,7 +128,7 @@ public class DryCoffeePurchaseCalculator {
         // vs 673/844 mensual) - ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente.
         BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!Boolean.TRUE.equals(request.withholdingExempt()) && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
+        if (!seller.association() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .subtract(dailyAccumulatedWithholding));

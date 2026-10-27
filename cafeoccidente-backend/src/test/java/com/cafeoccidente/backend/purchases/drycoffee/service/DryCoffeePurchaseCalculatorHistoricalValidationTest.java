@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.entity.Announcement;
@@ -137,8 +139,8 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
             DryCoffeePurchaseCalculation recalculated;
             try {
                 recalculated = calculator.calculate(
-                        toRequest(historical), controlRecord, announcement.getBasePriceLoad(),
-                        announcement.getDefectiveUnitPrice(), accumulated[0], accumulated[1]);
+                        toRequest(historical), controlRecord, toAnnouncement(historical, announcement),
+                        toSeller(historical), accumulated[0], accumulated[1]);
             } catch (RuntimeException ex) {
                 calculationErrors++;
                 continue;
@@ -196,12 +198,23 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
 
     private static DryCoffeePurchaseRequest toRequest(DryCoffeePurchase p) {
         return new DryCoffeePurchaseRequest(
-                p.getFund().getId(), p.getSpecialType(),
-                p.getIdNumber(), p.getFirstName(), p.getLastName(), p.getGrowerType(), p.getAddress(),
-                p.getCellphone(), p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
+                p.getFund().getId(), p.getSpecialType(), p.getIdNumber(), p.getAddress(), p.getCellphone(),
+                p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
                 p.getTotalStoredWeight(), p.getDefectiveStoredWeight(), p.getHealthyStoredWeight(),
-                p.getHealthyUnitPrice(), p.getBonus(), p.getPenalty(), p.getCosts(),
-                p.isWithholdingExempt(), p.getFreightDiscount(), p.getOtherDiscounts(), null);
+                p.getPenalty(), p.getFreightDiscount(), p.getOtherDiscounts(), null);
+    }
+
+    /** El anuncio tal como quedo en la compra de Access: Pr Sustentacion, Bonificacion y Costos
+     *  guardados en la fila (los que el cajero vio), mas el Pr_Base_CPS y Pr_AlmDefec del anuncio. */
+    private static AnnouncementResponse toAnnouncement(DryCoffeePurchase p, Announcement announcement) {
+        return new AnnouncementResponse(announcement.getId(), p.getAnnouncementNumber(), p.getAnnouncementDate(),
+                announcement.getBasePriceLoad(), announcement.getDefectiveUnitPrice(), p.getHealthyUnitPrice(),
+                p.getBonus(), p.getCosts(), p.getAgency().getId(), p.getFund().getId(), p.getSpecialType(), null);
+    }
+
+    private static PurchaseSeller toSeller(DryCoffeePurchase p) {
+        return new PurchaseSeller(p.getIdNumber(), p.getFirstName(), p.getLastName(), p.getGrowerType(),
+                p.getAddress(), p.getCellphone(), p.isWithholdingExempt());
     }
 
     /** Suma el Vr_Bruto/Retefuente HISTORICO de las compras ya registradas para esta cedula en el

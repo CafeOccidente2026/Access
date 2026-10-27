@@ -3,6 +3,8 @@ package com.cafeoccidente.backend.purchases.greencoffee.service;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -22,7 +24,9 @@ public class GreenCoffeePurchaseCalculator {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     /**
-     * @param announcementBasePriceLoad Pr_Base_CPS del anuncio vigente (Texto91 en el VBA)
+     * @param announcement anuncio CV vigente (lo resuelve el servidor): Pr_Base_CPS (Texto91 en el
+     *     VBA) y Costos - nunca los del navegador
+     * @param seller vendedor desde TERCEROS (tipo S/C/F y si es asociacion)
      * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado en VERDES para esta cedula
      *     en el dia de la compra (Texto105 / macro CalculoReteFteMesVerdes)
      * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada en VERDES a esta cedula en
@@ -31,27 +35,28 @@ public class GreenCoffeePurchaseCalculator {
     public GreenCoffeePurchaseCalculation calculate(
             GreenCoffeePurchaseRequest request,
             ControlRecord controlRecord,
-            BigDecimal announcementBasePriceLoad,
+            AnnouncementResponse announcement,
+            PurchaseSeller seller,
             BigDecimal dailyAccumulatedGrossValue,
             BigDecimal dailyAccumulatedWithholding) {
         // Mismo guard que Cafe Seco/Otros (Cedula_AfterUpdate en los 3 formularios comparte la
         // verificacion "NO LE PUEDE FACTURAR A UN FALLECIDO"): sin esto, la API se podia llamar
         // directo (sin pasar por el bloqueo del frontend) para facturarle Verde a un caficultor
         // fallecido.
-        if ("F".equalsIgnoreCase(request.growerType())) {
+        if ("F".equalsIgnoreCase(seller.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
 
         // Cedula_AfterUpdate (Form_VERDES.bas linea 56): Pr_Base_PC = Texto91 - (Costos * Texto176).
         // Misma formula que Cafe Seco; "Costos" es el valor CONGELADO que la macro de anuncio escribe
         // en el textbox al elegir el producto (en todo Form_VERDES.bas es la unica escritura de
-        // Costos) -> request.costs(), no ControlRecord.costos. BaseCarga (Texto176) si es vivo del
+        // Costos) -> announcement.costs(), no ControlRecord.costos. BaseCarga (Texto176) si es vivo del
         // RegControl -> controlRecord.getBaseLoad(). Ojo: no se pudo confirmar en el .bas que control
         // dispara la macro de anuncio en VERDES (posible ligadura por diseñador, no visible aqui);
         // mismo nivel de confianza que los acumulados de retencion (Texto105/Texto107) - no verificado
         // al 100%, pero es la unica fuente de Costos que aparece en todo el modulo.
-        BigDecimal basePriceLoad = announcementBasePriceLoad
-                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+        BigDecimal basePriceLoad = announcement.basePriceLoad()
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
         MoneyValidation.requireNonNegative(basePriceLoad, "Precio Base Carga PC");
 
@@ -75,11 +80,11 @@ public class GreenCoffeePurchaseCalculator {
 
         BigDecimal associateContribution = BigDecimal.ZERO;
         BigDecimal cooperativeDiscount = BigDecimal.ZERO;
-        if ("S".equalsIgnoreCase(request.growerType())) {
+        if ("S".equalsIgnoreCase(seller.growerType())) {
             associateContribution = grossValue.multiply(controlRecord.getAssociatePercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
-        } else if ("C".equalsIgnoreCase(request.growerType())) {
+        } else if ("C".equalsIgnoreCase(seller.growerType())) {
             cooperativeDiscount = grossValue.multiply(controlRecord.getNonAssociateDiscount())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
@@ -92,7 +97,7 @@ public class GreenCoffeePurchaseCalculator {
         // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
         BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!Boolean.TRUE.equals(request.withholdingExempt()) && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
+        if (!seller.association() && var6.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = var6.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
                     .subtract(dailyAccumulatedWithholding)
