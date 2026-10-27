@@ -27,14 +27,6 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
     MonthlyGrowerTotals sumDailyTotalsByIdNumber(
             @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
-    /**
-     * Ultima factura ya usada por esta agencia, para reservar la siguiente (paso "Fondo"). Null si
-     * no hay ninguna. Debe filtrar por agencia: cada agencia tiene su propio rango de resolucion
-     * DIAN (ver ControlRecord), y mezclar el maximo entre agencias agota el rango de una con
-     * facturas de otra.
-     */
-    @Query("SELECT MAX(p.invoiceNumber) FROM DryCoffeePurchase p WHERE p.agency.id = :agencyId")
-    Integer findMaxInvoiceNumber(@Param("agencyId") Long agencyId);
 
     /**
      * "Entregados" (Asignar Cupo): kilos netos ya comprados contra un anuncio puntual. La

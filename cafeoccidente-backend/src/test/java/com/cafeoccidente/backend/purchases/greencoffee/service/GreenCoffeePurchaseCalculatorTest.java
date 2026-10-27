@@ -31,7 +31,7 @@ class GreenCoffeePurchaseCalculatorTest {
 
     private GreenCoffeePurchaseRequest request(String growerType, BigDecimal costs) {
         return new GreenCoffeePurchaseRequest(
-                1L, 1, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                1L, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250"), new BigDecimal("50"),
                 new BigDecimal("1200"), BigDecimal.ZERO, costs, BigDecimal.ZERO,
                 new BigDecimal("1300"), false, BigDecimal.ZERO, BigDecimal.ZERO, null);
@@ -54,7 +54,7 @@ class GreenCoffeePurchaseCalculatorTest {
 
     private GreenCoffeePurchaseRequest fractionalRequest(String growerType) {
         return new GreenCoffeePurchaseRequest(
-                1L, 1, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
+                1L, "123456", "Juan", "Perez", growerType, "Vereda", "3001234567",
                 10, new BigDecimal("1250.3"), new BigDecimal("50"),
                 new BigDecimal("1200"), BigDecimal.ZERO, new BigDecimal("692"), BigDecimal.ZERO,
                 new BigDecimal("1300.6"), false, BigDecimal.ZERO, BigDecimal.ZERO, null);

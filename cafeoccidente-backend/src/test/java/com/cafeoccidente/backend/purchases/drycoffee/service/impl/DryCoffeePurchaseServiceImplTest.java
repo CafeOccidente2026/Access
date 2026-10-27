@@ -19,7 +19,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
+import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
 import java.time.LocalDate;
 import java.util.List;
@@ -36,7 +36,7 @@ class DryCoffeePurchaseServiceImplTest {
             repository, mock(AgencyRepository.class), mock(FundRepository.class), mock(ProductCodeResolver.class),
             mock(AnnouncementService.class), controlRecordService, new DryCoffeePurchaseCalculator(),
             new DryCoffeePurchaseMapper(), securityUtils, currentAgencyProvider, mock(GrowerService.class),
-            mock(PurchaseInvoiceNumberService.class), mock(InventoryMovementService.class),
+            mock(InvoiceConsecutiveService.class), mock(InventoryMovementService.class),
             mock(PurchasePaymentService.class));
 
     @Test

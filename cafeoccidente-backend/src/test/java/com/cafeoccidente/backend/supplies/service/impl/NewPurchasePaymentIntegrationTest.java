@@ -74,8 +74,7 @@ class NewPurchasePaymentIntegrationTest {
     private DryCoffeePurchaseRequest request(PurchasePaymentRequest payment) {
         Long fundId = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
         SpecialInfoResponse info = purchases.specialInfo(agencyId, fundId, "NESPRESSO - FTUSA");
-        Integer invoice = jdbc.queryForObject("SELECT COALESCE(MAX(numero_factura), 0) + 1000 FROM compras_cafe_seco", Integer.class);
-        return new DryCoffeePurchaseRequest(fundId, invoice, "NESPRESSO - FTUSA", GROWER, "PRUEBA", "PAGO",
+        return new DryCoffeePurchaseRequest(fundId, "NESPRESSO - FTUSA", GROWER, "PRUEBA", "PAGO",
                 "C", "VEREDA", "3000000000", 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"),
                 new BigDecimal("10"), new BigDecimal("190"), info.healthyUnitPrice(), info.bonus(), BigDecimal.ZERO,
                 info.costs(), false, BigDecimal.ZERO, BigDecimal.ZERO, payment);
@@ -85,11 +84,14 @@ class NewPurchasePaymentIntegrationTest {
     void aNewMixedPurchaseShowsUpInEveryCashReportLikeAMigratedOne() {
         BigDecimal net = purchases.preview(request(null)).netToPay();
         BigDecimal check = new BigDecimal("1000000");
+        // HU-15: el numero lo pone el servidor, el mismo que el encabezado mostro como proximo.
+        int shown = purchases.nextInvoiceNumber().invoiceNumber();
         DryCoffeePurchaseResponse saved = purchases.create(request(
                 new PurchasePaymentRequest(net.subtract(check), check, BigDecimal.ZERO, BigDecimal.ZERO, "987654")));
         String invoice = String.valueOf(saved.invoiceNumber());
         LocalDate today = LocalDate.now();
 
+        assertThat(saved.invoiceNumber()).isEqualTo(shown);
         assertThat(saved.paymentMethod()).isEqualTo("MIXTO");
         assertThat(saved.checkNumber()).isEqualTo("987654");
 

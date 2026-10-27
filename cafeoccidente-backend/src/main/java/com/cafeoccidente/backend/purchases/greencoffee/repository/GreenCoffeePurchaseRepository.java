@@ -20,11 +20,4 @@ public interface GreenCoffeePurchaseRepository extends JpaRepository<GreenCoffee
     MonthlyGrowerTotals sumDailyTotalsByIdNumber(
             @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
-    /**
-     * Ultima factura ya usada en este modulo por esta agencia ("Para asignar # factura verdes").
-     * Null si no hay ninguna. Ver DryCoffeePurchaseRepository.findMaxInvoiceNumber - mismo motivo
-     * para filtrar por agencia.
-     */
-    @Query("SELECT MAX(p.invoiceNumber) FROM GreenCoffeePurchase p WHERE p.agency.id = :agencyId")
-    Integer findMaxInvoiceNumber(@Param("agencyId") Long agencyId);
 }

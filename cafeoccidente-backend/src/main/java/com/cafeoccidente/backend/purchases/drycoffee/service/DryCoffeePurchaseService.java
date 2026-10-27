@@ -2,7 +2,7 @@ package com.cafeoccidente.backend.purchases.drycoffee.service;
 
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.QualityPercentagesResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import java.math.BigDecimal;

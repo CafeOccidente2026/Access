@@ -1,6 +1,5 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service.impl;
 
-import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
@@ -10,7 +9,7 @@ import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.QualityPercentagesResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
@@ -30,7 +29,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
+import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -52,7 +51,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
-    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
 
@@ -67,7 +66,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             DryCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
-            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
@@ -81,7 +80,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
-        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
     }
@@ -104,7 +103,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
         DryCoffeePurchase purchase = new DryCoffeePurchase();
         purchase.setPurchaseDate(LocalDate.now());
-        purchase.setInvoiceNumber(request.invoiceNumber());
+        // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
+        purchase.setInvoiceNumber(invoiceConsecutiveService.take(agency.getId(), controlRecord));
         purchase.setAgency(agency);
         purchase.setFund(fund);
         purchase.setSpecialType(request.specialType());
@@ -211,23 +211,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = currentAgencyProvider.currentAgencyId();
-        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
-        int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
-        if (next > controlRecord.getResolutionTo()) {
-            throw new BusinessRuleException(
-                    "Se agotó el rango de facturas autorizado por la resolución DIAN vigente");
-        }
-
-        String warning = null;
-        LocalDate expiration = controlRecord.getResolutionDate().plusMonths(controlRecord.getValidity());
-        if (LocalDate.now().isAfter(expiration)) {
-            warning = "La resolución de facturación está vencida";
-        } else if (controlRecord.getResolutionTo() - next < 100) {
-            warning = "La resolución de facturación está a punto de agotarse";
-        }
-
-        return new NextInvoiceNumberResponse(next, controlRecord.getPrefix(), warning);
+        return invoiceConsecutiveService.next(agencyId, controlRecordService.getActive(agencyId));
     }
 
     @Override

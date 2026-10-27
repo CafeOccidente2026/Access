@@ -4,7 +4,7 @@ import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.husk.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseResponse;
-import com.cafeoccidente.backend.purchases.husk.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseCalculation;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
 import jakarta.validation.Valid;

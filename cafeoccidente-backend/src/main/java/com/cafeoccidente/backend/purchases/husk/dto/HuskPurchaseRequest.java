@@ -15,7 +15,6 @@ import java.math.BigDecimal;
  */
 public record HuskPurchaseRequest(
         @NotNull Long fundId,
-        @NotNull Integer invoiceNumber,
         @NotBlank String idNumber,
         @NotBlank String firstName,
         @NotBlank String lastName,
@@ -38,7 +37,7 @@ public record HuskPurchaseRequest(
      *  nunca la que mande el formulario - Form_COMPRAS.bas: If ... And Asociacion.Value = 0 Then Retefuente. */
     public HuskPurchaseRequest withWithholdingExempt(boolean exempt) {
         return new HuskPurchaseRequest(
-                fundId, invoiceNumber, idNumber, firstName, lastName, growerType, address, cellphone,
+                fundId, idNumber, firstName, lastName, growerType, address, cellphone,
                 almondWeight, bagsCount, grossKg, tareKg, pointPrice, costs, exempt, shrinkageDiscount,
                 otherDiscounts, payment);
     }

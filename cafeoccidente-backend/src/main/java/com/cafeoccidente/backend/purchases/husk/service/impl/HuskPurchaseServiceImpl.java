@@ -1,6 +1,5 @@
 package com.cafeoccidente.backend.purchases.husk.service.impl;
 
-import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
@@ -13,7 +12,7 @@ import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.husk.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseResponse;
-import com.cafeoccidente.backend.purchases.husk.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.husk.entity.HuskPurchase;
 import com.cafeoccidente.backend.purchases.husk.mapper.HuskPurchaseMapper;
 import com.cafeoccidente.backend.purchases.husk.repository.HuskPurchaseRepository;
@@ -29,7 +28,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseInvoiceNumberService;
+import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -54,7 +53,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
-    private final PurchaseInvoiceNumberService purchaseInvoiceNumberService;
+    private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
 
@@ -69,7 +68,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             HuskPurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
-            PurchaseInvoiceNumberService purchaseInvoiceNumberService,
+            InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
         this.huskPurchaseRepository = huskPurchaseRepository;
@@ -83,7 +82,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
-        this.purchaseInvoiceNumberService = purchaseInvoiceNumberService;
+        this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
     }
@@ -104,7 +103,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
 
         HuskPurchase purchase = new HuskPurchase();
         purchase.setPurchaseDate(LocalDate.now());
-        purchase.setInvoiceNumber(request.invoiceNumber());
+        // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
+        purchase.setInvoiceNumber(invoiceConsecutiveService.take(agency.getId(), controlRecordService.getActive(agency.getId())));
         purchase.setAgency(agency);
         purchase.setFund(fund);
         purchase.setSpecialType(SPECIAL_TYPE);
@@ -187,23 +187,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     @Override
     public NextInvoiceNumberResponse nextInvoiceNumber() {
         Long agencyId = currentAgencyProvider.currentAgencyId();
-        ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        Integer maxUsed = purchaseInvoiceNumberService.findMaxUsed(agencyId);
-        int next = maxUsed == null ? controlRecord.getResolutionFrom() : maxUsed + 1;
-        if (next > controlRecord.getResolutionTo()) {
-            throw new BusinessRuleException(
-                    "Se agotó el rango de facturas autorizado por la resolución DIAN vigente");
-        }
-
-        String warning = null;
-        LocalDate expiration = controlRecord.getResolutionDate().plusMonths(controlRecord.getValidity());
-        if (LocalDate.now().isAfter(expiration)) {
-            warning = "La resolución de facturación está vencida";
-        } else if (controlRecord.getResolutionTo() - next < 100) {
-            warning = "La resolución de facturación está a punto de agotarse";
-        }
-
-        return new NextInvoiceNumberResponse(next, controlRecord.getPrefix(), warning);
+        return invoiceConsecutiveService.next(agencyId, controlRecordService.getActive(agencyId));
     }
 
     @Override
