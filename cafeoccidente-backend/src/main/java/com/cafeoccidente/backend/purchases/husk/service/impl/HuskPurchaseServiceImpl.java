@@ -15,7 +15,6 @@ import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.husk.entity.HuskPurchase;
 import com.cafeoccidente.backend.purchases.husk.mapper.HuskPurchaseMapper;
 import com.cafeoccidente.backend.purchases.husk.repository.HuskPurchaseRepository;
-import com.cafeoccidente.backend.purchases.husk.repository.MonthlyGrowerTotals;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseCalculation;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseCalculator;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
@@ -25,6 +24,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
@@ -168,8 +168,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     }
 
     private HuskPurchaseCalculation runCalculation(HuskPurchaseRequest request, PurchaseContext context) {
-        MonthlyGrowerTotals dailyTotals = huskPurchaseRepository.sumDailyTotalsByIdNumber(
-                request.idNumber(), LocalDate.now());
+        // Q10: lo que el fiel ya vendio hoy en seco + verde + pasilla, en todas las agencias.
+        DailyGrowerTotals dailyTotals = context.dailyTotals();
 
         HuskPurchaseCalculation calculation =
                 calculator.calculate(

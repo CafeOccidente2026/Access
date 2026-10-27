@@ -10,10 +10,14 @@ import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.repository.GrowerDailyTotalsRepository;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import java.time.LocalDate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PurchaseContextServiceImpl implements PurchaseContextService {
@@ -25,6 +29,7 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
     private final AnnouncementService announcementService;
     private final ControlRecordService controlRecordService;
     private final PurchaseSellerService purchaseSellerService;
+    private final GrowerDailyTotalsRepository dailyTotals;
 
     public PurchaseContextServiceImpl(
             CurrentAgencyProvider currentAgencyProvider,
@@ -33,7 +38,8 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
             ProductCodeResolver productCodeResolver,
             AnnouncementService announcementService,
             ControlRecordService controlRecordService,
-            PurchaseSellerService purchaseSellerService) {
+            PurchaseSellerService purchaseSellerService,
+            GrowerDailyTotalsRepository dailyTotals) {
         this.currentAgencyProvider = currentAgencyProvider;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -41,16 +47,22 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
         this.announcementService = announcementService;
         this.controlRecordService = controlRecordService;
         this.purchaseSellerService = purchaseSellerService;
+        this.dailyTotals = dailyTotals;
     }
 
     @Override
     public PurchaseContext forPreview(Long fundId, String specialType, String idNumber, String address, String cellphone) {
-        return context(fundId, specialType, purchaseSellerService.resolve(idNumber, address, cellphone));
+        PurchaseSeller seller = purchaseSellerService.resolve(idNumber, address, cellphone);
+        return context(fundId, specialType, seller);
     }
 
+    /** MANDATORY: el bloqueo del tercero solo sirve dentro de la transaccion del guardado. */
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public PurchaseContext forSave(Long fundId, String specialType, String idNumber, String address, String cellphone) {
-        return context(fundId, specialType, purchaseSellerService.resolveAndComplete(idNumber, address, cellphone));
+        PurchaseSeller seller = purchaseSellerService.resolveAndComplete(idNumber, address, cellphone);
+        dailyTotals.lockGrower(seller.idNumber());
+        return context(fundId, specialType, seller);
     }
 
     private PurchaseContext context(Long fundId, String specialType, PurchaseSeller seller) {
@@ -64,6 +76,7 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
                 productCodeResolver.resolve(specialType, fund.getId()),
                 announcementService.findLatest(agency.getId(), fund.getId(), specialType),
                 controlRecordService.getActive(agency.getId()),
-                seller);
+                seller,
+                dailyTotals.sum(seller.idNumber(), LocalDate.now()));
     }
 }

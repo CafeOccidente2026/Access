@@ -21,11 +21,14 @@ import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseResponse;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
+import com.cafeoccidente.backend.purchases.shared.repository.GrowerDailyTotalsRepository;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +73,8 @@ class PurchaseServerValuesIntegrationTest {
     private RoleRepository roles;
     @Autowired
     private AgencyRepository agencies;
+    @Autowired
+    private GrowerDailyTotalsRepository dailyTotals;
     @Autowired
     private JdbcTemplate jdbc;
 
@@ -222,4 +227,30 @@ class PurchaseServerValuesIntegrationTest {
                 .isInstanceOf(BusinessRuleException.class).hasMessage(PurchaseSellerServiceImpl.DECEASED);
         assertThat(consecutive.next(AGENCY, controlRecords.getActive(AGENCY)).invoiceNumber()).isEqualTo(next);
     }
+
+    @Test
+    void theDailyWithholdingAddsDryGreenAndHuskOfEveryAgency() {
+        // Q10: base 1.000.000 y 0,5 % para que se note con montos chicos.
+        jdbc.update("UPDATE registros_control SET base_retencion = 1000000, porcentaje_retencion = 0.5"
+                + " WHERE agencia_id = ? AND activo", AGENCY);
+        GreenCoffeePurchaseRequest green600 = new GreenCoffeePurchaseRequest(rp, COMPLETE, null, null, 5,
+                new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("600"),
+                BigDecimal.ZERO, BigDecimal.ZERO, cash(new BigDecimal("595200")));
+        GreenCoffeePurchaseResponse greenSaved = green.create(green600);
+        assertThat(greenSaved.grossValue()).isEqualByComparingTo("600000");
+        assertThat(greenSaved.withholding()).isEqualByComparingTo("0");
+        // La compra de verde queda en otra agencia: igual cuenta para el mismo fiel.
+        jdbc.update("UPDATE compras_cafe_verde SET agencia_id = (SELECT min(id) FROM agencias WHERE id <> ?) WHERE id = ?",
+                AGENCY, greenSaved.id());
+
+        var huskPreview = husk.preview(new HuskPurchaseRequest(rp, COMPLETE, null, null, new BigDecimal("200"), 5,
+                new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null));
+
+        BigDecimal expected = huskPreview.grossValue().add(new BigDecimal("600000"))
+                .multiply(new BigDecimal("0.005")).setScale(0, RoundingMode.HALF_UP);
+        assertThat(huskPreview.withholding()).isEqualByComparingTo(expected);
+        assertThat(dailyTotals.sum(COMPLETE, LocalDate.now()).grossValue()).isEqualByComparingTo("600000");
+        assertThat(dailyTotals.sum(COMPLETE, LocalDate.now().plusDays(1)).grossValue()).isEqualByComparingTo("0");
+    }
+
 }

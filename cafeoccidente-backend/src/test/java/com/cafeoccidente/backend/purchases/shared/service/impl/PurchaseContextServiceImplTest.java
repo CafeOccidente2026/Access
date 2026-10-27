@@ -12,6 +12,7 @@ import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
@@ -19,8 +20,11 @@ import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.repository.GrowerDailyTotalsRepository;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,8 +38,9 @@ class PurchaseContextServiceImplTest {
     private final AnnouncementService announcements = mock(AnnouncementService.class);
     private final ControlRecordService controlRecords = mock(ControlRecordService.class);
     private final PurchaseSellerService sellers = mock(PurchaseSellerService.class);
+    private final GrowerDailyTotalsRepository totals = mock(GrowerDailyTotalsRepository.class);
     private final PurchaseContextServiceImpl service = new PurchaseContextServiceImpl(
-            currentAgencyProvider, agencies, funds, productCodes, announcements, controlRecords, sellers);
+            currentAgencyProvider, agencies, funds, productCodes, announcements, controlRecords, sellers, totals);
 
     private final Agency agency = new Agency();
     private final Fund fund = new Fund();
@@ -44,6 +49,7 @@ class PurchaseContextServiceImplTest {
             new AnnouncementResponse(9L, "9", null, null, null, null, null, null, 4L, 2L, "RN", null);
     private final ControlRecord controlRecord = new ControlRecord();
     private final PurchaseSeller seller = new PurchaseSeller("1", "A", "B", "S", "D", "C", false);
+    private final DailyGrowerTotals today = new DailyGrowerTotals(new BigDecimal("600000"), BigDecimal.ZERO);
 
     @BeforeEach
     void pointWithEverything() {
@@ -55,6 +61,7 @@ class PurchaseContextServiceImplTest {
         when(productCodes.resolve("RN", 2L)).thenReturn(productCode);
         when(announcements.findLatest(4L, 2L, "RN")).thenReturn(announcement);
         when(controlRecords.getActive(4L)).thenReturn(controlRecord);
+        when(totals.sum("1", LocalDate.now())).thenReturn(today);
     }
 
     @Test
@@ -63,18 +70,21 @@ class PurchaseContextServiceImplTest {
 
         PurchaseContext context = service.forPreview(2L, "RN", "1", "dir", "cel");
 
-        assertThat(context).isEqualTo(new PurchaseContext(agency, fund, productCode, announcement, controlRecord, seller));
+        assertThat(context).isEqualTo(new PurchaseContext(agency, fund, productCode, announcement, controlRecord, seller, today));
         verify(sellers, never()).resolveAndComplete(any(), any(), any());
+        verify(totals, never()).lockGrower(any());
     }
 
     @Test
-    void theSaveAlsoCompletesTheSeller() {
+    void theSaveAlsoCompletesTheSellerAndLocksItsRow() {
         when(sellers.resolveAndComplete("1", "dir", "cel")).thenReturn(seller);
 
         PurchaseContext context = service.forSave(2L, "RN", "1", "dir", "cel");
 
         assertThat(context.seller()).isSameAs(seller);
         assertThat(context.agency()).isSameAs(agency);
+        assertThat(context.dailyTotals()).isSameAs(today);
+        verify(totals).lockGrower("1");
         verify(sellers, never()).resolve(any(), any(), any());
     }
 }

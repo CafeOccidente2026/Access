@@ -16,7 +16,6 @@ import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.entity.GreenCoffeePurchase;
 import com.cafeoccidente.backend.purchases.greencoffee.mapper.GreenCoffeePurchaseMapper;
 import com.cafeoccidente.backend.purchases.greencoffee.repository.GreenCoffeePurchaseRepository;
-import com.cafeoccidente.backend.purchases.greencoffee.repository.MonthlyGrowerTotals;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
@@ -27,6 +26,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
@@ -174,8 +174,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     }
 
     private GreenCoffeePurchaseCalculation runCalculation(GreenCoffeePurchaseRequest request, PurchaseContext context) {
-        MonthlyGrowerTotals dailyTotals = greenCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
-                request.idNumber(), LocalDate.now());
+        // Q10: lo que el fiel ya vendio hoy en seco + verde + pasilla, en todas las agencias.
+        DailyGrowerTotals dailyTotals = context.dailyTotals();
 
         GreenCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,

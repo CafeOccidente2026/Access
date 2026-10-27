@@ -8,7 +8,8 @@ import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 
 /**
  * Lo que toda compra (seco, verde, pasilla) resuelve en el servidor antes de calcular: agencia de
- * trabajo del token, fondo, codigo de producto, anuncio vigente, Registro de Control y vendedor.
+ * trabajo del token, fondo, codigo de producto, anuncio vigente, Registro de Control, vendedor y
+ * lo que ese vendedor ya vendio hoy (retencion conjunta, Q10).
  */
 public record PurchaseContext(
         Agency agency,
@@ -16,5 +17,6 @@ public record PurchaseContext(
         ProductCode productCode,
         AnnouncementResponse announcement,
         ControlRecord controlRecord,
-        PurchaseSeller seller) {
+        PurchaseSeller seller,
+        DailyGrowerTotals dailyTotals) {
 }

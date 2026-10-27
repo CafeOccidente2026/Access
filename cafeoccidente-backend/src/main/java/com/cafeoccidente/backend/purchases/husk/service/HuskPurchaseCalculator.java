@@ -27,9 +27,9 @@ public class HuskPurchaseCalculator {
      * @param announcement anuncio de pasilla vigente (lo resuelve el servidor): Pr Punto
      *     (healthyUnitPrice) y Costos - nunca los del navegador
      * @param seller vendedor desde TERCEROS (tipo S/C/F y si es asociacion)
-     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado en PASILLA para esta cedula
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado hoy (seco + verde + pasilla, Q10) para esta cedula
      *     en el dia de la compra (Texto105 / macro CalculoReteFteMesPas)
-     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada en PASILLA a esta cedula en
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada (seco + verde + pasilla, Q10) a esta cedula en
      *     el dia de la compra (Texto107 / macro CalculoReteFteMesPas)
      */
     public HuskPurchaseCalculation calculate(
@@ -96,7 +96,7 @@ public class HuskPurchaseCalculator {
 
         // SIN VERIFICAR: CalculoReteFteMesPas solo abre el reporte "ReteMesCursoPas" y copia
         // TotalVrBruto/TotalRetefuente a Texto105/Texto107; el RecordSource del reporte no esta en
-        // el export de VBA disponible. sumDailyTotalsByIdNumber usa ventana diaria
+        // el export de VBA disponible. GrowerDailyTotalsRepository usa ventana diaria
         // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
         BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;

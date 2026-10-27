@@ -120,8 +120,8 @@ public class DryCoffeePurchaseCalculator {
         // Retefuente incremental sobre el acumulado DIARIO del caficultor (macro CalculoReteFteMes):
         // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado hoy),
         // y se descuenta la Retefuente ya practicada hoy, dejando solo el diferencial.
-        // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
-        // Cuando existan greencoffee/husk habra que decidir si tambien deben sumar.
+        // Q10 (area de compras): el acumulado es conjunto, seco + verde + pasilla del dia en todas las
+        // agencias (GrowerDailyTotalsRepository).
         // Ventana: CalculoReteFteMes copia TotalVrBruto/TotalRetefuente del reporte "ReteMesCurso",
         // cuyo RecordSource es una consulta guardada que no esta en el export. Pese al nombre "Mes",
         // la ventana diaria reproduce mejor la Retefuente historica de compras_migrar.csv (750/844
