@@ -49,11 +49,15 @@ class DryCoffeePurchaseCalculatorTest {
     }
 
     private static DryCoffeePurchaseRequest request(String grossKg) {
+        return request(grossKg, "50");
+    }
+
+    private static DryCoffeePurchaseRequest request(String grossKg, String penalty) {
         return new DryCoffeePurchaseRequest(
                 1L, "RN", "123456", null, null,
                 10, new BigDecimal(grossKg), new BigDecimal("50"),
                 new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
-                new BigDecimal("50"), BigDecimal.ZERO, BigDecimal.ZERO, null);
+                new BigDecimal(penalty), BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
     private static DryCoffeePurchaseRequest request() {
@@ -164,6 +168,20 @@ class DryCoffeePurchaseCalculatorTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("\"Precio Base Carga PC\" dio un valor negativo (-184000.00). Revise el anuncio"
                         + " vigente o el Registro de Control de la agencia antes de continuar.");
+    }
+
+    @Test
+    void aPositivePenaltyIsTakenAsNegativeAndLowersTheKiloPrice() {
+        // Q1 / RN-14.7: 23 se registra como -23; sin castigo el Vr. Kilo es mayor.
+        BigDecimal typedPositive = calculator.calculate(request("1250", "23"), controlRecord(), announcement(),
+                seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO).unitPrice();
+        BigDecimal typedNegative = calculator.calculate(request("1250", "-23"), controlRecord(), announcement(),
+                seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO).unitPrice();
+        BigDecimal none = calculator.calculate(request("1250", "0"), controlRecord(), announcement(),
+                seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO).unitPrice();
+
+        assertThat(typedPositive).isEqualByComparingTo(typedNegative);
+        assertThat(typedPositive).isLessThan(none);
     }
 
     @Test

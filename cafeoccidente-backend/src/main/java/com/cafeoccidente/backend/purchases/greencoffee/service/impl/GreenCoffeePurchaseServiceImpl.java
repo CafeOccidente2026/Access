@@ -30,6 +30,7 @@ import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -128,7 +129,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
         purchase.setBonus(announcement.bonus());
         purchase.setCosts(announcement.costs());
-        purchase.setPenalty(request.penalty());
+        purchase.setPenalty(PenaltyRule.normalize(request.penalty()));
         purchase.setCompKgPrice(request.compKgPrice());
         purchase.setUnitPrice(calculation.unitPrice());
         purchase.setGrossValue(calculation.grossValue());

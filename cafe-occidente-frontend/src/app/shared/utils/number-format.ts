@@ -61,3 +61,12 @@ export function parseDisplayNumber(value: string | undefined | null): number {
   const n = Number(normalizeDecimalComma(s));
   return Number.isNaN(n) ? 0 : n;
 }
+
+/**
+ * Castigo confirmado (Q1, RN-14.7): solo cero o negativo. "23" queda "-23", "-23" se respeta y vacio o
+ * cero quedan "0". El servidor aplica la misma regla, esto es solo lo que ve el cajero.
+ */
+export function asPenalty(value: string): string {
+  const digits = value.trim().replace(/^[+-]/, '');
+  return parseDisplayNumber(digits) === 0 ? '0' : `-${digits}`;
+}

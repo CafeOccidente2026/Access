@@ -28,6 +28,7 @@ import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -123,7 +124,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setHealthyUnitPrice(announcement.healthyUnitPrice());
         purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
         purchase.setBonus(announcement.bonus());
-        purchase.setPenalty(request.penalty());
+        purchase.setPenalty(PenaltyRule.normalize(request.penalty()));
         purchase.setCosts(announcement.costs());
         purchase.setUnitPrice(calculation.unitPrice());
         purchase.setGrossValue(calculation.grossValue());

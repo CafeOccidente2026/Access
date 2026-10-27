@@ -26,7 +26,8 @@ public record DryCoffeePurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal totalStoredWeight,
         @NotNull @PositiveOrZero BigDecimal defectiveStoredWeight,
         @NotNull @PositiveOrZero BigDecimal healthyStoredWeight,
-        @NotNull @PositiveOrZero BigDecimal penalty,
+        /** Castigo: cualquier signo; el servidor lo registra negativo (PenaltyRule). */
+        @NotNull BigDecimal penalty,
         @NotNull @PositiveOrZero BigDecimal freightDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
         /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */

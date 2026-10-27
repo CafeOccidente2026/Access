@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -79,7 +80,8 @@ public class DryCoffeePurchaseCalculator {
         BigDecimal healthyPercentage = healthyPercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
         // Sacos_LostFocus: precios unitarios intermedios (Texto190/Texto191 en el VBA original).
-        BigDecimal var5 = announcement.healthyUnitPrice().subtract(request.penalty());
+        // Q1: el castigo (siempre <= 0) se suma al Pr Sustentacion, que es restarlo.
+        BigDecimal var5 = announcement.healthyUnitPrice().add(PenaltyRule.normalize(request.penalty()));
         BigDecimal var1 = var5.add(announcement.bonus());
         if (healthyPercentageRaw.signum() == 0) {
             throw new BusinessRuleException("El porcentaje de almendra sana no puede ser cero");

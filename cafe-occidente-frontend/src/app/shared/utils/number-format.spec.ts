@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  asPenalty,
   formatDisplayNumber,
   formatThousands,
   parseDisplayNumber,
@@ -95,5 +96,15 @@ describe('stripAnnouncementPrefix', () => {
 
   it('returns the value unchanged when there is no dash', () => {
     expect(stripAnnouncementPrefix('3500')).toBe('3500');
+  });
+});
+
+describe('asPenalty', () => {
+  it('takes a positive penalty as negative and leaves zero and negatives alone', () => {
+    expect(asPenalty('23')).toBe('-23');
+    expect(asPenalty('-23')).toBe('-23');
+    expect(asPenalty(' 1,5 ')).toBe('-1,5');
+    expect(asPenalty('')).toBe('0');
+    expect(asPenalty('0')).toBe('0');
   });
 });

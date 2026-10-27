@@ -121,9 +121,14 @@ class PurchaseServerValuesIntegrationTest {
     }
 
     private DryCoffeePurchaseRequest dryRequest(String idNumber, String address, String cellphone, BigDecimal pay) {
+        return dryRequest(idNumber, address, cellphone, BigDecimal.ZERO, pay);
+    }
+
+    private DryCoffeePurchaseRequest dryRequest(String idNumber, String address, String cellphone, BigDecimal penalty,
+            BigDecimal pay) {
         return new DryCoffeePurchaseRequest(rp, "RN", idNumber, address, cellphone, 5, new BigDecimal("1000"),
                 BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"), new BigDecimal("190"),
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, cash(pay));
+                penalty, BigDecimal.ZERO, BigDecimal.ZERO, cash(pay));
     }
 
     private DryCoffeePurchaseResponse saveDry(String idNumber, String address, String cellphone) {
@@ -199,6 +204,15 @@ class PurchaseServerValuesIntegrationTest {
                 + " FROM historial_cambios WHERE entidad = 'TERCERO' AND entidad_id = ?", tercero.get("id"));
         assertThat(history.get("accion")).isEqualTo("MODIFICAR");
         assertThat((String) history.get("despues")).contains("3110000000").contains("VEREDA NUEVA");
+    }
+
+    @Test
+    void aPositivePenaltyIsSavedAsNegative() {
+        BigDecimal net = dry.preview(dryRequest(COMPLETE, null, null, new BigDecimal("23"), null)).netToPay();
+        DryCoffeePurchaseResponse saved = dry.create(dryRequest(COMPLETE, null, null, new BigDecimal("23"), net));
+
+        assertThat(saved.penalty()).isEqualByComparingTo("-23");
+        assertThat(saved.netToPay()).isEqualByComparingTo(net);
     }
 
     @Test

@@ -23,7 +23,8 @@ public record GreenCoffeePurchaseRequest(
         @NotNull @Positive Integer bagsCount,
         @NotNull @PositiveOrZero BigDecimal grossKg,
         @NotNull @PositiveOrZero BigDecimal tareKg,
-        @NotNull @PositiveOrZero BigDecimal penalty,
+        /** Castigo: cualquier signo; el servidor lo registra negativo (PenaltyRule). */
+        @NotNull BigDecimal penalty,
         @NotNull @PositiveOrZero BigDecimal compKgPrice,
         @NotNull @PositiveOrZero BigDecimal shrinkageDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,

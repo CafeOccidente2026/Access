@@ -14,7 +14,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { asPenalty, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
 type FormModel = Record<string, string>;
@@ -127,6 +127,9 @@ export class QuotaBillingFormComponent {
     }
     if (value === '' && ZERO_IF_EMPTY.includes(key)) {
       this.model[key] = '0';
+    }
+    if (key === 'penalty') {
+      this.model[key] = asPenalty(this.model[key] ?? '');
     }
     if (key !== 'idPart1') {
       this.locked.add(key);
