@@ -368,7 +368,7 @@ export class QuotaBillingFormComponent {
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';

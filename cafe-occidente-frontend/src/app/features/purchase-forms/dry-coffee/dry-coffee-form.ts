@@ -620,6 +620,7 @@ export class DryCoffeeFormComponent {
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
       idNumber: this.model['idPart1'] ?? '',
+      healthyStoredWeight: this.model['healthyStoredWeight'] ?? '',
       wastePercentage: q.wastePercentage ?? '',
       huskPercentage: q.defectivePercentage ?? '',
       factor: q.healthyPercentage ?? '',
