@@ -50,21 +50,14 @@ export class DryCoffeePurchaseService {
     return this.http.get<SpecialInfo>(`${API_BASE_URL}/purchases/dry-coffee/special-info?${params}`);
   }
 
-  /** Porcentajes independientes (pasos "Peso Tot Alm"/"Peso Tot Pasilla"/"Peso Alm Sana"). */
-  qualityPercentages(
-    totalStoredWeight?: number,
-    defectiveStoredWeight?: number,
-    healthyStoredWeight?: number,
-  ): Observable<QualityPercentages> {
+  /** Porc Merma con Peso Tot Alm; con los dos pesos, ademas Porc Kg Pas, Peso Alm Sana y Factor (Q2). */
+  qualityPercentages(totalStoredWeight?: number, defectiveStoredWeight?: number): Observable<QualityPercentages> {
     const params = new URLSearchParams();
     if (totalStoredWeight !== undefined) {
       params.set('totalStoredWeight', String(totalStoredWeight));
     }
     if (defectiveStoredWeight !== undefined) {
       params.set('defectiveStoredWeight', String(defectiveStoredWeight));
-    }
-    if (healthyStoredWeight !== undefined) {
-      params.set('healthyStoredWeight', String(healthyStoredWeight));
     }
     return this.http.get<QualityPercentages>(
       `${API_BASE_URL}/purchases/dry-coffee/quality-percentages?${params.toString()}`,

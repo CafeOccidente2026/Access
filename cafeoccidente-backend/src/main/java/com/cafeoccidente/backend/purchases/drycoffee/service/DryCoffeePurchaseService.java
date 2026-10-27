@@ -27,6 +27,5 @@ public interface DryCoffeePurchaseService {
     SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType);
 
     /** Porcentajes independientes (pasos "Peso Tot Alm"/"Peso Tot Pasilla"/"Peso Alm Sana"). */
-    QualityPercentagesResponse qualityPercentages(
-            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, BigDecimal healthyStoredWeight);
+    QualityPercentagesResponse qualityPercentages(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight);
 }

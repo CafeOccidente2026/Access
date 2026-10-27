@@ -119,7 +119,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setWastePercentage(calculation.wastePercentage());
         purchase.setDefectiveStoredWeight(request.defectiveStoredWeight());
         purchase.setDefectivePercentage(calculation.defectivePercentage());
-        purchase.setHealthyStoredWeight(request.healthyStoredWeight());
+        purchase.setHealthyStoredWeight(calculation.healthyStoredWeight());
         purchase.setHealthyPercentage(calculation.healthyPercentage());
         purchase.setHealthyUnitPrice(announcement.healthyUnitPrice());
         purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
@@ -230,16 +230,18 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     }
 
     @Override
-    public QualityPercentagesResponse qualityPercentages(
-            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, BigDecimal healthyStoredWeight) {
+    public QualityPercentagesResponse qualityPercentages(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight) {
         ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
+        // Q2: con los dos pesos digitados, Peso Alm Sana y Factor salen del servidor.
+        BigDecimal healthyStoredWeight = totalStoredWeight == null || defectiveStoredWeight == null
+                ? null
+                : calculator.healthyStoredWeight(totalStoredWeight, defectiveStoredWeight);
         return new QualityPercentagesResponse(
                 totalStoredWeight == null ? null : calculator.wastePercentage(totalStoredWeight, controlRecord),
                 defectiveStoredWeight == null
                         ? null
                         : calculator.defectivePercentage(defectiveStoredWeight, controlRecord),
-                healthyStoredWeight == null
-                        ? null
-                        : calculator.healthyPercentage(healthyStoredWeight, controlRecord));
+                healthyStoredWeight,
+                healthyStoredWeight == null ? null : calculator.healthyPercentage(healthyStoredWeight, controlRecord));
     }
 }

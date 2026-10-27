@@ -75,7 +75,7 @@ class NewPurchasePaymentIntegrationTest {
         // Precios, costos y datos del vendedor los pone el servidor (anuncio vigente y TERCEROS).
         return new DryCoffeePurchaseRequest(fundId, "NESPRESSO - FTUSA", GROWER, null, null,
                 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"),
-                new BigDecimal("10"), new BigDecimal("190"), BigDecimal.ZERO,
+                new BigDecimal("10"), BigDecimal.ZERO,
                 BigDecimal.ZERO, BigDecimal.ZERO, payment);
     }
 

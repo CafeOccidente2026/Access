@@ -200,7 +200,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
         return new DryCoffeePurchaseRequest(
                 p.getFund().getId(), p.getSpecialType(), p.getIdNumber(), p.getAddress(), p.getCellphone(),
                 p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
-                p.getTotalStoredWeight(), p.getDefectiveStoredWeight(), p.getHealthyStoredWeight(),
+                p.getTotalStoredWeight(), p.getDefectiveStoredWeight(),
                 p.getPenalty(), p.getFreightDiscount(), p.getOtherDiscounts(), null);
     }
 

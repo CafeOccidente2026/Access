@@ -56,7 +56,7 @@ class DryCoffeePurchaseCalculatorTest {
         return new DryCoffeePurchaseRequest(
                 1L, "RN", "123456", null, null,
                 10, new BigDecimal(grossKg), new BigDecimal("50"),
-                new BigDecimal("240"), new BigDecimal("20"), new BigDecimal("220"),
+                new BigDecimal("240"), new BigDecimal("20"),
                 new BigDecimal(penalty), BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
@@ -182,6 +182,25 @@ class DryCoffeePurchaseCalculatorTest {
 
         assertThat(typedPositive).isEqualByComparingTo(typedNegative);
         assertThat(typedPositive).isLessThan(none);
+    }
+
+    @Test
+    void theHealthyAlmondIsTotalMinusHuskAndFeedsTheFactor() {
+        // Q2: se digitan Peso Tot Alm (200) y Peso Pasilla (10); Alm Sana = 190 y Factor = 250 x 70 / 190.
+        assertThat(calculator.healthyStoredWeight(new BigDecimal("200"), new BigDecimal("10"))).isEqualByComparingTo("190");
+        assertThat(calculator.healthyPercentage(new BigDecimal("190"), controlRecord())).isEqualByComparingTo("92.11");
+        // Ejemplo del RF (198,3 / 7,1 / 186,17 -> Factor 94,0001): no suma; con la regla del area
+        // (Q2) la Alm Sana es 191,20 y el Factor 91,53.
+        BigDecimal rfHealthy = calculator.healthyStoredWeight(new BigDecimal("198.3"), new BigDecimal("7.1"));
+        assertThat(rfHealthy).isEqualByComparingTo("191.20");
+        assertThat(calculator.healthyPercentage(rfHealthy, controlRecord())).isEqualByComparingTo("91.53");
+    }
+
+    @Test
+    void theHuskCannotReachTheTotalAlmond() {
+        assertThatThrownBy(() -> calculator.healthyStoredWeight(new BigDecimal("200"), new BigDecimal("200")))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("La pasilla debe ser menor que la almendra total");
     }
 
     @Test

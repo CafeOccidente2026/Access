@@ -127,7 +127,7 @@ class PurchaseServerValuesIntegrationTest {
     private DryCoffeePurchaseRequest dryRequest(String idNumber, String address, String cellphone, BigDecimal penalty,
             BigDecimal pay) {
         return new DryCoffeePurchaseRequest(rp, "RN", idNumber, address, cellphone, 5, new BigDecimal("1000"),
-                BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"), new BigDecimal("190"),
+                BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"),
                 penalty, BigDecimal.ZERO, BigDecimal.ZERO, cash(pay));
     }
 

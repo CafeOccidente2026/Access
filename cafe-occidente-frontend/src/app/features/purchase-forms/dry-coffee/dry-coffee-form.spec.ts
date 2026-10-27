@@ -72,6 +72,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
   let previewSpy: ReturnType<typeof vi.fn>;
   let createSpy: ReturnType<typeof vi.fn>;
+  let qualitySpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
 
   function setup(grower: Grower) {
@@ -90,7 +91,9 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
           bonus: 40,
           costs: 692,
         }),
-      qualityPercentages: () => of({ wastePercentage: 12, defectivePercentage: 8, healthyPercentage: 90.9 }),
+      qualityPercentages: (qualitySpy = vi.fn(() =>
+        of({ wastePercentage: 12, defectivePercentage: 8, healthyStoredWeight: 200, healthyPercentage: 90.9 }),
+      )),
       preview: previewSpy,
       create: (createSpy = vi.fn(() => of({}))),
     };
@@ -236,5 +239,20 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     pending.error(new Error('fallo'));
     expect(component.saving()).toBe(false);
+  });
+
+  it('Q2: the healthy almond is not typed; the server computes it from total and husk weights', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+    component.model['totalHuskWeight'] = '20';
+    component.onFieldCommitted('totalHuskWeight');
+
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20);
+    expect(component.model['healthyStoredWeight']).toBe('200');
+    component.model['healthyStoredWeight'] = '999';
+    component.onFieldCommitted('healthyStoredWeight');
+    expect((component as any).locked.has('healthyStoredWeight')).toBe(false);
   });
 });

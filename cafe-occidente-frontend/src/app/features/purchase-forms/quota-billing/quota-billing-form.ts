@@ -24,17 +24,19 @@ type FormModel = Record<string, string>;
  *  (Factura la tipea el cajero, Cedula_AfterUpdate solo valida el consecutivo contra la resolucion). */
 const EDITABLE: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 const REQUIRED: string[] = [
-  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
+  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
 ];
 
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
+  // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
+  'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'basePricePergaminoLoad', 'huskPrice',
   'sustentationPrice', 'bonus', 'costs',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
@@ -42,7 +44,7 @@ const READONLY: string[] = [
 
 const FOCUS_ORDER: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
@@ -168,7 +170,6 @@ export class QuotaBillingFormComponent {
         break;
       case 'totalStoredWeight':
       case 'totalHuskWeight':
-      case 'healthyStoredWeight':
         this.loadQualityPercentage(key);
         this.recalculate();
         break;
@@ -233,24 +234,19 @@ export class QuotaBillingFormComponent {
     });
   }
 
-  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight' | 'healthyStoredWeight'): void {
-    const value = num(this.model[key]);
-    const args: [number?, number?, number?] =
-      key === 'totalStoredWeight'
-        ? [value, undefined, undefined]
-        : key === 'totalHuskWeight'
-          ? [undefined, value, undefined]
-          : [undefined, undefined, value];
+  /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
+  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight'): void {
+    const total = num(this.model['totalStoredWeight']);
+    const args: [number?, number?] = key === 'totalStoredWeight' ? [total] : [total, num(this.model['totalHuskWeight'])];
     this.service.qualityPercentages(...args).subscribe((q) => {
-      const target: Record<string, string> = {
-        totalStoredWeight: 'wastePercentage',
-        totalHuskWeight: 'huskPercentage',
-        healthyStoredWeight: 'factor',
-      };
-      const value2 =
-        key === 'totalStoredWeight' ? q.wastePercentage : key === 'totalHuskWeight' ? q.defectivePercentage : q.healthyPercentage;
-      this.model[target[key]] = value2 != null ? String(value2) : '';
-      this.locked.add(target[key]);
+      const shown: Record<string, number | null | undefined> =
+        key === 'totalStoredWeight'
+          ? { wastePercentage: q.wastePercentage }
+          : { huskPercentage: q.defectivePercentage, healthyStoredWeight: q.healthyStoredWeight, factor: q.healthyPercentage };
+      for (const [field, value] of Object.entries(shown)) {
+        this.model[field] = value != null ? String(value) : '';
+        this.locked.add(field);
+      }
       this.tick.update((n) => n + 1);
     });
   }
@@ -290,7 +286,6 @@ export class QuotaBillingFormComponent {
       tareKg: num(this.model['tare']),
       totalStoredWeight: num(this.model['totalStoredWeight']),
       defectiveStoredWeight: num(this.model['totalHuskWeight']),
-      healthyStoredWeight: num(this.model['healthyStoredWeight']),
       penalty: num(this.model['penalty']),
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),

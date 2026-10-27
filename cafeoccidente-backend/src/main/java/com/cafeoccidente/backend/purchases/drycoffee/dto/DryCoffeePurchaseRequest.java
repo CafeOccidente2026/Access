@@ -9,7 +9,8 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
 /**
- * Solo lo que digita el cajero (Cedula, Sacos, Destare, pesos de muestra, Castigo, descuentos).
+ * Solo lo que digita el cajero (Cedula, Sacos, Destare, Peso Tot Alm y Peso Pasilla, Castigo,
+ * descuentos). Peso Alm Sana lo calcula el servidor (Q2).
  * Factura, Pr Sustentacion, Bonificacion, Costos, Pr_AlmDefec y los datos del vendedor los resuelve
  * el servidor (anuncio vigente, consecutivo y TERCEROS); si el cliente los manda, se ignoran.
  * address y cellphone solo se usan cuando el tercero los tiene vacios.
@@ -25,7 +26,6 @@ public record DryCoffeePurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal tareKg,
         @NotNull @PositiveOrZero BigDecimal totalStoredWeight,
         @NotNull @PositiveOrZero BigDecimal defectiveStoredWeight,
-        @NotNull @PositiveOrZero BigDecimal healthyStoredWeight,
         /** Castigo: cualquier signo; el servidor lo registra negativo (PenaltyRule). */
         @NotNull BigDecimal penalty,
         @NotNull @PositiveOrZero BigDecimal freightDiscount,
