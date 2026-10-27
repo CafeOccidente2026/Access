@@ -185,6 +185,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
     private DryCoffeePurchaseCalculation runCalculation(DryCoffeePurchaseRequest request, PurchaseContext context) {
+        // Q8: en los cafes de programa la cedula tiene que estar en su programa NESS.
+        growerService.requireProgramToInvoice(request.idNumber(), request.specialType());
         // Q10: lo que el fiel ya vendio hoy en seco + verde + pasilla, en todas las agencias.
         DailyGrowerTotals dailyTotals = context.dailyTotals();
 

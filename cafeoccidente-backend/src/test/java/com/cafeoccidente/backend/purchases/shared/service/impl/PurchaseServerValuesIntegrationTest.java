@@ -92,7 +92,8 @@ class PurchaseServerValuesIntegrationTest {
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
 
         rp = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
-        for (String special : new String[] {"RN", "CV", "PASILLA"}) {
+        for (String special : new String[] {"RN", "CV", "PASILLA", "NESPRESSO - FTUSA", "NESPRESSO CON TAZA - FTUSA",
+                "NESPRESSO LATE HARVEST CON TAZA - FTUSA"}) {
             Long id = jdbc.queryForObject("INSERT INTO anuncios (fecha_anuncio, pr_base_cps, pr_alm_defec, sobrepr_carga_esp,"
                     + " pr_inc_calidad, fondo_id, especial, activo) VALUES (CURRENT_DATE, 1546900, 6000, 80000, 50, ?, ?, true)"
                     + " RETURNING id", Long.class, rp, special);
@@ -126,9 +127,23 @@ class PurchaseServerValuesIntegrationTest {
 
     private DryCoffeePurchaseRequest dryRequest(String idNumber, String address, String cellphone, BigDecimal penalty,
             BigDecimal pay) {
-        return new DryCoffeePurchaseRequest(rp, "RN", idNumber, address, cellphone, 5, new BigDecimal("1000"),
-                BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"),
+        return dryRequest("RN", idNumber, address, cellphone, penalty, new BigDecimal("10"), pay);
+    }
+
+    private DryCoffeePurchaseRequest dryRequest(String special, String idNumber, String address, String cellphone,
+            BigDecimal penalty, BigDecimal huskWeight, BigDecimal pay) {
+        return new DryCoffeePurchaseRequest(rp, special, idNumber, address, cellphone, 5, new BigDecimal("1000"),
+                BigDecimal.ZERO, new BigDecimal("200"), huskWeight,
                 penalty, BigDecimal.ZERO, BigDecimal.ZERO, cash(pay));
+    }
+
+    private DryCoffeePurchaseRequest nespresso(String special, String huskWeight) {
+        return dryRequest(special, COMPLETE, null, null, BigDecimal.ZERO, new BigDecimal(huskWeight), null);
+    }
+
+    private void inProgram(String program) {
+        jdbc.update("INSERT INTO cupos_ness (cedula, nombres, programa, cupo) VALUES (?, 'PRUEBA', ?, '100000')",
+                COMPLETE, program);
     }
 
     private DryCoffeePurchaseResponse saveDry(String idNumber, String address, String cellphone) {
@@ -265,6 +280,39 @@ class PurchaseServerValuesIntegrationTest {
         assertThat(huskPreview.withholding()).isEqualByComparingTo(expected);
         assertThat(dailyTotals.sum(COMPLETE, LocalDate.now()).grossValue()).isEqualByComparingTo("600000");
         assertThat(dailyTotals.sum(COMPLETE, LocalDate.now().plusDays(1)).grossValue()).isEqualByComparingTo("0");
+    }
+
+
+    @Test
+    void programCoffeesRequireTheSellerInItsNessProgramIncludingTheCupVariants() {
+        String notInProgram = "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO LE PUEDE FACTURAR ESTE TIPO DE CAFE.";
+        for (String special : new String[] {"NESPRESSO - FTUSA", "NESPRESSO CON TAZA - FTUSA",
+                "NESPRESSO LATE HARVEST CON TAZA - FTUSA"}) {
+            assertThatThrownBy(() -> dry.preview(nespresso(special, "10")))
+                    .as(special).isInstanceOf(BusinessRuleException.class).hasMessage(notInProgram);
+        }
+        inProgram("NESPRESSO");
+        inProgram("NESPRESSO LATE HARVEST");
+
+        assertThat(dry.preview(nespresso("NESPRESSO - FTUSA", "10")).healthyPercentage()).isEqualByComparingTo("92.11");
+        assertThat(dry.preview(nespresso("NESPRESSO CON TAZA - FTUSA", "10")).netToPay()).isPositive();
+        assertThat(dry.preview(nespresso("NESPRESSO LATE HARVEST CON TAZA - FTUSA", "10")).netToPay()).isPositive();
+    }
+
+    @Test
+    void aNespressoFactorOverTheThresholdIsRejectedButRnIsNot() {
+        inProgram("NESPRESSO");
+        // 200 / 14 -> Alm Sana 186 y Factor 250 x 70 / 186 = 94,09 > 93,33.
+        assertThatThrownBy(() -> dry.preview(nespresso("NESPRESSO - FTUSA", "14")))
+                .isInstanceOf(BusinessRuleException.class)
+                .extracting("code").isEqualTo("UMBRAL_ESPECIALES");
+        assertThatThrownBy(() -> dry.qualityPercentages(new BigDecimal("200"), new BigDecimal("14"), rp, "NESPRESSO - FTUSA"))
+                .isInstanceOf(BusinessRuleException.class)
+                .extracting("code").isEqualTo("UMBRAL_ESPECIALES");
+        assertThat(dry.preview(dryRequest("RN", COMPLETE, null, null, BigDecimal.ZERO, new BigDecimal("14"), null))
+                .healthyPercentage()).isEqualByComparingTo("94.09");
+        assertThat(dry.qualityPercentages(new BigDecimal("200"), new BigDecimal("14"), null, null).healthyStoredWeight())
+                .isEqualByComparingTo("186");
     }
 
 }

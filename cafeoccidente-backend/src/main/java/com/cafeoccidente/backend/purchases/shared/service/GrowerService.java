@@ -58,12 +58,20 @@ public interface GrowerService {
      * PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE"). Solo bloquea para los Especiales con
      * cobertura de datos confirmada (staging_legacy_ness/SPECIAL_TO_PROGRAMA) - para el resto no
      * hay forma de distinguir "no pertenece" de "dato no migrado", mismo criterio que
-     * {@link #checkQuota}. NO esta activado para Cafe Seco/Verde/Pasilla/Otros (ver nota EnProg
-     * en la implementacion) - esa es una decision de negocio pendiente, distinta de esta.
+     * {@link #checkQuota}. Para facturar Cafe Seco se usa {@link #requireProgramToInvoice}.
      *
      * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si no pertenece.
      */
     void requireProgramMembership(String idNumber, String specialType);
+
+    /**
+     * Mismo bloqueo para facturar Cafe Seco (Q8, Form_COMPRAS.bas W_AlmSana_AfterUpdate): en los
+     * cafes de programa (NESPRESSO, NESPRESSO LATE HARVEST con y sin taza, REGIONAL NARIÑO 4C) la
+     * cedula tiene que estar en su programa NESS.
+     *
+     * @throws com.cafeoccidente.backend.common.exception.BusinessRuleException si no pertenece.
+     */
+    void requireProgramToInvoice(String idNumber, String specialType);
 
     /** Asociados.Asociacion de esa cedula (sin caficultor o nulo = No, como un Si/No de Access). */
     boolean isAssociation(String idNumber);
