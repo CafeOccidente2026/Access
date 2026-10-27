@@ -249,10 +249,28 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.model['totalHuskWeight'] = '20';
     component.onFieldCommitted('totalHuskWeight');
 
-    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20);
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
     expect(component.model['healthyStoredWeight']).toBe('200');
     component.model['healthyStoredWeight'] = '999';
     component.onFieldCommitted('healthyStoredWeight');
     expect((component as any).locked.has('healthyStoredWeight')).toBe(false);
+  });
+
+  it('Q15: a NESPRESSO Factor over the threshold warns, clears the sample weights and goes back to them', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    const message = 'El Factor (94,00) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+    qualitySpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+    component.model['totalHuskWeight'] = '20';
+    component.onFieldCommitted('totalHuskWeight');
+
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
+    expect(component.errorMessage()).toBe(message);
+    expect(component.model['totalStoredWeight']).toBe('');
+    expect(component.model['totalHuskWeight']).toBe('');
+    expect((component as any).locked.has('totalStoredWeight')).toBe(false);
+    expect((component as any).locked.has('totalHuskWeight')).toBe(false);
   });
 });

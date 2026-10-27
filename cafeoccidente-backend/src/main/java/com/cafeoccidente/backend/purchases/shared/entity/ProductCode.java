@@ -38,4 +38,8 @@ public class ProductCode {
     /** "Nom" de Access (V28); NULL si el codigo no estaba en producto_migrar.csv. */
     @Column(name = "nombre")
     private String name;
+
+    /** Q15: el Factor no puede superar el umbral de cafes especiales del Registro de Control (V14). */
+    @Column(name = "aplica_umbral_especiales", nullable = false)
+    private boolean appliesSpecialtyThreshold;
 }

@@ -361,7 +361,9 @@ export class DryCoffeeFormComponent {
    *  Sana y Factor, que calcula el servidor (Q2). */
   private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight'): void {
     const total = num(this.model['totalStoredWeight']);
-    const args: [number?, number?] = key === 'totalStoredWeight' ? [total] : [total, num(this.model['totalHuskWeight'])];
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    const args: [number?, number?, number?, string?] =
+      key === 'totalStoredWeight' ? [total] : [total, num(this.model['totalHuskWeight']), fundId, this.model['special']];
     this.service.qualityPercentages(...args).subscribe({
       next: (q) => {
         if (q.healthyStoredWeight != null) {
@@ -375,6 +377,9 @@ export class DryCoffeeFormComponent {
         this.tick.update((n) => n + 1);
       },
       error: (err) => {
+        if (this.clearSampleOverThreshold(err)) {
+          return;
+        }
         // Limpia lo que dependia de este peso: si no, Porc Merma/Porc Kg Pas/Factor pueden quedar
         // mostrando el valor de un peso digitado anteriormente en vez del que esta en pantalla ahora.
         this.qualityCalc.update((prev) =>
@@ -399,14 +404,35 @@ export class DryCoffeeFormComponent {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         // Sin esto, un preview fallido deja Vr. Kilo/Vr. Bruto/Neto a Pagar/Kilos Netos mostrando
         // (y el panel de pago usando) el resultado de un calculo anterior con otros datos de entrada.
         this.calc.set(null);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        if (!this.clearSampleOverThreshold(err)) {
+          this.errorMessage.set(this.messages()?.saveError ?? null);
+        }
         this.tick.update((n) => n + 1);
       },
     });
+  }
+
+  /**
+   * Q15: en los NESPRESSO el Factor supero el umbral de especiales. Se avisa con el mensaje del
+   * servidor, se limpian y desbloquean los pesos de la muestra y se vuelve a Peso Tot Alm.
+   */
+  private clearSampleOverThreshold(err: { error?: { code?: string; message?: string } } | undefined): boolean {
+    if (err?.error?.code !== 'UMBRAL_ESPECIALES') {
+      return false;
+    }
+    for (const key of ['totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight']) {
+      this.model[key] = '';
+      this.locked.delete(key);
+    }
+    this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
+    this.errorMessage.set(err.error.message ?? null);
+    this.tick.update((n) => n + 1);
+    this.focusField('totalStoredWeight');
+    return true;
   }
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
@@ -459,6 +485,9 @@ export class DryCoffeeFormComponent {
         // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
         // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
         console.error('Error al registrar compra Cafe Seco:', err?.error ?? err);
+        if (this.clearSampleOverThreshold(err)) {
+          return;
+        }
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },

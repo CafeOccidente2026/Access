@@ -30,6 +30,7 @@ import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
+import com.cafeoccidente.backend.purchases.shared.service.SpecialtyThresholdRule;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -194,6 +195,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
                 context.seller(),
                 dailyTotals.grossValue(),
                 dailyTotals.withholding());
+        // Q15: en los NESPRESSO el Factor no puede superar el umbral del Registro de Control.
+        SpecialtyThresholdRule.check(context.productCode().isAppliesSpecialtyThreshold(),
+                calculation.healthyPercentage(), context.controlRecord().getSpecialtyThreshold());
         // Item C (cupo, Form_COMPRAS.bas lineas 412/465/518/571/624) - ver GrowerService.checkQuota.
         growerService.checkQuota(request.idNumber(), request.specialType(), calculation.netKg());
         return calculation;
@@ -230,18 +234,25 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     }
 
     @Override
-    public QualityPercentagesResponse qualityPercentages(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight) {
+    public QualityPercentagesResponse qualityPercentages(
+            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, Long fundId, String specialType) {
         ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
         // Q2: con los dos pesos digitados, Peso Alm Sana y Factor salen del servidor.
         BigDecimal healthyStoredWeight = totalStoredWeight == null || defectiveStoredWeight == null
                 ? null
                 : calculator.healthyStoredWeight(totalStoredWeight, defectiveStoredWeight);
+        BigDecimal factor = healthyStoredWeight == null ? null : calculator.healthyPercentage(healthyStoredWeight, controlRecord);
+        if (factor != null && fundId != null && specialType != null) {
+            // Q15: el aviso sale apenas se conoce el Factor, no despues de digitar sacos y kilos.
+            SpecialtyThresholdRule.check(productCodeResolver.resolve(specialType, fundId).isAppliesSpecialtyThreshold(),
+                    factor, controlRecord.getSpecialtyThreshold());
+        }
         return new QualityPercentagesResponse(
                 totalStoredWeight == null ? null : calculator.wastePercentage(totalStoredWeight, controlRecord),
                 defectiveStoredWeight == null
                         ? null
                         : calculator.defectivePercentage(defectiveStoredWeight, controlRecord),
                 healthyStoredWeight,
-                healthyStoredWeight == null ? null : calculator.healthyPercentage(healthyStoredWeight, controlRecord));
+                factor);
     }
 }

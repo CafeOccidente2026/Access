@@ -27,5 +27,7 @@ public interface DryCoffeePurchaseService {
     SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType);
 
     /** Porcentajes independientes (pasos "Peso Tot Alm"/"Peso Tot Pasilla"/"Peso Alm Sana"). */
-    QualityPercentagesResponse qualityPercentages(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight);
+    /** Con fondo y especial, ademas aplica el umbral de especiales al Factor (Q15), igual que el guardado. */
+    QualityPercentagesResponse qualityPercentages(
+            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, Long fundId, String specialType);
 }

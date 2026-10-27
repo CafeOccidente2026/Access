@@ -50,14 +50,24 @@ export class DryCoffeePurchaseService {
     return this.http.get<SpecialInfo>(`${API_BASE_URL}/purchases/dry-coffee/special-info?${params}`);
   }
 
-  /** Porc Merma con Peso Tot Alm; con los dos pesos, ademas Porc Kg Pas, Peso Alm Sana y Factor (Q2). */
-  qualityPercentages(totalStoredWeight?: number, defectiveStoredWeight?: number): Observable<QualityPercentages> {
+  /** Porc Merma con Peso Tot Alm; con los dos pesos, ademas Porc Kg Pas, Peso Alm Sana y Factor (Q2).
+   *  Con fondo y especial, el servidor aplica tambien el umbral de especiales (Q15). */
+  qualityPercentages(
+    totalStoredWeight?: number,
+    defectiveStoredWeight?: number,
+    fundId?: number,
+    specialType?: string,
+  ): Observable<QualityPercentages> {
     const params = new URLSearchParams();
     if (totalStoredWeight !== undefined) {
       params.set('totalStoredWeight', String(totalStoredWeight));
     }
     if (defectiveStoredWeight !== undefined) {
       params.set('defectiveStoredWeight', String(defectiveStoredWeight));
+    }
+    if (fundId !== undefined && specialType) {
+      params.set('fundId', String(fundId));
+      params.set('specialType', specialType);
     }
     return this.http.get<QualityPercentages>(
       `${API_BASE_URL}/purchases/dry-coffee/quality-percentages?${params.toString()}`,
