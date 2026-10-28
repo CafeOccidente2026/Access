@@ -75,6 +75,9 @@ public class PurchaseAnnulmentRepository {
         jdbc.update("UPDATE formas_pago_compras SET efectivo = 0, cheque = 0, transferencia = 0,"
                 + " datafono = 0, numero_cheque = NULL WHERE origen = :module AND origen_id = :id", params);
         jdbc.update("DELETE FROM inventarios WHERE modulo_compra = :inventoryModule AND compra_id = :id", params);
+        // Q33/Q35: la cuenta por cobrar del datafono queda anulada con la compra.
+        jdbc.update("UPDATE cuentas_por_cobrar SET estado = 'ANULADA' WHERE modulo_compra = :module AND compra_id = :id",
+                params);
     }
 
     private static AnnulmentCandidate toCandidate(ResultSet rs) throws SQLException {

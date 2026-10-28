@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.shared.service;
 
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import java.math.BigDecimal;
 
@@ -16,6 +17,11 @@ public interface PurchasePaymentService {
     /** Rechaza el pago descuadrado o el cheque sin numero (NumCheque_LostFocus / Texto203_LostFocus). */
     ResolvedPayment validate(PurchasePaymentRequest payment, BigDecimal netToPay);
 
-    /** source = clave del modulo en purchase_payment_split (DRY, GREEN, HUSK). */
-    void record(String source, Long purchaseId, PurchasePaymentRequest payment);
+    /**
+     * Guarda el desglose de pago de la compra (source = DRY, GREEN o HUSK). Si hubo datafono, deja
+     * ademas la cuenta por cobrar PENDIENTE a favor del fiel del Registro de Control (Q33, Q35), en la
+     * misma transaccion.
+     */
+    void record(String source, Long purchaseId, Integer invoiceNumber, PurchasePaymentRequest payment,
+            PurchaseContext context);
 }
