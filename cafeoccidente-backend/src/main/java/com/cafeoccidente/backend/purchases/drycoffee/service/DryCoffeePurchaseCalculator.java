@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -69,17 +70,14 @@ public class DryCoffeePurchaseCalculator {
                 defectivePercentageRaw(request.defectiveStoredWeight(), controlRecord);
         BigDecimal defectivePercentage = defectivePercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
-        BigDecimal totalStored = request.defectiveStoredWeight().add(request.healthyStoredWeight());
-        if (totalStored.compareTo(request.totalStoredWeight()) != 0) {
-            throw new BusinessRuleException(
-                    "La almendra total debe ser igual a la suma de la almendra sana mas la defectuosa");
-        }
-
-        BigDecimal healthyPercentageRaw = healthyPercentageRaw(request.healthyStoredWeight(), controlRecord);
+        // Q2: se digitan Peso Tot Alm y Peso Pasilla; Peso Alm Sana = Tot - Pasilla (siempre suman exacto).
+        BigDecimal healthyStoredWeight = healthyStoredWeight(request.totalStoredWeight(), request.defectiveStoredWeight());
+        BigDecimal healthyPercentageRaw = healthyPercentageRaw(healthyStoredWeight, controlRecord);
         BigDecimal healthyPercentage = healthyPercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
         // Sacos_LostFocus: precios unitarios intermedios (Texto190/Texto191 en el VBA original).
-        BigDecimal var5 = announcement.healthyUnitPrice().subtract(request.penalty());
+        // Q1: el castigo (siempre <= 0) se suma al Pr Sustentacion, que es restarlo.
+        BigDecimal var5 = announcement.healthyUnitPrice().add(PenaltyRule.normalize(request.penalty()));
         BigDecimal var1 = var5.add(announcement.bonus());
         if (healthyPercentageRaw.signum() == 0) {
             throw new BusinessRuleException("El porcentaje de almendra sana no puede ser cero");
@@ -120,8 +118,8 @@ public class DryCoffeePurchaseCalculator {
         // Retefuente incremental sobre el acumulado DIARIO del caficultor (macro CalculoReteFteMes):
         // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado hoy),
         // y se descuenta la Retefuente ya practicada hoy, dejando solo el diferencial.
-        // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
-        // Cuando existan greencoffee/husk habra que decidir si tambien deben sumar.
+        // Q10 (area de compras): el acumulado es conjunto, seco + verde + pasilla del dia en todas las
+        // agencias (GrowerDailyTotalsRepository).
         // Ventana: CalculoReteFteMes copia TotalVrBruto/TotalRetefuente del reporte "ReteMesCurso",
         // cuyo RecordSource es una consulta guardada que no esta en el export. Pese al nombre "Mes",
         // la ventana diaria reproduce mejor la Retefuente historica de compras_migrar.csv (750/844
@@ -147,6 +145,7 @@ public class DryCoffeePurchaseCalculator {
                 netKg.setScale(SCALE, RoundingMode.HALF_UP),
                 wastePercentage,
                 defectivePercentage,
+                healthyStoredWeight,
                 healthyPercentage,
                 unitPrice,
                 grossValue,
@@ -176,6 +175,15 @@ public class DryCoffeePurchaseCalculator {
     }
 
     /** PorcAlmSana (Factor): paso "Peso Alm Sana" (independiente del resto de la cascada). */
+    /** Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla; si no queda almendra sana, no se puede facturar. */
+    public BigDecimal healthyStoredWeight(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight) {
+        BigDecimal healthy = totalStoredWeight.subtract(defectiveStoredWeight);
+        if (healthy.signum() <= 0) {
+            throw new BusinessRuleException("La pasilla debe ser menor que la almendra total");
+        }
+        return healthy.setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal healthyPercentage(BigDecimal healthyStoredWeight, ControlRecord controlRecord) {
         return healthyPercentageRaw(healthyStoredWeight, controlRecord).setScale(SCALE, RoundingMode.HALF_UP);
     }

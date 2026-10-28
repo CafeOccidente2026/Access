@@ -16,6 +16,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { SampleWeightKey, loadSampleQuality } from '../sample-quality';
 
 type FormModel = Record<string, string>;
 
@@ -24,17 +25,19 @@ type FormModel = Record<string, string>;
  *  (Factura la tipea el cajero, Cedula_AfterUpdate solo valida el consecutivo contra la resolucion). */
 const EDITABLE: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 const REQUIRED: string[] = [
-  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
+  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
 ];
 
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
+  // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
+  'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'basePricePergaminoLoad', 'huskPrice',
   'sustentationPrice', 'bonus', 'costs',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
@@ -42,7 +45,7 @@ const READONLY: string[] = [
 
 const FOCUS_ORDER: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
@@ -165,7 +168,6 @@ export class QuotaBillingFormComponent {
         break;
       case 'totalStoredWeight':
       case 'totalHuskWeight':
-      case 'healthyStoredWeight':
         this.loadQualityPercentage(key);
         this.recalculate();
         break;
@@ -230,26 +232,9 @@ export class QuotaBillingFormComponent {
     });
   }
 
-  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight' | 'healthyStoredWeight'): void {
-    const value = num(this.model[key]);
-    const args: [number?, number?, number?] =
-      key === 'totalStoredWeight'
-        ? [value, undefined, undefined]
-        : key === 'totalHuskWeight'
-          ? [undefined, value, undefined]
-          : [undefined, undefined, value];
-    this.service.qualityPercentages(...args).subscribe((q) => {
-      const target: Record<string, string> = {
-        totalStoredWeight: 'wastePercentage',
-        totalHuskWeight: 'huskPercentage',
-        healthyStoredWeight: 'factor',
-      };
-      const value2 =
-        key === 'totalStoredWeight' ? q.wastePercentage : key === 'totalHuskWeight' ? q.defectivePercentage : q.healthyPercentage;
-      this.model[target[key]] = value2 != null ? String(value2) : '';
-      this.locked.add(target[key]);
-      this.tick.update((n) => n + 1);
-    });
+  /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
+  private loadQualityPercentage(key: SampleWeightKey): void {
+    loadSampleQuality(this.service, this.model, this.locked, key, () => this.tick.update((n) => n + 1));
   }
 
   private recalculate(): void {
@@ -287,7 +272,6 @@ export class QuotaBillingFormComponent {
       tareKg: num(this.model['tare']),
       totalStoredWeight: num(this.model['totalStoredWeight']),
       defectiveStoredWeight: num(this.model['totalHuskWeight']),
-      healthyStoredWeight: num(this.model['healthyStoredWeight']),
       penalty: num(this.model['penalty']),
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
@@ -370,7 +354,7 @@ export class QuotaBillingFormComponent {
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';

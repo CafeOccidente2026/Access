@@ -73,6 +73,8 @@ export interface NextInvoiceNumber {
 export interface QualityPercentages {
   readonly wastePercentage: number | null;
   readonly defectivePercentage: number | null;
+  /** Peso Alm Sana = Peso Tot Alm - Peso Pasilla (Q2); solo cuando llegan los dos pesos. */
+  readonly healthyStoredWeight?: number | null;
   readonly healthyPercentage: number | null;
 }
 
@@ -105,7 +107,6 @@ export interface DryCoffeePurchaseRequest {
   readonly tareKg: number;
   readonly totalStoredWeight: number;
   readonly defectiveStoredWeight: number;
-  readonly healthyStoredWeight: number;
   readonly penalty: number;
   readonly freightDiscount: number;
   readonly otherDiscounts: number;

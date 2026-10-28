@@ -15,23 +15,22 @@ import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import com.cafeoccidente.backend.purchases.drycoffee.mapper.DryCoffeePurchaseMapper;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
-import com.cafeoccidente.backend.purchases.drycoffee.repository.MonthlyGrowerTotals;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
-import com.cafeoccidente.backend.purchases.shared.entity.Agency;
-import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
-import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
-import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
+import com.cafeoccidente.backend.purchases.shared.service.SpecialtyThresholdRule;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -43,8 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     private final DryCoffeePurchaseRepository dryCoffeePurchaseRepository;
-    private final AgencyRepository agencyRepository;
-    private final FundRepository fundRepository;
     private final ProductCodeResolver productCodeResolver;
     private final AnnouncementService announcementService;
     private final ControlRecordService controlRecordService;
@@ -53,15 +50,13 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
-    private final PurchaseSellerService purchaseSellerService;
+    private final PurchaseContextService purchaseContextService;
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
 
     public DryCoffeePurchaseServiceImpl(
             DryCoffeePurchaseRepository dryCoffeePurchaseRepository,
-            AgencyRepository agencyRepository,
-            FundRepository fundRepository,
             ProductCodeResolver productCodeResolver,
             AnnouncementService announcementService,
             ControlRecordService controlRecordService,
@@ -69,13 +64,11 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             DryCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
-            PurchaseSellerService purchaseSellerService,
+            PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
-        this.agencyRepository = agencyRepository;
-        this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
         this.announcementService = announcementService;
         this.controlRecordService = controlRecordService;
@@ -84,7 +77,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
-        this.purchaseSellerService = purchaseSellerService;
+        this.purchaseContextService = purchaseContextService;
         this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
@@ -93,29 +86,23 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     @Transactional
     public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request) {
-        // Q8: el vendedor sale de TERCEROS; lo digitado solo completa direccion o celular vacios.
-        PurchaseSeller seller = purchaseSellerService.resolveAndComplete(
-                request.idNumber(), request.address(), request.cellphone());
-        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
-        Fund fund = fundRepository.findById(request.fundId())
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
-        ProductCode productCode = productCodeResolver.resolve(request.specialType(), fund.getId());
-        AnnouncementResponse announcement =
-                announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
-        ControlRecord controlRecord = controlRecordService.getActive(agency.getId());
-        DryCoffeePurchaseCalculation calculation = runCalculation(request, announcement, controlRecord, seller);
+        // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
+        PurchaseContext context = purchaseContextService.forSave(
+                request.fundId(), request.specialType(), request.idNumber(), request.address(), request.cellphone());
+        AnnouncementResponse announcement = context.announcement();
+        PurchaseSeller seller = context.seller();
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
         DryCoffeePurchase purchase = new DryCoffeePurchase();
         purchase.setPurchaseDate(LocalDate.now());
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
-        purchase.setInvoiceNumber(invoiceConsecutiveService.take(agency.getId(), controlRecord));
-        purchase.setAgency(agency);
-        purchase.setFund(fund);
+        purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
+        purchase.setAgency(context.agency());
+        purchase.setFund(context.fund());
         purchase.setSpecialType(request.specialType());
-        purchase.setProductCode(productCode);
+        purchase.setProductCode(context.productCode());
         purchase.setAnnouncementNumber(announcement.announcementNumber());
         purchase.setAnnouncementDate(announcement.announcementDate());
         purchase.setBasePriceLoad(calculation.basePriceLoad());
@@ -133,12 +120,12 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setWastePercentage(calculation.wastePercentage());
         purchase.setDefectiveStoredWeight(request.defectiveStoredWeight());
         purchase.setDefectivePercentage(calculation.defectivePercentage());
-        purchase.setHealthyStoredWeight(request.healthyStoredWeight());
+        purchase.setHealthyStoredWeight(calculation.healthyStoredWeight());
         purchase.setHealthyPercentage(calculation.healthyPercentage());
         purchase.setHealthyUnitPrice(announcement.healthyUnitPrice());
         purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
         purchase.setBonus(announcement.bonus());
-        purchase.setPenalty(request.penalty());
+        purchase.setPenalty(PenaltyRule.normalize(request.penalty()));
         purchase.setCosts(announcement.costs());
         purchase.setUnitPrice(calculation.unitPrice());
         purchase.setGrossValue(calculation.grossValue());
@@ -162,11 +149,12 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
         inventoryMovementService.recordFromPurchaseSafely(
                 InventoryMovement.PurchaseModule.DRY_COFFEE, savedPurchase.getId(),
-                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
+                purchase.getInvoiceNumber(),
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 purchase.getHealthyPercentage(), purchase.getInventoryValue());
 
-        return mapper.toResponse(savedPurchase, controlRecord);
+        return mapper.toResponse(savedPurchase, context.controlRecord());
     }
 
     @Override
@@ -191,26 +179,27 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
-        PurchaseSeller seller = purchaseSellerService.resolve(request.idNumber(), request.address(), request.cellphone());
-        AnnouncementResponse announcement = announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), request.specialType());
-        ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
-        return runCalculation(request, announcement, controlRecord, seller);
+        return runCalculation(request, purchaseContextService.forPreview(
+                request.fundId(), request.specialType(), request.idNumber(), request.address(), request.cellphone()));
     }
 
     /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
-    private DryCoffeePurchaseCalculation runCalculation(
-            DryCoffeePurchaseRequest request, AnnouncementResponse announcement, ControlRecord controlRecord,
-            PurchaseSeller seller) {
-        MonthlyGrowerTotals dailyTotals = dryCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
-                request.idNumber(), LocalDate.now());
+    private DryCoffeePurchaseCalculation runCalculation(DryCoffeePurchaseRequest request, PurchaseContext context) {
+        // Q8: en los cafes de programa la cedula tiene que estar en su programa NESS.
+        growerService.requireProgramToInvoice(request.idNumber(), request.specialType());
+        // Q10: lo que el fiel ya vendio hoy en seco + verde + pasilla, en todas las agencias.
+        DailyGrowerTotals dailyTotals = context.dailyTotals();
 
         DryCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
-                controlRecord,
-                announcement,
-                seller,
+                context.controlRecord(),
+                context.announcement(),
+                context.seller(),
                 dailyTotals.grossValue(),
                 dailyTotals.withholding());
+        // Q15: en los NESPRESSO el Factor no puede superar el umbral del Registro de Control.
+        SpecialtyThresholdRule.check(context.productCode().isAppliesSpecialtyThreshold(),
+                calculation.healthyPercentage(), context.controlRecord().getSpecialtyThreshold());
         // Item C (cupo, Form_COMPRAS.bas lineas 412/465/518/571/624) - ver GrowerService.checkQuota.
         growerService.checkQuota(request.idNumber(), request.specialType(), calculation.netKg());
         return calculation;
@@ -248,15 +237,24 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public QualityPercentagesResponse qualityPercentages(
-            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, BigDecimal healthyStoredWeight) {
+            BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, Long fundId, String specialType) {
         ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
+        // Q2: con los dos pesos digitados, Peso Alm Sana y Factor salen del servidor.
+        BigDecimal healthyStoredWeight = totalStoredWeight == null || defectiveStoredWeight == null
+                ? null
+                : calculator.healthyStoredWeight(totalStoredWeight, defectiveStoredWeight);
+        BigDecimal factor = healthyStoredWeight == null ? null : calculator.healthyPercentage(healthyStoredWeight, controlRecord);
+        if (factor != null && fundId != null && specialType != null) {
+            // Q15: el aviso sale apenas se conoce el Factor, no despues de digitar sacos y kilos.
+            SpecialtyThresholdRule.check(productCodeResolver.resolve(specialType, fundId).isAppliesSpecialtyThreshold(),
+                    factor, controlRecord.getSpecialtyThreshold());
+        }
         return new QualityPercentagesResponse(
                 totalStoredWeight == null ? null : calculator.wastePercentage(totalStoredWeight, controlRecord),
                 defectiveStoredWeight == null
                         ? null
                         : calculator.defectivePercentage(defectiveStoredWeight, controlRecord),
-                healthyStoredWeight == null
-                        ? null
-                        : calculator.healthyPercentage(healthyStoredWeight, controlRecord));
+                healthyStoredWeight,
+                factor);
     }
 }

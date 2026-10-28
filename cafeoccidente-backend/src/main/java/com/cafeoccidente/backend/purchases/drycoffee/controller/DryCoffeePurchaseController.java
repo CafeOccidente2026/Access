@@ -75,8 +75,8 @@ public class DryCoffeePurchaseController {
     public QualityPercentagesResponse qualityPercentages(
             @RequestParam(required = false) BigDecimal totalStoredWeight,
             @RequestParam(required = false) BigDecimal defectiveStoredWeight,
-            @RequestParam(required = false) BigDecimal healthyStoredWeight) {
-        return dryCoffeePurchaseService.qualityPercentages(
-                totalStoredWeight, defectiveStoredWeight, healthyStoredWeight);
+            @RequestParam(required = false) Long fundId,
+            @RequestParam(required = false) String specialType) {
+        return dryCoffeePurchaseService.qualityPercentages(totalStoredWeight, defectiveStoredWeight, fundId, specialType);
     }
 }

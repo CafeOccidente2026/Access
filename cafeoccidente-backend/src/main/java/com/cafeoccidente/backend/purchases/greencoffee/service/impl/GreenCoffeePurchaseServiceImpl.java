@@ -16,22 +16,22 @@ import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.entity.GreenCoffeePurchase;
 import com.cafeoccidente.backend.purchases.greencoffee.mapper.GreenCoffeePurchaseMapper;
 import com.cafeoccidente.backend.purchases.greencoffee.repository.GreenCoffeePurchaseRepository;
-import com.cafeoccidente.backend.purchases.greencoffee.repository.MonthlyGrowerTotals;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import java.math.BigDecimal;
-import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
-import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
+import com.cafeoccidente.backend.purchases.shared.dto.DailyGrowerTotals;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
-import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
+import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -46,7 +46,6 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private static final String FUND_CODE = "RP";
 
     private final GreenCoffeePurchaseRepository greenCoffeePurchaseRepository;
-    private final AgencyRepository agencyRepository;
     private final FundRepository fundRepository;
     private final ProductCodeResolver productCodeResolver;
     private final AnnouncementService announcementService;
@@ -56,14 +55,13 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final GrowerService growerService;
-    private final PurchaseSellerService purchaseSellerService;
+    private final PurchaseContextService purchaseContextService;
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
 
     public GreenCoffeePurchaseServiceImpl(
             GreenCoffeePurchaseRepository greenCoffeePurchaseRepository,
-            AgencyRepository agencyRepository,
             FundRepository fundRepository,
             ProductCodeResolver productCodeResolver,
             AnnouncementService announcementService,
@@ -72,12 +70,11 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             GreenCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
-            PurchaseSellerService purchaseSellerService,
+            PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService) {
         this.greenCoffeePurchaseRepository = greenCoffeePurchaseRepository;
-        this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
         this.announcementService = announcementService;
@@ -87,7 +84,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
         this.growerService = growerService;
-        this.purchaseSellerService = purchaseSellerService;
+        this.purchaseContextService = purchaseContextService;
         this.invoiceConsecutiveService = invoiceConsecutiveService;
         this.inventoryMovementService = inventoryMovementService;
         this.purchasePaymentService = purchasePaymentService;
@@ -96,27 +93,23 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     @Override
     @Transactional
     public GreenCoffeePurchaseResponse create(GreenCoffeePurchaseRequest request) {
-        // Q8: el vendedor sale de TERCEROS; lo digitado solo completa direccion o celular vacios.
-        PurchaseSeller seller = purchaseSellerService.resolveAndComplete(
-                request.idNumber(), request.address(), request.cellphone());
-        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
-        Fund fund = fundRepository.findById(request.fundId())
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
-        ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
-        AnnouncementResponse announcement = announcementService.findLatest(agency.getId(), fund.getId(), SPECIAL_TYPE);
-        GreenCoffeePurchaseCalculation calculation = runCalculation(request, announcement, seller);
+        // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
+        PurchaseContext context = purchaseContextService.forSave(
+                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+        AnnouncementResponse announcement = context.announcement();
+        PurchaseSeller seller = context.seller();
+        GreenCoffeePurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
         GreenCoffeePurchase purchase = new GreenCoffeePurchase();
         purchase.setPurchaseDate(LocalDate.now());
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
-        purchase.setInvoiceNumber(invoiceConsecutiveService.take(agency.getId(), controlRecordService.getActive(agency.getId())));
-        purchase.setAgency(agency);
-        purchase.setFund(fund);
+        purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
+        purchase.setAgency(context.agency());
+        purchase.setFund(context.fund());
         purchase.setSpecialType(SPECIAL_TYPE);
-        purchase.setProductCode(productCode);
+        purchase.setProductCode(context.productCode());
         purchase.setAnnouncementNumber(announcement.announcementNumber());
         purchase.setAnnouncementDate(announcement.announcementDate());
         purchase.setBasePriceLoad(calculation.basePriceLoad());
@@ -136,7 +129,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         purchase.setDefectiveUnitPrice(announcement.defectiveUnitPrice());
         purchase.setBonus(announcement.bonus());
         purchase.setCosts(announcement.costs());
-        purchase.setPenalty(request.penalty());
+        purchase.setPenalty(PenaltyRule.normalize(request.penalty()));
         purchase.setCompKgPrice(request.compKgPrice());
         purchase.setUnitPrice(calculation.unitPrice());
         purchase.setGrossValue(calculation.grossValue());
@@ -160,7 +153,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
 
         inventoryMovementService.recordFromPurchaseSafely(
                 InventoryMovement.PurchaseModule.GREEN_COFFEE, savedPurchase.getId(),
-                agency.getId(), productCode.getId(), purchase.getSpecialType(), purchase.getInvoiceNumber(),
+                context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
+                purchase.getInvoiceNumber(),
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 null, purchase.getInventoryValue());
 
@@ -176,24 +170,19 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
 
     @Override
     public GreenCoffeePurchaseCalculation preview(GreenCoffeePurchaseRequest request) {
-        PurchaseSeller seller = purchaseSellerService.resolve(request.idNumber(), request.address(), request.cellphone());
-        AnnouncementResponse announcement =
-                announcementService.findLatest(currentAgencyProvider.currentAgencyId(), request.fundId(), SPECIAL_TYPE);
-        return runCalculation(request, announcement, seller);
+        return runCalculation(request, purchaseContextService.forPreview(
+                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone()));
     }
 
-    private GreenCoffeePurchaseCalculation runCalculation(
-            GreenCoffeePurchaseRequest request, AnnouncementResponse announcement, PurchaseSeller seller) {
-        ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
-
-        MonthlyGrowerTotals dailyTotals = greenCoffeePurchaseRepository.sumDailyTotalsByIdNumber(
-                request.idNumber(), LocalDate.now());
+    private GreenCoffeePurchaseCalculation runCalculation(GreenCoffeePurchaseRequest request, PurchaseContext context) {
+        // Q10: lo que el fiel ya vendio hoy en seco + verde + pasilla, en todas las agencias.
+        DailyGrowerTotals dailyTotals = context.dailyTotals();
 
         GreenCoffeePurchaseCalculation calculation = calculator.calculate(
                 request,
-                controlRecord,
-                announcement,
-                seller,
+                context.controlRecord(),
+                context.announcement(),
+                context.seller(),
                 dailyTotals.grossValue(),
                 dailyTotals.withholding());
         // Item C (cupo) - ver GrowerService.checkQuota. SPECIAL_TYPE fijo ("CV") nunca matchea

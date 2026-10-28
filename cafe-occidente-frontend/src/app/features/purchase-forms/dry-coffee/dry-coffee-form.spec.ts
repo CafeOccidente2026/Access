@@ -72,6 +72,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
   let previewSpy: ReturnType<typeof vi.fn>;
   let createSpy: ReturnType<typeof vi.fn>;
+  let qualitySpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
 
   function setup(grower: Grower) {
@@ -90,7 +91,9 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
           bonus: 40,
           costs: 692,
         }),
-      qualityPercentages: () => of({ wastePercentage: 12, defectivePercentage: 8, healthyPercentage: 90.9 }),
+      qualityPercentages: (qualitySpy = vi.fn(() =>
+        of({ wastePercentage: 12, defectivePercentage: 8, healthyStoredWeight: 200, healthyPercentage: 90.9 }),
+      )),
       preview: previewSpy,
       create: (createSpy = vi.fn(() => of({}))),
     };
@@ -236,5 +239,67 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     pending.error(new Error('fallo'));
     expect(component.saving()).toBe(false);
+  });
+
+  it('Q2: the healthy almond is not typed; the server computes it from total and husk weights', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+    component.model['totalHuskWeight'] = '20';
+    component.onFieldCommitted('totalHuskWeight');
+
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
+    expect(component.model['healthyStoredWeight']).toBe('200');
+    component.model['healthyStoredWeight'] = '999';
+    component.onFieldCommitted('healthyStoredWeight');
+    expect((component as any).locked.has('healthyStoredWeight')).toBe(false);
+  });
+
+  it('Q15: a NESPRESSO Factor over the threshold warns, clears the sample weights and goes back to them', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    const message = 'El Factor (94,00) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+    qualitySpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+    component.model['totalHuskWeight'] = '20';
+    component.onFieldCommitted('totalHuskWeight');
+
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
+    expect(component.errorMessage()).toBe(message);
+    expect(component.model['totalStoredWeight']).toBe('');
+    expect(component.model['totalHuskWeight']).toBe('');
+    expect((component as any).locked.has('totalStoredWeight')).toBe(false);
+    expect((component as any).locked.has('totalHuskWeight')).toBe(false);
+  });
+
+  it('Q15: if the save is rejected over the threshold, the sample weights are cleared too', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const message = 'El Factor (94,00) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    createSpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+
+    component.print();
+
+    expect(component.errorMessage()).toBe(message);
+    expect(component.model['totalStoredWeight']).toBe('');
+  });
+
+  it('a failed weight that is not the threshold keeps the generic message', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    qualitySpy.mockReturnValue(throwError(() => ({ error: { message: 'otro' } })));
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+
+    expect(component.errorMessage()).toBe('otro');
+    expect(component.model['totalStoredWeight']).toBe('220');
   });
 });

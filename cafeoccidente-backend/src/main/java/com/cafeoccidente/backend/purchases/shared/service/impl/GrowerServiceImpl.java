@@ -29,26 +29,28 @@ public class GrowerServiceImpl implements GrowerService {
 
     /**
      * Especial (formulario Compras) -> Programa (staging_legacy_ness). Evidencia: Form_COMPRAS.bas,
-     * Cuadro_combinado61_AfterUpdate - solo estos 3 Especiales llaman una macro "Abrir NESS/NESSLH/
-     * RN4C pcompras" que cruza contra la tabla de programa; el resto de Especiales (~17) no tiene
-     * tabla de programa migrada todavia.
+     * Cuadro_combinado61_AfterUpdate - estos Especiales (NESPRESSO y NESPRESSO LATE HARVEST con y
+     * sin taza, REGIONAL NARIÑO 4C) llaman una macro "Abrir NESS/NESSLH/RN4C pcompras" que cruza
+     * contra la tabla de programa; el resto de Especiales no tiene tabla de programa migrada.
      *
      * Form_COMPRAS.bas tiene DOS bloqueos distintos sobre estos mismos Especiales, evidencia
      * separada en el VBA:
      * <ul>
      *   <li><b>Cupo excedido</b> ({@code Kilos_Netos > Texto118}, lineas 412/465/518/571/624):
      *       implementado en {@link #checkQuota} desde 2026-09-23 (Item C).</li>
-     *   <li><b>Pendiente (EnProg)</b>: bloqueo si el caficultor no aparece en su programa (EnProg=0),
-     *       para estos mismos Especiales + RAINFOREST/EXPON (lineas 761-779, "Abrir RAIN/EXPON
-     *       pcompras" - tablas de programa de esos dos aun no migradas). Sigue SIN activar: con
-     *       cobertura de datos parcial (3 de ~20 Especiales), bloquear impediria facturar por falta
-     *       de dato migrado, no porque el caficultor realmente este fuera del programa. Revisar
-     *       cuando se migren las tablas de programa restantes.</li>
+     *   <li><b>No pertenece (EnProg = 0)</b>, lineas 761-779: activado para Cafe Seco en la fase 6c
+     *       (Q8) en {@link #requireProgramToInvoice}, solo para los Especiales de este mapa.
+     *       RAINFOREST/EXPON tambien lo tenian en Access, pero sus tablas de programa no estan
+     *       migradas: no se bloquean.</li>
      * </ul>
      */
     private static final Map<String, String> SPECIAL_TO_PROGRAMA = Map.of(
             "NESPRESSO - FTUSA", "NESPRESSO",
+            // Q8 (area de compras, 2026-10-27): las variantes CON TAZA exigen el mismo programa, como
+            // en Access (W_AlmSana_AfterUpdate las bloquea con EnProg = 0).
+            "NESPRESSO CON TAZA - FTUSA", "NESPRESSO",
             "NESPRESSO LATE HARVEST - FTUSA", "NESPRESSO LATE HARVEST",
+            "NESPRESSO LATE HARVEST CON TAZA - FTUSA", "NESPRESSO LATE HARVEST",
             "REGIONAL NARIÑO 4C", "REGIONAL NARIÑO 4C");
 
     private final GrowerRepository growerRepository;
@@ -215,15 +217,23 @@ public class GrowerServiceImpl implements GrowerService {
 
     @Override
     public void requireProgramMembership(String idNumber, String specialType) {
-        if (!SPECIAL_TO_PROGRAMA.containsKey(specialType)) {
-            // Sin cobertura de datos confirmada para este Especial - no se puede distinguir "no
-            // pertenece" de "dato no migrado" (ver Javadoc de la interfaz), no se bloquea.
-            return;
-        }
-        if (findMatch(idNumber, specialType) == null) {
+        if (isOutsideProgram(idNumber, specialType)) {
             throw new BusinessRuleException(
                     "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE");
         }
+    }
+
+    @Override
+    public void requireProgramToInvoice(String idNumber, String specialType) {
+        if (isOutsideProgram(idNumber, specialType)) {
+            throw new BusinessRuleException(
+                    "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO LE PUEDE FACTURAR ESTE TIPO DE CAFE.");
+        }
+    }
+
+    /** Solo para los Especiales de programa (SPECIAL_TO_PROGRAMA); los demas nunca se bloquean. */
+    private boolean isOutsideProgram(String idNumber, String specialType) {
+        return SPECIAL_TO_PROGRAMA.containsKey(specialType) && findMatch(idNumber, specialType) == null;
     }
 
     /** Mismo cruce cedula+Especial->Programa que usan findProgram/checkQuota (Form_COMPRAS.bas

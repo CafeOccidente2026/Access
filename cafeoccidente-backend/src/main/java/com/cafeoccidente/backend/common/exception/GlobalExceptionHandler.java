@@ -21,7 +21,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex) {
-        return ResponseEntity.status(ex.getStatus()).body(body(ex.getStatus(), ex.getMessage()));
+        Map<String, Object> response = body(ex.getStatus(), ex.getMessage());
+        if (ex.getCode() != null) {
+            response.put("code", ex.getCode());
+        }
+        return ResponseEntity.status(ex.getStatus()).body(response);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

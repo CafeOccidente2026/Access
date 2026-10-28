@@ -46,14 +46,14 @@ type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMess
 const EDITABLE: string[] = [
   'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone', 'program', 'quota',
   'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (bonus/penalty/descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = [
   'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone',
-  'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
+  'special', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
 ];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
@@ -61,6 +61,8 @@ const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts
 
 /** Campos siempre de solo lectura: los calcula el servidor o los deriva la sesión actual. */
 const READONLY: string[] = [
+  // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
+  'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoicePrefix', 'invoiceNumber',
   'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idNumber',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
@@ -70,7 +72,7 @@ const READONLY: string[] = [
  *  (los campos autocalculados de por medio, p.ej. Porc Merma, se saltan porque no estan aqui). */
 const FOCUS_ORDER: string[] = [
   'fund', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
@@ -231,7 +233,6 @@ export class DryCoffeeFormComponent {
         break;
       case 'totalStoredWeight':
       case 'totalHuskWeight':
-      case 'healthyStoredWeight':
         this.loadQualityPercentage(key);
         this.recalculate();
         break;
@@ -353,17 +354,18 @@ export class DryCoffeeFormComponent {
     });
   }
 
-  /** Pasos 6-8: cada peso calcula su propio porcentaje, independiente de los otros dos. */
-  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight' | 'healthyStoredWeight'): void {
-    const value = num(this.model[key]);
-    const args: [number?, number?, number?] =
-      key === 'totalStoredWeight'
-        ? [value, undefined, undefined]
-        : key === 'totalHuskWeight'
-          ? [undefined, value, undefined]
-          : [undefined, undefined, value];
+  /** Pasos 6-7: Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas y, con el total, Peso Alm
+   *  Sana y Factor, que calcula el servidor (Q2). */
+  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight'): void {
+    const total = num(this.model['totalStoredWeight']);
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    const args: [number?, number?, number?, string?] =
+      key === 'totalStoredWeight' ? [total] : [total, num(this.model['totalHuskWeight']), fundId, this.model['special']];
     this.service.qualityPercentages(...args).subscribe({
       next: (q) => {
+        if (q.healthyStoredWeight != null) {
+          this.model['healthyStoredWeight'] = String(q.healthyStoredWeight);
+        }
         this.qualityCalc.update((prev) => ({
           wastePercentage: q.wastePercentage ?? prev.wastePercentage,
           defectivePercentage: q.defectivePercentage ?? prev.defectivePercentage,
@@ -371,18 +373,18 @@ export class DryCoffeeFormComponent {
         }));
         this.tick.update((n) => n + 1);
       },
-      error: () => {
-        // Limpia solo el porcentaje de este peso: si no, Porc Merma/Porc Kg Pas/Factor pueden quedar
+      error: (err) => {
+        if (this.clearSampleOverThreshold(err)) {
+          return;
+        }
+        // Limpia lo que dependia de este peso: si no, Porc Merma/Porc Kg Pas/Factor pueden quedar
         // mostrando el valor de un peso digitado anteriormente en vez del que esta en pantalla ahora.
-        this.qualityCalc.update((prev) => ({
-          ...prev,
-          [key === 'totalStoredWeight'
-            ? 'wastePercentage'
-            : key === 'totalHuskWeight'
-              ? 'defectivePercentage'
-              : 'healthyPercentage']: null,
-        }));
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.qualityCalc.update((prev) =>
+          key === 'totalStoredWeight'
+            ? { ...prev, wastePercentage: null }
+            : { ...prev, defectivePercentage: null, healthyPercentage: null },
+        );
+        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
     });
@@ -399,14 +401,35 @@ export class DryCoffeeFormComponent {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         // Sin esto, un preview fallido deja Vr. Kilo/Vr. Bruto/Neto a Pagar/Kilos Netos mostrando
         // (y el panel de pago usando) el resultado de un calculo anterior con otros datos de entrada.
         this.calc.set(null);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        if (!this.clearSampleOverThreshold(err)) {
+          this.errorMessage.set(this.messages()?.saveError ?? null);
+        }
         this.tick.update((n) => n + 1);
       },
     });
+  }
+
+  /**
+   * Q15: en los NESPRESSO el Factor supero el umbral de especiales. Se avisa con el mensaje del
+   * servidor, se limpian y desbloquean los pesos de la muestra y se vuelve a Peso Tot Alm.
+   */
+  private clearSampleOverThreshold(err: { error?: { code?: string; message?: string } } | undefined): boolean {
+    if (err?.error?.code !== 'UMBRAL_ESPECIALES') {
+      return false;
+    }
+    for (const key of ['totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight']) {
+      this.model[key] = '';
+      this.locked.delete(key);
+    }
+    this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
+    this.errorMessage.set(err.error.message ?? null);
+    this.tick.update((n) => n + 1);
+    this.focusField('totalStoredWeight');
+    return true;
   }
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
@@ -414,8 +437,8 @@ export class DryCoffeeFormComponent {
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
     // Sin este chequeo, recalculate() dispara un preview cada vez que se confirma un peso (para que
     // Kilos Netos/Vr. Kilo nunca queden obsoletos, ver runSideEffects) - pero a mitad de captura,
-    // con healthyStoredWeight todavia en 0, el backend rechaza el calculo (no se puede dividir por
-    // almendra sana = 0) y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
+    // sin Peso Pasilla todavia, el backend rechaza el calculo (no hay almendra sana con que dividir)
+    // y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
     if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
@@ -431,7 +454,6 @@ export class DryCoffeeFormComponent {
       tareKg: num(this.model['tare']),
       totalStoredWeight: num(this.model['totalStoredWeight']),
       defectiveStoredWeight: num(this.model['totalHuskWeight']),
-      healthyStoredWeight: num(this.model['healthyStoredWeight']),
       penalty: num(this.model['penalty']),
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
@@ -460,6 +482,9 @@ export class DryCoffeeFormComponent {
         // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
         // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
         console.error('Error al registrar compra Cafe Seco:', err?.error ?? err);
+        if (this.clearSampleOverThreshold(err)) {
+          return;
+        }
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -592,6 +617,7 @@ export class DryCoffeeFormComponent {
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
       idNumber: this.model['idPart1'] ?? '',
+      healthyStoredWeight: this.model['healthyStoredWeight'] ?? '',
       wastePercentage: q.wastePercentage ?? '',
       huskPercentage: q.defectivePercentage ?? '',
       factor: q.healthyPercentage ?? '',

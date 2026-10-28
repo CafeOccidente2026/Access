@@ -59,3 +59,33 @@ describe('FormFieldComponent numeric input (HU-07 CA-3)', () => {
     }
   });
 });
+
+describe('FormFieldComponent negativeOnly (Castigo, Q1)', () => {
+  it('turns a positive penalty negative before announcing the commit, on blur and on Enter', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'penalty', label: 'Castigo', type: 'currency', negativeOnly: true };
+    const emitted: (string | number)[] = [];
+    let commits = 0;
+    component.valueChange.subscribe((v) => emitted.push(v));
+    component.committed.subscribe(() => commits++);
+
+    component.inputValue = '23';
+    component.onBlur();
+    component.inputValue = '';
+    component.commit();
+
+    expect(emitted).toEqual(['-23', '0']);
+    expect(commits).toBe(2);
+  });
+
+  it('does not touch other fields', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'tare', label: 'Destare', type: 'currency' };
+    const emitted: (string | number)[] = [];
+    component.valueChange.subscribe((v) => emitted.push(v));
+    component.inputValue = '23';
+    component.commit();
+
+    expect(emitted).toEqual([]);
+  });
+});

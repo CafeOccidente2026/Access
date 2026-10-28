@@ -10,22 +10,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurchase, Long> {
 
-    /**
-     * Suma el Vr_Bruto y la Retefuente de todas las compras ya registradas para una cedula en el
-     * dia de la compra (ventana diaria, ver docs/informe-formulas-compras-vs-vba.md, Retefuente).
-     * Se llama antes de guardar la compra en curso, asi que esta
-     * naturalmente excluida (todavia no tiene fila). COALESCE devuelve 0 cuando no hay compras.
-     */
-    @Query("""
-            SELECT new com.cafeoccidente.backend.purchases.drycoffee.repository.MonthlyGrowerTotals(
-                COALESCE(SUM(p.grossValue), 0),
-                COALESCE(SUM(p.withholding), 0))
-            FROM DryCoffeePurchase p
-            WHERE p.idNumber = :idNumber
-              AND p.purchaseDate = :purchaseDate
-            """)
-    MonthlyGrowerTotals sumDailyTotalsByIdNumber(
-            @Param("idNumber") String idNumber, @Param("purchaseDate") LocalDate purchaseDate);
 
 
     /**

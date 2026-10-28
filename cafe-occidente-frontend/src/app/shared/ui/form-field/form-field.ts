@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
-import { formatDisplayNumber } from '../../utils/number-format';
+import { asPenalty, formatDisplayNumber } from '../../utils/number-format';
 import { ComboboxComponent } from '../combobox/combobox';
 
 /**
@@ -61,6 +61,16 @@ export class FormFieldComponent {
     this.focused = false;
     if (this.formatWhenIdle) {
       this.inputValue = this.formatted(this.field.value ?? '');
+    }
+    this.commit();
+  }
+
+  /** Blur o Enter. Un campo `negativeOnly` (Castigo) se pasa a negativo antes de avisar que se confirmo. */
+  commit(): void {
+    if (this.field.negativeOnly && !this.field.readonly) {
+      const negative = asPenalty(String(this.inputValue ?? ''));
+      this.inputValue = negative;
+      this.valueChange.emit(negative);
     }
     this.committed.emit();
   }

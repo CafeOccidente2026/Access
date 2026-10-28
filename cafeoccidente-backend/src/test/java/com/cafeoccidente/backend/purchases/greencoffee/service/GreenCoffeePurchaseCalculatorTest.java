@@ -81,6 +81,24 @@ class GreenCoffeePurchaseCalculatorTest {
     }
 
     @Test
+    void dailyWithholdingFollowsTheExampleOfTheReport() {
+        // Informe 3.2 (Q10): base 1.000.000 y 0,5 %. 600.000 + 600.000 -> 6.000; la siguiente de 300.000 -> 1.500.
+        ControlRecord cr = controlRecord(new BigDecimal("692.00"));
+        cr.setBaseWithholding(new BigDecimal("1000000"));
+        GreenCoffeePurchaseCalculation first = calculator.calculate(request("1050", "600"), cr, announcement("692"),
+                seller("C"), BigDecimal.ZERO, BigDecimal.ZERO);
+        GreenCoffeePurchaseCalculation second = calculator.calculate(request("1050", "600"), cr, announcement("692"),
+                seller("C"), first.grossValue(), first.withholding());
+        GreenCoffeePurchaseCalculation third = calculator.calculate(request("1050", "300"), cr, announcement("692"),
+                seller("C"), first.grossValue().add(second.grossValue()), first.withholding().add(second.withholding()));
+
+        assertThat(first.grossValue()).isEqualByComparingTo("600000");
+        assertThat(first.withholding()).isEqualByComparingTo("0");
+        assertThat(second.withholding()).isEqualByComparingTo("6000");
+        assertThat(third.withholding()).isEqualByComparingTo("1500");
+    }
+
+    @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(
                 request("1250", "1300"), controlRecord(new BigDecimal("692.00")), announcement("692"), seller("F"),

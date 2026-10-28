@@ -27,9 +27,9 @@ public class GreenCoffeePurchaseCalculator {
      * @param announcement anuncio CV vigente (lo resuelve el servidor): Pr_Base_CPS (Texto91 en el
      *     VBA) y Costos - nunca los del navegador
      * @param seller vendedor desde TERCEROS (tipo S/C/F y si es asociacion)
-     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado en VERDES para esta cedula
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado hoy (seco + verde + pasilla, Q10) para esta cedula
      *     en el dia de la compra (Texto105 / macro CalculoReteFteMesVerdes)
-     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada en VERDES a esta cedula en
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada (seco + verde + pasilla, Q10) a esta cedula en
      *     el dia de la compra (Texto107 / macro CalculoReteFteMesVerdes)
      */
     public GreenCoffeePurchaseCalculation calculate(
@@ -90,10 +90,10 @@ public class GreenCoffeePurchaseCalculator {
                     .setScale(0, RoundingMode.HALF_UP).setScale(SCALE);
         }
 
-        // Retefuente incremental sobre el acumulado diario del caficultor en VERDES (var6).
+        // Retefuente incremental sobre el acumulado diario conjunto del caficultor (var6, Q10).
         // SIN VERIFICAR: CalculoReteFteMesVerdes solo abre el reporte "ReteMesCursoVerdes" y copia
         // TotalVrBruto/TotalRetefuente a Texto105/Texto107; el RecordSource del reporte no esta en
-        // el export de VBA disponible. sumDailyTotalsByIdNumber usa ventana diaria
+        // el export de VBA disponible. GrowerDailyTotalsRepository usa ventana diaria
         // (mejor coincidencia historica, ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente).
         BigDecimal var6 = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;

@@ -57,9 +57,9 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
 - Precios, costos, bonificación, retención, totales y consecutivos (factura, remisión, anuncio,
   Id de transacción) los calcula el servidor. Lo que mande el cliente en esos campos se ignora.
 - Dinero y cantidades con `BigDecimal`, nunca `double` ni `float`. Los valores calculados se
-  muestran con 2 decimales sin redondear (truncar). Pendiente (Q3): si el truncado aplica solo
-  al mostrar o también al guardar, y si los montos en pesos llevan decimales. No asumir hasta
-  que se defina.
+  muestran con 2 decimales sin redondear, cortando hacia cero (−235,569 → −235,56), con
+  `formatDisplayNumber` de `shared/utils`. Al guardar (Q3): montos en pesos y Vr. Kilo en pesos
+  enteros con HALF_UP (,50 sube); kilos y porcentajes con 2 decimales.
 - Roles: Administrador, Usuario y Operaciones (este último solo entra a Actualizar Anuncios).
 
 ## Git

@@ -8,6 +8,7 @@ public record DryCoffeePurchaseCalculation(
         BigDecimal netKg,
         BigDecimal wastePercentage,
         BigDecimal defectivePercentage,
+        BigDecimal healthyStoredWeight,
         BigDecimal healthyPercentage,
         BigDecimal unitPrice,
         BigDecimal grossValue,
