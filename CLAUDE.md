@@ -86,6 +86,9 @@ preguntas, avisos), además de commits y PR.
 - Después del merge: `git switch develop && git pull`, borrar la rama local con `git branch -d`
   (nunca `-D`) y la remota. La siguiente rama sale de ese `develop` actualizado.
 - `feature/daniers` y `feature/juan` no se modifican: quedan como respaldo.
+- No usar `git stash` ni `git stash pop` sin revisar antes `git stash list` y `git status` (hay
+  stashes viejos del usuario: un `pop` sobre un árbol limpio aplica uno de ellos). Para comparar con
+  otra rama se usa `git worktree` en una ruta corta (Windows corta las rutas largas).
 - Commits pequeños y frecuentes: uno por cambio lógico, no uno gigante al final.
 - Mensajes en español, imperativo, máximo ~60 caracteres, sin punto final y sin emojis.
   Ej.: "Toma la agencia del token al guardar compras", "Agrega tabla terceros".
