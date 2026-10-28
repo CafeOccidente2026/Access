@@ -16,6 +16,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { asPenalty, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { SampleWeightKey, applyQualityPercentages, qualityRequestArgs } from '../sample-quality';
 
 type FormModel = Record<string, string>;
 
@@ -235,18 +236,9 @@ export class QuotaBillingFormComponent {
   }
 
   /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
-  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight'): void {
-    const total = num(this.model['totalStoredWeight']);
-    const args: [number?, number?] = key === 'totalStoredWeight' ? [total] : [total, num(this.model['totalHuskWeight'])];
-    this.service.qualityPercentages(...args).subscribe((q) => {
-      const shown: Record<string, number | null | undefined> =
-        key === 'totalStoredWeight'
-          ? { wastePercentage: q.wastePercentage }
-          : { huskPercentage: q.defectivePercentage, healthyStoredWeight: q.healthyStoredWeight, factor: q.healthyPercentage };
-      for (const [field, value] of Object.entries(shown)) {
-        this.model[field] = value != null ? String(value) : '';
-        this.locked.add(field);
-      }
+  private loadQualityPercentage(key: SampleWeightKey): void {
+    this.service.qualityPercentages(...qualityRequestArgs(this.model, key)).subscribe((q) => {
+      applyQualityPercentages(this.model, this.locked, key, q);
       this.tick.update((n) => n + 1);
     });
   }
