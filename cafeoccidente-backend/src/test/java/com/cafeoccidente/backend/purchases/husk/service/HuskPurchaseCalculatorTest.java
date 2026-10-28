@@ -76,6 +76,17 @@ class HuskPurchaseCalculatorTest {
     }
 
     @Test
+    void aBaseHuskOfZeroGivesAClearMessageInsteadOfDividingByZero() {
+        ControlRecord zeroBase = controlRecord();
+        zeroBase.setBaseHusk(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> calculator.calculate(
+                REQUEST, zeroBase, announcement("8908"), seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage(HuskPurchaseCalculator.MISSING_PARAMETERS);
+    }
+
+    @Test
     void associateGrowerPaysContributionNotCooperativeDiscount() {
         HuskPurchaseCalculation result = calculate("S", false);
 

@@ -11,7 +11,10 @@ import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
+import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
+import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeeSample;
+import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeeSampleRule;
 import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.entity.GreenCoffeePurchase;
 import com.cafeoccidente.backend.purchases.greencoffee.mapper.GreenCoffeePurchaseMapper;
@@ -51,6 +54,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final AnnouncementService announcementService;
     private final ControlRecordService controlRecordService;
     private final GreenCoffeePurchaseCalculator calculator;
+    /** Formulas de la muestra de cafe seco, que verde reusa para su muestra fija (HU-23 CA-2). */
+    private final DryCoffeePurchaseCalculator sampleFormulas;
     private final GreenCoffeePurchaseMapper mapper;
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
@@ -67,6 +72,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             AnnouncementService announcementService,
             ControlRecordService controlRecordService,
             GreenCoffeePurchaseCalculator calculator,
+            DryCoffeePurchaseCalculator sampleFormulas,
             GreenCoffeePurchaseMapper mapper,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             GrowerService growerService,
@@ -80,6 +86,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         this.announcementService = announcementService;
         this.controlRecordService = controlRecordService;
         this.calculator = calculator;
+        this.sampleFormulas = sampleFormulas;
         this.mapper = mapper;
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
@@ -98,6 +105,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
                 request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
         AnnouncementResponse announcement = context.announcement();
         PurchaseSeller seller = context.seller();
+        // HU-23 CA-2 / Q23: sin los 3 pesos de verde del Registro de Control no se registra.
+        GreenCoffeeSample sample = GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
         GreenCoffeePurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
@@ -123,6 +132,12 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         purchase.setGrossKg(request.grossKg());
         purchase.setTareKg(request.tareKg());
         purchase.setGreenKg(calculation.greenKg());
+        purchase.setTotalStoredWeight(sample.totalStoredWeight());
+        purchase.setWastePercentage(sample.wastePercentage());
+        purchase.setHuskWeight(sample.huskWeight());
+        purchase.setHuskPercentage(sample.huskPercentage());
+        purchase.setHealthyStoredWeight(sample.healthyStoredWeight());
+        purchase.setFactor(sample.factor());
         purchase.setNetKg(calculation.netKg());
         // Como Access (macro "Asignar numero anuncio verdes"), no como RN-19.4/19.5 (Q36): del anuncio CV.
         purchase.setHealthyUnitPrice(announcement.healthyUnitPrice());
@@ -170,8 +185,10 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
 
     @Override
     public GreenCoffeePurchaseCalculation preview(GreenCoffeePurchaseRequest request) {
-        return runCalculation(request, purchaseContextService.forPreview(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone()));
+        PurchaseContext context = purchaseContextService.forPreview(
+                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+        GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
+        return runCalculation(request, context);
     }
 
     private GreenCoffeePurchaseCalculation runCalculation(GreenCoffeePurchaseRequest request, PurchaseContext context) {
@@ -205,6 +222,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         ProductCode productCode = productCodeResolver.resolve(SPECIAL_TYPE, fund.getId());
         AnnouncementResponse announcement = announcementService.findLatest(agencyId, fund.getId(), SPECIAL_TYPE);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
+        // HU-23 CA-2: no falla sin los pesos de verde, para que la pantalla avise apenas abre.
+        GreenCoffeeSample sample = GreenCoffeeSampleRule.sampleOrNull(controlRecord, sampleFormulas);
         // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio maestro - (Costos * BaseCarga)
         // (Form_VERDES.bas: Pr_Base_PC = Texto91 - (Costos * Texto176)). Desde el anuncio compartido
         // entre agencias (ver docs/diseno-anuncios-compartidos.md), "Costos" ya NO viene congelado:
@@ -222,6 +241,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
                 announcement.defectiveUnitPrice(),
                 announcement.healthyUnitPrice(),
                 announcement.bonus(),
-                announcement.costs());
+                announcement.costs(),
+                sample,
+                sample != null);
     }
 }

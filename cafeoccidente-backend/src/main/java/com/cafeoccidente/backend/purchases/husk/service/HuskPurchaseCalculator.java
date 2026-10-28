@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class HuskPurchaseCalculator {
 
+    static final String MISSING_PARAMETERS = "Faltan Tamaño Muestra o Base Pasilla en el Registro de Control.";
     private static final int SCALE = 2;
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
@@ -76,7 +77,7 @@ public class HuskPurchaseCalculator {
         // firma del control es identica y la convencion de peso entero es del COP, no del formulario.
         BigDecimal unitPrice = roundToWholePeso(announcement.healthyUnitPrice()
                 .multiply(almondPercentageRaw)
-                .divide(controlRecord.getBaseHusk(), MathContext.DECIMAL64)
+                .divide(baseHusk(controlRecord), MathContext.DECIMAL64)
                 .subtract(announcement.costs()));
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
 
@@ -133,10 +134,18 @@ public class HuskPurchaseCalculator {
     }
 
     private BigDecimal sampleSize(ControlRecord controlRecord) {
-        BigDecimal sampleSize = controlRecord.getSampleSize();
-        if (sampleSize.signum() == 0) {
-            throw new BusinessRuleException("El tamaño de muestra configurado no puede ser cero");
+        return requireParameter(controlRecord.getSampleSize());
+    }
+
+    /** RN-20.8: BasePasilla (hoy 12,5) del Registro de Control; en 0 dividia por cero (error 500). */
+    private BigDecimal baseHusk(ControlRecord controlRecord) {
+        return requireParameter(controlRecord.getBaseHusk());
+    }
+
+    private static BigDecimal requireParameter(BigDecimal value) {
+        if (value == null || value.signum() <= 0) {
+            throw new BusinessRuleException(MISSING_PARAMETERS);
         }
-        return sampleSize;
+        return value;
     }
 }

@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.greencoffee.mapper;
 
+import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeeSample;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.entity.GreenCoffeePurchase;
 import org.springframework.stereotype.Component;
@@ -50,6 +51,10 @@ public class GreenCoffeePurchaseMapper {
                 purchase.getNetToPay(),
                 purchase.getPaymentMethod(),
                 purchase.getCheckNumber(),
-                purchase.getCreatedByUserId());
+                purchase.getCreatedByUserId(),
+                purchase.getTotalStoredWeight() == null ? null : new GreenCoffeeSample(
+                        purchase.getTotalStoredWeight(), purchase.getWastePercentage(),
+                        purchase.getHuskWeight(), purchase.getHuskPercentage(),
+                        purchase.getHealthyStoredWeight(), purchase.getFactor()));
     }
 }

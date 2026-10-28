@@ -101,6 +101,8 @@ class PurchaseServerValuesIntegrationTest {
                     + " SELECT ?, ?, COALESCE(MAX(numero_anuncio), 0) + 1, CURRENT_DATE FROM anuncios_agencias WHERE agencia_id = ?",
                     AGENCY, id, AGENCY);
         }
+        // HU-23 CA-2: sin los 3 pesos de verde no se registra (Q23); la semilla los trae en 0.
+        greenSample("140", "12.5", "186.18");
         grower(COMPLETE, "VEREDA EL ALTO", "3001112233", false);
         grower(NO_CONTACT, "", "", false);
         grower(DECEASED, "VEREDA BAJA", "3004445566", true);
@@ -109,6 +111,16 @@ class PurchaseServerValuesIntegrationTest {
     @AfterEach
     void signOut() {
         SecurityContextHolder.clearContext();
+    }
+
+    private void greenSample(String total, String husk, String healthy) {
+        jdbc.update("UPDATE registros_control SET peso_tot_alm_cv = ?::numeric, peso_tot_pasilla_cv = ?::numeric,"
+                + " peso_alm_sana_cv = ?::numeric WHERE agencia_id = ? AND activo", total, husk, healthy, AGENCY);
+    }
+
+    private GreenCoffeePurchaseRequest green(BigDecimal pay) {
+        return new GreenCoffeePurchaseRequest(rp, COMPLETE, null, null, 5, new BigDecimal("1000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, new BigDecimal("12000"), BigDecimal.ZERO, BigDecimal.ZERO, cash(pay));
     }
 
     private void grower(String idNumber, String address, String phone, boolean deceased) {
@@ -313,6 +325,38 @@ class PurchaseServerValuesIntegrationTest {
                 .healthyPercentage()).isEqualByComparingTo("94.09");
         assertThat(dry.qualityPercentages(new BigDecimal("200"), new BigDecimal("14"), null, null).healthyStoredWeight())
                 .isEqualByComparingTo("186");
+    }
+
+
+    @Test
+    void greenCoffeeShowsAndSavesTheFixedSampleOfTheControlRecord() {
+        var info = green.announcementInfo();
+        assertThat(info.sampleReady()).isTrue();
+        assertThat(info.sample().wastePercentage()).isEqualByComparingTo("44.00");
+        assertThat(info.sample().huskPercentage()).isEqualByComparingTo("5.00");
+        assertThat(info.sample().factor()).isEqualByComparingTo("94.00");
+
+        BigDecimal net = green.preview(green(null)).netToPay();
+        GreenCoffeePurchaseResponse saved = green.create(green(net));
+
+        assertThat(saved.sample().totalStoredWeight()).isEqualByComparingTo("140");
+        assertThat(saved.sample().huskWeight()).isEqualByComparingTo("12.5");
+        assertThat(saved.sample().healthyStoredWeight()).isEqualByComparingTo("186.18");
+        assertThat(saved.sample().factor()).isEqualByComparingTo("94.00");
+    }
+
+    @Test
+    void greenCoffeeIsBlockedWhileAGreenWeightIsZeroWithoutTakingAnInvoice() {
+        greenSample("140", "0", "186.18");
+        int next = consecutive.next(AGENCY, controlRecords.getActive(AGENCY)).invoiceNumber();
+
+        assertThat(green.announcementInfo().sampleReady()).isFalse();
+        assertThat(green.announcementInfo().sample()).isNull();
+        assertThatThrownBy(() -> green.preview(green(null)))
+                .isInstanceOf(BusinessRuleException.class).extracting("code").isEqualTo("VERDE_SIN_VALORES");
+        assertThatThrownBy(() -> green.create(green(BigDecimal.ONE)))
+                .isInstanceOf(BusinessRuleException.class).extracting("code").isEqualTo("VERDE_SIN_VALORES");
+        assertThat(consecutive.next(AGENCY, controlRecords.getActive(AGENCY)).invoiceNumber()).isEqualTo(next);
     }
 
 }
