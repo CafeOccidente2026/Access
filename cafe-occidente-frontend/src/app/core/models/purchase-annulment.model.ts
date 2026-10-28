@@ -1,5 +1,8 @@
 export type AnnulmentModule = 'DRY' | 'GREEN' | 'HUSK';
 
+/** Botones |◄ ◄ ► ►| (RN-23.2). */
+export type AnnulmentDirection = 'FIRST' | 'PREV' | 'NEXT' | 'LAST';
+
 /** Ficha de "CONSULTA COMPRAS PARA ANULAR" (AnnulmentCandidate del backend). */
 export interface AnnulmentCandidate {
   readonly module: AnnulmentModule;

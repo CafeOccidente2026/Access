@@ -2,12 +2,13 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { AnnulmentCandidate } from '../../core/models/purchase-annulment.model';
+import { AnnulmentCandidate, AnnulmentDirection } from '../../core/models/purchase-annulment.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseAnnulmentService } from '../../core/services/purchase-annulment.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
 
 export interface PurchaseAnnulmentContent {
@@ -24,7 +25,9 @@ export interface PurchaseAnnulmentContent {
   readonly lockedMessage: string;
   readonly modules: Record<string, string>;
   readonly fields: { key: string; label: string; type?: 'date' | 'number' | 'money' }[];
-  readonly messages: Record<'notFound' | 'annulled' | 'error', string>;
+  /** |◄ ◄ ► ►|: texto del boton y su ayuda, por direccion. */
+  readonly navigation: { direction: AnnulmentDirection; label: string; title: string }[];
+  readonly messages: Record<'notFound' | 'noMore' | 'annulled' | 'error', string>;
 }
 
 /** Valor de una fila de la ficha (Cns_ComprasParaAnular, todos los controles bloqueados). */
@@ -51,8 +54,9 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
 }
 
 /**
- * "Anular Documento" (macro ParaAnularFactura -> Cns_ComprasParaAnular -> AnularFactura): buscar la
- * factura, ver la ficha y anular con la misma confirmacion de Access. Una compra cerrada en Access no se anula.
+ * "Anular Documento" (macro ParaAnularFactura -> Cns_ComprasParaAnular -> AnularFactura): recorrer las
+ * compras una por una o buscar la factura (RN-23.2), ver la ficha y anular con la confirmacion del RF
+ * (RN-23.3). Una compra cerrada en Access no se anula.
  */
 @Component({
   selector: 'app-purchase-annulment',
@@ -68,10 +72,12 @@ export class PurchaseAnnulmentComponent {
   readonly content = toSignal(inject(ContentService).loadJson<PurchaseAnnulmentContent>('purchase-annulment'));
   readonly candidates = signal<AnnulmentCandidate[]>([]);
   readonly selected = signal<AnnulmentCandidate | null>(null);
-  /** Comando87: 'confirm' = Etiqueta97 + SI/NO; 'locked' = Etiqueta98 + Aceptar. */
+  /** RN-23.3: 'confirm' = pregunta del RF con Aceptar/Cancelar; 'locked' = Etiqueta98 de Access + Aceptar. */
   readonly prompt = signal<'confirm' | 'locked' | null>(null);
   readonly message = signal<string | null>(null);
   readonly error = signal(false);
+  /** Anulacion en curso: Aceptar queda deshabilitado y un segundo clic no vuelve a enviar. */
+  readonly saving = signal(false);
   readonly value = fieldValue;
 
   search(event: Event, invoice: string): void {
@@ -93,6 +99,23 @@ export class PurchaseAnnulmentComponent {
     });
   }
 
+  /** RN-23.2: la compra anterior o siguiente por factura; al final se queda en la que estaba. */
+  go(direction: AnnulmentDirection): void {
+    this.prompt.set(null);
+    this.message.set(null);
+    this.service.navigate(this.selected()?.invoiceNumber ?? null, direction).subscribe({
+      next: (list) => {
+        if (!list.length) {
+          this.fail(this.content()!.messages.noMore);
+          return;
+        }
+        this.candidates.set(list);
+        this.selected.set(list[0]);
+      },
+      error: () => this.fail(this.content()!.messages.error),
+    });
+  }
+
   choose(candidate: AnnulmentCandidate): void {
     this.selected.set(candidate);
     this.prompt.set(null);
@@ -106,15 +129,18 @@ export class PurchaseAnnulmentComponent {
 
   confirm(): void {
     const candidate = this.selected()!;
-    this.prompt.set(null);
-    this.service.annul(candidate).subscribe({
+    saveOnce(this.saving, () => this.service.annul(candidate), {
       next: (annulled) => {
+        this.prompt.set(null);
         this.selected.set(annulled);
         this.candidates.update((list) => list.map((c) => (c.module === annulled.module && c.id === annulled.id ? annulled : c)));
         this.error.set(false);
         this.message.set(this.content()!.messages.annulled.replace('{invoice}', String(annulled.invoiceNumber)));
       },
-      error: (err) => this.fail(err?.error?.message ?? this.content()!.messages.error),
+      error: (err) => {
+        this.prompt.set(null);
+        this.fail(err?.error?.message ?? this.content()!.messages.error);
+      },
     });
   }
 
