@@ -146,5 +146,9 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     expect((component as any).locked.has('bags')).toBe(false);
     expect((component as any).locked.has('compKgPrice')).toBe(false);
     expect(createSpy).not.toHaveBeenCalled();
+    // Sin muestra, los 6 campos de la muestra quedan vacios y de solo lectura (antes salian fijos del JSON).
+    const fields = component.viewContent()?.weightFields ?? [];
+    expect(fields.find((f) => f.key === 'totalStoredWeight')).toMatchObject({ readonly: true, value: '' });
+    expect(fields.find((f) => f.key === 'factor')).toMatchObject({ readonly: true, value: '' });
   });
 });
