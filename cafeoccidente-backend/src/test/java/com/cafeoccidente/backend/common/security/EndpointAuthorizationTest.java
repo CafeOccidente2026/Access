@@ -169,6 +169,8 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/purchases/dry-coffee/by-date", "/api/purchases/dry-coffee/by-date?date=2026-01-01");
         // RN-23.1 Anular Documento: el Administrador o con el permiso (RF-02).
         add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment", "/api/purchases/annulment?invoiceNumber=1");
+        add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment/navigate",
+                "/api/purchases/annulment/navigate?direction=FIRST");
         add(ADMIN, "ANULAR_DOCUMENTO", post, "/api/purchases/annulment/{module}/{id}", "/api/purchases/annulment/DRY/1");
 
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
