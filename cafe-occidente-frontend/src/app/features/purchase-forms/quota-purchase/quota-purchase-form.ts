@@ -15,9 +15,9 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { asPenalty, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
-import { SampleWeightKey, applyQualityPercentages, qualityRequestArgs } from '../sample-quality';
+import { SampleWeightKey, loadSampleQuality } from '../sample-quality';
 
 type FormModel = Record<string, string>;
 
@@ -131,9 +131,6 @@ export class QuotaPurchaseFormComponent {
     }
     if (value === '' && ZERO_IF_EMPTY.includes(key)) {
       this.model[key] = '0';
-    }
-    if (key === 'penalty') {
-      this.model[key] = asPenalty(this.model[key] ?? '');
     }
     if (key !== 'idPart1') {
       this.locked.add(key);
@@ -276,10 +273,7 @@ export class QuotaPurchaseFormComponent {
 
   /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
   private loadQualityPercentage(key: SampleWeightKey): void {
-    this.service.qualityPercentages(...qualityRequestArgs(this.model, key)).subscribe((q) => {
-      applyQualityPercentages(this.model, this.locked, key, q);
-      this.tick.update((n) => n + 1);
-    });
+    loadSampleQuality(this.service, this.model, this.locked, key, () => this.tick.update((n) => n + 1));
   }
 
   private recalculate(): void {

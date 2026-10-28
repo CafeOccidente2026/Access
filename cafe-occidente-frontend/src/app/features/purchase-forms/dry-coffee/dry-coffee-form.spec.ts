@@ -273,4 +273,33 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     expect((component as any).locked.has('totalStoredWeight')).toBe(false);
     expect((component as any).locked.has('totalHuskWeight')).toBe(false);
   });
+
+  it('Q15: if the save is rejected over the threshold, the sample weights are cleared too', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const message = 'El Factor (94,00) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    createSpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+
+    component.print();
+
+    expect(component.errorMessage()).toBe(message);
+    expect(component.model['totalStoredWeight']).toBe('');
+  });
+
+  it('a failed weight that is not the threshold keeps the generic message', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    qualitySpy.mockReturnValue(throwError(() => ({ error: { message: 'otro' } })));
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+
+    expect(component.errorMessage()).toBe('otro');
+    expect(component.model['totalStoredWeight']).toBe('220');
+  });
 });

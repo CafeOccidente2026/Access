@@ -10,7 +10,7 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 
-describe('QuotaPurchaseFormComponent - pesos de la muestra y castigo', () => {
+describe('QuotaPurchaseFormComponent - pesos de la muestra', () => {
   const content: PurchaseFormContent = {
     windowTitle: 'Cupo',
     theme: 'teal',
@@ -55,11 +55,4 @@ describe('QuotaPurchaseFormComponent - pesos de la muestra y castigo', () => {
     expect(field?.value).toBe('190');
   });
 
-  it('Q1: a positive penalty is shown as negative', () => {
-    const { component } = setup();
-    component.model['penalty'] = '23';
-    component.onFieldCommitted('penalty');
-
-    expect(component.model['penalty']).toBe('-23');
-  });
 });

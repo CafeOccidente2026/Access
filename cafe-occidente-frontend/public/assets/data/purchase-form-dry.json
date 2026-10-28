@@ -77,7 +77,7 @@
     { "key": "grossKg", "label": "Kilos Brutos", "type": "count" },
     { "key": "tare", "label": "Destare", "type": "count", "rawDisplay": true },
     { "key": "netKg", "label": "Kilos Netos", "type": "count" },
-    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true, "negativeOnly": true }
   ],
   "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "integer": true },
   "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},

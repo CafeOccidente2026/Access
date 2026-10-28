@@ -1,12 +1,26 @@
 import { QualityPercentages } from '../../core/models/dry-coffee-purchase.model';
+import { DryCoffeePurchaseService } from '../../core/services/dry-coffee-purchase.service';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
 
 export type SampleWeightKey = 'totalStoredWeight' | 'totalHuskWeight';
 
-/** Q2: con Peso Tot Alm se pide Porc Merma; con Peso Pasilla, ademas Alm Sana y Factor (ambos pesos). */
-export function qualityRequestArgs(model: Record<string, string>, key: SampleWeightKey): [number?, number?] {
+/**
+ * Q2: Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas y, con el total, Peso Alm Sana y Factor,
+ * que calcula el servidor. Escribe esos campos en el formulario, los bloquea y avisa con `done`.
+ */
+export function loadSampleQuality(
+  service: DryCoffeePurchaseService,
+  model: Record<string, string>,
+  locked: Set<string>,
+  key: SampleWeightKey,
+  done: () => void,
+): void {
   const total = parseDisplayNumber(model['totalStoredWeight']);
-  return key === 'totalStoredWeight' ? [total] : [total, parseDisplayNumber(model['totalHuskWeight'])];
+  const args: [number?, number?] = key === 'totalStoredWeight' ? [total] : [total, parseDisplayNumber(model['totalHuskWeight'])];
+  service.qualityPercentages(...args).subscribe((q) => {
+    applyQualityPercentages(model, locked, key, q);
+    done();
+  });
 }
 
 /** Escribe en el formulario (y bloquea) los campos que llena la respuesta de /quality-percentages. */

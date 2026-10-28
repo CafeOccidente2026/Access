@@ -15,7 +15,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { asPenalty, formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
@@ -153,9 +153,6 @@ export class GreenCoffeeFormComponent {
     }
     if (value === '' && ZERO_IF_EMPTY.includes(key)) {
       this.model[key] = '0';
-    }
-    if (key === 'penalty') {
-      this.model[key] = asPenalty(this.model[key] ?? '');
     }
     if (key !== 'idPart1') {
       this.locked.add(key);

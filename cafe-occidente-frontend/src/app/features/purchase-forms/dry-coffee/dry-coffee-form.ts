@@ -19,7 +19,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { asPenalty, formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
@@ -188,9 +188,6 @@ export class DryCoffeeFormComponent {
     }
     if (value === '' && ZERO_IF_EMPTY.includes(key)) {
       this.model[key] = '0';
-    }
-    if (key === 'penalty') {
-      this.model[key] = asPenalty(this.model[key] ?? '');
     }
     // idPart1 se bloquea (locked) recien cuando lookupGrower confirma que la cedula existe - hasta
     // entonces sigue editable para poder corregirla (ver mensaje "no existe" en lookupGrower).

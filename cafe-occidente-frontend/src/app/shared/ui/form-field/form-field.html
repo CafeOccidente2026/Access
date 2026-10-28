@@ -24,7 +24,7 @@
       (ngModelChange)="onInput($event, textInput)"
       (focus)="onFocus()"
       (blur)="onBlur()"
-      (keydown.enter)="committed.emit()"
+      (keydown.enter)="commit()"
     />
   </ng-template>
 </label>
