@@ -17,5 +17,8 @@ public record AnnouncementInfoResponse(
         BigDecimal defectiveUnitPrice,
         BigDecimal healthyUnitPrice,
         BigDecimal bonus,
-        BigDecimal costs) {
+        BigDecimal costs,
+        /** HU-23 CA-2: muestra fija del Registro de Control; null si faltan los pesos (sampleReady = false). */
+        GreenCoffeeSample sample,
+        boolean sampleReady) {
 }

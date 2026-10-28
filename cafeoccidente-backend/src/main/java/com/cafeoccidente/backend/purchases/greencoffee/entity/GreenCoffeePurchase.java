@@ -104,6 +104,25 @@ public class GreenCoffeePurchase {
     @Column(name = "kilos_netos", nullable = false, precision = 10, scale = 2)
     private BigDecimal netKg;
 
+    /** Muestra fija de verde del Registro de Control al momento de la compra (HU-23 CA-2, V15). */
+    @Column(name = "peso_tot_alm", precision = 10, scale = 2)
+    private BigDecimal totalStoredWeight;
+
+    @Column(name = "porc_merma", precision = 10, scale = 2)
+    private BigDecimal wastePercentage;
+
+    @Column(name = "peso_tot_pasilla", precision = 10, scale = 2)
+    private BigDecimal huskWeight;
+
+    @Column(name = "porc_kg_pasilla", precision = 10, scale = 2)
+    private BigDecimal huskPercentage;
+
+    @Column(name = "peso_alm_sana", precision = 10, scale = 2)
+    private BigDecimal healthyStoredWeight;
+
+    @Column(name = "factor", precision = 10, scale = 2)
+    private BigDecimal factor;
+
     /** Pr_AlmSana vigente en el anuncio (snapshot, se muestra como "Pr Alm Sana"). */
     @Column(name = "pr_alm_sana", nullable = false, precision = 15, scale = 2)
     private BigDecimal healthyUnitPrice;
