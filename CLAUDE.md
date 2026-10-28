@@ -16,6 +16,11 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
    Las dos carpetas son locales.
 5. RF-22 Inventarios y RF-29 Contabilizado están pendientes de levantamiento: no se inventan reglas.
 6. Si el RF es ambiguo o contradice otra fuente: preguntar, no suponer.
+7. **`docs/traspaso-fase6.md`** (local): estado por fase y PR, decisiones Q1–Q37 en una línea y
+   pendientes. Leerlo al empezar una conversación nueva.
+
+**Idioma:** todo lo que se le escribe al usuario va en español (respuestas, resúmenes, tablas,
+preguntas, avisos), además de commits y PR.
 
 ## Convenciones de código
 
@@ -45,6 +50,10 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
 - Las entidades JPA siguen en inglés y mapean con `@Table(name = ...)` y `@Column(name = ...)`.
 - Todo cambio de esquema es una migración Flyway nueva (`Vn__descripcion.sql`). Nunca se edita
   una ya aplicada. `ddl-auto: validate`.
+- Antes de cada migración: respaldo con `pg_dump -Fc` de `cafeoccidente` y `cafeoccidente_test` en
+  `docs/respaldos-bd/`.
+- Los datos propios de un ambiente (correcciones, cargas de Access) van en un script aparte en
+  `scripts/`, con respaldo antes, nunca en Flyway.
 - Excepción: el rebaseline del esquema en español de la fase 1, si se aprueba, reemplaza las
   migraciones actuales.
 
@@ -66,11 +75,14 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
 
 - `main` NO se toca por ahora. Solo recibe un PR desde `develop` cuando un bloque esté
   terminado, probado y aprobado por el usuario.
-- `develop` es la rama base de trabajo. Cada fase o historia va en su propia rama, creada desde
+- `develop` es la rama base de trabajo. Nunca se hace push directo a `develop`. Cada fase o historia va en su propia rama, creada desde
   `develop` actualizado: `feature/<fase-o-hu>-<descripcion-corta>`
   (ej. `feature/hu-01-login-roles`, `feature/bd-esquema-espanol`).
-- Al terminar se abre un PR a `develop` con **merge commit** (no squash). Se esperan los checks en
-  verde; el usuario lo revisa y hace el merge.
+- **Detenerse antes del push** y pedir confirmación. Luego se abre un PR a `develop` con **merge
+  commit** (no squash). Se esperan los checks en verde; el usuario lo revisa y hace el merge.
+- **Sonar:** cobertura del código nuevo ≥ 80 % (cuenta ramas, no solo líneas) y duplicación
+  < 3 %. Avisar al usuario si la puerta pasa. Un falso positivo se marca en Sonar con su motivo; no
+  se esconde con exclusiones ni con `NOSONAR` sin explicar.
 - Después del merge: `git switch develop && git pull`, borrar la rama local con `git branch -d`
   (nunca `-D`) y la remota. La siguiente rama sale de ese `develop` actualizado.
 - `feature/daniers` y `feature/juan` no se modifican: quedan como respaldo.
@@ -83,7 +95,7 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
 
 ## Flujo de trabajo por historia
 
-a. **Modo plan:** leer la HU, sus RF, su fila de la matriz y la captura de Access de la pantalla.
+a. **Modo plan, sin programar:** leer la HU, sus RF, su fila de la matriz y la captura de Access de la pantalla.
    Listar las dudas.
 b. Esperar la aprobación del usuario.
 c. Crear la rama.
@@ -99,9 +111,14 @@ No se pasa a la siguiente historia hasta que la actual cumpla todos sus criterio
 **Antes de cualquier cosa irreversible** (migraciones, borrar datos, renombrar, push, merge):
 detenerse y pedir confirmación.
 
-**Al terminar una prueba en el Chrome del usuario:** borrar los usuarios temporales y además
-cerrar la sesión o borrar el localStorage de `localhost:4200`. Un token guardado de un usuario
-ya borrado deja al navegador mandándolo en cada petición.
+**Prueba en el navegador:** solo sobre `cafeoccidente_test`, con un usuario temporal (la clave en
+el scratchpad, borrada al final). Con permiso del usuario se detiene su contenedor
+`cafeoccidente-backend` (ocupa el 8090) y se levantan el jar de la rama y un `ng serve` propio. No
+se toca el `ng serve` del usuario. Al terminar: borrar los usuarios temporales (si hicieron compras,
+desactivarlos) y los datos de prueba, cerrar la sesión o borrar el localStorage de
+`localhost:4200` (un token de un usuario ya borrado se sigue mandando en cada petición), cerrar la
+pestaña, detener los procesos propios (también el `node` hijo del `ng serve`) y **volver a arrancar
+el contenedor del usuario**. No borrar las bases `cafeoccidente_vieja` ni `cafeoccidente_verifica`.
 
 ## Aprendizajes técnicos
 
@@ -113,8 +130,14 @@ ya borrado deja al navegador mandándolo en cada petición.
   cualquier profundidad. Con `/` inicial (`/docs/`) solo ignora la de la raíz. Como `docs/` está
   ignorada, los tests que leen CSV de Access desde ahí se saltan en CI (`Assumptions`).
 - **Java 21:** el proyecto y el CI usan JDK 21 (`<java.version>21</java.version>`). En esta máquina
-  el `java` por defecto es 25: usar el JDK 21 para compilar.
+  el `java` por defecto es 25: usar el JDK 21 para compilar
+  (`/c/Users/Usuario/AppData/Local/Programs/Microsoft/jdk-21.0.11.10-hotspot`).
+- **Entorno local:** backend 8090, frontend 4200, PostgreSQL 18 en 5433 (contenedor
+  `cafeoccidente-postgres`). Bases: `cafeoccidente` (la del usuario) y `cafeoccidente_test` (tests y
+  pruebas en el navegador). Tests del backend: `./mvnw -B verify` con `.env` cargado y
+  `DB_URL=jdbc:postgresql://localhost:5433/cafeoccidente_test`. Mapeo de BD:
+  `requerimientos_del_sistema/mapeo_bd_espanol.md`.
 - **Zoneless:** Angular 22 sin `zone.js`. La UI solo se refresca con signals, `toSignal`, el pipe
   `async` o eventos de plantilla. Mutar un campo dentro de un callback no repinta.
-- **CI:** frontend-ci hoy solo hace `npm ci && npm run build` (no corre tests); backend-ci corre
-  `mvn -B package` contra un Postgres 18 de servicio.
+- **CI:** frontend-ci corre `ng test --coverage` y `npm run build`; backend-ci corre `./mvnw -B
+  verify` contra un Postgres 18 de servicio. Ambos alimentan SonarCloud.
