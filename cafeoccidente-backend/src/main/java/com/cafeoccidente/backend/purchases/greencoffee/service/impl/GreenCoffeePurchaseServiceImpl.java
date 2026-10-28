@@ -166,7 +166,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         GreenCoffeePurchase savedPurchase = greenCoffeePurchaseRepository.save(purchase);
         purchasePaymentService.record("GREEN", savedPurchase.getId(), request.payment());
 
-        inventoryMovementService.recordFromPurchaseSafely(
+        inventoryMovementService.recordFromPurchase(
                 InventoryMovement.PurchaseModule.GREEN_COFFEE, savedPurchase.getId(),
                 context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
                 purchase.getInvoiceNumber(),

@@ -9,11 +9,10 @@ import java.util.List;
 public interface InventoryMovementService {
 
     /**
-     * Registra la entrada de inventario de una compra ya guardada (Access "INVENTARIO"). NUNCA
-     * lanza excepción: cualquier error se loguea y se descarta - la compra ya se guardó antes de
-     * llamar esto y no debe poder revertirse ni fallar por esto (ver *PurchaseServiceImpl.create()).
+     * Registra la entrada de inventario de una compra (Access "INVENTARIO") dentro de la misma
+     * transaccion del guardado (6e): si falla, la compra entera se revierte y no queda nada a medias.
      */
-    void recordFromPurchaseSafely(
+    void recordFromPurchase(
             InventoryMovement.PurchaseModule purchaseModule,
             Long purchaseId,
             Long agencyId,

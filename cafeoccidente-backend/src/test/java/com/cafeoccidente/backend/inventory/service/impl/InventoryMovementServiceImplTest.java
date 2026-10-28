@@ -1,10 +1,11 @@
 package com.cafeoccidente.backend.inventory.service.impl;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
 import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepository;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
@@ -16,10 +17,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
- * Prueba la garantia "no bloqueante" pedida por el usuario 2026-09-23: si recordFromPurchaseSafely
- * falla por el motivo que sea (aca: un product_code_id que no existe), el llamador (cualquiera de
- * los 5 *PurchaseServiceImpl.create()) nunca debe ver una excepcion ni un intento de rollback -
- * la compra ya esta guardada antes de que esto corra.
+ * 6e: el inventario va dentro de la transaccion de la compra. Si no puede registrarse (aca: un
+ * product_code_id que no existe), el error sube para que la compra entera se revierta, en vez de
+ * quedar una compra sin su entrada de inventario (antes se tragaba el error, decision 2026-09-23).
  */
 class InventoryMovementServiceImplTest {
 
@@ -30,20 +30,18 @@ class InventoryMovementServiceImplTest {
             new InventoryMovementServiceImpl(inventoryMovementRepository, agencyRepository, productCodeRepository);
 
     @Test
-    void neverThrowsWhenTheProductCodeDoesNotExist() {
+    void aFailureIsPropagatedSoThePurchaseRollsBack() {
         when(agencyRepository.findById(1L)).thenReturn(Optional.empty());
         when(productCodeRepository.findById(999999L)).thenReturn(Optional.empty());
 
-        // La asercion real es que esta llamada NO lanza nada - ni ResourceNotFoundException ni
-        // ninguna otra. Un *PurchaseServiceImpl real llama esto sin try/catch, confiado en que
-        // nunca se propaga un error hasta el (ver Javadoc de InventoryMovementService).
-        assertThatCode(() -> service.recordFromPurchaseSafely(
+        assertThatThrownBy(() -> service.recordFromPurchase(
                         InventoryMovement.PurchaseModule.DRY_COFFEE, 1L, 1L, 999999L, "RN", 27867,
                         LocalDate.now(), 10, new BigDecimal("1250"), new BigDecimal("1200"),
                         new BigDecimal("90"), new BigDecimal("10000000")))
-                .doesNotThrowAnyException();
+                .isInstanceOf(ResourceNotFoundException.class);
 
         // Como fallo antes de construir el movimiento, nunca se intento guardar nada.
         verifyNoInteractions(inventoryMovementRepository);
     }
+
 }
