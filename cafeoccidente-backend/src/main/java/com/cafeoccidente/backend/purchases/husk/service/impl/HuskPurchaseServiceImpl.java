@@ -142,9 +142,10 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         purchase.setCreatedAt(Instant.now());
 
         HuskPurchase savedPurchase = huskPurchaseRepository.save(purchase);
-        purchasePaymentService.record("HUSK", savedPurchase.getId(), request.payment());
+        purchasePaymentService.record(
+                "HUSK", savedPurchase.getId(), savedPurchase.getInvoiceNumber(), request.payment(), context);
 
-        inventoryMovementService.recordFromPurchaseSafely(
+        inventoryMovementService.recordFromPurchase(
                 InventoryMovement.PurchaseModule.HUSK, savedPurchase.getId(),
                 context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
                 purchase.getInvoiceNumber(),

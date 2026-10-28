@@ -145,9 +145,10 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setCreatedAt(Instant.now());
 
         DryCoffeePurchase savedPurchase = dryCoffeePurchaseRepository.save(purchase);
-        purchasePaymentService.record("DRY", savedPurchase.getId(), request.payment());
+        purchasePaymentService.record(
+                "DRY", savedPurchase.getId(), savedPurchase.getInvoiceNumber(), request.payment(), context);
 
-        inventoryMovementService.recordFromPurchaseSafely(
+        inventoryMovementService.recordFromPurchase(
                 InventoryMovement.PurchaseModule.DRY_COFFEE, savedPurchase.getId(),
                 context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
                 purchase.getInvoiceNumber(),

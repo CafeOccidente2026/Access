@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.supplies.service.impl;
 
 import static com.cafeoccidente.backend.supplies.service.impl.SuppliesEntryServiceImpl.CASH;
 import static com.cafeoccidente.backend.supplies.service.impl.SuppliesEntryServiceImpl.CHECK;
+import static com.cafeoccidente.backend.supplies.service.impl.SuppliesEntryServiceImpl.TRANSFER;
 
 import com.cafeoccidente.backend.supplies.dto.SuppliesReportRow;
 import com.cafeoccidente.backend.supplies.entity.CheckRelationMark;
@@ -201,8 +202,9 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
                 // Efectivo con cheques: Vr_Gastos_o_Comp = Caja.Entradas
                 .forEach(e -> lines.add(line(CASH_SOURCE, e, BigDecimal.ZERO, e.getInflow(), CHECK)));
         copiedPurchasePayments(agencyId, from, to)
-                .filter(p -> CHECK.equals(p.paymentMethod()))
-                // ActualizaSuministros: Vr_Gastos_o_Comp = FPch
+                // ActualizaSuministros: Vr_Gastos_o_Comp = FPch. Q33 (fase 6e): la transferencia tambien
+                // sale de la cuenta corriente; en Access solo quedaba listada en Caja.
+                .filter(p -> CHECK.equals(p.paymentMethod()) || TRANSFER.equals(p.paymentMethod()))
                 .forEach(p -> lines.add(line(p, BigDecimal.ZERO, p.netToPay())));
         return lines;
     }

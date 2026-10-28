@@ -1,6 +1,7 @@
 package com.cafeoccidente.backend.purchases.shared.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import com.cafeoccidente.backend.purchases.shared.service.PurchasePaymentService;
 import java.math.BigDecimal;
@@ -53,11 +54,19 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
     }
 
     @Override
-    public void record(String source, Long purchaseId, PurchasePaymentRequest payment) {
+    public void record(String source, Long purchaseId, Integer invoiceNumber, PurchasePaymentRequest payment,
+            PurchaseContext context) {
         String checkNumber = payment.checkAmount().signum() > 0 ? payment.checkNumber().trim() : null;
         jdbc.update("INSERT INTO formas_pago_compras (origen, origen_id, efectivo, cheque,"
                         + " transferencia, datafono, numero_cheque) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 source, purchaseId, payment.cashAmount(), payment.checkAmount(), payment.transferAmount(),
                 payment.cardAmount(), checkNumber == null ? null : Integer.valueOf(checkNumber));
+        if (payment.cardAmount().signum() > 0) {
+            // Q33: el datafono no sale de Caja ni de Suministros; queda por cobrar a favor del fiel.
+            jdbc.update("INSERT INTO cuentas_por_cobrar (agencia_id, modulo_compra, compra_id, numero_factura,"
+                            + " cedula_vendedor, cedula_fiel, valor) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    context.agency().getId(), source, purchaseId, invoiceNumber, context.seller().idNumber(),
+                    context.controlRecord().getTrustedId(), payment.cardAmount());
+        }
     }
 }
