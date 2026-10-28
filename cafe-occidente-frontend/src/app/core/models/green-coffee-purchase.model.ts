@@ -11,6 +11,19 @@ export interface GreenAnnouncementInfo {
   readonly healthyUnitPrice: number;
   readonly bonus: number;
   readonly costs: number;
+  /** HU-23 CA-2: muestra fija del Registro de Control; null mientras falten los pesos de verde. */
+  readonly sample: GreenCoffeeSample | null;
+  readonly sampleReady: boolean;
+}
+
+/** Muestra fija de cafe verde (Registro de Control) y sus porcentajes, calculados por el servidor. */
+export interface GreenCoffeeSample {
+  readonly totalStoredWeight: number;
+  readonly wastePercentage: number;
+  readonly huskWeight: number;
+  readonly huskPercentage: number;
+  readonly healthyStoredWeight: number;
+  readonly factor: number;
 }
 
 /** Proxima factura del punto (Q7: consecutivo compartido con seco y pasilla); la asigna el servidor al guardar. */

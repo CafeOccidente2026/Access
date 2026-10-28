@@ -17,7 +17,12 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     theme: 'teal',
     topFields: [],
     identificationFields: [],
+    weightFields: [
+      { key: 'totalStoredWeight', label: 'Peso Tot Alm', type: 'count' },
+      { key: 'factor', label: 'Factor', type: 'number' },
+    ],
     messages: {
+      sampleMissing: 'Faltan los valores de café verde en el Registro de Control.',
       acceptLabel: 'Aceptar',
       noAnnouncement: 'No hay anuncio',
       deceasedBlocked: 'No se le puede facturar a un fallecido.',
@@ -50,7 +55,11 @@ describe('GreenCoffeeFormComponent - guardado', () => {
   let createSpy: ReturnType<typeof vi.fn>;
   let component: GreenCoffeeFormComponent;
 
-  function setup(): void {
+  const sample = {
+    totalStoredWeight: 140, wastePercentage: 44, huskWeight: 12.5, huskPercentage: 5, healthyStoredWeight: 186.18, factor: 94,
+  };
+
+  function setup(sampleReady = true): void {
     const fakeGreenService = {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
       announcementInfo: () =>
@@ -64,6 +73,8 @@ describe('GreenCoffeeFormComponent - guardado', () => {
           healthyUnitPrice: 12000,
           bonus: 0,
           costs: 692,
+          sample: sampleReady ? sample : null,
+          sampleReady,
         }),
       preview: vi.fn(() => of({ netKg: 1200, withholding: 0, netToPay: 1000 })),
       create: (createSpy = vi.fn(() => of({}))),
@@ -116,5 +127,24 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     pending.error(new Error('fallo'));
     expect(component.saving()).toBe(false);
+  });
+
+  it('HU-23 CA-2: shows the fixed sample of the control record as read-only', () => {
+    setup();
+
+    const fields = component.viewContent()?.weightFields ?? [];
+    expect(fields.find((f) => f.key === 'totalStoredWeight')).toMatchObject({ readonly: true, value: 140 });
+    expect(fields.find((f) => f.key === 'factor')).toMatchObject({ readonly: true, value: 94 });
+  });
+
+  it('Q23: without the green weights it warns on open and nothing can be typed or saved', () => {
+    setup(false);
+    fillEverything();
+    component.print();
+
+    expect(component.errorMessage()).toBe(content.messages['sampleMissing']);
+    expect((component as any).locked.has('bags')).toBe(false);
+    expect((component as any).locked.has('compKgPrice')).toBe(false);
+    expect(createSpy).not.toHaveBeenCalled();
   });
 });

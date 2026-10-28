@@ -26,6 +26,7 @@ interface GreenCoffeeMessages {
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
+  readonly sampleMissing: string;
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
@@ -57,6 +58,8 @@ const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoicePrefix',
   'invoiceNumber', 'basePriceLoad', 'special', 'idNumber', 'healthyStoredPrice', 'defectStoredPrice',
   'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding',
+  // HU-23 CA-2: muestra fija del Registro de Control.
+  'totalStoredWeight', 'wastePercentage', 'totalHuskWeight', 'huskPercentage', 'healthyStoredWeight', 'factor',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario. */
@@ -99,6 +102,8 @@ export class GreenCoffeeFormComponent {
   readonly result = signal<GreenCoffeePurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
+  /** Q23: el Registro de Control no tiene los pesos de verde; la pantalla no deja digitar. */
+  readonly sampleMissing = signal(false);
   readonly savedNoticeOpen = signal(false);
   private readonly tick = signal(0);
 
@@ -144,7 +149,7 @@ export class GreenCoffeeFormComponent {
   }
 
   onFieldCommitted(key: string): void {
-    if (!EDITABLE.includes(key)) {
+    if (this.sampleMissing() || !EDITABLE.includes(key)) {
       return;
     }
     const value = (this.model[key] ?? '').trim();
@@ -218,7 +223,13 @@ export class GreenCoffeeFormComponent {
   private loadAnnouncementInfo(): void {
     this.service.announcementInfo().subscribe({
       next: (info) => {
-        this.announcementInfo.set(info);
+        // HU-23 CA-2 / Q23: sin los pesos de verde no hay cálculo ni factura (sin info no hay preview
+        // ni Imprimir); se avisa apenas abre la pantalla.
+        this.announcementInfo.set(info.sampleReady ? info : null);
+        this.sampleMissing.set(!info.sampleReady);
+        if (!info.sampleReady) {
+          this.errorMessage.set(this.messages()?.sampleMissing ?? null);
+        }
         this.tick.update((n) => n + 1);
       },
       error: () => {
@@ -447,6 +458,12 @@ export class GreenCoffeeFormComponent {
       defectStoredPrice: info?.defectiveUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
+      totalStoredWeight: info?.sample?.totalStoredWeight ?? '',
+      wastePercentage: info?.sample?.wastePercentage ?? '',
+      totalHuskWeight: info?.sample?.huskWeight ?? '',
+      huskPercentage: info?.sample?.huskPercentage ?? '',
+      healthyStoredWeight: info?.sample?.healthyStoredWeight ?? '',
+      factor: info?.sample?.factor ?? '',
       idNumber: this.model['idPart1'] ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
@@ -484,7 +501,7 @@ export class GreenCoffeeFormComponent {
       federationFields: row(base.federationFields),
       contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
-      weightFields: base.weightFields,
+      weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
       priceFields: row(base.priceFields),
       settlementFields: row(base.settlementFields)!,
