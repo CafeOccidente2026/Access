@@ -37,6 +37,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
 
     public static final String CASH = "EFECTIVO";
     public static final String CHECK = "CHEQUE";
+    public static final String TRANSFER = "TRANSFERENCIA";
     /** Combos de Access: Fondo "LF";"RP", Forma_de_Pago "EFECTIVO";"CHEQUE", Tipo "NUEVO";"USADO". */
     private static final Set<String> FUNDS = Set.of("RP", "LF");
     private static final Set<String> CASH_SUPPLY_METHODS = Set.of(CASH, CHECK);
