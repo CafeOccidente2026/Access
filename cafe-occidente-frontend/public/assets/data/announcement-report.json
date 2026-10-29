@@ -1,0 +1,31 @@
+{
+  "windowTitle": "REPORTE ANUNCIO",
+  "dateLabel": "Fecha",
+  "generateLabel": "Generar reporte",
+  "printLabel": "Imprimir",
+  "pdfTitle": "REPORTE ANUNCIO",
+  "messages": {
+    "wrongYear": "La fecha debe ser del año {year}",
+    "empty": "No hay compras para esa fecha",
+    "error": "No se pudo generar el reporte"
+  },
+  "pdf": {
+    "cooperative": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "nit": "NIT. 891.200.986-8",
+    "detailTitle": "ANUNCIO",
+    "summaryTitle": "RESUMEN ANUNCIO",
+    "agencyLabel": "Agencia:",
+    "dateLabel": "Fecha:",
+    "detailColumns": ["Anun", "Factura", "Cedula", "Fecha", "Fondo", "Nombre", "Apellidos", "KV", "KN", "Factor", "Vr\nKilo", "Vr\nBruto", "Aporte\nSocio", "Dcto\nCoop", "Dcto\nFro", "Retefuente", "Otros\nDctos", "Neto a\nPagar", "FP"],
+    "summaryColumns": ["", "KV", "KN", "Porcent\nPonderado", "Vr\nBruto", "Aporte\nSocio", "Dcto\nCoop", "Dcto\nFro", "Retefuente", "Neto a\nPagar"],
+    "groupSummary": "Resumir por 'Cod_Prod' =  {code} ({count} {records})",
+    "oneRecord": "registro de detalle",
+    "manyRecords": "registros de detalle",
+    "sum": "Suma",
+    "detailTotal": "Suma total",
+    "summaryTotal": "SUMA TOTAL",
+    "trusted": "Fiel: _____________________________________",
+    "signatures": ["CONTABILIDAD", "OPERACIONES", "REVISORIA FISCAL"],
+    "page": "Página {page} de {pages}"
+  }
+}
