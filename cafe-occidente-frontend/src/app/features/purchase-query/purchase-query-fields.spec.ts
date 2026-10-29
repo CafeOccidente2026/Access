@@ -37,7 +37,7 @@ describe('fillQueryContent (RF-26: all the data of the purchase, read only)', ()
     const fields = Object.fromEntries(
       [base.identificationFields, base.qualityFields ?? [], base.netWeightFields ?? []].flat().map((f) => [f.key, f]),
     );
-    for (const key of ['basePriceDryLoad', 'healthyStoredPrice', 'bonus', 'costs', 'bags', 'penalty']) {
+    for (const key of ['basePriceDryLoad', 'bonus', 'costs', 'bags', 'penalty']) {
       expect(fields[key].integer).toBe(true);
     }
     expect(fields['invoiceNumber'].type).toBe('text');

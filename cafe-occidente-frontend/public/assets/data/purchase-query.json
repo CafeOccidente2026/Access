@@ -44,7 +44,7 @@
   ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text" },
-    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency", "integer": true },
+    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
     { "key": "defectStoredPrice", "label": "Pr Alm Defec", "type": "currency", "integer": true },
     { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
     { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
