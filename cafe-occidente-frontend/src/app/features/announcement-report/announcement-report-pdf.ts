@@ -175,8 +175,9 @@ function summaryTable(block: AnnouncementBlock, text: AnnouncementReportText): C
 /** ANUNCIO de un bloque: una fila por compra, subtotales por Cod_Prod y "Suma total". */
 function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Content {
   // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt, con la
-  // columna Anun (RN-24.2) al frente. FP se ensancha porque guarda la forma de pago completa.
-  const twips = [600, 651, 1299, 1032, 561, 1521, 1500, 737, 885, 750, 840, 1020, 855, 900, 855, 900, 960, 1185, 800];
+  // columna Anun (RN-24.2) al frente. FP se ensancha (a costa de Nombre y Apellidos) porque guarda la
+  // forma de pago completa y "ANULADA" en negrilla tiene que caber en una linea.
+  const twips = [600, 651, 1299, 1032, 561, 1371, 1350, 737, 885, 750, 840, 1020, 855, 900, 855, 900, 960, 1185, 1100];
   const total = twips.reduce((a, t) => a + t, 0);
   const widths = twips.map((t) => (t * 752) / total - 2);
   const columns = twips.length;
