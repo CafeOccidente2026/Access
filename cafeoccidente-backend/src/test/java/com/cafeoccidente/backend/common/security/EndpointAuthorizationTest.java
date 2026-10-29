@@ -14,6 +14,7 @@ import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
 import com.cafeoccidente.backend.permissions.service.PermissionService;
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
+import com.cafeoccidente.backend.purchases.query.service.PurchaseQueryService;
 import com.cafeoccidente.backend.purchases.report.service.PurchaseReportService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
@@ -168,6 +169,10 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
         // Generar Reporte Anuncio (Q14: Administrador y Usuario, prima sobre RF-24) y Compras por fecha (RF-25).
         add(ADMIN_USER, get, "/api/purchases/reports/by-date", "/api/purchases/reports/by-date?from=2026-01-01&to=2026-01-01");
+        // Consultar Compras (RF-26): Administrador y Usuario.
+        add(ADMIN_USER, get, "/api/purchases/query", "/api/purchases/query?invoiceNumber=1");
+        add(ADMIN_USER, get, "/api/purchases/query/navigate", "/api/purchases/query/navigate?direction=FIRST");
+        add(ADMIN_USER, get, "/api/purchases/query/{module}/{id}", "/api/purchases/query/DRY/1");
         // RN-23.1 Anular Documento: el Administrador o con el permiso (RF-02).
         add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment", "/api/purchases/annulment?invoiceNumber=1");
         add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment/navigate",
@@ -253,6 +258,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private RemissionService remissionService;
     @MockitoBean private PurchaseAnnulmentService purchaseAnnulmentService;
     @MockitoBean private PurchaseReportService purchaseReportService;
+    @MockitoBean private PurchaseQueryService purchaseQueryService;
     @MockitoBean private DryCoffeePurchaseService dryCoffeePurchaseService;
     @MockitoBean private AnnouncementService announcementService;
     @MockitoBean private AnnouncementQuotaService announcementQuotaService;
