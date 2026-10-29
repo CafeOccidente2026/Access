@@ -1,6 +1,8 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -18,6 +20,8 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
+import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -111,6 +115,7 @@ export class GreenCoffeeFormComponent {
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
+  private readonly logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
 
   pendingClose = false;
   private closeResolver: ((value: boolean) => void) | null = null;
@@ -338,6 +343,7 @@ export class GreenCoffeeFormComponent {
         this.result.set(res);
         this.savedNoticeOpen.set(true);
         this.tick.update((n) => n + 1);
+        this.printInvoice(res);
       },
       error: (err) => {
         console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
@@ -510,5 +516,13 @@ export class GreenCoffeeFormComponent {
       paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
+  }
+
+  /** "Factura verdes" (macro "Imprime Factura" de VERDES): dos copias, con el pago del panel. */
+  private printInvoice(purchase: GreenCoffeePurchaseResponse): void {
+    this.logoDataUrlPromise.then((logoDataUrl) => {
+      pdfMake.vfs = pdfFonts;
+      pdfMake.createPdf(buildGreenCoffeeInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl)).open();
+    });
   }
 }
