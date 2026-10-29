@@ -27,6 +27,9 @@
   --color-btn-face-hover: #c7ddf2;
   --color-btn-border: #7fa8cc;
 
+  /* Marca "ANULADA" de las reimpresiones (Consultar Compras). */
+  --color-annulled: #b91c1c;
+
   --font-sans: "Segoe UI", "Inter", system-ui, sans-serif;
 }
 
