@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.greencoffee.mapper;
 
+import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeeSample;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.entity.GreenCoffeePurchase;
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class GreenCoffeePurchaseMapper {
 
-    public GreenCoffeePurchaseResponse toResponse(GreenCoffeePurchase purchase) {
+    public GreenCoffeePurchaseResponse toResponse(GreenCoffeePurchase purchase, ControlRecord controlRecord) {
         return new GreenCoffeePurchaseResponse(
                 purchase.getId(),
                 purchase.getPurchaseDate(),
@@ -55,6 +56,13 @@ public class GreenCoffeePurchaseMapper {
                 purchase.getTotalStoredWeight() == null ? null : new GreenCoffeeSample(
                         purchase.getTotalStoredWeight(), purchase.getWastePercentage(),
                         purchase.getHuskWeight(), purchase.getHuskPercentage(),
-                        purchase.getHealthyStoredWeight(), purchase.getFactor()));
+                        purchase.getHealthyStoredWeight(), purchase.getFactor()),
+                controlRecord.getPurchasePoint(),
+                controlRecord.getPrefix(),
+                controlRecord.getDianResolution(),
+                controlRecord.getResolutionDate(),
+                controlRecord.getResolutionFrom(),
+                controlRecord.getResolutionTo(),
+                controlRecord.getValidity());
     }
 }
