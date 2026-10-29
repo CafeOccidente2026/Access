@@ -1,5 +1,5 @@
 import { FormFieldDefinition } from './form-field.model';
-import { PaymentPanelDefinition } from './payment-method.model';
+import { PaymentPanelDefinition, PurchasePayment } from './payment-method.model';
 
 /**
  * Forma generica del contenido de un formulario de compra.
@@ -27,6 +27,8 @@ export interface PurchaseFormContent {
   readonly paymentNetToPay?: number | null;
   /** Factura ya impresa: el pago queda fijo. */
   readonly paymentLocked?: boolean;
+  /** Pago ya guardado que solo se muestra (Consultar Compras). */
+  readonly paymentSaved?: PurchasePayment | null;
   /** Ausente cuando la pantalla no liquida una compra (ej. Compras a Futuro: solo anuncia, no calcula Vr. Kilo). */
   readonly settlementHeading?: string;
   readonly settlementFields?: FormFieldDefinition[];

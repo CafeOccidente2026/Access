@@ -98,6 +98,7 @@
         [definition]="content.paymentPanel"
         [netToPay]="content.paymentNetToPay ?? null"
         [locked]="!!content.paymentLocked"
+        [saved]="content.paymentSaved ?? null"
         (paymentChange)="paymentChange.emit($event)"
       ></app-payment-panel>
     </div>
