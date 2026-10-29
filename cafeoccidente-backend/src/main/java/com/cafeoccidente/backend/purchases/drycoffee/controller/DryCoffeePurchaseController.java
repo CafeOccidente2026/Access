@@ -11,9 +11,6 @@ import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCa
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,12 +39,6 @@ public class DryCoffeePurchaseController {
     @ResponseStatus(HttpStatus.CREATED)
     public DryCoffeePurchaseResponse create(@Valid @RequestBody DryCoffeePurchaseRequest request) {
         return dryCoffeePurchaseService.create(request);
-    }
-
-    @GetMapping("/by-date")
-    public List<DryCoffeePurchaseResponse> findByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return dryCoffeePurchaseService.findByDate(date);
     }
 
     @GetMapping("/{id}")
