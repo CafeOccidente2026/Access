@@ -159,7 +159,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public DryCoffeePurchaseResponse findById(Long id) {
+        // Solo de la agencia de trabajo (RF-05.1): la de otra agencia es "no encontrada", como Consultar Compras.
         DryCoffeePurchase purchase = dryCoffeePurchaseRepository.findById(id)
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de cafe seco no encontrada"));
         ControlRecord controlRecord = controlRecordService.getActive(purchase.getAgency().getId());
         return mapper.toResponse(purchase, controlRecord);
