@@ -11,6 +11,10 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 
+// El PDF no se abre de verdad: se mira el documento que se arma (6g3, "Factura verdes").
+const pdf = vi.hoisted(() => ({ open: vi.fn(), createPdf: vi.fn() }));
+vi.mock('pdfmake/build/pdfmake', () => ({ default: { createPdf: pdf.createPdf } }));
+
 describe('GreenCoffeeFormComponent - guardado', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
     windowTitle: 'Compra Café Verde',
@@ -135,6 +139,23 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     const fields = component.viewContent()?.weightFields ?? [];
     expect(fields.find((f) => f.key === 'totalStoredWeight')).toMatchObject({ readonly: true, value: 140 });
     expect(fields.find((f) => f.key === 'factor')).toMatchObject({ readonly: true, value: 94 });
+  });
+
+  it('6g3: after saving it opens the "Factura verdes" with the Kilos Verdes and the payment of the panel', async () => {
+    setup();
+    fillEverything();
+    pdf.createPdf.mockReturnValue({ open: pdf.open });
+    createSpy.mockReturnValue(of({
+      invoiceNumber: 100, prefix: 'SDBU', specialType: 'CV', idNumber: grower.idNumber, firstName: 'A', lastName: 'B',
+      growerType: 'C', greenKg: 1250, netKg: 1200, netToPay: 1, paymentMethod: 'EFECTIVO', sample,
+    }));
+
+    component.print();
+
+    await vi.waitFor(() => expect(pdf.open).toHaveBeenCalledTimes(1));
+    const doc = JSON.stringify(pdf.createPdf.mock.calls[0][0]);
+    expect(doc).toContain('"Kilos Verdes"');
+    expect(doc).toContain('SDBU - 100');
   });
 
   it('Q23: without the green weights it warns on open and nothing can be typed or saved', () => {
