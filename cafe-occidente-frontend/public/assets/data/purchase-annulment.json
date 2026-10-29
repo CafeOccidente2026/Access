@@ -5,10 +5,10 @@
   "backLabel": "Volver",
   "backRoute": "/compras",
   "annulLabel": "Anular Dcto Equiv",
-  "yesLabel": "SI",
-  "noLabel": "NO",
+  "yesLabel": "Aceptar",
+  "noLabel": "Cancelar",
   "acceptLabel": "Aceptar",
-  "confirmMessage": "ESTA SEGURO QUE DESEA ANULAR ESTE DOCUMENTO SOPORTE?, RECUERDE QUE UNA VEZ ANULADO NO PODRÁ RECUPERAR LA INFORMACION DEL MISMO.",
+  "confirmMessage": "¿Está seguro de querer anular este documento?",
   "lockedMessage": "IMPOSIBLE ANULAR: ES UNA COMPRA CERRADA EN EL SISTEMA ANTERIOR.",
   "modules": {
     "DRY": "Café Seco",
@@ -29,8 +29,15 @@
     { "key": "paymentMethod", "label": "Forma de Pago" },
     { "key": "status", "label": "Estado" }
   ],
+  "navigation": [
+    { "direction": "FIRST", "label": "|◄", "title": "Primera compra" },
+    { "direction": "PREV", "label": "◄", "title": "Compra anterior" },
+    { "direction": "NEXT", "label": "►", "title": "Compra siguiente" },
+    { "direction": "LAST", "label": "►|", "title": "Última compra" }
+  ],
   "messages": {
     "notFound": "No hay ninguna compra con esa factura",
+    "noMore": "No hay más compras en esa dirección",
     "annulled": "Documento soporte {invoice} anulado",
     "error": "No se pudo anular el documento soporte"
   }

@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.purchases.annulment.controller;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.annulment.dto.AnnulmentCandidate;
+import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentDirection;
 import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
 import java.util.List;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** "Anular Documento" del menu Compras: USER solo su agencia, ADMIN cualquiera (decision P6). */
+/** "Anular Documento" del menu Compras (RN-23.1): el Administrador o quien tenga el permiso (Q11), en la agencia de trabajo. */
 @RestController
 @RequestMapping("/api/purchases/annulment")
 @PreAuthorize(Roles.ANNUL)
@@ -31,6 +32,12 @@ public class PurchaseAnnulmentController {
     @GetMapping
     public List<AnnulmentCandidate> findByInvoice(@RequestParam Integer invoiceNumber) {
         return service.findByInvoice(agency(), invoiceNumber);
+    }
+
+    @GetMapping("/navigate")
+    public List<AnnulmentCandidate> navigate(@RequestParam(required = false) Integer from,
+            @RequestParam AnnulmentDirection direction) {
+        return service.navigate(agency(), from, direction);
     }
 
     @PostMapping("/{module}/{id}")
