@@ -10,10 +10,7 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
-
-// El PDF no se abre de verdad: se mira el documento que se arma (6g3, "Factura verdes").
-const pdf = vi.hoisted(() => ({ open: vi.fn(), createPdf: vi.fn() }));
-vi.mock('pdfmake/build/pdfmake', () => ({ default: { createPdf: pdf.createPdf } }));
+import pdfMake from 'pdfmake/build/pdfmake';
 
 describe('GreenCoffeeFormComponent - guardado', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
@@ -144,16 +141,23 @@ describe('GreenCoffeeFormComponent - guardado', () => {
   it('6g3: after saving it opens the "Factura verdes" with the Kilos Verdes and the payment of the panel', async () => {
     setup();
     fillEverything();
-    pdf.createPdf.mockReturnValue({ open: pdf.open });
+    // El PDF no se abre de verdad: se mira el documento que se arma.
+    const open = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
     createSpy.mockReturnValue(of({
-      invoiceNumber: 100, prefix: 'SDBU', specialType: 'CV', idNumber: grower.idNumber, firstName: 'A', lastName: 'B',
-      growerType: 'C', greenKg: 1250, netKg: 1200, netToPay: 1, paymentMethod: 'EFECTIVO', sample,
+      id: 1, purchaseDate: '2026-10-29', invoiceNumber: 100, agencyName: 'Buesaco', fundCode: 'RP', specialType: 'CV',
+      productCode: '0110002000010', announcementNumber: 'SDBU-5', announcementDate: '2026-10-29', basePriceLoad: 1113500,
+      idNumber: grower.idNumber, firstName: 'A', lastName: 'B', growerType: 'C', address: 'VEREDA', cellphone: '300',
+      bagsCount: 10, grossKg: 1250, tareKg: 50, greenKg: 1250, netKg: 1200, healthyUnitPrice: 12000, defectiveUnitPrice: 6000,
+      bonus: 0, costs: 692, penalty: 0, compKgPrice: 12000, unitPrice: 1, grossValue: 1, inventoryValue: 1,
+      associateContribution: 0, cooperativeDiscount: 0, withholding: 0, shrinkageDiscount: 0, otherDiscounts: 0, netToPay: 1,
+      paymentMethod: 'EFECTIVO', checkNumber: null, sample, purchasePoint: 'BUESACO', prefix: 'SDBU', dianResolution: '1',
+      resolutionDate: '2026-01-01', resolutionFrom: 1, resolutionTo: 99999, validity: 12,
     }));
 
     component.print();
-
-    await vi.waitFor(() => expect(pdf.open).toHaveBeenCalledTimes(1));
-    const doc = JSON.stringify(pdf.createPdf.mock.calls[0][0]);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    const doc = JSON.stringify(createPdf.mock.calls[0][0]);
     expect(doc).toContain('"Kilos Verdes"');
     expect(doc).toContain('SDBU - 100');
   });
