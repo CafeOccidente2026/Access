@@ -41,6 +41,8 @@ export class PaymentPanelComponent implements OnChanges {
   @Input() netToPay: number | null = null;
   /** Despues de imprimir la factura ya no se cambia. */
   @Input() locked = false;
+  /** Pago ya guardado (Consultar Compras): se muestra tal cual y no se puede cambiar. */
+  @Input() saved: PurchasePayment | null = null;
   @Output() readonly paymentChange = new EventEmitter<PurchasePayment | null>();
 
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
@@ -50,6 +52,14 @@ export class PaymentPanelComponent implements OnChanges {
   readonly order = PAYMENT_ORDER;
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['saved'] && this.saved) {
+      const s = this.saved;
+      this.state.set({
+        amounts: { cash: s.cashAmount, check: s.checkAmount, transfer: s.transferAmount, card: s.cardAmount },
+        checkNumber: s.checkNumber ?? '',
+      });
+      return;
+    }
     if (changes['netToPay']) {
       // Nueva liquidacion: todo en efectivo otra vez (OtrosDescuentos_LostFocus).
       this.state.set(this.netToPay == null ? null : initialPayment(this.netToPay));
@@ -57,6 +67,11 @@ export class PaymentPanelComponent implements OnChanges {
       // Fuera del ciclo de cambios del formulario padre, que es quien guarda el pago.
       queueMicrotask(() => this.emit());
     }
+  }
+
+  /** Sin cambios: despues de imprimir la factura o con un pago ya guardado. */
+  readOnly(): boolean {
+    return this.locked || !!this.saved;
   }
 
   display(value: number): string {

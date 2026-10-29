@@ -262,6 +262,7 @@ export const routes: Routes = [
       },
       {
         path: 'compras/consulta',
+        data: { roles: ADMIN_USER },
         loadComponent: () =>
           import('./features/purchase-query/purchase-query').then((m) => m.PurchaseQueryComponent),
       },

@@ -12,3 +12,4 @@ export * from './confirm-dialog/confirm-dialog';
 export * from './agency-picker/agency-picker';
 export * from './form-flow/form-flow';
 export * from './success-overlay/success-overlay';
+export * from './invoice-navigator/invoice-navigator';

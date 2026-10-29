@@ -101,4 +101,28 @@ export interface GreenCoffeePurchaseResponse {
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
   readonly netToPay: number;
+  readonly address: string;
+  readonly cellphone: string;
+  readonly paymentMethod: string;
+  readonly checkNumber: string | null;
+  /** Muestra fija del Registro de Control guardada con la compra; null en las anteriores a la V15. */
+  readonly sample: GreenCoffeeSample | null;
+  /** Encabezado de "Factura verdes" (Registro de Control activo). */
+  readonly purchasePoint: string;
+  readonly prefix: string;
+  readonly dianResolution: string;
+  readonly resolutionDate: string;
+  readonly resolutionFrom: number;
+  readonly resolutionTo: number;
+  readonly validity: number;
+}
+
+/** Muestra fija de cafe verde (GreenCoffeeSample del backend). */
+export interface GreenCoffeeSample {
+  readonly totalStoredWeight: number;
+  readonly wastePercentage: number;
+  readonly huskWeight: number;
+  readonly huskPercentage: number;
+  readonly healthyStoredWeight: number;
+  readonly factor: number;
 }

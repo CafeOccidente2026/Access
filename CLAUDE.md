@@ -89,10 +89,14 @@ preguntas, avisos), además de commits y PR.
 - No usar `git stash` ni `git stash pop` sin revisar antes `git stash list` y `git status` (hay
   stashes viejos del usuario: un `pop` sobre un árbol limpio aplica uno de ellos). Para comparar con
   otra rama se usa `git worktree` en una ruta corta (Windows corta las rutas largas).
-- Commits pequeños y frecuentes: uno por cambio lógico, no uno gigante al final.
-- Mensajes en español, imperativo, máximo ~60 caracteres, sin punto final y sin emojis.
-  Ej.: "Toma la agencia del token al guardar compras", "Agrega tabla terceros".
-  Cuerpo solo si hace falta explicar el porqué, en 1-2 líneas.
+- Commits muy pequeños: un solo cambio lógico por commit y pocos archivos. Se separan backend,
+  frontend, tests, migración y documentación cuando se pueda.
+- Mensajes cortos (máximo ~60 caracteres), en español, en primera persona y en presente, sin punto
+  final y sin emojis. Ej.: "Agrego el calendario al diálogo de compras", "Corrijo el ancho de la
+  columna FP", "Pruebo que Aceptar no envía dos veces". Cuerpo solo si hace falta explicar el
+  porqué, en 1-2 líneas. Los commits anteriores (en imperativo) se quedan como están.
+- Los commits salen a nombre del usuario, con la identidad de `git config` (`user.name` y
+  `user.email`), sin `Co-Authored-By` ni ningún otro autor.
 - NUNCA agregar `Co-Authored-By`, "Generated with Claude Code" ni ninguna mención a Claude o IA
   en commits, ramas ni PRs. No cambiar `git config user.name` ni `user.email`.
 

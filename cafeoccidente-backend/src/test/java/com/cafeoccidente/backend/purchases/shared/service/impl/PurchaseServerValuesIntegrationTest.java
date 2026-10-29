@@ -203,6 +203,12 @@ class PurchaseServerValuesIntegrationTest {
         assertThat(saved.costs()).isEqualByComparingTo(announcement.costs());
         assertThat(saved.firstName()).isEqualTo("PRUEBA SEIS");
         assertThat(saved.netToPay()).isEqualByComparingTo(net);
+        // 6g3: encabezado de "Factura verdes" (punto de compra, prefijo y resolucion DIAN), como seco y pasilla.
+        var controlRecord = controlRecords.getActive(AGENCY);
+        assertThat(saved.prefix()).isEqualTo(controlRecord.getPrefix());
+        assertThat(saved.purchasePoint()).isEqualTo(controlRecord.getPurchasePoint());
+        assertThat(saved.dianResolution()).isEqualTo(controlRecord.getDianResolution());
+        assertThat(green.findById(saved.id()).prefix()).isEqualTo(controlRecord.getPrefix());
     }
 
     @Test

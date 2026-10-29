@@ -174,13 +174,15 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 null, purchase.getInventoryValue());
 
-        return mapper.toResponse(savedPurchase);
+        return mapper.toResponse(savedPurchase, context.controlRecord());
     }
 
     @Override
     public GreenCoffeePurchaseResponse findById(Long id) {
+        // Solo de la agencia de trabajo (RF-05.1): la de otra agencia es "no encontrada", como Consultar Compras.
         return greenCoffeePurchaseRepository.findById(id)
-                .map(mapper::toResponse)
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
+                .map(p -> mapper.toResponse(p, controlRecordService.getActive(p.getAgency().getId())))
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de cafe verde no encontrada"));
     }
 

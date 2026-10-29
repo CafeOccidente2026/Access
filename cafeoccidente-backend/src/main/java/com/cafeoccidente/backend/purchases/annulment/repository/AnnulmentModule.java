@@ -41,4 +41,14 @@ public enum AnnulmentModule {
         this.inventoryModule = inventoryModule;
         this.zeroed = zeroed;
     }
+
+    /** Tabla de la compra (Consultar Compras lee su ESTADO). */
+    public String table() {
+        return table;
+    }
+
+    /** inventarios.modulo_compra de la compra (Consultar Compras busca su remision). */
+    public String inventoryModule() {
+        return inventoryModule;
+    }
 }
