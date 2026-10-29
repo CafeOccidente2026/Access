@@ -19,18 +19,28 @@ describe('fillQueryContent (RF-26: all the data of the purchase, read only)', ()
   it('fills the header, the seller, the quality, the kilos and the settlement of a dry coffee purchase', () => {
     const filled = fillQueryContent(base, detail({ remissions: ['SDBU-RP-0001', 'SDBU-RP-0002'] }));
     expect(value(filled, 'agency')).toBe('Buesaco 1');
-    expect(value(filled, 'purchaseDate')).toBe('29/10/2026');
+    expect(value(filled, 'purchaseDate')).toBe('2026-10-29');
     expect(value(filled, 'announcement')).toBe('4');
     expect(value(filled, 'remission')).toBe('SDBU-RP-0001, SDBU-RP-0002');
     expect(value(filled, 'invoice')).toBe('SDBU');
     expect(value(filled, 'invoiceNumber')).toBe('27869');
-    expect(value(filled, 'basePriceDryLoad')).toBe('1.546.900');
+    expect(value(filled, 'basePriceDryLoad')).toBe(1546900);
     expect(value(filled, 'idNumber')).toBe('990.006.003');
-    expect(value(filled, 'factor')).toBe('92,11');
-    expect(value(filled, 'netKg')).toBe('1.000,00');
+    expect(value(filled, 'factor')).toBe(92.11);
+    expect(value(filled, 'netKg')).toBe(1000);
     expect(value(filled, 'greenKg')).toBe('');
-    expect(value(filled, 'netToPay')).toBe('12.255.579,00');
+    expect(value(filled, 'netToPay')).toBe(12255579);
     expect(value(filled, 'status')).toBe('VALIDA');
+  });
+
+  it('dates go in ISO and whole prices are marked as integers, so each field formats them by its type', () => {
+    const fields = Object.fromEntries(
+      [base.identificationFields, base.qualityFields ?? [], base.netWeightFields ?? []].flat().map((f) => [f.key, f]),
+    );
+    for (const key of ['basePriceDryLoad', 'healthyStoredPrice', 'bonus', 'costs', 'bags', 'penalty']) {
+      expect(fields[key].integer).toBe(true);
+    }
+    expect(fields['invoiceNumber'].type).toBe('text');
   });
 
   it('RN-26.4: no field is editable', () => {
@@ -51,14 +61,14 @@ describe('fillQueryContent (RF-26: all the data of the purchase, read only)', ()
 
   it('green coffee shows its Kilos Verdes and its sample; husk its almond as Peso Alm Sana and %', () => {
     const green = fillQueryContent(base, detail({ module: 'GREEN', purchase: GREEN }));
-    expect(value(green, 'greenKg')).toBe('1.000,00');
-    expect(value(green, 'factor')).toBe('94,00');
-    expect(value(green, 'totalStoredWeight')).toBe('140,00');
+    expect(value(green, 'greenKg')).toBe(1000);
+    expect(value(green, 'factor')).toBe(94);
+    expect(value(green, 'totalStoredWeight')).toBe(140);
 
     const husk = fillQueryContent(base, detail({ module: 'HUSK', purchase: HUSK }));
-    expect(value(husk, 'healthyStoredWeight')).toBe('200,00');
-    expect(value(husk, 'factor')).toBe('48,00');
-    expect(value(husk, 'basePriceDryLoad')).toBe('1.546.900');
+    expect(value(husk, 'healthyStoredWeight')).toBe(200);
+    expect(value(husk, 'factor')).toBe(48);
+    expect(value(husk, 'basePriceDryLoad')).toBe(1546900);
     expect(value(husk, 'greenKg')).toBe('');
   });
 });
