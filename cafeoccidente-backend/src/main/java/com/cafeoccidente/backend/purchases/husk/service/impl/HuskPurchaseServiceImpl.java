@@ -157,7 +157,9 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
 
     @Override
     public HuskPurchaseResponse findById(Long id) {
+        // Solo de la agencia de trabajo (RF-05.1): la de otra agencia es "no encontrada", como Consultar Compras.
         return huskPurchaseRepository.findById(id)
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .map(p -> mapper.toResponse(p, controlRecordService.getActive(p.getAgency().getId())))
                 .orElseThrow(() -> new ResourceNotFoundException("Compra de pasilla no encontrada"));
     }
