@@ -39,6 +39,12 @@ describe('buildGreenCoffeeInvoiceDocDefinition ("Factura verdes")', () => {
     expect(text).toContain('11.844.000,00');
   });
 
+  it('a purchase saved before the sample (V15) prints the sample rows in zero', () => {
+    const text = JSON.stringify(buildGreenCoffeeInvoiceDocDefinition({ ...purchase, sample: null }, null).content);
+    expect(text).toContain('"Kilos Verdes"');
+    expect(text).not.toContain('186,18');
+  });
+
   it('prints two copies on separate pages, like the dry coffee invoice', () => {
     const content = buildGreenCoffeeInvoiceDocDefinition(purchase, null).content as unknown[];
     expect((content.at(-1) as { pageBreak: string }).pageBreak).toBe('before');
