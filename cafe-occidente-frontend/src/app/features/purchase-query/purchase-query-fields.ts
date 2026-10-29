@@ -1,50 +1,46 @@
 import { FormFieldDefinition } from '../../core/models/form-field.model';
 import { PurchaseFormContent } from '../../core/models/purchase-form-content.model';
 import { PurchaseQueryDetail } from '../../core/models/purchase-query.model';
-import { formatDisplayNumber, formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
-import { shortDate } from '../conductor-form/conductor-form';
+import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 
 type Value = string | number | null | undefined;
 
-/** Kilos, pesos de la muestra y porcentajes: 2 decimales cortados (Q3); vacio si no aplica. */
-const decimals = (v: number | null | undefined): string => (v == null ? '' : formatDisplayNumber(v, 'currency'));
-/** Precios por unidad en pesos enteros. */
-const pesos = (v: number | null | undefined): string => (v == null ? '' : formatDisplayNumber(v, 'count'));
-
 /**
- * Lo que cambia entre modulos: el verde trae Kilos Verdes y su muestra fija; la pasilla su almendra
- * (Peso Alm Sana y su % en Factor) y el precio base de carga en otro campo. Lo que no aplica queda vacio.
+ * Los numeros van crudos y las fechas en ISO: el campo de solo lectura los formatea segun su tipo
+ * (2 decimales cortados, o enteros con "integer" en el JSON). Lo que cambia entre modulos: el verde
+ * trae Kilos Verdes y su muestra fija; la pasilla su almendra (Peso Alm Sana y su % en Factor) y el
+ * precio base de carga en otro campo. Lo que no aplica queda vacio.
  */
 function moduleValues(detail: PurchaseQueryDetail): Record<string, Value> {
   switch (detail.module) {
     case 'DRY': {
       const p = detail.purchase;
       return {
-        basePriceDryLoad: pesos(p.basePriceLoad), healthyStoredPrice: pesos(p.healthyUnitPrice),
-        defectStoredPrice: pesos(p.defectiveUnitPrice), bonus: pesos(p.bonus), penalty: pesos(p.penalty),
-        totalStoredWeight: decimals(p.totalStoredWeight), wastePercentage: decimals(p.wastePercentage),
-        totalHuskWeight: decimals(p.defectiveStoredWeight), huskPercentage: decimals(p.defectivePercentage),
-        healthyStoredWeight: decimals(p.healthyStoredWeight), factor: decimals(p.healthyPercentage),
-        greenKg: '', shrinkageDiscount: decimals(p.freightDiscount),
+        basePriceDryLoad: p.basePriceLoad, healthyStoredPrice: p.healthyUnitPrice,
+        defectStoredPrice: p.defectiveUnitPrice, bonus: p.bonus, penalty: p.penalty,
+        totalStoredWeight: p.totalStoredWeight, wastePercentage: p.wastePercentage,
+        totalHuskWeight: p.defectiveStoredWeight, huskPercentage: p.defectivePercentage,
+        healthyStoredWeight: p.healthyStoredWeight, factor: p.healthyPercentage,
+        greenKg: '', shrinkageDiscount: p.freightDiscount,
       };
     }
     case 'GREEN': {
       const p = detail.purchase;
       const s = p.sample;
       return {
-        basePriceDryLoad: pesos(p.basePriceLoad), healthyStoredPrice: pesos(p.healthyUnitPrice),
-        defectStoredPrice: pesos(p.defectiveUnitPrice), bonus: pesos(p.bonus), penalty: pesos(p.penalty),
-        totalStoredWeight: decimals(s?.totalStoredWeight), wastePercentage: decimals(s?.wastePercentage),
-        totalHuskWeight: decimals(s?.huskWeight), huskPercentage: decimals(s?.huskPercentage),
-        healthyStoredWeight: decimals(s?.healthyStoredWeight), factor: decimals(s?.factor),
-        greenKg: decimals(p.greenKg), shrinkageDiscount: decimals(p.shrinkageDiscount),
+        basePriceDryLoad: p.basePriceLoad, healthyStoredPrice: p.healthyUnitPrice,
+        defectStoredPrice: p.defectiveUnitPrice, bonus: p.bonus, penalty: p.penalty,
+        totalStoredWeight: s?.totalStoredWeight, wastePercentage: s?.wastePercentage,
+        totalHuskWeight: s?.huskWeight, huskPercentage: s?.huskPercentage,
+        healthyStoredWeight: s?.healthyStoredWeight, factor: s?.factor,
+        greenKg: p.greenKg, shrinkageDiscount: p.shrinkageDiscount,
       };
     }
     case 'HUSK': {
       const p = detail.purchase;
       return {
-        basePriceDryLoad: pesos(p.basePriceDryLoad), healthyStoredWeight: decimals(p.almondWeight),
-        factor: decimals(p.almondPercentage), greenKg: '', shrinkageDiscount: decimals(p.shrinkageDiscount),
+        basePriceDryLoad: p.basePriceDryLoad, healthyStoredWeight: p.almondWeight,
+        factor: p.almondPercentage, greenKg: '', shrinkageDiscount: p.shrinkageDiscount,
       };
     }
   }
@@ -58,9 +54,9 @@ export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQ
   const p = detail.purchase;
   const values: Record<string, Value> = {
     agency: p.agencyName,
-    purchaseDate: shortDate(p.purchaseDate),
+    purchaseDate: p.purchaseDate,
     announcement: stripAnnouncementPrefix(p.announcementNumber),
-    announcementDate: shortDate(p.announcementDate),
+    announcementDate: p.announcementDate,
     remission: detail.remissions.join(', '),
     fund: p.fundCode,
     invoice: p.prefix,
@@ -73,18 +69,18 @@ export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQ
     address: p.address,
     cellphone: p.cellphone,
     special: p.specialType,
-    costs: pesos(p.costs),
-    bags: pesos(p.bagsCount),
-    grossKg: decimals(p.grossKg),
-    tare: decimals(p.tareKg),
-    netKg: decimals(p.netKg),
-    kgPrice: pesos(p.unitPrice),
-    grossValue: decimals(p.grossValue),
-    netToPay: decimals(p.netToPay),
-    associateContribution: decimals(p.associateContribution),
-    coopDiscount: decimals(p.cooperativeDiscount),
-    withholding: decimals(p.withholding),
-    otherDiscounts: decimals(p.otherDiscounts),
+    costs: p.costs,
+    bags: p.bagsCount,
+    grossKg: p.grossKg,
+    tare: p.tareKg,
+    netKg: p.netKg,
+    kgPrice: p.unitPrice,
+    grossValue: p.grossValue,
+    netToPay: p.netToPay,
+    associateContribution: p.associateContribution,
+    coopDiscount: p.cooperativeDiscount,
+    withholding: p.withholding,
+    otherDiscounts: p.otherDiscounts,
     status: detail.status,
     ...moduleValues(detail),
   };

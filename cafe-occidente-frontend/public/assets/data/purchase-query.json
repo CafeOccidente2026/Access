@@ -23,15 +23,15 @@
   "topFields": [
     { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "purchaseDate", "label": "Fecha de Compra", "type": "date" },
-    { "key": "announcement", "label": "Anuncio", "type": "number" },
+    { "key": "announcement", "label": "Anuncio", "type": "text" },
     { "key": "announcementDate", "label": "Fecha de Anuncio", "type": "date" },
     { "key": "remission", "label": "Remisión", "type": "text" }
   ],
   "identificationFields": [
     { "key": "fund", "label": "Fondo", "type": "text" },
     { "key": "invoice", "label": "Factura", "type": "text", "highlighted": true },
-    { "key": "invoiceNumber", "label": "", "type": "number", "highlighted": true },
-    { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency" },
+    { "key": "invoiceNumber", "label": "", "type": "text", "highlighted": true },
+    { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency", "integer": true },
     { "key": "productCode", "label": "Cod Prod", "type": "text" }
   ],
   "contactFields": [
@@ -44,10 +44,10 @@
   ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text" },
-    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
-    { "key": "defectStoredPrice", "label": "Pr Alm Defec", "type": "currency" },
-    { "key": "bonus", "label": "Bonificación", "type": "currency" },
-    { "key": "costs", "label": "Costos", "type": "currency" }
+    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency", "integer": true },
+    { "key": "defectStoredPrice", "label": "Pr Alm Defec", "type": "currency", "integer": true },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
+    { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
   ],
   "weightFields": [
     { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number" },
@@ -58,12 +58,12 @@
     { "key": "factor", "label": "Factor", "type": "number" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "number" },
+    { "key": "bags", "label": "Sacos", "type": "number", "integer": true },
     { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
     { "key": "greenKg", "label": "Kilos Verdes", "type": "number" },
     { "key": "tare", "label": "Destare", "type": "number" },
     { "key": "netKg", "label": "Kilos Netos", "type": "number" },
-    { "key": "penalty", "label": "Castigo", "type": "currency" }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "integer": true }
   ],
   "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
   "statusField": { "key": "status", "label": "ESTADO", "type": "text" },
@@ -82,7 +82,7 @@
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency" },
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
     { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
     { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true }
   ],
