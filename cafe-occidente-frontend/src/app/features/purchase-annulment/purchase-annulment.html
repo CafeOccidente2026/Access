@@ -10,16 +10,7 @@
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
       </form>
 
-      <div class="flex gap-1" data-testid="navigation">
-        <button
-          *ngFor="let n of c.navigation"
-          type="button"
-          class="w-10 rounded border border-slate-400 bg-slate-100 py-1 font-bold hover:bg-slate-200"
-          [title]="n.title"
-          [attr.aria-label]="n.title"
-          (click)="go(n.direction)"
-        >{{ n.label }}</button>
-      </div>
+      <app-invoice-navigator [buttons]="c.navigation" (navigate)="go($event)"></app-invoice-navigator>
 
       <div *ngIf="candidates().length > 1" class="flex flex-wrap gap-2">
         <button

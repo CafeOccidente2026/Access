@@ -6,7 +6,7 @@ import { AnnulmentCandidate, AnnulmentDirection } from '../../core/models/purcha
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseAnnulmentService } from '../../core/services/purchase-annulment.service';
-import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
@@ -26,7 +26,7 @@ export interface PurchaseAnnulmentContent {
   readonly modules: Record<string, string>;
   readonly fields: { key: string; label: string; type?: 'date' | 'number' | 'money' }[];
   /** |◄ ◄ ► ►|: texto del boton y su ayuda, por direccion. */
-  readonly navigation: { direction: AnnulmentDirection; label: string; title: string }[];
+  readonly navigation: NavigatorButton[];
   readonly messages: Record<'notFound' | 'noMore' | 'annulled' | 'error', string>;
 }
 
@@ -61,7 +61,7 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
 @Component({
   selector: 'app-purchase-annulment',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent],
   templateUrl: './purchase-annulment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
