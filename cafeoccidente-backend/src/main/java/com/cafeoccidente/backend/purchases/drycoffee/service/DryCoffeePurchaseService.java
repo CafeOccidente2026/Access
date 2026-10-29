@@ -6,16 +6,12 @@ import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.QualityPercentagesResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 public interface DryCoffeePurchaseService {
     DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request);
 
     DryCoffeePurchaseResponse findById(Long id);
 
-    /** Compras de la agencia de la sesion en una fecha (reportes ANUNCIO / RESUMEN ANUNCIO). */
-    List<DryCoffeePurchaseResponse> findByDate(LocalDate purchaseDate);
 
     /** Recalcula la cascada completa sin persistir (pasos Castigo/Descuento Fro/Otros Desctos). */
     DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request);
