@@ -248,6 +248,7 @@ export const routes: Routes = [
       },
       {
         path: 'compras/dialogo-fechas',
+        data: { roles: ADMIN_USER },
         loadComponent: () =>
           import('./features/date-range-dialog/date-range-dialog').then(
             (m) => m.DateRangeDialogComponent,
