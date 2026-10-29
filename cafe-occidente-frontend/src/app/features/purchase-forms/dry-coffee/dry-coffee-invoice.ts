@@ -208,12 +208,17 @@ export function buildInvoiceDoc(
   };
 }
 
-function dryCoffeeMainTable(
+/**
+ * Tabla central de "Factura" (seco). Con greenKg es la de "Factura verdes": la misma con la fila
+ * Kilos Verdes entre Destare y Kilos Netos Pergamino (Top 5400 en reports/Factura verdes.txt).
+ */
+export function dryCoffeeMainTable(
   purchase: DryCoffeePurchaseResponse,
   cashRow: Content,
   checkRow: Content,
   transferRow: Content,
   cardTerminalRow: Content,
+  greenKg?: number,
 ): Content {
   const dataRow = (
     label: string,
@@ -261,6 +266,7 @@ function dryCoffeeMainTable(
           ...dataRow('Destare', money(purchase.tareKg)),
           ...liquidationRow('Descuento Cooperativo', money(purchase.cooperativeDiscount)),
         ],
+        ...(greenKg == null ? [] : [[...dataRow('Kilos Verdes', money(greenKg)), { text: '', ...CELL }, { text: '', ...CELL }]]),
         [
           ...dataRow('Kilos Netos Pergamino', money(purchase.netKg)),
           ...liquidationRow('Retención en la Fuente', money(purchase.withholding)),
