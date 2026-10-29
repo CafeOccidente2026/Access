@@ -119,7 +119,10 @@ el scratchpad, borrada al final). Con permiso del usuario se detiene su contened
 `cafeoccidente-backend` (ocupa el 8090) y se levantan el jar de la rama y un `ng serve` propio. No
 se toca el `ng serve` del usuario. Al terminar: borrar los usuarios temporales (si hicieron compras,
 desactivarlos) y los datos de prueba, cerrar la sesión o borrar el localStorage de
-`localhost:4200` (un token de un usuario ya borrado se sigue mandando en cada petición), cerrar la
+`localhost:4200` (un token de un usuario ya borrado se sigue mandando en cada petición), revertir
+las marcas de `cheques_relacionados` que se creen en la prueba (abrir Relación Cheques marca todos
+los cheques pendientes de la agencia, como en Access; anotar `cheques_relacionados` antes y borrar
+solo las filas nuevas), cerrar la
 pestaña, detener los procesos propios (también el `node` hijo del `ng serve`) y **volver a arrancar
 el contenedor del usuario**. No borrar las bases `cafeoccidente_vieja` ni `cafeoccidente_verifica`.
 
