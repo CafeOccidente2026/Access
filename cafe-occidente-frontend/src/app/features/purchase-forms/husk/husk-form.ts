@@ -14,13 +14,11 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
-import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
-import { openPdf } from '../../../shared/utils/pdf-preview';
-import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { hasRequired, saveAndPrint } from '../purchase-print';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -124,15 +122,10 @@ export class HuskFormComponent {
     return this.buildContent(base);
   });
 
-  private readonly logoDataUrlPromise: Promise<string | null>;
-
   constructor() {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
-    // Precargado ya (no en print()) - ver mismo motivo en dry-coffee-form.ts: open() necesita el
-    // gesto del click todavia vigente o el navegador lo bloquea como pop-up.
-    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
@@ -299,10 +292,7 @@ export class HuskFormComponent {
   private buildRequest(): HuskPurchaseRequest | null {
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    // Como Café Seco: sin todos los datos no se pide el cálculo (el servidor lo rechazaría y saldría
-    // "No se pudo registrar la compra" mientras el fiel todavía está llenando el formulario).
-    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!invoiceNumber || !info || !hasRequiredCascadeInputs) {
+    if (!invoiceNumber || !info || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
@@ -328,28 +318,15 @@ export class HuskFormComponent {
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    saveOnce(this.saving, () => this.service.create(request), {
-      next: (res) => {
-        // Como Access: se guarda, se abre la factura y el formulario queda limpio para la siguiente compra.
-        this.printInvoice(res, this.payment());
-        this.reset();
-        this.savedNoticeOpen.set(true);
-      },
-      error: (err) => {
-        console.error('Error al registrar compra Pasilla:', err?.error ?? err);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
+    saveAndPrint(this, {
+      name: 'Pasilla',
+      save: () => this.service.create(request),
+      invoice: buildHuskInvoiceDocDefinition,
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
     });
   }
 
-  private printInvoice(purchase: HuskPurchaseResponse, payment: PurchasePayment | null): void {
-    openPdf(
-      this.logoDataUrlPromise.then((logo) => buildHuskInvoiceDocDefinition({ ...purchase, payment }, logo)),
-      () => this.errorMessage.set(this.messages()?.invoiceError ?? null),
-    );
-  }
 
   dismissError(): void {
     const wasBlocked = this.blockedByDeceased();

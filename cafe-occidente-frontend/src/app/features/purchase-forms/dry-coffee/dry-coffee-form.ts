@@ -18,10 +18,9 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
-import { openPdf } from '../../../shared/utils/pdf-preview';
-import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
-import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
+import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
+import { hasRequired, saveAndPrint } from '../purchase-print';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -127,7 +126,6 @@ export class DryCoffeeFormComponent {
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
   private readonly fundIdByName = new Map<string, number>();
-  private logoDataUrlPromise!: Promise<string | null>;
 
   pendingClose = false;
   private closeResolver: ((value: boolean) => void) | null = null;
@@ -149,10 +147,6 @@ export class DryCoffeeFormComponent {
       list.forEach((f) => this.fundIdByName.set(f.code, f.id));
       this.tick.update((n) => n + 1);
     });
-    // Precargado ya (no en print()): abrir el PDF depende de un window.open() disparado por el
-    // gesto del click en "Imprimir" - si print() todavia estuviera esperando el fetch del logo en
-    // ese momento, el navegador pierde el gesto de usuario y bloquea la pestaña como pop-up.
-    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
     // Foco en el primer campo (Fondo) apenas carga el contenido: sin esto, el desplegable de Fondo
     // no aparecia hasta que el cajero hacia clic a mano - con el foco ya puesto, se puede elegir
     // directo con el mouse o escribiendo + Enter, y de ahi sigue el mismo avance automatico de
@@ -441,8 +435,7 @@ export class DryCoffeeFormComponent {
     // Kilos Netos/Vr. Kilo nunca queden obsoletos, ver runSideEffects) - pero a mitad de captura,
     // sin Peso Pasilla todavia, el backend rechaza el calculo (no hay almendra sana con que dividir)
     // y eso disparaba "No se pudo registrar la compra" en pleno llenado normal.
-    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
@@ -471,15 +464,13 @@ export class DryCoffeeFormComponent {
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    saveOnce(this.saving, () => this.service.create(request), {
-      next: (res) => {
-        // Como Access: se guarda, se abre la factura y el formulario queda limpio para la siguiente compra.
-        this.printInvoice(res, this.payment());
-        this.reset();
-        this.savedNoticeOpen.set(true);
-      },
-      error: (err) => {
+    saveAndPrint(this, {
+      name: 'Cafe Seco',
+      save: () => this.service.create(request),
+      invoice: buildDryCoffeeInvoiceDocDefinition,
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
+      saveError: (err) => {
         // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
         // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
         // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
@@ -686,11 +677,4 @@ export class DryCoffeeFormComponent {
     };
   }
 
-  /** Genera el Documento Soporte en PDF (mismo layout que capturas/prueba de factura sin boton de nube.pdf). */
-  private printInvoice(purchase: DryCoffeePurchaseResponse, payment: PurchasePayment | null): void {
-    openPdf(
-      this.logoDataUrlPromise.then((logo) => buildDryCoffeeInvoiceDocDefinition({ ...purchase, payment }, logo)),
-      () => this.errorMessage.set(this.messages()?.invoiceError ?? null),
-    );
-  }
 }
