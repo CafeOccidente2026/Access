@@ -89,3 +89,15 @@ describe('FormFieldComponent negativeOnly (Castigo, Q1)', () => {
     expect(emitted).toEqual([]);
   });
 });
+
+describe('FormFieldComponent labelAbove', () => {
+  it('puts the whole label above the box, without cutting it', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'fullName', label: 'Nombres y Apellidos', type: 'text' });
+    fixture.componentRef.setInput('labelAbove', true);
+    fixture.detectChanges();
+    const label = (fixture.nativeElement as HTMLElement).querySelector('label')!;
+    expect(label.classList).toContain('flex-col');
+    expect(label.querySelector('span')!.classList).not.toContain('truncate');
+  });
+});

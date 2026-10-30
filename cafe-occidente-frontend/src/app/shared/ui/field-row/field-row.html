@@ -7,6 +7,7 @@
     [labelWidthClass]="labelWidthClass"
     [inputWidthClass]="inputWidthClass"
     [highlightClass]="highlightClass"
+    [labelAbove]="labelAbove"
     (valueChange)="fieldValueChange.emit({ key: field.key, value: $event })"
     (committed)="fieldCommitted.emit(field.key)"
   ></app-form-field>

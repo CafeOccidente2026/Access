@@ -23,6 +23,8 @@ export class FormFieldComponent {
   @Input() labelWidthClass = 'w-32';
   @Input() inputWidthClass = 'min-w-[100px]';
   @Input() highlightClass = 'bg-yellow-100';
+  /** Etiqueta encima del cuadro (Información Federación de Access): se ve completa, sin cortar. */
+  @Input() labelAbove = false;
   /** Pantallas de edicion libre (Registro de Control): el campo numerico editable se ve formateado
    *  mientras no tiene el foco y crudo mientras se escribe, sin reformatear en cada tecla. */
   @Input() formatWhenIdle = false;
