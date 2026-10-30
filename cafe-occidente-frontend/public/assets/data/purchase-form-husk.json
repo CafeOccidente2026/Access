@@ -50,6 +50,7 @@
     "idNumberNotFound": "Este número de cédula no existe.",
     "saveError": "No se pudo registrar la compra. Verifique los datos.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
+    "invoiceError": "No se pudo generar la factura",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario"
