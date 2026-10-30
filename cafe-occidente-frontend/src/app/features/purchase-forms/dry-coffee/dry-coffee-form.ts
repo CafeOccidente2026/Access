@@ -465,9 +465,11 @@ export class DryCoffeeFormComponent {
       return;
     }
     saveAndPrint(this, {
+      name: 'Cafe Seco',
       save: () => this.service.create(request),
       invoice: buildDryCoffeeInvoiceDocDefinition,
-      invoiceError: () => this.messages()?.invoiceError ?? null,
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
       saveError: (err) => {
         // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
         // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para

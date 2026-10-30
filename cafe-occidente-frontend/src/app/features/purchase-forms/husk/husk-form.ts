@@ -319,14 +319,11 @@ export class HuskFormComponent {
       return;
     }
     saveAndPrint(this, {
+      name: 'Pasilla',
       save: () => this.service.create(request),
       invoice: buildHuskInvoiceDocDefinition,
-      invoiceError: () => this.messages()?.invoiceError ?? null,
-      saveError: (err) => {
-        console.error('Error al registrar compra Pasilla:', err?.error ?? err);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
     });
   }
 

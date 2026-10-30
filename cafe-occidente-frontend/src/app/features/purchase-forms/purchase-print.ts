@@ -19,13 +19,18 @@ export interface PrintablePurchaseForm {
 }
 
 export interface PurchasePrint<T> {
+  /** Nombre de la compra para la consola ("Cafe Verde", "Pasilla"...). */
+  readonly name: string;
   /** Guarda la compra (POST). */
   readonly save: () => Observable<T>;
   /** Arma la factura del módulo con la compra guardada, su pago y el logo. */
   readonly invoice: (purchase: T & { payment: PurchasePayment | null }, logo: string | null) => TDocumentDefinitions;
-  /** "No se pudo generar la factura". */
-  readonly invoiceError: () => string | null;
-  readonly saveError: Observer<T>['error'];
+  /** Mensajes de la pantalla: saveError ("No se pudo registrar...") e invoiceError ("No se pudo generar la factura"). */
+  readonly messages: () => { readonly saveError?: string; readonly invoiceError?: string } | undefined;
+  /** Repinta el formulario después del error. */
+  readonly refresh: () => void;
+  /** Solo si la pantalla maneja errores propios (el seco, por el umbral de especiales). */
+  readonly saveError?: Observer<T>['error'];
 }
 
 /**
@@ -47,11 +52,18 @@ export function saveAndPrint<T>(form: PrintablePurchaseForm, print: PurchasePrin
       form.savedNoticeOpen.set(true);
       openPdf(
         logo.then((l) => print.invoice({ ...purchase, payment }, l)),
-        () => form.errorMessage.set(print.invoiceError()),
+        () => form.errorMessage.set(print.messages()?.invoiceError ?? null),
       );
     },
-    error: print.saveError,
+    error: print.saveError ?? ((err) => defaultSaveError(form, print, err)),
   });
+}
+
+/** Error al guardar: el detalle va a la consola y al cajero solo el mensaje de la pantalla. */
+function defaultSaveError<T>(form: PrintablePurchaseForm, print: PurchasePrint<T>, err: { error?: unknown } | undefined): void {
+  console.error(`Error al registrar compra ${print.name}:`, err?.error ?? err);
+  form.errorMessage.set(print.messages()?.saveError ?? null);
+  print.refresh();
 }
 
 /** Como Café Seco: sin todos los datos requeridos no se pide el cálculo ni se guarda. */

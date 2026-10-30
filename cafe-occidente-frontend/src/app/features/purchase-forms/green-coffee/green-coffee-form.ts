@@ -334,14 +334,11 @@ export class GreenCoffeeFormComponent {
       return;
     }
     saveAndPrint(this, {
+      name: 'Cafe Verde',
       save: () => this.service.create(request),
       invoice: buildGreenCoffeeInvoiceDocDefinition,
-      invoiceError: () => this.messages()?.invoiceError ?? null,
-      saveError: (err) => {
-        console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
     });
   }
 
