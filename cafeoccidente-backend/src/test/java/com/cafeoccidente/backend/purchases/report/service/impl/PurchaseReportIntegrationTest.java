@@ -163,6 +163,24 @@ class PurchaseReportIntegrationTest {
     }
 
     @Test
+    void leavesOutTheAnnouncementsOfTheDayWithoutPurchases() {
+        var d = dry.create(dryRequest(cash(dry.preview(dryRequest(null)).netToPay())));
+        Long id = jdbc.queryForObject("INSERT INTO anuncios (fecha_anuncio, pr_base_cps, pr_alm_defec, sobrepr_carga_esp,"
+                + " pr_inc_calidad, fondo_id, especial, activo) VALUES (CURRENT_DATE, 1546900, 6000, 80000, 50, ?, 'RN', true)"
+                + " RETURNING id", Long.class, rp);
+        Integer unused = jdbc.queryForObject("INSERT INTO anuncios_agencias (agencia_id, anuncio_id, numero_anuncio,"
+                + " fecha_asignacion) SELECT ?, ?, COALESCE(MAX(numero_anuncio), 0) + 1, CURRENT_DATE FROM anuncios_agencias"
+                + " WHERE agencia_id = ? RETURNING numero_anuncio", Integer.class, AGENCY, id, AGENCY);
+        LocalDate today = LocalDate.now();
+
+        List<PurchaseReportRow> rows = reports.byDate(today, today);
+
+        // Solo la compra de seco: los anuncios de verde y pasilla del dia y el RN nuevo no tuvieron compras.
+        assertThat(ours(today, today)).extracting(PurchaseReportRow::invoiceNumber).containsExactly(d.invoiceNumber());
+        assertThat(rows).extracting(PurchaseReportRow::announcementNumber).doesNotContain(String.valueOf(unused));
+    }
+
+    @Test
     void onlyTheWorkingAgencyAndTheChosenDates() {
         var d = dry.create(dryRequest(cash(dry.preview(dryRequest(null)).netToPay())));
         jdbc.update("UPDATE compras_cafe_seco SET fecha_compra = fecha_compra - 3 WHERE id = ?", d.id());
