@@ -309,7 +309,10 @@ export class GreenCoffeeFormComponent {
   private buildRequest(): GreenCoffeePurchaseRequest | null {
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!invoiceNumber || !info) {
+    // Como Café Seco: sin todos los datos no se pide el cálculo (el servidor lo rechazaría y saldría
+    // "No se pudo registrar la compra" mientras el fiel todavía está llenando el formulario).
+    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    if (!invoiceNumber || !info || !hasRequiredCascadeInputs) {
       return null;
     }
     return {
