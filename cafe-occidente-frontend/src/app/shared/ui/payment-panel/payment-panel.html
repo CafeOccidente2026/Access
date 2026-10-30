@@ -1,41 +1,43 @@
-<div class="grid grid-cols-[110px_1fr] gap-3 rounded border border-slate-400 bg-white/40 p-3">
-  <span class="self-center whitespace-pre-line text-center text-sm font-semibold text-slate-700">
-    {{ definition.heading }}
-  </span>
+<div class="flex items-start gap-3 rounded border border-slate-400 bg-white/40 px-3 py-1">
+  <span class="self-center whitespace-pre-line text-center text-sm font-semibold text-slate-700">{{ definition.heading }}</span>
 
-  <div class="flex flex-col gap-2">
-    <ng-container *ngFor="let method of definition.methods">
-      <label class="flex items-center gap-2 text-sm">
-        <span class="w-28 text-slate-700">{{ method.label }}:</span>
-        <input
-          #amount
-          type="text"
-          inputmode="numeric"
-          class="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
-          [attr.data-field-key]="keyOf[method.key]"
-          [readonly]="!state() || readOnly()"
-          [value]="state() ? display(state()!.amounts[method.key]) : ''"
-          (input)="onAmount(method.key, amount)"
-          (keydown.enter)="commit(method.key, $event)"
-        />
-      </label>
-      <label *ngIf="method.key === 'check' && state() && state()!.amounts.check > 0" class="flex items-center gap-2 text-sm">
-        <span class="w-28 text-slate-700">{{ definition.checkNumberLabel }}:</span>
-        <input
-          #checkNumber
-          type="text"
-          inputmode="numeric"
-          class="w-40 rounded border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
-          [attr.data-field-key]="keyOf['checkNumber']"
-          [readonly]="readOnly()"
-          [value]="state()!.checkNumber"
-          (input)="onCheckNumber(checkNumber)"
-          (keydown.enter)="commit('checkNumber', $event)"
-        />
-      </label>
-    </ng-container>
+  <div class="flex flex-col gap-1">
+    <div class="flex items-end gap-2">
+      <ng-container *ngFor="let method of methods()">
+        <label class="flex flex-col text-sm">
+          <span class="text-slate-700">{{ method.label }}:</span>
+          <input
+            #amount
+            type="text"
+            inputmode="numeric"
+            class="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
+            [attr.data-field-key]="keyOf[method.key]"
+            [readonly]="!state() || readOnly() || method.key === 'card'"
+            [value]="state() ? display(state()!.amounts[method.key]) : ''"
+            (input)="onAmount(method.key, amount)"
+            (blur)="leave(method.key)"
+            (keydown.enter)="commit(method.key, $event)"
+          />
+        </label>
+        <label *ngIf="method.key === 'check' && state()!.amounts.check > 0" class="flex flex-col text-sm">
+          <span class="whitespace-nowrap text-slate-700">{{ definition.checkNumberLabel }}:</span>
+          <input
+            #checkNumber
+            type="text"
+            inputmode="numeric"
+            class="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
+            [attr.data-field-key]="keyOf['checkNumber']"
+            [readonly]="readOnly()"
+            [value]="state()!.checkNumber"
+            (input)="onCheckNumber(checkNumber)"
+            (blur)="leave('checkNumber')"
+            (keydown.enter)="commit('checkNumber', $event)"
+          />
+        </label>
+      </ng-container>
+    </div>
 
-    <div class="mt-1 flex items-center justify-end gap-2 text-sm font-semibold">
+    <div class="flex items-center justify-end gap-2 text-sm font-semibold">
       <span>{{ definition.totalLabel }}:</span>
       <input class="w-32 rounded border border-slate-300 bg-green-100 px-2 py-1 text-right shadow-sm" [value]="total()" readonly />
     </div>

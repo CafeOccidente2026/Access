@@ -14,7 +14,7 @@ import {
 
 import { PaymentKey, PaymentPanelDefinition, PurchasePayment } from '../../../core/models';
 import { formatThousands } from '../../utils/number-format';
-import { PaymentState, PAYMENT_ORDER, commitPayment, initialPayment, readyPayment } from './payment-cascade';
+import { PaymentState, PAYMENT_ORDER, commitPayment, initialPayment, readyPayment, visibleMethods } from './payment-cascade';
 
 const KEY_OF: Record<PaymentKey | 'checkNumber', string> = {
   cash: 'payCash',
@@ -26,7 +26,8 @@ const KEY_OF: Record<PaymentKey | 'checkNumber', string> = {
 
 /**
  * Panel "FORMAS DE PAGO" de los formularios de compra: la cascada FPef / FPch + NumCheque / FPtx /
- * FPdat de Access (ver payment-cascade.ts). Emite el pago cuadrado, o null mientras no cuadra.
+ * FPdat de Access (ver payment-cascade.ts), en un renglón y con cada forma apareciendo al lado de la
+ * anterior. El Datáfono es el resto: no se edita. Emite el pago cuadrado, o null mientras no cuadra.
  */
 @Component({
   selector: 'app-payment-panel',
@@ -74,6 +75,13 @@ export class PaymentPanelComponent implements OnChanges {
     return this.locked || !!this.saved;
   }
 
+  /** Las formas que se ven, en el orden de Access. */
+  methods(): PaymentPanelDefinition['methods'] {
+    const s = this.state();
+    const visible = s ? visibleMethods(s) : ['cash'];
+    return this.definition.methods.filter((m) => visible.includes(m.key));
+  }
+
   display(value: number): string {
     return formatThousands(String(value));
   }
@@ -106,17 +114,29 @@ export class PaymentPanelComponent implements OnChanges {
   /** Enter: confirma el campo como el LostFocus de Access y pasa al que sigue. */
   commit(field: PaymentKey | 'checkNumber', event: Event): void {
     event.preventDefault();
+    const next = this.apply(field);
+    if (next) {
+      setTimeout(() => this.host.querySelector<HTMLInputElement>(`[data-field-key="${KEY_OF[next]}"]`)?.select());
+    }
+  }
+
+  /** Salir del campo también confirma (LostFocus), pero sin mover el foco: puede ir a Imprimir. */
+  leave(field: PaymentKey | 'checkNumber'): void {
+    if (!this.readOnly()) {
+      this.apply(field);
+    }
+  }
+
+  private apply(field: PaymentKey | 'checkNumber'): PaymentKey | 'checkNumber' | null {
     const s = this.state();
     if (!s || this.netToPay == null) {
-      return;
+      return null;
     }
     const step = commitPayment(this.netToPay, s, field);
     this.state.set(step.state);
     this.unbalanced.set(step.unbalanced);
     this.emit();
-    if (step.next) {
-      setTimeout(() => this.host.querySelector<HTMLInputElement>(`[data-field-key="${KEY_OF[step.next!]}"]`)?.select());
-    }
+    return step.next;
   }
 
   private emit(): void {
