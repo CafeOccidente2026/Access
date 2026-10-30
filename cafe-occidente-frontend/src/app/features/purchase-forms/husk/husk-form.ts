@@ -430,7 +430,7 @@ export class HuskFormComponent {
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
     collect(base.topFields);
     collect(base.identificationFields);
-    collect(base.federationFields);
+    collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.netWeightFields);
     collect(base.settlementFields);
@@ -487,7 +487,7 @@ export class HuskFormComponent {
       ...base,
       topFields: row(base.topFields)!,
       identificationFields: row(base.identificationFields)!,
-      federationFields: row(base.federationFields),
+      contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,

@@ -14,14 +14,13 @@
     { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "max-w-[110px]" },
     { "key": "basePriceDryLoad", "label": "Pr base carga perg seco", "type": "currency" }
   ],
-  "federationHeading": "Información Federación:",
-  "federationFields": [
-    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true, "highlighted": true, "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" },
-    { "key": "firstName", "label": "Nombres", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
-    { "key": "lastName", "label": "Apellidos", "type": "text", "highlighted": true, "rowWidthClass": "min-w-[150px]", "inputWidthClass": "min-w-[120px]" },
-    { "key": "idType", "label": "Tipo", "type": "text", "rowWidthClass": "min-w-[90px]", "inputWidthClass": "min-w-[50px]" },
-    { "key": "address", "label": "Dirección", "type": "text", "rowWidthClass": "min-w-[170px]", "inputWidthClass": "min-w-[120px]" },
-    { "key": "cellphone", "label": "Cel", "type": "text", "rowWidthClass": "min-w-[110px]", "inputWidthClass": "min-w-[80px]" }
+  "contactFields": [
+    { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true, "inputWidthClass": "max-w-[110px]" },
+    { "key": "firstName", "label": "", "type": "text", "inputWidthClass": "max-w-[170px]" },
+    { "key": "lastName", "label": "", "type": "text", "inputWidthClass": "max-w-[170px]" },
+    { "key": "idType", "label": "Tipo", "type": "text", "inputWidthClass": "max-w-[50px]" },
+    { "key": "address", "label": "Dirección", "type": "text", "inputWidthClass": "max-w-[170px]" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "inputWidthClass": "max-w-[110px]" }
   ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text", "value": "PASILLA" },
