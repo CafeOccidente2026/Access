@@ -14,6 +14,17 @@ export function renderPdfPreview(
   pdfMake.createPdf(docDefinition).getBlob((blob) => done(trustBlobUrl(URL.createObjectURL(blob), sanitizer)));
 }
 
+/** Abre en otra pestaña el PDF que se arma con `docDefinition` (factura, reimpresión). Si armarlo o
+ *  abrirlo falla, avisa con `onError` en vez de dejar la promesa sin manejar. */
+export function openPdf(docDefinition: Promise<TDocumentDefinitions>, onError: () => void): void {
+  docDefinition
+    .then((doc) => {
+      pdfMake.vfs = pdfFonts;
+      return pdfMake.createPdf(doc).open();
+    })
+    .catch(onError);
+}
+
 /** Único punto que salta el saneamiento de Angular. Es seguro porque solo acepta URLs "blob:", que
  *  crea URL.createObjectURL con el PDF que arma esta misma app: nunca una URL que venga de afuera. */
 export function trustBlobUrl(url: string, sanitizer: DomSanitizer): SafeResourceUrl {
