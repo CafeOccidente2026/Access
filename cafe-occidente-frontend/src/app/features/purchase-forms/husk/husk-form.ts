@@ -14,7 +14,6 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
-import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
@@ -123,15 +122,10 @@ export class HuskFormComponent {
     return this.buildContent(base);
   });
 
-  private readonly logoDataUrlPromise: Promise<string | null>;
-
   constructor() {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
-    // Precargado ya (no en print()) - ver mismo motivo en dry-coffee-form.ts: open() necesita el
-    // gesto del click todavia vigente o el navegador lo bloquea como pop-up.
-    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
@@ -326,8 +320,7 @@ export class HuskFormComponent {
     }
     saveAndPrint(this, {
       save: () => this.service.create(request),
-      invoice: (purchase, payment) =>
-        this.logoDataUrlPromise.then((logo) => buildHuskInvoiceDocDefinition({ ...purchase, payment }, logo)),
+      invoice: buildHuskInvoiceDocDefinition,
       invoiceError: () => this.messages()?.invoiceError ?? null,
       saveError: (err) => {
         console.error('Error al registrar compra Pasilla:', err?.error ?? err);

@@ -17,7 +17,6 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
-import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 
@@ -113,7 +112,6 @@ export class GreenCoffeeFormComponent {
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
-  private readonly logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
 
   pendingClose = false;
   private closeResolver: ((value: boolean) => void) | null = null;
@@ -337,8 +335,7 @@ export class GreenCoffeeFormComponent {
     }
     saveAndPrint(this, {
       save: () => this.service.create(request),
-      invoice: (purchase, payment) =>
-        this.logoDataUrlPromise.then((logo) => buildGreenCoffeeInvoiceDocDefinition({ ...purchase, payment }, logo)),
+      invoice: buildGreenCoffeeInvoiceDocDefinition,
       invoiceError: () => this.messages()?.invoiceError ?? null,
       saveError: (err) => {
         console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
