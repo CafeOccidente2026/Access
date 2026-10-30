@@ -44,7 +44,7 @@ type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMess
 /** Campos editables en el orden de captura del formulario Access. "agency" no entra: la
  *  autocompleta la sesión y nunca la toca el usuario (paso 1). */
 const EDITABLE: string[] = [
-  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone', 'program', 'quota',
+  'fund', 'idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'program', 'quota',
   'special',
   'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
@@ -281,6 +281,9 @@ export class DryCoffeeFormComponent {
           .filter(Boolean)
           .join(' ');
         this.model['fullName'] = fullName;
+        // Renglón de contacto como en Access: nombres y apellidos en dos cuadros.
+        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
+        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
@@ -288,7 +291,7 @@ export class DryCoffeeFormComponent {
         // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
         // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
         // la cascada de calculo (Vr. Kilo/Vr. Bruto/Neto a Pagar) nunca llegaba a dispararse.
-        ['fullName', 'idType', 'address', 'cellphone'].forEach((k) => {
+        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
           if ((this.model[k] ?? '').trim() !== '') {
             this.locked.add(k);
           }
