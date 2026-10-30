@@ -11,6 +11,8 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 import pdfMake from 'pdfmake/build/pdfmake';
+import { GREEN } from '../../purchase-query/purchase-query.testing';
+
 
 describe('GreenCoffeeFormComponent - guardado', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
@@ -30,6 +32,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
       idNumberNotFound: 'Este número de cédula no existe.',
       saveError: 'No se pudo registrar la compra. Verifique los datos.',
       savedNotice: 'Compra registrada.',
+      invoiceError: 'No se pudo generar la factura',
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
@@ -175,5 +178,42 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     const fields = component.viewContent()?.weightFields ?? [];
     expect(fields.find((f) => f.key === 'totalStoredWeight')).toMatchObject({ readonly: true, value: '' });
     expect(fields.find((f) => f.key === 'factor')).toMatchObject({ readonly: true, value: '' });
+  });
+
+  it('Imprimir saves, opens the invoice with the payment and leaves the form clean with the next invoice', async () => {
+    setup();
+    fillEverything();
+    const nextInvoice = vi.spyOn(TestBed.inject(GreenCoffeePurchaseService), 'nextInvoiceNumber');
+    const open = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
+    createSpy.mockReturnValue(of(GREEN));
+
+    component.print();
+
+    expect(component.model['idPart1']).toBeUndefined();
+    expect(component.payment()).toBeNull();
+    expect(component.savedNoticeOpen()).toBe(true);
+    expect(nextInvoice).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    const doc = JSON.stringify(createPdf.mock.lastCall![0]);
+    expect(doc).toContain('SDBU - 27.875');
+    expect(doc).toContain('7.777.777');
+    createPdf.mockRestore();
+  });
+
+  it('says "No se pudo generar la factura" when the invoice PDF fails', async () => {
+    setup();
+    fillEverything();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
+      throw new Error('pdfmake');
+    });
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    createSpy.mockReturnValue(of(GREEN));
+
+    component.print();
+
+    await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
+    createPdf.mockRestore();
   });
 });
