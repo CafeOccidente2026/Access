@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GreenCoffeeFormComponent } from './green-coffee-form';
@@ -131,6 +131,19 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     pending.error(new Error('fallo'));
     expect(component.saving()).toBe(false);
+  });
+
+  it('does not ask for the preview (nor warn) while a required field is still missing, like Cafe Seco', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    preview.mockReturnValue(throwError(() => new Error('400')));
+    for (const [key, value] of [['idPart1', grower.idNumber], ['bags', '10'], ['grossKg', '1250'], ['tare', '50']]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+
+    expect(preview).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toBeNull();
   });
 
   it('HU-23 CA-2: shows the fixed sample of the control record as read-only', () => {
