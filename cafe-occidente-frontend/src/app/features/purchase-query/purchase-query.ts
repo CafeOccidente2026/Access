@@ -1,14 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { PurchaseFormContent } from '../../core/models/purchase-form-content.model';
 import { AnnulmentCandidate, AnnulmentDirection, AnnulmentModule } from '../../core/models/purchase-annulment.model';
 import { ContentService } from '../../core/services/content.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
 import { FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
+import { openPdf } from '../../shared/utils/pdf-preview';
 import { themeColor } from '../../shared/utils/theme-color';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { fillQueryContent } from './purchase-query-fields';
@@ -21,7 +20,7 @@ export interface PurchaseQueryContent extends PurchaseFormContent {
   readonly modules: Record<AnnulmentModule, string>;
   /** Marca de las reimpresiones de una compra anulada. */
   readonly annulledMark: string;
-  readonly messages: Record<'notFound' | 'noMore' | 'error', string>;
+  readonly messages: Record<'notFound' | 'noMore' | 'error' | 'invoiceError', string>;
 }
 
 /** Busqueda por factura o paso |◄ ◄ ► ►| desde la factura que se muestra. */
@@ -82,10 +81,16 @@ export class PurchaseQueryComponent {
     return detail && content ? fillQueryContent(content, detail) : null;
   });
 
+  /** La reimpresión falló; se borra al cambiar de compra. */
+  private readonly pdfError = linkedSignal({ source: this.selected, computation: () => false });
+
   readonly message = computed(() => {
     const m = this.content()?.messages;
     if (!m) {
       return null;
+    }
+    if (this.pdfError()) {
+      return m.invoiceError;
     }
     if (this.list.error() || this.detail.error()) {
       return m.error;
@@ -120,9 +125,10 @@ export class PurchaseQueryComponent {
     if (!detail || !content) {
       return;
     }
-    this.logoDataUrlPromise.then((logoDataUrl) => {
-      pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(buildReprintDoc(detail, logoDataUrl, content.annulledMark, themeColor('--color-annulled'))).open();
-    });
+    this.pdfError.set(false);
+    openPdf(
+      this.logoDataUrlPromise.then((logo) => buildReprintDoc(detail, logo, content.annulledMark, themeColor('--color-annulled'))),
+      () => this.pdfError.set(true),
+    );
   }
 }
