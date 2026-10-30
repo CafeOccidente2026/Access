@@ -24,27 +24,33 @@ export function initialPayment(netToPay: number): PaymentState {
 
 /**
  * Texto197/Texto199/NumCheque/Texto201/Texto203_LostFocus de Form_COMPRAS.bas: al confirmar una forma,
- * si la suma cuadra con el Neto termina; si se pasa (o ya no quedan formas) queda descuadrada; si falta,
- * la siguiente forma se llena con lo que falta. Despues de Cheque se pide el numero de cheque.
+ * las que siguen se recalculan (quedan en 0); si la suma cuadra con el Neto termina; si se pasa (o ya no
+ * quedan formas) queda descuadrada; si falta, la siguiente forma se llena con lo que falta. Despues de
+ * Cheque se pide el numero de cheque, y la Transferencia ya queda con lo que falta.
  */
 export function commitPayment(netToPay: number, state: PaymentState, field: PaymentKey | 'checkNumber'): CascadeStep {
-  const index = field === 'checkNumber' ? PAYMENT_ORDER.indexOf('check') : PAYMENT_ORDER.indexOf(field);
-  if (field === 'check' && state.amounts.check > 0) {
-    return { state, next: 'checkNumber', unbalanced: false };
-  }
-  // Las formas que siguen se recalculan desde aca, como hacia la cascada de Access.
+  const index = PAYMENT_ORDER.indexOf(field === 'checkNumber' ? 'check' : field);
   const amounts = { ...state.amounts };
   PAYMENT_ORDER.slice(index + 1).forEach((k) => (amounts[k] = 0));
   const paid = total(amounts);
-  if (paid === netToPay) {
-    return { state: { ...state, amounts }, next: null, unbalanced: false };
-  }
   const following = PAYMENT_ORDER[index + 1];
-  if (paid > netToPay || !following) {
+  if (paid > netToPay || (paid < netToPay && !following)) {
     return { state: { amounts: { cash: 0, check: 0, transfer: 0, card: 0 }, checkNumber: '' }, next: 'cash', unbalanced: true };
   }
-  amounts[following] = netToPay - paid;
-  return { state: { ...state, amounts }, next: following, unbalanced: false };
+  if (paid < netToPay) {
+    amounts[following] = netToPay - paid;
+  }
+  let next: CascadeStep['next'] = paid === netToPay ? null : following;
+  if (field === 'check' && amounts.check > 0) {
+    next = 'checkNumber';
+  }
+  return { state: { ...state, amounts }, next, unbalanced: false };
+}
+
+/** Formas que se ven (.Visible de FPch/FPtx/FPdat): Efectivo siempre, y hasta la ultima con monto. */
+export function visibleMethods(state: PaymentState): PaymentKey[] {
+  const last = Math.max(0, ...PAYMENT_ORDER.map((k, i) => (state.amounts[k] > 0 ? i : 0)));
+  return PAYMENT_ORDER.slice(0, last + 1);
 }
 
 /** El pago que se puede enviar: cuadrado con el Neto y, si hay cheque, con su numero. */

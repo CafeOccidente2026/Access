@@ -108,7 +108,9 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
 
     @Override
     public FuturePurchaseResponse findById(Long id) {
+        // Solo de la agencia de trabajo (RF-05.1): la de otra agencia es "no encontrada", como Consultar Compras.
         FuturePurchase purchase = futurePurchaseRepository.findById(id)
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Compromiso de compra a futuro no encontrado"));
         return toResponse(purchase);
     }

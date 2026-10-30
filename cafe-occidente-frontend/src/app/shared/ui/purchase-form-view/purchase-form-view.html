@@ -21,10 +21,16 @@
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
 
-    <div *ngIf="content.federationFields" class="rounded border border-slate-500/40" [class]="content.compactFields ? 'px-3 py-1' : 'p-3'">
-      <p class="mb-2 text-sm font-semibold text-slate-800">{{ content.federationHeading }}</p>
+    <div
+      *ngIf="content.federationFields"
+      class="flex items-end gap-4 rounded border border-slate-500/40"
+      [class]="content.compactFields ? 'px-3 py-1' : 'p-3'"
+    >
+      <p class="whitespace-nowrap pb-1 text-sm font-semibold text-slate-800">{{ content.federationHeading }}</p>
       <app-field-row
         [fields]="content.federationFields"
+        [labelAbove]="true"
+        fieldWidthClass="w-auto flex-initial"
         labelClass="text-slate-800 font-semibold"
         [highlightClass]="content.federationHighlightClass || 'bg-orange-200'"
         (fieldValueChange)="fieldValueChange.emit($event)"

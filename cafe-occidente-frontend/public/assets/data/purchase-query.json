@@ -18,7 +18,8 @@
   "messages": {
     "notFound": "No hay ninguna compra con esa factura",
     "noMore": "No hay más compras en esa dirección",
-    "error": "No se pudo consultar la compra"
+    "error": "No se pudo consultar la compra",
+    "invoiceError": "No se pudo generar la factura"
   },
   "topFields": [
     { "key": "agency", "label": "Agencia", "type": "text" },

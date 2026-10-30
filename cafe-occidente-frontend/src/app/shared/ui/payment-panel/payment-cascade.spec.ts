@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { commitPayment, initialPayment, readyPayment } from './payment-cascade';
+import { commitPayment, initialPayment, readyPayment, visibleMethods } from './payment-cascade';
 
 const NET = 4944624;
 
@@ -47,5 +47,24 @@ describe('payment cascade (Form_COMPRAS.bas FPef/FPch/FPtx/FPdat)', () => {
     expect(readyPayment(NET, state)).toBeNull();
     expect(readyPayment(NET, { ...state, checkNumber: '12A' })).toBeNull();
     expect(readyPayment(NET, { ...state, checkNumber: '0123' })?.checkNumber).toBe('0123');
+  });
+
+  it('shows only Efectivo at first, and each form appears as the previous one is lowered (FPch/FPtx/FPdat .Visible)', () => {
+    let state = initialPayment(NET);
+    expect(visibleMethods(state)).toEqual(['cash']);
+    state = commitPayment(NET, { ...state, amounts: { ...state.amounts, cash: 1000000 } }, 'cash').state;
+    expect(visibleMethods(state)).toEqual(['cash', 'check']);
+    state = commitPayment(NET, { amounts: { ...state.amounts, check: 1000000 }, checkNumber: '7' }, 'checkNumber').state;
+    expect(visibleMethods(state)).toEqual(['cash', 'check', 'transfer']);
+    state = commitPayment(NET, { ...state, amounts: { ...state.amounts, transfer: 1000000 } }, 'transfer').state;
+    expect(visibleMethods(state)).toEqual(['cash', 'check', 'transfer', 'card']);
+    expect(state.amounts.card).toBe(NET - 3000000);
+  });
+
+  it('raising Efectivo back to the total hides and zeroes the forms on its right', () => {
+    const state = { amounts: { cash: 1000000, check: 1000000, transfer: 1000000, card: NET - 3000000 }, checkNumber: '7' };
+    const step = commitPayment(NET, { ...state, amounts: { ...state.amounts, cash: NET } }, 'cash');
+    expect(step.state.amounts).toEqual({ cash: NET, check: 0, transfer: 0, card: 0 });
+    expect(visibleMethods(step.state)).toEqual(['cash']);
   });
 });

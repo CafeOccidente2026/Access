@@ -1,8 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -20,6 +18,7 @@ import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { openPdf } from '../../../shared/utils/pdf-preview';
 import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 
@@ -33,6 +32,7 @@ interface HuskMessages {
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
+  readonly invoiceError: string;
   readonly closeWarning: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
@@ -102,7 +102,6 @@ export class HuskFormComponent {
   readonly calc = signal<HuskPurchaseCalculation | null>(null);
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
   readonly payment = signal<PurchasePayment | null>(null);
-  readonly result = signal<HuskPurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
@@ -300,7 +299,10 @@ export class HuskFormComponent {
   private buildRequest(): HuskPurchaseRequest | null {
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!invoiceNumber || !info) {
+    // Como Café Seco: sin todos los datos no se pide el cálculo (el servidor lo rechazaría y saldría
+    // "No se pudo registrar la compra" mientras el fiel todavía está llenando el formulario).
+    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    if (!invoiceNumber || !info || !hasRequiredCascadeInputs) {
       return null;
     }
     return {
@@ -329,10 +331,10 @@ export class HuskFormComponent {
     this.errorMessage.set(null);
     saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
-        this.result.set(res);
+        // Como Access: se guarda, se abre la factura y el formulario queda limpio para la siguiente compra.
+        this.printInvoice(res, this.payment());
+        this.reset();
         this.savedNoticeOpen.set(true);
-        this.printInvoice(res);
-        this.tick.update((n) => n + 1);
       },
       error: (err) => {
         console.error('Error al registrar compra Pasilla:', err?.error ?? err);
@@ -342,11 +344,11 @@ export class HuskFormComponent {
     });
   }
 
-  private printInvoice(purchase: HuskPurchaseResponse): void {
-    this.logoDataUrlPromise.then((logoDataUrl) => {
-      pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(buildHuskInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl)).open();
-    });
+  private printInvoice(purchase: HuskPurchaseResponse, payment: PurchasePayment | null): void {
+    openPdf(
+      this.logoDataUrlPromise.then((logo) => buildHuskInvoiceDocDefinition({ ...purchase, payment }, logo)),
+      () => this.errorMessage.set(this.messages()?.invoiceError ?? null),
+    );
   }
 
   dismissError(): void {
@@ -360,11 +362,11 @@ export class HuskFormComponent {
 
   @HostListener('document:keydown.escape')
   reset(): void {
+    this.payment.set(null);
     this.model = {};
     this.locked.clear();
     this.invoiceReservation.set(null);
     this.calc.set(null);
-    this.result.set(null);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
@@ -376,7 +378,7 @@ export class HuskFormComponent {
   }
 
   private hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   onClose(): void {
@@ -416,7 +418,7 @@ export class HuskFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() &&
+      !!this.payment() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
@@ -430,7 +432,7 @@ export class HuskFormComponent {
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
     collect(base.topFields);
     collect(base.identificationFields);
-    collect(base.federationFields);
+    collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.netWeightFields);
     collect(base.settlementFields);
@@ -487,13 +489,12 @@ export class HuskFormComponent {
       ...base,
       topFields: row(base.topFields)!,
       identificationFields: row(base.identificationFields)!,
-      federationFields: row(base.federationFields),
+      contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
-      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }

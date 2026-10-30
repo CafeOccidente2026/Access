@@ -29,4 +29,39 @@ describe('PaymentPanelComponent', () => {
     expect(inputs.map((i) => i.value)).toEqual(['655.579', '300.000', '4321', '200.000', '100.000', '1.255.579']);
     expect(inputs.every((i) => i.readOnly)).toBe(true);
   });
+
+  it('starts with only Efectivo and the total; lowering a form and leaving it shows the next one beside it', async () => {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('definition', definition);
+    fixture.componentRef.setInput('netToPay', 1000);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const keys = () => Array.from(host.querySelectorAll('input[data-field-key]')).map((i) => i.getAttribute('data-field-key'));
+    const field = (key: string) => host.querySelector<HTMLInputElement>(`[data-field-key="${key}"]`)!;
+    const lower = (key: string, value: string) => {
+      field(key).value = value;
+      field(key).dispatchEvent(new Event('input'));
+      field(key).dispatchEvent(new Event('blur'));
+      fixture.detectChanges();
+    };
+
+    expect(keys()).toEqual(['payCash']);
+    expect(field('payCash').value).toBe('1.000');
+
+    lower('payCash', '600');
+    expect(keys()).toEqual(['payCash', 'payCheck', 'payCheckNumber']);
+    expect(field('payCheck').value).toBe('400');
+
+    lower('payCheck', '100');
+    expect(keys()).toEqual(['payCash', 'payCheck', 'payCheckNumber', 'payTransfer']);
+    expect(field('payTransfer').value).toBe('300');
+
+    lower('payTransfer', '200');
+    expect(keys()).toEqual(['payCash', 'payCheck', 'payCheckNumber', 'payTransfer', 'payCard']);
+    expect(field('payCard').value).toBe('100');
+    expect(field('payCard').readOnly).toBe(true);
+
+    lower('payCash', '1000');
+    expect(keys()).toEqual(['payCash']);
+  });
 });

@@ -32,8 +32,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 6g3 (seguridad): GET /{id} de seco, verde y pasilla solo da compras de la agencia de trabajo; la de
- * otra agencia responde 404, como Consultar Compras. Sobre la semilla (agencia 1). Transaccional.
+ * 6g3 (seguridad): GET /{id} de seco, verde, pasilla y compras a futuro solo da compras de la agencia de
+ * trabajo; la de otra agencia responde 404, como Consultar Compras. Sobre la semilla (agencia 1). Transaccional.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -138,5 +138,21 @@ class PurchaseByIdAgencyIntegrationTest {
             mockMvc.perform(get(url).header("Authorization", sameAgency)).andExpect(status().isOk());
             mockMvc.perform(get(url).header("Authorization", otherAgency)).andExpect(status().isNotFound());
         }
+    }
+
+    @Test
+    void aFuturePurchaseOfAnotherAgencyGives404() throws Exception {
+        User owner = user("prueba_6g3_futuro", AGENCY);
+        Long id = jdbc.queryForObject("INSERT INTO compras_anunciadas (creado_en, agencia_id, numero_anuncio, fecha_anuncio,"
+                + " cedula, nombres, tipo, direccion, especial, kilos, saldo, fecha_entrega, pr_alm_sana, pr_alm_defec,"
+                + " bonificacion, costos, pr_inc_calidad, pr_base_cps, creado_por_usuario_id) VALUES (now(), ?, 1, CURRENT_DATE,"
+                + " ?, 'PRUEBA', 'C', 'VEREDA', 'RN', 100, 100, CURRENT_DATE, 0, 0, 0, 0, 0, 0, ?) RETURNING id",
+                Long.class, AGENCY, SELLER, owner.getId());
+        Long other = jdbc.queryForObject("SELECT min(id) FROM agencias WHERE id <> ? AND activa", Long.class, AGENCY);
+        String url = "/api/purchases/future/" + id;
+
+        mockMvc.perform(get(url).header("Authorization", token(owner))).andExpect(status().isOk());
+        mockMvc.perform(get(url).header("Authorization", token(user("prueba_6g3_futuro_otra", other))))
+                .andExpect(status().isNotFound());
     }
 }

@@ -1,8 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -18,6 +16,7 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { openPdf } from '../../../shared/utils/pdf-preview';
 import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
@@ -34,6 +33,7 @@ interface GreenCoffeeMessages {
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
+  readonly invoiceError: string;
   readonly closeWarning: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
@@ -103,7 +103,6 @@ export class GreenCoffeeFormComponent {
   readonly calc = signal<GreenCoffeePurchaseCalculation | null>(null);
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
   readonly payment = signal<PurchasePayment | null>(null);
-  readonly result = signal<GreenCoffeePurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   /** Q23: el Registro de Control no tiene los pesos de verde; la pantalla no deja digitar. */
@@ -310,7 +309,10 @@ export class GreenCoffeeFormComponent {
   private buildRequest(): GreenCoffeePurchaseRequest | null {
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!invoiceNumber || !info) {
+    // Como Café Seco: sin todos los datos no se pide el cálculo (el servidor lo rechazaría y saldría
+    // "No se pudo registrar la compra" mientras el fiel todavía está llenando el formulario).
+    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    if (!invoiceNumber || !info || !hasRequiredCascadeInputs) {
       return null;
     }
     return {
@@ -340,10 +342,10 @@ export class GreenCoffeeFormComponent {
     this.errorMessage.set(null);
     saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
-        this.result.set(res);
+        // Como Access: se guarda, se abre la factura y el formulario queda limpio para la siguiente compra.
+        this.printInvoice(res, this.payment());
+        this.reset();
         this.savedNoticeOpen.set(true);
-        this.tick.update((n) => n + 1);
-        this.printInvoice(res);
       },
       error: (err) => {
         console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
@@ -364,11 +366,11 @@ export class GreenCoffeeFormComponent {
 
   @HostListener('document:keydown.escape')
   reset(): void {
+    this.payment.set(null);
     this.model = {};
     this.locked.clear();
     this.invoiceReservation.set(null);
     this.calc.set(null);
-    this.result.set(null);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
@@ -380,7 +382,7 @@ export class GreenCoffeeFormComponent {
   }
 
   private hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   onClose(): void {
@@ -420,7 +422,7 @@ export class GreenCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() &&
+      !!this.payment() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
@@ -513,16 +515,15 @@ export class GreenCoffeeFormComponent {
       settlementFields: row(base.settlementFields)!,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
-      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
 
   /** "Factura verdes" (macro "Imprime Factura" de VERDES): dos copias, con el pago del panel. */
-  private printInvoice(purchase: GreenCoffeePurchaseResponse): void {
-    this.logoDataUrlPromise.then((logoDataUrl) => {
-      pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(buildGreenCoffeeInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl)).open();
-    });
+  private printInvoice(purchase: GreenCoffeePurchaseResponse, payment: PurchasePayment | null): void {
+    openPdf(
+      this.logoDataUrlPromise.then((logo) => buildGreenCoffeeInvoiceDocDefinition({ ...purchase, payment }, logo)),
+      () => this.errorMessage.set(this.messages()?.invoiceError ?? null),
+    );
   }
 }

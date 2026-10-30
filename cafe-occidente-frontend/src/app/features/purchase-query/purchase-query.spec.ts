@@ -130,6 +130,20 @@ describe('PurchaseQueryComponent (HU-28)', () => {
     createPdf.mockRestore();
   });
 
+  it('says "No se pudo generar la factura" when the reprint PDF fails', async () => {
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
+      throw new Error('pdfmake');
+    });
+    const { component } = render();
+    component.go('FIRST');
+    await show(`${URL}/navigate?direction=FIRST`, FIRST);
+
+    component.reprint();
+
+    await vi.waitFor(() => expect(component.message()).toBe(content.messages.invoiceError));
+    createPdf.mockRestore();
+  });
+
   it('RF-26: the Compras menu opens it for the Administrator and the User', () => {
     expect(menu.options.find((o) => o.label === 'Consultar Compras')?.route).toBe('/compras/consulta');
     const shell = routes.find((r) => r.children?.some((c) => c.path === 'compras/consulta'));
