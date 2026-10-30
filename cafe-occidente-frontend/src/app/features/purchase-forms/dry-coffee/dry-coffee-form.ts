@@ -1,8 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -20,6 +18,7 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { openPdf } from '../../../shared/utils/pdf-preview';
 import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition, loadLogoDataUrl } from './dry-coffee-invoice';
@@ -34,6 +33,7 @@ interface DryCoffeeMessages {
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
+  readonly invoiceError: string;
   readonly closeWarning: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
@@ -115,7 +115,6 @@ export class DryCoffeeFormComponent {
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
   readonly payment = signal<PurchasePayment | null>(null);
-  readonly result = signal<DryCoffeePurchaseResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
@@ -475,10 +474,10 @@ export class DryCoffeeFormComponent {
     this.errorMessage.set(null);
     saveOnce(this.saving, () => this.service.create(request), {
       next: (res) => {
-        this.result.set(res);
+        // Como Access: se guarda, se abre la factura y el formulario queda limpio para la siguiente compra.
+        this.printInvoice(res, this.payment());
+        this.reset();
         this.savedNoticeOpen.set(true);
-        this.printInvoice(res);
-        this.tick.update((n) => n + 1);
       },
       error: (err) => {
         // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
@@ -507,23 +506,24 @@ export class DryCoffeeFormComponent {
   /** Escape reinicia todo el formulario en blanco y editable (única forma de "volver atrás"). */
   @HostListener('document:keydown.escape')
   reset(): void {
+    this.payment.set(null);
     this.model = {};
     this.locked.clear();
     this.specialInfo.set(null);
     this.invoiceReservation.set(null);
     this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
     this.calc.set(null);
-    this.result.set(null);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
     this.fieldCache.clear();
     this.prefillAgency();
+    this.reserveInvoiceNumber();
     this.tick.update((n) => n + 1);
   }
 
   private hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   /** La X del formulario: si hay datos sin imprimir pide confirmación; si no, cierra. */
@@ -565,7 +565,7 @@ export class DryCoffeeFormComponent {
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !this.result() &&
+      !!this.payment() &&
       !!this.specialInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
@@ -682,17 +682,15 @@ export class DryCoffeeFormComponent {
       netToPayField: base.netToPayField ? field(base.netToPayField.key) : undefined,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
-      paymentLocked: !!this.result(),
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
 
   /** Genera el Documento Soporte en PDF (mismo layout que capturas/prueba de factura sin boton de nube.pdf). */
-  private printInvoice(purchase: DryCoffeePurchaseResponse): void {
-    this.logoDataUrlPromise.then((logoDataUrl) => {
-      const docDefinition = buildDryCoffeeInvoiceDocDefinition({ ...purchase, payment: this.payment() }, logoDataUrl);
-      pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(docDefinition).open();
-    });
+  private printInvoice(purchase: DryCoffeePurchaseResponse, payment: PurchasePayment | null): void {
+    openPdf(
+      this.logoDataUrlPromise.then((logo) => buildDryCoffeeInvoiceDocDefinition({ ...purchase, payment }, logo)),
+      () => this.errorMessage.set(this.messages()?.invoiceError ?? null),
+    );
   }
 }
