@@ -16,11 +16,10 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
-import { openPdf } from '../../../shared/utils/pdf-preview';
-import { saveOnce } from '../../../shared/utils/save-once';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { loadLogoDataUrl } from '../dry-coffee/dry-coffee-invoice';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
+import { hasRequired, saveAndPrint } from '../purchase-print';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -309,10 +308,7 @@ export class GreenCoffeeFormComponent {
   private buildRequest(): GreenCoffeePurchaseRequest | null {
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    // Como Café Seco: sin todos los datos no se pide el cálculo (el servidor lo rechazaría y saldría
-    // "No se pudo registrar la compra" mientras el fiel todavía está llenando el formulario).
-    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!invoiceNumber || !info || !hasRequiredCascadeInputs) {
+    if (!invoiceNumber || !info || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
@@ -339,15 +335,12 @@ export class GreenCoffeeFormComponent {
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    saveOnce(this.saving, () => this.service.create(request), {
-      next: (res) => {
-        // Como Access: se guarda, se abre la factura y el formulario queda limpio para la siguiente compra.
-        this.printInvoice(res, this.payment());
-        this.reset();
-        this.savedNoticeOpen.set(true);
-      },
-      error: (err) => {
+    saveAndPrint(this, {
+      save: () => this.service.create(request),
+      invoice: (purchase, payment) =>
+        this.logoDataUrlPromise.then((logo) => buildGreenCoffeeInvoiceDocDefinition({ ...purchase, payment }, logo)),
+      invoiceError: () => this.messages()?.invoiceError ?? null,
+      saveError: (err) => {
         console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
         this.errorMessage.set(this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
@@ -519,11 +512,4 @@ export class GreenCoffeeFormComponent {
     };
   }
 
-  /** "Factura verdes" (macro "Imprime Factura" de VERDES): dos copias, con el pago del panel. */
-  private printInvoice(purchase: GreenCoffeePurchaseResponse, payment: PurchasePayment | null): void {
-    openPdf(
-      this.logoDataUrlPromise.then((logo) => buildGreenCoffeeInvoiceDocDefinition({ ...purchase, payment }, logo)),
-      () => this.errorMessage.set(this.messages()?.invoiceError ?? null),
-    );
-  }
 }
