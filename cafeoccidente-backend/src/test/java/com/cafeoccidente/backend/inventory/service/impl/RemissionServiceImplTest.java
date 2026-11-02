@@ -18,6 +18,7 @@ import com.cafeoccidente.backend.inventory.dto.RemissionResponse;
 import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
 import com.cafeoccidente.backend.inventory.repository.CodeTotals;
 import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepository;
+import com.cafeoccidente.backend.inventory.repository.RemissionConsecutiveRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionLineRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionRepository;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
@@ -40,12 +41,13 @@ class RemissionServiceImplTest {
     private final GrowerRepository growerRepository = mock(GrowerRepository.class);
     private final SecurityUtils securityUtils = mock(SecurityUtils.class);
     private final ControlRecordService controlRecordService = mock(ControlRecordService.class);
+    private final RemissionConsecutiveRepository consecutives = mock(RemissionConsecutiveRepository.class);
 
     /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final RemissionServiceImpl service = new RemissionServiceImpl(
             remissionRepository, remissionLineRepository, inventoryMovementRepository,
-            agencyRepository, growerRepository, securityUtils, currentAgencyProvider, controlRecordService);
+            agencyRepository, growerRepository, securityUtils, currentAgencyProvider, controlRecordService, consecutives);
 
     /** Linea con Sacos y Kilos Brutos de relleno (no intervienen en saldo ni valor). */
     private static RemissionLineRequest line(long movementId, String quantity) {
@@ -187,27 +189,28 @@ class RemissionServiceImplTest {
     }
 
     @Test
-    void numbersEachAgencyAndFundWithItsOwnSequence() {
+    void takesTheNumberFromTheConsecutiveOfItsAgencyAndFund() {
         mockCommonSaves();
         InventoryMovement rp = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
-        // RP (fondo 1) ya va en 947; LF (fondo 2) no se consulta: su serie es otra.
-        when(remissionRepository.findMaxSequenceNumber(1L, 1L)).thenReturn(947);
+        // 7a: el consecutivo de agencia y fondo (compartido con las remesas) ya va en 947.
+        when(consecutives.take(1L, 1L)).thenReturn(948);
 
         RemissionResponse response = service.create(new RemissionRequest(
                 LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
 
         assertThat(response.displayNumber()).isEqualTo("SDBU-RP-0948");
-        verify(remissionRepository).findMaxSequenceNumber(1L, 1L);
-        verify(remissionRepository, org.mockito.Mockito.never()).findMaxSequenceNumber(1L, 2L);
+        verify(consecutives).take(1L, 1L);
+        verify(consecutives, org.mockito.Mockito.never()).take(1L, 2L);
     }
 
     @Test
-    void firstRemissionOfAFundStartsAtOne() {
+    void anLfExitUsesTheLfConsecutive() {
         mockCommonSaves();
         InventoryMovement lf = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
         lf.setProductCode(productCode(2L, "LF"));
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(lf));
+        when(consecutives.take(1L, 2L)).thenReturn(1);
 
         RemissionResponse response = service.create(new RemissionRequest(
                 LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));

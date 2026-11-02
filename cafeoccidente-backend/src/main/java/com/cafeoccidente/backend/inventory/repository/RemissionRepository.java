@@ -19,7 +19,4 @@ public interface RemissionRepository extends JpaRepository<Remission, Long> {
     Optional<Remission> findByAgencyIdAndRemissionNumber(Long agencyId, Integer remissionNumber);
 
     Optional<Remission> findByAgencyIdAndDisplayNumberIgnoreCase(Long agencyId, String displayNumber);
-
-    @Query("SELECT MAX(r.sequenceNumber) FROM Remission r WHERE r.agency.id = :agencyId AND r.fund.id = :fundId")
-    Integer findMaxSequenceNumber(@Param("agencyId") Long agencyId, @Param("fundId") Long fundId);
 }
