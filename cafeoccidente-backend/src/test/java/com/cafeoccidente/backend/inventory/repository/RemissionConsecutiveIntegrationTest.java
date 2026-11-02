@@ -163,6 +163,11 @@ class RemissionConsecutiveIntegrationTest {
                 .isEqualTo(remittance);
         assertThat(remittance(other, "SDBU-RP-9001", "VIGENTE")).isNotNull();
         assertThatThrownBy(() -> remittance(AGENCY, "SDBU-RP-9001", "VIGENTE")).isInstanceOf(DuplicateKeyException.class);
+    }
+
+    @Test
+    void aRemittanceIsEitherInForceOrUnmarked() {
+        assertThat(remittance(AGENCY, "SDBU-RP-9003", "DESMARCADA")).isNotNull();
         assertThatThrownBy(() -> remittance(AGENCY, "SDBU-RP-9002", "BORRADA"))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
