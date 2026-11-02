@@ -14,6 +14,7 @@ import com.cafeoccidente.backend.inventory.entity.Remission;
 import com.cafeoccidente.backend.inventory.entity.RemissionLine;
 import com.cafeoccidente.backend.inventory.repository.CodeTotals;
 import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepository;
+import com.cafeoccidente.backend.inventory.repository.RemissionConsecutiveRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionLineRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionRepository;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
@@ -49,6 +50,7 @@ public class RemissionServiceImpl implements RemissionService {
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final ControlRecordService controlRecordService;
+    private final RemissionConsecutiveRepository consecutives;
 
     public RemissionServiceImpl(
             RemissionRepository remissionRepository,
@@ -57,8 +59,9 @@ public class RemissionServiceImpl implements RemissionService {
             AgencyRepository agencyRepository,
             GrowerRepository growerRepository,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
-            ControlRecordService controlRecordService) {
+            ControlRecordService controlRecordService, RemissionConsecutiveRepository consecutives) {
         this.controlRecordService = controlRecordService;
+        this.consecutives = consecutives;
         this.remissionRepository = remissionRepository;
         this.remissionLineRepository = remissionLineRepository;
         this.inventoryMovementRepository = inventoryMovementRepository;
@@ -82,9 +85,8 @@ public class RemissionServiceImpl implements RemissionService {
         Remission remission = new Remission();
         Integer maxUsed = remissionRepository.findMaxRemissionNumber(agency.getId());
         remission.setRemissionNumber(maxUsed == null ? 1 : maxUsed + 1);
-        // Consecutivo propio por agencia + fondo (LF y RP no comparten serie).
-        Integer lastSequence = remissionRepository.findMaxSequenceNumber(agency.getId(), fund.getId());
-        int sequence = lastSequence == null ? 1 : lastSequence + 1;
+        // Consecutivo por agencia + fondo (LF y RP no comparten serie), el mismo de las remesas (RN-11.5).
+        int sequence = consecutives.take(agency.getId(), fund.getId());
         remission.setFund(fund);
         remission.setSequenceNumber(sequence);
         remission.setDisplayNumber(displayNumber(
