@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -55,6 +56,25 @@ public class RemittanceRepository {
             + " FROM compras_cafe_seco UNION ALL SELECT remesa_id, kilos_netos FROM compras_cafe_verde"
             + " UNION ALL SELECT remesa_id, kilos_netos FROM compras_pasilla) u GROUP BY remesa_id) x ON x.remesa_id = r.id";
 
+    /** SQL fijo por modulo: el nombre de la tabla nunca sale del request (solo el enum elige el texto). */
+    private static final Map<AnnulmentModule, String> LOCK = Map.of(
+            AnnulmentModule.DRY, lockSql("compras_cafe_seco"),
+            AnnulmentModule.GREEN, lockSql("compras_cafe_verde"),
+            AnnulmentModule.HUSK, lockSql("compras_pasilla"));
+    private static final Map<AnnulmentModule, String> ASSIGN = Map.of(
+            AnnulmentModule.DRY, "UPDATE compras_cafe_seco SET remesa_id = :remittanceId WHERE id IN (:ids)",
+            AnnulmentModule.GREEN, "UPDATE compras_cafe_verde SET remesa_id = :remittanceId WHERE id IN (:ids)",
+            AnnulmentModule.HUSK, "UPDATE compras_pasilla SET remesa_id = :remittanceId WHERE id IN (:ids)");
+    private static final List<String> RELEASE = List.of(
+            "UPDATE compras_cafe_seco SET remesa_id = NULL WHERE remesa_id = :id",
+            "UPDATE compras_cafe_verde SET remesa_id = NULL WHERE remesa_id = :id",
+            "UPDATE compras_pasilla SET remesa_id = NULL WHERE remesa_id = :id");
+
+    private static String lockSql(String table) {
+        return "SELECT p.id, p.agencia_id, f.codigo, p.especial, p.estado, p.kilos_netos, p.remesa_id, p.numero_factura"
+                + " FROM " + table + " p JOIN fondos f ON f.id = p.fondo_id WHERE p.id IN (:ids) FOR UPDATE OF p";
+    }
+
     /** Estado de una compra al armar la remesa, leida con bloqueo de fila. */
     public record LockedPurchase(Long id, Long agencyId, String fundCode, String specialType, String status,
             BigDecimal netKg, Long remittanceId, Integer invoiceNumber) {
@@ -87,13 +107,10 @@ public class RemittanceRepository {
 
     /** Las compras pedidas, bloqueadas hasta el fin de la transaccion: dos remesas a la vez no toman la misma. */
     public List<LockedPurchase> lock(AnnulmentModule module, List<Long> ids) {
-        return jdbc.query("SELECT p.id, p.agencia_id, f.codigo, p.especial, p.estado, p.kilos_netos, p.remesa_id,"
-                        + " p.numero_factura FROM " + module.table() + " p JOIN fondos f ON f.id = p.fondo_id"
-                        + " WHERE p.id IN (:ids) FOR UPDATE OF p",
-                new MapSqlParameterSource("ids", ids), (rs, i) -> new LockedPurchase(rs.getLong("id"),
-                        rs.getLong("agencia_id"), rs.getString("codigo"), rs.getString("especial"),
-                        rs.getString("estado"), rs.getBigDecimal("kilos_netos"), (Long) rs.getObject("remesa_id"),
-                        (Integer) rs.getObject("numero_factura")));
+        return jdbc.query(LOCK.get(module), new MapSqlParameterSource("ids", ids), (rs, i) -> new LockedPurchase(
+                rs.getLong("id"), rs.getLong("agencia_id"), rs.getString("codigo"), rs.getString("especial"),
+                rs.getString("estado"), rs.getBigDecimal("kilos_netos"), (Long) rs.getObject("remesa_id"),
+                (Integer) rs.getObject("numero_factura")));
     }
 
     public Long insert(Long agencyId, Long fundId, int sequence, String number, String specialType,
@@ -109,8 +126,7 @@ public class RemittanceRepository {
 
     /** RN-11.6: las facturas quedan con la remesa y salen de pendientes. */
     public void assign(AnnulmentModule module, List<Long> ids, Long remittanceId) {
-        jdbc.update("UPDATE " + module.table() + " SET remesa_id = :remittanceId WHERE id IN (:ids)",
-                new MapSqlParameterSource().addValue("remittanceId", remittanceId).addValue("ids", ids));
+        jdbc.update(ASSIGN.get(module), new MapSqlParameterSource().addValue("remittanceId", remittanceId).addValue("ids", ids));
     }
 
     /** RN-11.9: salida en EMPAQUES con el numero de la remesa como transaccion y el detalle "Remision". */
@@ -146,9 +162,7 @@ public class RemittanceRepository {
     public void unmark(Long agencyId, Long id, String number, Long userId) {
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("id", id).addValue("agencyId", agencyId)
                 .addValue("number", number).addValue("userId", userId);
-        for (AnnulmentModule module : AnnulmentModule.values()) {
-            jdbc.update("UPDATE " + module.table() + " SET remesa_id = NULL WHERE remesa_id = :id", params);
-        }
+        RELEASE.forEach(sql -> jdbc.update(sql, params));
         jdbc.update("DELETE FROM empaques WHERE agencia_id = :agencyId AND id_transaccion = :number"
                 + " AND detalle = 'Remision'", params);
         jdbc.update("UPDATE remesas SET estado = 'DESMARCADA', desmarcado_por_usuario_id = :userId,"
