@@ -1,7 +1,14 @@
 import { VendorCreateRequest } from '../../core/models/vendor.model';
 import { VendorEntryContent, VendorField, VendorKind } from './vendor-entry.model';
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** usuario@dominio, sin espacios ni otra @ (regex sin retroceso, S8786). */
+const EMAIL = /^[^\s@]+@([^\s@]+)$/;
+
+/** Como antes: el dominio lleva un punto que no es ni el primero ni el ultimo caracter. */
+function isEmail(value: string): boolean {
+  const domain = EMAIL.exec(value)?.[1];
+  return domain != null && domain.slice(1, -1).includes('.');
+}
 
 /** Primer problema del formulario como mensaje del JSON, o null si se puede guardar. */
 export function validationError(
@@ -14,7 +21,7 @@ export function validationError(
     return messages.required.replace('{label}', missing.label);
   }
   const email = (values['email'] ?? '').trim();
-  return email && !EMAIL.test(email) ? messages.email : null;
+  return email && !isEmail(email) ? messages.email : null;
 }
 
 /** Solo viaja lo que tiene la pantalla elegida; vacio = null. */
