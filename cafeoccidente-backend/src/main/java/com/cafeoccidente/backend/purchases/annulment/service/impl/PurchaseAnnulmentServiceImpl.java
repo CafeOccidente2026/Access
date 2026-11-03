@@ -22,6 +22,8 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
     static final String HAS_INVENTORY_EXITS = "La compra ya tiene salidas de inventario";
     /** Q35 (pendiente del area): no hay movimiento definido para reversar una cuenta ya saldada. */
     static final String RECEIVABLE_NOT_PENDING = "La compra tiene una cuenta por cobrar ya saldada";
+    /** 7b: como con la remision (Q11), una compra remesada ya se envio; primero se desmarca la remesa. */
+    static final String IN_REMITTANCE = "La compra está en la remesa %s: primero desmárquela";
 
     private final PurchaseAnnulmentRepository repository;
     private final SecurityUtils securityUtils;
@@ -68,6 +70,9 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
         if (repository.hasReceivableNotPending(module, id)) {
             throw new BusinessRuleException(RECEIVABLE_NOT_PENDING);
         }
+        repository.remittanceNumber(module, id).ifPresent(number -> {
+            throw new BusinessRuleException(IN_REMITTANCE.formatted(number));
+        });
         repository.annul(module, id, securityUtils.getCurrentUserId());
         return repository.lock(module, id).orElseThrow();
     }
