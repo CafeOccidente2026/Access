@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import pdfMake from 'pdfmake/build/pdfmake';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RemissionFormComponent } from './remission-form';
@@ -107,4 +108,23 @@ describe('RemissionFormComponent', () => {
 
     expect(component.errorMessage()).toBe('La salida no puede ser superior al saldo disponible (saldo: 700 kg, factura 27867)');
   });
+
+  it('print() says so when the PDF cannot be built, instead of leaving the promise unhandled', async () => {
+    setup();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
+      throw new Error('pdfmake');
+    });
+    component.selectedMovementId.set(10);
+    component.draftQuantity.set('300');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
+    component.addLine();
+    component.save();
+
+    component.print();
+
+    await vi.waitFor(() => expect(component.errorMessage()).toBe('No se pudo generar la remisión'));
+    createPdf.mockRestore();
+  });
 });
+
