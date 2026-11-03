@@ -5,7 +5,6 @@ import com.cafeoccidente.backend.vendors.dto.NessQuotaBalanceRow;
 import com.cafeoccidente.backend.vendors.dto.NessQuotaRow;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -26,16 +25,24 @@ public class VendorReadRepository {
     public static final List<String> QUOTA_SPECIALS =
             List.of("NESPRESSO", "RAINFOREST", "NESPRESSO LATE HARVEST", "REGIONAL NARIÑO 4C");
 
-    /** Las 3 tablas de compra: lista fija de tablas permitidas en purchase(), que las concatena al SQL. */
-    private static final Set<String> PURCHASE_TABLES = Set.of(
-            "compras_cafe_seco", "compras_cafe_verde", "compras_pasilla");
+    /** Columnas de COMPRAS en cada tabla de compra; entre medias, Kilos_Verdes y PorcAlmSana de cada una. */
+    private static final String PURCHASE_START = "SELECT p.agencia_id, a.nombre AS agency_name, p.fecha_compra,"
+            + " f.codigo AS fund_code, p.numero_factura, p.cedula, ";
+    private static final String PURCHASE_MIDDLE = " AS kilos_verdes, p.kilos_netos, ";
+    private static final String PURCHASE_END = " AS factor, p.vr_bruto, p.aporte_asociado, p.descuento_cooperativo,"
+            + " p.descuento_financiero AS descuento_financiero, p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.especial"
+            + " FROM ";
+    private static final String PURCHASE_JOINS = " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
 
-    /** COMPRAS como union de las 3 tablas. Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la
-     *  merma en Verde y Pasilla; PorcAlmSana en Pasilla es el porcentaje de almendra y Verde no lo usa. */
-    private static final String PURCHASES = String.join(" UNION ALL ",
-            purchase("compras_cafe_seco", "0", "p.factor", "p.descuento_financiero"),
-            purchase("compras_cafe_verde", "p.kilos_verdes", "0", "p.descuento_financiero"),
-            purchase("compras_pasilla", "0", "p.porc_almendra", "p.descuento_financiero"));
+    /** COMPRAS como union de las 3 tablas, en una constante fija (S2077: nada del request entra al SQL).
+     *  Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la merma en Verde y Pasilla; PorcAlmSana en
+     *  Pasilla es el porcentaje de almendra y Verde no lo usa. */
+    static final String PURCHASES =
+            PURCHASE_START + "0" + PURCHASE_MIDDLE + "p.factor" + PURCHASE_END + "compras_cafe_seco" + PURCHASE_JOINS
+            + " UNION ALL " + PURCHASE_START + "p.kilos_verdes" + PURCHASE_MIDDLE + "0" + PURCHASE_END
+            + "compras_cafe_verde" + PURCHASE_JOINS
+            + " UNION ALL " + PURCHASE_START + "0" + PURCHASE_MIDDLE + "p.porc_almendra" + PURCHASE_END
+            + "compras_pasilla" + PURCHASE_JOINS;
 
     /** Cedula de la tabla NESS: el CSV de origen la trae como numero ("210514.0"). */
     private static final String NESS_ID = "regexp_replace(n.cedula, '\\.0$', '')";
@@ -44,17 +51,6 @@ public class VendorReadRepository {
 
     public VendorReadRepository(NamedParameterJdbcTemplate jdbc) {
         this.jdbc = jdbc;
-    }
-
-    static String purchase(String table, String greenKg, String healthyPercentage, String freightDiscount) {
-        if (!PURCHASE_TABLES.contains(table)) {
-            throw new IllegalArgumentException("Tabla de compras no permitida: " + table);
-        }
-        return "SELECT p.agencia_id, a.nombre AS agency_name, p.fecha_compra, f.codigo AS fund_code, p.numero_factura,"
-                + " p.cedula, " + greenKg + " AS kilos_verdes, p.kilos_netos, " + healthyPercentage + " AS factor,"
-                + " p.vr_bruto, p.aporte_asociado, p.descuento_cooperativo, " + freightDiscount
-                + " AS descuento_financiero, p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.especial"
-                + " FROM " + table + " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
     }
 
     /** "Beneficiario" (sin fechas) y "Beneficiario Resumen": Cedula Like texto & "*"; agencyId null = todas. */
