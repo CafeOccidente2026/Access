@@ -127,6 +127,8 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
 
   it('finds a remittance by number; only the Administrator can unmark it, after confirming', async () => {
     const { component } = await render();
+    // Otros specs dejan un rol en localStorage: la prueba fija el suyo.
+    TestBed.inject(AuthService).roleName.set('USUARIO');
     component.search('sdxx-rp-0008');
     await settle();
     http.expectOne((r) => r.url === URL && r.params.get('number') === 'sdxx-rp-0008').flush([REMITTANCE]);
