@@ -32,6 +32,7 @@
             <input
               type="text"
               readonly
+              [attr.aria-label]="f.label"
               class="rounded border border-slate-300 bg-slate-100 px-2 py-1"
               [class.text-right]="f.type === 'number' || f.type === 'money'"
               [class.font-bold]="f.key === 'status'"

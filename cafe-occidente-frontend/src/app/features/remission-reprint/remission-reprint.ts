@@ -40,9 +40,11 @@ export class RemissionReprintComponent {
           this.message.set('No existe una remisión con ese número');
           return;
         }
-        this.logoDataUrlPromise.then((logo) =>
-          renderPdfPreview(buildRemissionDocDefinition(results[0], logo), this.sanitizer, (url) => this.pdfUrl.set(url)),
-        );
+        this.logoDataUrlPromise
+          .then((logo) =>
+            renderPdfPreview(buildRemissionDocDefinition(results[0], logo), this.sanitizer, (url) => this.pdfUrl.set(url)),
+          )
+          .catch(() => this.message.set('No se pudo generar la remisión'));
       },
       error: () => this.message.set('No se pudo buscar la remisión'),
     });

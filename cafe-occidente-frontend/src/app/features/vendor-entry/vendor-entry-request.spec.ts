@@ -40,3 +40,30 @@ describe('vendor entry', () => {
     expect(request).toMatchObject({ association: false, secondName: null, lastName: 'TUTISTAR', sex: 'F', postalCode: '522060' });
   });
 });
+
+/** La regex de antes (S8786, retroceso super lineal): la validacion nueva acepta y rechaza lo mismo. */
+const OLD_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+describe('email check without backtracking accepts and rejects exactly as before', () => {
+  const fields = [{ key: 'email', label: 'Correo', required: false }] as never;
+  const verdict = (email: string) => validationError(fields, { email }, (content as VendorEntryContent).messages) === null;
+  // Antes y ahora el correo se valida recortado; vacio no se valida.
+  const before = (email: string) => email.trim() === '' || OLD_EMAIL.test(email.trim());
+
+  it.each([
+    'a@b.co', 'ana.maria@cafe.com.co', 'x@y.z', 'x@y.', 'x@.y', 'x@y', '@b.co', 'a@@b.co', 'a b@c.co', 'a@b c.co',
+    'a@b..c', 'a@.b.c', 'a@b.c.', 'a.@b.c', '.a@b.c', 'a@b.c d', '', ' ', 'a@b.c\n', 'ñandú@café.co', 'a@b.c.d.e.f',
+  ])('"%s"', (email) => {
+    expect(verdict(email)).toBe(before(email));
+  });
+
+  it('agrees on generated addresses', () => {
+    const alphabet = 'ab.@ .@a1-_';
+    let seed = 7;
+    const next = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    for (let n = 0; n < 5000; n++) {
+      const email = Array.from({ length: 1 + Math.floor(next() * 12) }, () => alphabet[Math.floor(next() * alphabet.length)]).join('');
+      expect(verdict(email), JSON.stringify(email)).toBe(before(email));
+    }
+  });
+});

@@ -1,7 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { InventoryMovementResponse, RemissionLineRequest, RemissionResponse } from '../../core/models/inventory.model';
 import { Grower, GrowerCreateRequest } from '../../core/models/grower.model';
@@ -11,6 +9,7 @@ import { AccessWindowComponent } from '../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber } from '../../shared/utils/number-format';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from './remission-invoice';
+import { openPdf } from '../../shared/utils/pdf-preview';
 
 interface DraftLine {
   readonly inventoryMovementId: number;
@@ -63,10 +62,9 @@ export class RemissionFormComponent {
   readonly result = signal<RemissionResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
-  private readonly logoDataUrlPromise: Promise<string | null>;
+  private readonly logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
 
   constructor() {
-    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
     this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
   }
 
@@ -75,11 +73,10 @@ export class RemissionFormComponent {
     if (!remission) {
       return;
     }
-    this.logoDataUrlPromise.then((logoDataUrl) => {
-      const docDefinition = buildRemissionDocDefinition(remission, logoDataUrl);
-      pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(docDefinition).open();
-    });
+    openPdf(
+      this.logoDataUrlPromise.then((logo) => buildRemissionDocDefinition(remission, logo)),
+      () => this.errorMessage.set('No se pudo generar la remisión'),
+    );
   }
 
   kg(value: number): string {

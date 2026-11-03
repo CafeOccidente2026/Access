@@ -24,4 +24,12 @@ describe('AgencyPickerComponent', () => {
       expect(input.value).toBe('El Tambo');
     }
   });
+
+  it('gives its input the accessible name it receives (the visible label is outside the component)', () => {
+    const fixture = TestBed.createComponent(AgencyPickerComponent);
+    fixture.componentRef.setInput('ariaLabel', 'Agencia');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('input')!.getAttribute('aria-label')).toBe('Agencia');
+  });
 });
+

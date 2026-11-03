@@ -2,10 +2,10 @@
   <app-access-window title="REIMPRIMIR REMISIÓN" bodyClass="bg-white flex-1 flex flex-col">
     <div class="flex flex-1 flex-col gap-3 p-4">
       <div class="flex items-end gap-3">
-        <label class="flex w-56 flex-col gap-1 text-sm">
+        <div class="flex w-56 flex-col gap-1 text-sm">
           <span class="font-medium text-blue-900">Pto Compra</span>
-          <app-agency-picker></app-agency-picker>
-        </label>
+          <app-agency-picker [ariaLabel]="'Pto Compra'"></app-agency-picker>
+        </div>
         <label class="flex flex-col gap-1 text-sm">
           <span class="font-medium text-blue-900">N° de Remisión</span>
           <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="remissionNumber()" (input)="remissionNumber.set($any($event.target).value)" (keyup.enter)="search()" />

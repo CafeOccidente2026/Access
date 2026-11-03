@@ -64,4 +64,14 @@ describe('PaymentPanelComponent', () => {
     lower('payCash', '1000');
     expect(keys()).toEqual(['payCash']);
   });
+
+  it('the total box is named after its label (Tot F de Pago)', () => {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('definition', definition);
+    fixture.componentRef.setInput('netToPay', 1000);
+    fixture.detectChanges();
+    const inputs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('input'));
+    expect(inputs.at(-1)!.getAttribute('aria-label')).toBe('Tot F de Pago');
+  });
 });
+

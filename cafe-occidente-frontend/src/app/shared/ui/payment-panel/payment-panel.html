@@ -39,7 +39,7 @@
 
     <div class="flex items-center justify-end gap-2 text-sm font-semibold">
       <span>{{ definition.totalLabel }}:</span>
-      <input class="w-32 rounded border border-slate-300 bg-green-100 px-2 py-1 text-right shadow-sm" [value]="total()" readonly />
+      <input class="w-32 rounded border border-slate-300 bg-green-100 px-2 py-1 text-right shadow-sm" [attr.aria-label]="definition.totalLabel" [value]="total()" readonly />
     </div>
     <p *ngIf="unbalanced()" class="text-sm font-semibold text-red-600">{{ definition.unbalancedMessage }}</p>
     <p *ngIf="missingCheckNumber()" class="text-sm text-red-600">{{ definition.checkNumberMessage }}</p>

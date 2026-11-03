@@ -45,6 +45,8 @@ export class ComboboxComponent implements OnChanges, OnDestroy {
   @Input() disabled = false;
   @Input() dataFieldKey = '';
   @Input() inputClass = '';
+  /** Nombre del campo para lectores de pantalla (la etiqueta visible esta fuera del componente). */
+  @Input() ariaLabel = '';
 
   @Output() readonly valueChange = new EventEmitter<string>();
   @Output() readonly committed = new EventEmitter<void>();

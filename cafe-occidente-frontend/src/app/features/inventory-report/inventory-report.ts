@@ -72,7 +72,7 @@ export class InventoryReportComponent {
   }
 
   cancel(): void {
-    this.router.navigateByUrl('/compras/inventarios');
+    void this.router.navigateByUrl('/compras/inventarios');
   }
 
   accept(): void {

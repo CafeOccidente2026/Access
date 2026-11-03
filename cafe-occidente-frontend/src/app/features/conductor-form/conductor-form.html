@@ -14,22 +14,22 @@
       </ng-container>
 
       <div *ngIf="mode() === 'new'" class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
-        <span>Fecha</span>
-        <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(today)" />
-        <span>Cédula</span>
-        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.idNumber" />
-        <span>Nombre</span>
-        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.firstName" />
-        <span>Apellidos</span>
-        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.lastName" />
+        <label for="conductor-fecha">Fecha</label>
+        <input id="conductor-fecha" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(today)" />
+        <label for="conductor-cedula">Cédula</label>
+        <input id="conductor-cedula" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.idNumber" />
+        <label for="conductor-nombre">Nombre</label>
+        <input id="conductor-nombre" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.firstName" />
+        <label for="conductor-apellidos">Apellidos</label>
+        <input id="conductor-apellidos" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.lastName" />
         <span>Agencia</span>
-        <app-agency-picker></app-agency-picker>
-        <span>Dirección</span>
-        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.address" />
-        <span>Emp. Transp.</span>
-        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.transportCompany" />
-        <span>Vehículo</span>
-        <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.vehiclePlate" />
+        <app-agency-picker [ariaLabel]="'Agencia'"></app-agency-picker>
+        <label for="conductor-direccion">Dirección</label>
+        <input id="conductor-direccion" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.address" />
+        <label for="conductor-emp-transp">Emp. Transp.</label>
+        <input id="conductor-emp-transp" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.transportCompany" />
+        <label for="conductor-vehiculo">Vehículo</label>
+        <input id="conductor-vehiculo" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="form.vehiclePlate" />
         <span></span>
         <div class="flex justify-end gap-2">
           <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 hover:bg-slate-100" (click)="choose('choose')">Cancelar</button>
@@ -45,20 +45,20 @@
           (valueChange)="onIdNumberTyped($event)"
         ></app-combobox>
         <ng-container *ngIf="selected() as c">
-          <span>Fecha</span>
-          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(c.affiliationDate)" />
-          <span>Nombre</span>
-          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.firstName" />
-          <span>Apellidos</span>
-          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.lastName" />
-          <span>Agencia</span>
-          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.agencyName" />
-          <span>Dirección</span>
-          <input type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.address" />
-          <span>Emp. Transp.</span>
-          <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="transportCompany" />
-          <span>Vehículo</span>
-          <input type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="vehiclePlate" />
+          <label for="conductor-fecha-2">Fecha</label>
+          <input id="conductor-fecha-2" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(c.affiliationDate)" />
+          <label for="conductor-nombre-2">Nombre</label>
+          <input id="conductor-nombre-2" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.firstName" />
+          <label for="conductor-apellidos-2">Apellidos</label>
+          <input id="conductor-apellidos-2" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.lastName" />
+          <label for="conductor-agencia">Agencia</label>
+          <input id="conductor-agencia" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.agencyName" />
+          <label for="conductor-direccion-2">Dirección</label>
+          <input id="conductor-direccion-2" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="c.address" />
+          <label for="conductor-emp-transp-2">Emp. Transp.</label>
+          <input id="conductor-emp-transp-2" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="transportCompany" />
+          <label for="conductor-vehiculo-2">Vehículo</label>
+          <input id="conductor-vehiculo-2" type="text" class="rounded border border-slate-300 px-2 py-1" [(ngModel)]="vehiclePlate" />
           <span></span>
           <span class="text-xs text-slate-600">Actualizado: {{ c.updatedAt ? dateTime(c.updatedAt) : '—' }}</span>
         </ng-container>
