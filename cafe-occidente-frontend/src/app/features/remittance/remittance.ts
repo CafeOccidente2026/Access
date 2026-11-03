@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 
 import { RemittancePurchase } from '../../core/models/remittance.model';
@@ -10,7 +10,7 @@ import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent } fro
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
-import { RemittanceWorkbook, remittanceWorkbooks, saveWorkbooks } from './remittance-files';
+import { RemittanceWorkbook, remittanceWorkbooks, saveBlob, workbookBlobs } from './remittance-files';
 
 export interface RemittanceContent {
   readonly windowTitle: string;
@@ -79,8 +79,8 @@ export class RemittanceComponent {
   readonly saving = signal(false);
   readonly unmarking = signal(false);
   readonly confirmingUnmark = signal(false);
-  /** Descarga de los libros; los tests la reemplazan. */
-  saveFiles: (books: readonly RemittanceWorkbook[]) => Promise<void> = saveWorkbooks;
+  /** Descarga de un archivo; los tests la reemplazan. */
+  saveFile: (fileName: string, blob: Blob) => void = saveBlob;
 
   private readonly specialsResource = rxResource({
     params: () => this.fund(),
@@ -122,6 +122,11 @@ export class RemittanceComponent {
     stream: ({ params }) => this.service.files(params),
   });
   readonly books = computed(() => (this.filesResource.hasValue() ? remittanceWorkbooks(this.filesResource.value()) : []));
+  private readonly blobsResource = resource({
+    params: () => (this.books().length ? this.books() : undefined),
+    loader: ({ params }) => workbookBlobs(params),
+  });
+  readonly filesReady = computed(() => this.blobsResource.hasValue());
 
   readonly message = linkedSignal({
     source: this.searchValue,
@@ -174,11 +179,12 @@ export class RemittanceComponent {
     }
   }
 
-  /** Un archivo por clic: Chrome bloquea las descargas automaticas que siguen a la primera. */
-  async download(book: RemittanceWorkbook): Promise<void> {
-    try {
-      await this.saveFiles([book]);
-    } catch {
+  /** Un archivo por clic y sin esperas: Chrome bloquea las descargas que no salen directo de un clic. */
+  download(book: RemittanceWorkbook): void {
+    const blob = this.blobsResource.hasValue() ? this.blobsResource.value().get(book.fileName) : undefined;
+    if (blob) {
+      this.saveFile(book.fileName, blob);
+    } else {
       this.message.set(this.content()?.messages.filesError ?? null);
     }
   }
