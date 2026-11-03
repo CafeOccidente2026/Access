@@ -31,8 +31,26 @@ function normalizeDecimalComma(value: string): string {
 /** Separador de miles con punto, estilo colombiano (ej. "2500000" -> "2.500.000"), para inputs que
  *  formatean en vivo mientras el usuario digita (solo dígitos, sin decimales). */
 export function formatThousands(digits: string): string {
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Sin regex (S8786): un punto antes de cada grupo de 3 digitos que cierra un tramo de digitos, si lo
+  // precede una letra, digito o "_" (lo mismo que hacia /\B(?=(\d{3})+(?!\d))/g).
+  let out = '';
+  let run = 0; // digitos seguidos desde la posicion actual hasta el primer no digito
+  const runs = new Array<number>(digits.length + 1).fill(0);
+  for (let i = digits.length - 1; i >= 0; i--) {
+    run = isDigit(digits[i]) ? run + 1 : 0;
+    runs[i] = run;
+  }
+  for (let i = 0; i < digits.length; i++) {
+    if (i > 0 && runs[i] >= 3 && runs[i] % 3 === 0 && isWordChar(digits[i - 1])) {
+      out += '.';
+    }
+    out += digits[i];
+  }
+  return out;
 }
+
+const isDigit = (c: string) => c >= '0' && c <= '9';
+const isWordChar = (c: string) => isDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_';
 
 /** "SDTA-3500" -> "3500": el Anuncio se guarda y numera con prefijo por agencia, pero en
  *  pantalla se muestra solo el numero. */
