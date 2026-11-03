@@ -149,6 +149,9 @@ describe('PermissionService', () => {
   it('sends the user as a query parameter', () => {
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
     TestBed.inject(PermissionService).list(5).subscribe();
-    TestBed.inject(HttpTestingController).expectOne(`${API_BASE_URL}/permissions?userId=5`).flush([]);
+    const request = TestBed.inject(HttpTestingController).expectOne(`${API_BASE_URL}/permissions?userId=5`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('userId')).toBe('5');
+    request.flush([]);
   });
 });
