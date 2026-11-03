@@ -83,17 +83,18 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
       utc(2026, 5, 16, 7, 34, 20), 'SDXX1001', 'LF', 300, 94, 28200, 3000000, 'NESPRESSO - FTUSA']);
     expect(first[4]).toMatchObject({ format: 'mm-dd-yy' });
 
-    // Filas 2 y 3 de Excel: las facturas; 4: sumas; 5 y 6 vacias; 7 y 8: los dos cocientes.
+    // Filas 2 y 3 de Excel: las facturas; 4: sumas; 5 y 6 vacias; 7 y 8: los dos cocientes. Sin '=' inicial: la
+    // libreria lo escribe tal cual en <f>, y el archivo del area trae <f>SUM(H2:H17)</f> y <f>+J18/H18</f>.
     const sums = data[3] as Cell[];
-    expect(sums[7]).toEqual({ value: '=SUM(H2:H3)', type: 'Formula' });
-    expect(sums[9]).toEqual({ value: '=SUM(J2:J3)', type: 'Formula' });
-    expect(sums[10]).toEqual({ value: '=SUM(K2:K3)', type: 'Formula' });
+    expect(sums[7]).toEqual({ value: 'SUM(H2:H3)', type: 'Formula' });
+    expect(sums[9]).toEqual({ value: 'SUM(J2:J3)', type: 'Formula' });
+    expect(sums[10]).toEqual({ value: 'SUM(K2:K3)', type: 'Formula' });
     expect(values(data[4]).every((v) => v == null)).toBe(true);
     expect(values(data[5]).every((v) => v == null)).toBe(true);
     expect(values(data[6])[4]).toBe('FACTOR PONDERADO');
-    expect(data[6][7]).toEqual({ value: '=+J4/H4', type: 'Formula' });
+    expect(data[6][7]).toEqual({ value: '+J4/H4', type: 'Formula' });
     expect(values(data[7])[4]).toBe('VR KG PROM REMISION');
-    expect(data[7][7]).toEqual({ value: '=+K4/H4', type: 'Formula' });
+    expect(data[7][7]).toEqual({ value: '+K4/H4', type: 'Formula' });
     expect(data).toHaveLength(8);
 
     // Lo que dan esas formulas con las filas de arriba: sum(KAS)/sum(cantidad) y sum(PR_TOTAL)/sum(cantidad).
