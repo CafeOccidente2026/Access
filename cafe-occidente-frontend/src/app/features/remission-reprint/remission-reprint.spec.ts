@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import pdfMake from 'pdfmake/build/pdfmake';
 import { describe, expect, it, vi } from 'vitest';
 
 import { InventoryService } from '../../core/services/inventory.service';
-import * as pdfPreview from '../../shared/utils/pdf-preview';
 import { RemissionReprintComponent } from './remission-reprint';
 
 describe('RemissionReprintComponent', () => {
@@ -13,7 +13,7 @@ describe('RemissionReprintComponent', () => {
       providers: [{ provide: InventoryService, useValue: { findRemissionByNumber: () => of([remission]) } }],
     });
     const component = TestBed.createComponent(RemissionReprintComponent).componentInstance;
-    const render = vi.spyOn(pdfPreview, 'renderPdfPreview').mockImplementation(() => {
+    const render = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
       throw new Error('pdfmake');
     });
     component.remissionNumber.set('SDBU-RP-0001');
