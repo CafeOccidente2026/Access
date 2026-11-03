@@ -155,20 +155,22 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     expect(component.message()).toBe(content.messages.notFound);
   });
 
-  it('each file has its own button: one click downloads only that file (Chrome does not block it)', async () => {
+  it('each file has its own button: the xlsx is built beforehand and the click downloads it at once', async () => {
     const { component } = await render();
-    const saveFiles = vi.fn(() => Promise.resolve());
-    component.saveFiles = saveFiles;
+    const saveFile = vi.fn();
+    component.saveFile = saveFile;
     component.search('SDXX-RP-0008');
     await settle();
     http.expectOne((r) => r.url === URL).flush([REMITTANCE]);
     await settle();
-
     http.expectOne(`${URL}/9/files`).flush(FILES);
-    await settle();
+    await vi.waitFor(() => expect(component.filesReady()).toBe(true));
 
-    await component.download(component.books()[3]);
-    expect(saveFiles).toHaveBeenCalledTimes(1);
-    expect((saveFiles.mock.calls[0] as unknown[])[0]).toEqual([component.books()[3]]);
+    // Sin esperar nada entre el clic y la descarga: Chrome solo deja pasar las que salen del clic.
+    component.download(component.books()[3]);
+    expect(saveFile).toHaveBeenCalledTimes(1);
+    const [name, blob] = saveFile.mock.calls[0] as [string, Blob];
+    expect(name).toBe('ParaAlmacafe_SDXX-RP-0008.xlsx');
+    expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
   });
 });
