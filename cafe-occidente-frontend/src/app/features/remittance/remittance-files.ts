@@ -74,6 +74,7 @@ function table(columns: readonly Column[], files: RemittanceFiles): Cell[][] {
   return [columns.map(([header]) => cell(header)), ...files.lines.map((l) => columns.map(([, value]) => value(l, files)))];
 }
 
+/** Sin '=' inicial: write-excel-file escribe el texto tal cual en <f>, como el archivo del area. */
 const formula = (value: string): Cell => ({ value, type: 'Formula' });
 
 /**
@@ -86,11 +87,11 @@ function operationsTotals(lastLineRow: number): Cell[][] {
   const row = (cells: Record<number, Cell>) => Array.from({ length: width }, (_, i) => cells[i] ?? null);
   const sumRow = lastLineRow + 1;
   return [
-    row({ 7: formula(`=SUM(H2:H${lastLineRow})`), 9: formula(`=SUM(J2:J${lastLineRow})`), 10: formula(`=SUM(K2:K${lastLineRow})`) }),
+    row({ 7: formula(`SUM(H2:H${lastLineRow})`), 9: formula(`SUM(J2:J${lastLineRow})`), 10: formula(`SUM(K2:K${lastLineRow})`) }),
     row({}),
     row({}),
-    row({ 4: cell('FACTOR PONDERADO'), 7: formula(`=+J${sumRow}/H${sumRow}`) }),
-    row({ 4: cell('VR KG PROM REMISION'), 7: formula(`=+K${sumRow}/H${sumRow}`) }),
+    row({ 4: cell('FACTOR PONDERADO'), 7: formula(`+J${sumRow}/H${sumRow}`) }),
+    row({ 4: cell('VR KG PROM REMISION'), 7: formula(`+K${sumRow}/H${sumRow}`) }),
   ];
 }
 
