@@ -71,6 +71,16 @@ public class PurchaseAnnulmentRepository {
      * Entradas de inventario de la compra que ya tuvieron salidas (remision) o saldo menor a lo comprado.
      * Bloquea antes la entrada: una remision que la toque a la vez espera a que termine la anulacion.
      */
+    /** Numero de la remesa vigente en la que esta la compra, si esta en una. */
+    public Optional<String> remittanceNumber(AnnulmentModule module, Long id) {
+        return jdbc.queryForList("SELECT r.numero_remesa FROM remesas r JOIN (SELECT 'DRY' AS module, id, remesa_id"
+                        + " FROM compras_cafe_seco UNION ALL SELECT 'GREEN', id, remesa_id FROM compras_cafe_verde"
+                        + " UNION ALL SELECT 'HUSK', id, remesa_id FROM compras_pasilla) p ON p.remesa_id = r.id"
+                        + " WHERE p.module = :module AND p.id = :id AND r.estado = 'VIGENTE'",
+                new MapSqlParameterSource().addValue("module", module.name()).addValue("id", id), String.class)
+                .stream().findFirst();
+    }
+
     public boolean hasInventoryExits(AnnulmentModule module, Long id) {
         jdbc.queryForList("SELECT id FROM inventarios WHERE modulo_compra = :module AND compra_id = :id FOR UPDATE",
                 new MapSqlParameterSource().addValue("module", module.inventoryModule).addValue("id", id));

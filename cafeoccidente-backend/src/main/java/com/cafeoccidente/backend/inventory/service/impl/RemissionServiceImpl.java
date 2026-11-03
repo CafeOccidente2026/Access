@@ -127,7 +127,7 @@ public class RemissionServiceImpl implements RemissionService {
     }
 
     /** {prefijo del ControlRecord}-{LF|RP}-{consecutivo}: minimo 4 digitos, crece sin truncar. */
-    static String displayNumber(String prefix, String fundCode, int sequence) {
+    public static String displayNumber(String prefix, String fundCode, int sequence) {
         return prefix + "-" + fundCode + "-" + String.format("%04d", sequence);
     }
 

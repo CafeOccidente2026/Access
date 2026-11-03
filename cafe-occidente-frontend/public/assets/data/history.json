@@ -22,7 +22,8 @@
     "USUARIO": "Usuario",
     "AGENCIA": "Agencia",
     "PERMISO": "Permiso",
-    "TERCERO": "Tercero"
+    "TERCERO": "Tercero",
+    "REMESA": "Remesa"
   },
   "actions": {
     "CREAR": "Crear",
@@ -32,9 +33,13 @@
     "DESACTIVAR": "Desactivar",
     "PUBLICAR": "Publicar",
     "CONCEDER": "Conceder",
-    "RETIRAR": "Retirar"
+    "RETIRAR": "Retirar",
+    "DESMARCAR": "Desmarcar"
   },
   "fields": {
+    "number": "Número",
+    "status": "Estado",
+    "purchases": "Facturas",
     "screen": "Pantalla",
     "username": "Usuario",
     "idNumber": "Cédula",

@@ -14,6 +14,7 @@ import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
 import com.cafeoccidente.backend.permissions.service.PermissionService;
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
+import com.cafeoccidente.backend.purchases.remittance.service.RemittanceService;
 import com.cafeoccidente.backend.purchases.query.service.PurchaseQueryService;
 import com.cafeoccidente.backend.purchases.report.service.PurchaseReportService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
@@ -186,6 +187,14 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
         add(ADMIN_USER, put, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
 
+        // Genera Remesa (RF-11, RF-12): Administrador y Usuario; desmarcar una remesa, solo el Administrador.
+        add(ADMIN_USER, get, "/api/remittances/pending", "/api/remittances/pending?fundCode=RP");
+        add(ADMIN_USER, get, "/api/remittances/specials", "/api/remittances/specials?fundCode=RP");
+        add(ADMIN_USER, post, "/api/remittances");
+        add(ADMIN_USER, get, "/api/remittances", "/api/remittances?number=X");
+        add(ADMIN_USER, get, "/api/remittances/{id}/files", "/api/remittances/1/files");
+        add(ADMIN, post, "/api/remittances/{id}/unmark", "/api/remittances/1/unmark");
+
         // Remesa (RF-11) e Inventarios (RF-22, roles por definir: como hoy).
         add(ADMIN_USER, post, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions");
@@ -257,6 +266,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private InventoryReportService inventoryReportService;
     @MockitoBean private RemissionService remissionService;
     @MockitoBean private PurchaseAnnulmentService purchaseAnnulmentService;
+    @MockitoBean private RemittanceService remittanceService;
     @MockitoBean private PurchaseReportService purchaseReportService;
     @MockitoBean private PurchaseQueryService purchaseQueryService;
     @MockitoBean private DryCoffeePurchaseService dryCoffeePurchaseService;
