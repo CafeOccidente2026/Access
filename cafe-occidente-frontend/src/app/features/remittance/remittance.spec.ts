@@ -175,4 +175,20 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     expect(name).toBe('ParaAlmacafe_SDXX-RP-0008.xlsx');
     expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
   });
+
+  it('every field has an accessible name: its label, or the invoice number on each checkbox', async () => {
+    const { fixture, component } = await render();
+    component.special.set('RN');
+    await accept(component, [P1, P2]);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const pick = host.querySelector<HTMLInputElement>('[data-testid="pick-HUSK-7"]')!;
+    expect(pick.getAttribute('aria-label')).toBe('Incluir la factura SDXX1002');
+    for (const field of Array.from(host.querySelectorAll<HTMLElement>('input, select'))) {
+      const labelled = field.getAttribute('aria-label') || (field.id && host.querySelector(`label[for="${field.id}"]`));
+      expect(labelled, field.outerHTML.slice(0, 80)).toBeTruthy();
+    }
+  });
 });
+
