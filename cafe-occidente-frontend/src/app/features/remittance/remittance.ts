@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
-import { firstValueFrom, map, switchMap } from 'rxjs';
 
 import { RemittancePurchase } from '../../core/models/remittance.model';
 import { AuthService } from '../../core/services/auth.service';
@@ -33,7 +32,8 @@ export interface RemittanceContent {
   readonly searchButton: string;
   readonly summary: string;
   readonly statuses: Record<string, string>;
-  readonly downloadLabel: string;
+  readonly filesLabel: string;
+  readonly fileLabels: Record<string, string>;
   readonly unmarkLabel: string;
   readonly unmarkConfirm: string;
   readonly yesLabel: string;
@@ -113,6 +113,16 @@ export class RemittanceComponent {
   readonly found = linkedSignal({ source: this.searchValue, computation: (list) => list?.[0] ?? null });
   readonly canUnmark = computed(() => this.auth.isAdmin() && this.found()?.status === 'VIGENTE');
 
+  /** Las filas de los 4 archivos de la remesa vigente que se muestra, cargadas antes del clic. */
+  private readonly filesResource = rxResource({
+    params: () => {
+      const r = this.found();
+      return r?.status === 'VIGENTE' ? r.id : undefined;
+    },
+    stream: ({ params }) => this.service.files(params),
+  });
+  readonly books = computed(() => (this.filesResource.hasValue() ? remittanceWorkbooks(this.filesResource.value()) : []));
+
   readonly message = linkedSignal({
     source: this.searchValue,
     computation: (list) => (list?.length === 0 ? (this.content()?.messages.notFound ?? null) : null),
@@ -147,12 +157,12 @@ export class RemittanceComponent {
     saveOnce(this.saving, () => this.service.create({
       fundCode: request.fund, specialType: request.special || null, purchases,
       packagingQuantity: Number(this.packagingQuantity()), packagingType: this.packagingType(),
-    }).pipe(switchMap((remittance) => this.service.files(remittance.id).pipe(map((files) => ({ remittance, files }))))), {
-      next: ({ remittance, files }) => {
+    }), {
+      next: (remittance) => {
+        this.found.set(remittance);
         this.message.set(fill(content.messages.generated, { number: remittance.number }));
         this.packagingQuantity.set('');
         this.accept();
-        this.saveFiles(remittanceWorkbooks(files)).catch(() => this.message.set(content.messages.filesError));
       },
       error: (err) => this.message.set(err?.error?.message ?? content.messages.error),
     });
@@ -164,17 +174,12 @@ export class RemittanceComponent {
     }
   }
 
-  /** Vuelve a descargar los 4 archivos de la remesa encontrada. */
-  async downloadFound(): Promise<void> {
-    const remittance = this.found();
-    const content = this.content();
-    if (!remittance || !content) {
-      return;
-    }
+  /** Un archivo por clic: Chrome bloquea las descargas automaticas que siguen a la primera. */
+  async download(book: RemittanceWorkbook): Promise<void> {
     try {
-      await this.saveFiles(remittanceWorkbooks(await firstValueFrom(this.service.files(remittance.id))));
+      await this.saveFiles([book]);
     } catch {
-      this.message.set(content.messages.filesError);
+      this.message.set(this.content()?.messages.filesError ?? null);
     }
   }
 
