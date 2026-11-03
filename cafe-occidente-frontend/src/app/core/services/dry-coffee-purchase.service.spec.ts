@@ -21,8 +21,16 @@ describe('DryCoffeePurchaseService.qualityPercentages', () => {
     service.qualityPercentages(200, 10, 1, 'NESPRESSO - FTUSA').subscribe();
     service.qualityPercentages(200).subscribe();
 
-    http.expectOne(`${url}?totalStoredWeight=200&defectiveStoredWeight=10&fundId=1&specialType=NESPRESSO+-+FTUSA`).flush({});
-    http.expectOne(`${url}?totalStoredWeight=200`).flush({});
+    const withSpecial = http.expectOne(`${url}?totalStoredWeight=200&defectiveStoredWeight=10&fundId=1&specialType=NESPRESSO+-+FTUSA`);
+    const withoutSpecial = http.expectOne(`${url}?totalStoredWeight=200`);
+    // El servicio arma los parametros en la URL (URLSearchParams), no en HttpParams.
+    const query = (url: string) => new URL(url).searchParams;
+    expect(query(withSpecial.request.url).get('specialType')).toBe('NESPRESSO - FTUSA');
+    expect(query(withSpecial.request.url).get('fundId')).toBe('1');
+    expect(query(withoutSpecial.request.url).has('fundId')).toBe(false);
+    expect(query(withoutSpecial.request.url).has('specialType')).toBe(false);
+    withSpecial.flush({});
+    withoutSpecial.flush({});
     http.verify();
   });
 });

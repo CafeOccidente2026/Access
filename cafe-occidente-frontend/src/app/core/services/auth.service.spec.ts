@@ -41,8 +41,10 @@ describe('AuthService', () => {
   });
 
   it('without a session there is nothing to refresh', () => {
-    auth.refreshSession().subscribe();
+    let session: unknown = 'sin respuesta';
+    auth.refreshSession().subscribe((s) => (session = s));
     backend.expectNone(`${API_BASE_URL}/me`);
+    expect(session).toBeNull();
   });
 
   it('hasRole: no role list means any session', () => {
