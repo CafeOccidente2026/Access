@@ -3,16 +3,16 @@
     <div class="flex h-full flex-col gap-2 p-3 text-sm text-slate-800">
       <!-- Dialogo Remesa: Especial + Aceptar; a la derecha, buscar una remesa ya generada. -->
       <div class="flex flex-wrap items-end gap-3">
-        <label class="flex flex-col">
+        <label class="flex flex-col" for="remittance-fund">
           <span class="font-medium">{{ c.fundLabel }}:</span>
-          <select data-testid="fund" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="fund()"
+          <select id="remittance-fund" data-testid="fund" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="fund()"
             (change)="fund.set($any($event.target).value)">
             <option *ngFor="let f of c.funds" [value]="f">{{ f }}</option>
           </select>
         </label>
-        <label class="flex flex-col">
+        <label class="flex flex-col" for="remittance-special">
           <span class="font-medium">{{ c.specialLabel }}:</span>
-          <select data-testid="special" class="w-72 rounded border border-slate-300 bg-white px-2 py-1" [value]="special()"
+          <select id="remittance-special" data-testid="special" class="w-72 rounded border border-slate-300 bg-white px-2 py-1" [value]="special()"
             (change)="special.set($any($event.target).value)">
             <option value="">{{ c.allLabel }}</option>
             <option *ngFor="let s of specials()" [value]="s">{{ s }}</option>
@@ -21,9 +21,9 @@
         <app-button [label]="c.acceptLabel" (pressed)="accept()"></app-button>
 
         <form class="ml-auto flex items-end gap-2" (submit)="$event.preventDefault(); search(number.value)">
-          <label class="flex flex-col">
+          <label class="flex flex-col" for="remittance-number">
             <span class="font-medium">{{ c.searchLabel }}:</span>
-            <input #number data-testid="remittance-number" class="w-40 rounded border border-slate-300 bg-white px-2 py-1 uppercase" />
+            <input #number id="remittance-number" data-testid="remittance-number" class="w-40 rounded border border-slate-300 bg-white px-2 py-1 uppercase" />
           </label>
           <app-button [label]="c.searchButton" (pressed)="search(number.value)"></app-button>
         </form>
@@ -57,7 +57,7 @@
           <tbody>
             <tr *ngFor="let p of pending() ?? []" class="border-t border-slate-200 odd:bg-slate-50">
               <td class="px-2 py-0.5 text-center">
-                <input type="checkbox" [attr.data-testid]="'pick-' + p.module + '-' + p.id" [checked]="isSelected(p)"
+                <input type="checkbox" [attr.data-testid]="'pick-' + p.module + '-' + p.id" [attr.aria-label]="pickLabel(c, p)" [checked]="isSelected(p)"
                   (change)="toggle(p)" />
               </td>
               <td class="px-2 py-0.5">{{ p.invoice }}</td>
@@ -77,19 +77,19 @@
 
       <!-- Pie de Genera Plano: Acumulado, empaques de la remesa (RN-11.8) y Genera Remesa. -->
       <div class="flex flex-wrap items-end gap-4">
-        <label class="flex flex-col">
+        <label class="flex flex-col" for="remittance-accumulated">
           <span class="font-medium">{{ c.accumulatedLabel }}:</span>
-          <input data-testid="accumulated" class="w-32 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-right"
+          <input id="remittance-accumulated" data-testid="accumulated" class="w-32 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-right"
             [value]="kg(accumulated())" readonly />
         </label>
-        <label class="flex flex-col">
+        <label class="flex flex-col" for="remittance-packaging-quantity">
           <span class="font-medium">{{ c.packagingQuantityLabel }}:</span>
-          <input data-testid="packaging-quantity" inputmode="numeric" class="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-right"
+          <input id="remittance-packaging-quantity" data-testid="packaging-quantity" inputmode="numeric" class="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-right"
             [value]="packagingQuantity()" (input)="packagingQuantity.set($any($event.target).value.replace(/\D/g, '')); $any($event.target).value = packagingQuantity()" />
         </label>
-        <label class="flex flex-col">
+        <label class="flex flex-col" for="remittance-packaging-type">
           <span class="font-medium">{{ c.packagingTypeLabel }}:</span>
-          <select data-testid="packaging-type" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="packagingType()"
+          <select id="remittance-packaging-type" data-testid="packaging-type" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="packagingType()"
             (change)="packagingType.set($any($event.target).value)">
             <option value=""></option>
             <option *ngFor="let t of c.packagingTypes" [value]="t">{{ t }}</option>

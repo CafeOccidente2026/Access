@@ -21,6 +21,8 @@ export interface RemittanceContent {
   readonly acceptLabel: string;
   readonly columns: Record<'selected' | 'invoice' | 'purchaseDate' | 'specialType' | 'idNumber' | 'sellerName' | 'netKg'
     | 'grossValue', string>;
+  /** Nombre accesible de la casilla de cada factura. */
+  readonly pickLabel: string;
   readonly pickFirst: string;
   readonly empty: string;
   readonly accumulatedLabel: string;
@@ -210,6 +212,10 @@ export class RemittanceComponent {
       },
       error: (err) => this.message.set(err?.error?.message ?? content.messages.error),
     });
+  }
+
+  pickLabel(content: RemittanceContent, p: RemittancePurchase): string {
+    return fill(content.pickLabel, { invoice: p.invoice });
   }
 
   summary(content: RemittanceContent): string {

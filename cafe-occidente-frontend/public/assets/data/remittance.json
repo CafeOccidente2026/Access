@@ -15,6 +15,7 @@
     "netKg": "cantidad",
     "grossValue": "Pr Total"
   },
+  "pickLabel": "Incluir la factura {invoice}",
   "pickFirst": "Elija el fondo y el especial y presione Aceptar.",
   "empty": "No hay facturas pendientes de remesar con ese fondo y especial.",
   "accumulatedLabel": "Acumulado",
