@@ -106,10 +106,22 @@ export function remittanceWorkbooks(files: RemittanceFiles): RemittanceWorkbook[
   ];
 }
 
-/** Descarga los libros uno tras otro (el navegador puede pedir permiso para varias descargas). */
-export async function saveWorkbooks(books: readonly RemittanceWorkbook[]): Promise<void> {
+/** Arma los .xlsx antes del clic: asi la descarga sale del clic mismo y Chrome no la bloquea. */
+export async function workbookBlobs(books: readonly RemittanceWorkbook[]): Promise<Map<string, Blob>> {
   const { default: writeExcelFile } = await import('write-excel-file/browser');
+  const blobs = new Map<string, Blob>();
   for (const book of books) {
-    await writeExcelFile(book.data, { sheet: book.sheet }).toFile(book.fileName);
+    blobs.set(book.fileName, await writeExcelFile(book.data, { sheet: book.sheet }).toBlob());
   }
+  return blobs;
+}
+
+/** Descarga un archivo ya armado, sin esperar nada (tiene que correr dentro del clic). */
+export function saveBlob(fileName: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url));
 }
