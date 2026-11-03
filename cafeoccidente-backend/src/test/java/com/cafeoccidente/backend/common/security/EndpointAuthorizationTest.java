@@ -97,7 +97,6 @@ class EndpointAuthorizationTest {
 
     /** Body por defecto "{}"; estos no lo aceptan (lista, o boolean primitivo que no admite null). */
     private static final Map<String, String> BODIES = Map.of(
-            "/api/remissions/mark-exported", "[]",
             "/api/vendors", "{\"association\": false}");
 
     /** Las 5 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
@@ -199,7 +198,6 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, post, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions/{id}", "/api/remissions/1");
-        add(ADMIN_USER, post, "/api/remissions/mark-exported");
         add(ADMIN_USER, get, "/api/inventory-movements");
         add(ADMIN_USER, get, "/api/inventory-movements/{id}", "/api/inventory-movements/1");
         add(ADMIN_USER, get, "/api/inventory-report");

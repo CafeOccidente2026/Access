@@ -45,20 +45,11 @@ public class RemissionController {
     /** "Reimprimir Remision" busca por numero+agencia; sin numero, lista todas (mas nueva primero).
      *  Siempre la agencia de trabajo (RF-05.1). */
     @GetMapping
-    public List<RemissionResponse> list(
-            @RequestParam(required = false) String remissionNumber,
-            @RequestParam(required = false, defaultValue = "false") boolean pendingExport) {
+    public List<RemissionResponse> list(@RequestParam(required = false) String remissionNumber) {
         Long agencyId = currentAgencyProvider.currentAgencyId();
         if (remissionNumber != null && !remissionNumber.isBlank()) {
             return remissionService.findByNumber(agencyId, remissionNumber).map(List::of).orElseGet(List::of);
         }
-        return pendingExport ? remissionService.listPendingExport(agencyId) : remissionService.listByAgency(agencyId);
-    }
-
-    /** "Genera Remesa"/"Genera Remesa Otros" (Form_Genera Plano.bas): marca como exportadas tras
-     *  descargar el Excel en el navegador (reemplaza el TransferSpreadsheet a D:\ + envio a SAP). */
-    @PostMapping("/mark-exported")
-    public List<RemissionResponse> markExported(@RequestBody List<Long> remissionIds) {
-        return remissionService.markExported(remissionIds);
+        return remissionService.listByAgency(agencyId);
     }
 }

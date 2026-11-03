@@ -14,8 +14,6 @@ public interface RemissionRepository extends JpaRepository<Remission, Long> {
 
     List<Remission> findByAgencyIdOrderByRemissionNumberDesc(Long agencyId);
 
-    List<Remission> findByAgencyIdAndExportedFalseOrderByRemissionNumberAsc(Long agencyId);
-
     Optional<Remission> findByAgencyIdAndRemissionNumber(Long agencyId, Integer remissionNumber);
 
     Optional<Remission> findByAgencyIdAndDisplayNumberIgnoreCase(Long agencyId, String displayNumber);
