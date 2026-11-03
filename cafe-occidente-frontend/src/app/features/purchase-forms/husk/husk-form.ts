@@ -8,7 +8,6 @@ import {
   HuskNextInvoiceNumber,
   HuskPurchaseCalculation,
   HuskPurchaseRequest,
-  HuskPurchaseResponse,
 } from '../../../core/models/husk-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
@@ -16,7 +15,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 
