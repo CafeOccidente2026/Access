@@ -80,10 +80,8 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     expect(component.accumulated()).toBe(300);
   });
 
-  it('Genera Remesa: two clicks create a single remittance, then its 4 files are downloaded', async () => {
+  it('Genera Remesa: two clicks create a single remittance, which then offers its 4 files', async () => {
     const { component } = await render();
-    const saveFiles = vi.fn(() => Promise.resolve());
-    component.saveFiles = saveFiles;
     component.special.set('RN');
     await accept(component, [P1, P2]);
     component.toggle(P1);
@@ -100,15 +98,15 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
       packagingQuantity: 10, packagingType: 'USADO',
     });
     post.flush(REMITTANCE);
-    http.expectOne(`${URL}/9/files`).flush(FILES);
-    await vi.waitFor(() => expect(saveFiles).toHaveBeenCalledTimes(1));
-    expect((saveFiles.mock.calls[0] as unknown[])[0]).toHaveLength(4);
-    expect(component.message()).toContain('SDXX-RP-0008');
     await settle();
+    expect(component.message()).toContain('SDXX-RP-0008');
+    expect(component.found()?.number).toBe('SDXX-RP-0008');
     // Las facturas remesadas salen de pendientes: la lista se vuelve a pedir.
     http.expectOne((r) => r.url === `${URL}/pending`).flush([]);
+    http.expectOne(`${URL}/9/files`).flush(FILES);
     await settle();
     expect(component.selected().size).toBe(0);
+    expect(component.books().map((b) => b.sheet)).toEqual(['ParaOperaciones', 'ParaOpen', 'GeneraPlano', 'ParaAlmacafe']);
   });
 
   it('cannot generate without invoices or without packaging', async () => {
@@ -157,7 +155,7 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     expect(component.message()).toBe(content.messages.notFound);
   });
 
-  it('downloads again the files of a remittance already generated', async () => {
+  it('each file has its own button: one click downloads only that file (Chrome does not block it)', async () => {
     const { component } = await render();
     const saveFiles = vi.fn(() => Promise.resolve());
     component.saveFiles = saveFiles;
@@ -166,9 +164,11 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     http.expectOne((r) => r.url === URL).flush([REMITTANCE]);
     await settle();
 
-    const done = component.downloadFound();
     http.expectOne(`${URL}/9/files`).flush(FILES);
-    await done;
+    await settle();
+
+    await component.download(component.books()[3]);
     expect(saveFiles).toHaveBeenCalledTimes(1);
+    expect((saveFiles.mock.calls[0] as unknown[])[0]).toEqual([component.books()[3]]);
   });
 });
