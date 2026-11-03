@@ -73,8 +73,11 @@ public class PurchaseAnnulmentRepository {
      */
     /** Numero de la remesa vigente en la que esta la compra, si esta en una. */
     public Optional<String> remittanceNumber(AnnulmentModule module, Long id) {
-        return jdbc.queryForList("SELECT r.numero_remesa FROM " + module.table + " p JOIN remesas r ON r.id = p.remesa_id"
-                + " WHERE p.id = :id AND r.estado = 'VIGENTE'", new MapSqlParameterSource("id", id), String.class)
+        return jdbc.queryForList("SELECT r.numero_remesa FROM remesas r JOIN (SELECT 'DRY' AS module, id, remesa_id"
+                        + " FROM compras_cafe_seco UNION ALL SELECT 'GREEN', id, remesa_id FROM compras_cafe_verde"
+                        + " UNION ALL SELECT 'HUSK', id, remesa_id FROM compras_pasilla) p ON p.remesa_id = r.id"
+                        + " WHERE p.module = :module AND p.id = :id AND r.estado = 'VIGENTE'",
+                new MapSqlParameterSource().addValue("module", module.name()).addValue("id", id), String.class)
                 .stream().findFirst();
     }
 
