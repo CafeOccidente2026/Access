@@ -3,10 +3,10 @@
     <div class="flex flex-1 flex-col gap-3 p-4" appFormFlow>
       <div class="flex w-[40rem] flex-col gap-2">
         <ng-container *ngFor="let field of s.fields">
-          <label *ngIf="field.key === 'agency'" class="flex items-center gap-2 text-sm">
+          <div *ngIf="field.key === 'agency'" class="flex items-center gap-2 text-sm">
             <span class="w-32 shrink-0 font-medium text-blue-900">{{ field.label }}:</span>
-            <app-agency-picker class="w-56" ></app-agency-picker>
-          </label>
+            <app-agency-picker class="w-56" [ariaLabel]="field.label"></app-agency-picker>
+          </div>
 
           <label *ngIf="field.key === 'idNumber'" class="flex items-center gap-2 text-sm">
             <span class="w-32 shrink-0 font-medium text-blue-900">{{ field.label }}:</span>

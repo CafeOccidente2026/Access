@@ -3,10 +3,10 @@
     <div class="flex flex-1 flex-col gap-3 p-4">
       <p *ngIf="r.prompt" class="text-sm font-medium text-blue-900">{{ r.prompt }}</p>
       <form class="flex flex-wrap items-end gap-3" appFormFlow (submit)="accept($event)">
-        <label class="flex w-56 flex-col gap-1 text-sm">
+        <div class="flex w-56 flex-col gap-1 text-sm">
           <span class="font-bold text-blue-900">{{ c.agencyLabel }}:</span>
-          <app-agency-picker></app-agency-picker>
-        </label>
+          <app-agency-picker [ariaLabel]="c.agencyLabel"></app-agency-picker>
+        </div>
         <label class="flex w-44 flex-col gap-1 text-sm">
           <span class="font-bold text-blue-900">{{ c.idNumberLabel }}:</span>
           <input type="text" inputmode="numeric" data-field-key="idNumber" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" (input)="idNumber.set($any($event.target).value)" />
