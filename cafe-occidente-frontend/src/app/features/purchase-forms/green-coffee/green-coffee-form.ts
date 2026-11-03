@@ -7,7 +7,6 @@ import {
   GreenAnnouncementInfo,
   GreenCoffeePurchaseCalculation,
   GreenCoffeePurchaseRequest,
-  GreenCoffeePurchaseResponse,
   GreenNextInvoiceNumber,
 } from '../../../core/models/green-coffee-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -15,7 +14,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
