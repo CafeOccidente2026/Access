@@ -33,6 +33,23 @@ class PurchaseAnnulmentSqlTest {
                 oldUnion(m -> oldSelect(m) + " WHERE p.numero_factura = :invoice" + OLD_OF_AGENCY) + " ORDER BY agency_name, module");
     }
 
+    /** Copia del armado viejo de neighborInvoice: con factura de partida (from) o sin ella. */
+    private static String oldNeighbor(AnnulmentDirection direction, Integer from) {
+        String filter = from == null || direction.comparison == null ? ""
+                : " AND p.numero_factura " + direction.comparison + " :from";
+        return "SELECT " + direction.aggregate + "(numero_factura) FROM ("
+                + oldUnion(m -> "SELECT p.numero_factura FROM " + m.table + " p WHERE TRUE" + OLD_OF_AGENCY + filter)
+                + ") f";
+    }
+
+    @Test
+    void theNeighborInvoiceIsTheSameSqlAsBeforeForEveryDirection() {
+        for (AnnulmentDirection direction : AnnulmentDirection.values()) {
+            assertThat(PurchaseAnnulmentRepository.neighborSql(direction, 1001)).isEqualTo(oldNeighbor(direction, 1001));
+            assertThat(PurchaseAnnulmentRepository.neighborSql(direction, null)).isEqualTo(oldNeighbor(direction, null));
+        }
+    }
+
     @Test
     void lockingAndAnnullingAreTheSameSqlAsBeforeForEveryModule() {
         for (AnnulmentModule module : AnnulmentModule.values()) {
