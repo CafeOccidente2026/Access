@@ -14,6 +14,7 @@ import com.cafeoccidente.backend.inventory.service.InventoryReportService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
 import com.cafeoccidente.backend.permissions.service.PermissionService;
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
+import com.cafeoccidente.backend.purchases.remittance.service.RemittanceService;
 import com.cafeoccidente.backend.purchases.query.service.PurchaseQueryService;
 import com.cafeoccidente.backend.purchases.report.service.PurchaseReportService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
@@ -265,6 +266,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private InventoryReportService inventoryReportService;
     @MockitoBean private RemissionService remissionService;
     @MockitoBean private PurchaseAnnulmentService purchaseAnnulmentService;
+    @MockitoBean private RemittanceService remittanceService;
     @MockitoBean private PurchaseReportService purchaseReportService;
     @MockitoBean private PurchaseQueryService purchaseQueryService;
     @MockitoBean private DryCoffeePurchaseService dryCoffeePurchaseService;
