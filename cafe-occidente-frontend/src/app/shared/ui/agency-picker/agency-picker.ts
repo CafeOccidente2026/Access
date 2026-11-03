@@ -9,11 +9,14 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-agency-picker',
   standalone: true,
-  template: `<input type="text" readonly [class]="inputClass + ' bg-slate-100'" [value]="auth.agencyName() ?? ''" />`,
+  template: `<input type="text" readonly [class]="inputClass + ' bg-slate-100'" [attr.aria-label]="ariaLabel || null"
+    [value]="auth.agencyName() ?? ''" />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AgencyPickerComponent {
   readonly auth = inject(AuthService);
 
   @Input() inputClass = 'w-full rounded border border-slate-300 px-2 py-1 text-sm';
+  /** Nombre del campo para lectores de pantalla (la etiqueta visible esta fuera del componente). */
+  @Input() ariaLabel = '';
 }
