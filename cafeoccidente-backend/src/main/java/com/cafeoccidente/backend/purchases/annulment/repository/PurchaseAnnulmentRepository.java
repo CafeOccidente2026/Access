@@ -41,20 +41,37 @@ public class PurchaseAnnulmentRepository {
         return Arrays.stream(AnnulmentModule.values()).map(sql).collect(Collectors.joining(" UNION ALL "));
     }
 
-    private static Map<AnnulmentModule, String> byModule(Function<AnnulmentModule, String> sql) {
-        Map<AnnulmentModule, String> map = new EnumMap<>(AnnulmentModule.class);
-        Arrays.stream(AnnulmentModule.values()).forEach(m -> map.put(m, sql.apply(m)));
+    private static <E extends Enum<E>> Map<E, String> byEnum(Class<E> type, Function<E, String> sql) {
+        Map<E, String> map = new EnumMap<>(type);
+        Arrays.stream(type.getEnumConstants()).forEach(e -> map.put(e, sql.apply(e)));
         return Collections.unmodifiableMap(map);
+    }
+
+    private static String neighbor(AnnulmentDirection direction, boolean fromInvoice) {
+        String filter = fromInvoice && direction.comparison != null
+                ? " AND p.numero_factura " + direction.comparison + " :from" : "";
+        return "SELECT " + direction.aggregate + "(numero_factura) FROM ("
+                + unionOfModules(m -> "SELECT p.numero_factura FROM " + m.table + " p WHERE TRUE" + OF_AGENCY + filter)
+                + ") f";
     }
 
     // SQL fijo, armado una sola vez con los datos del enum (S2077): nada del request entra al texto.
     static final String BY_INVOICE = unionOfModules(m -> select(m) + " WHERE p.numero_factura = :invoice" + OF_AGENCY)
             + " ORDER BY agency_name, module";
-    static final Map<AnnulmentModule, String> LOCK = byModule(m -> select(m) + " WHERE p.id = :id FOR UPDATE OF p");
-    static final Map<AnnulmentModule, String> ANNUL = byModule(m -> "UPDATE " + m.table + " SET estado = 'ANULADA',"
+    static final Map<AnnulmentModule, String> LOCK = byEnum(AnnulmentModule.class, m -> select(m) + " WHERE p.id = :id FOR UPDATE OF p");
+    static final Map<AnnulmentModule, String> ANNUL = byEnum(AnnulmentModule.class, m -> "UPDATE " + m.table + " SET estado = 'ANULADA',"
             + " anulado_en = now(), anulado_por_usuario_id = :userId, numero_cheque = NULL, "
             + m.zeroed.stream().map(c -> c + " = 0").collect(Collectors.joining(", "))
             + " WHERE id = :id AND estado = 'VALIDA' AND NOT anulacion_bloqueada");
+    private static final Map<AnnulmentDirection, String> NEIGHBOR_FROM =
+            byEnum(AnnulmentDirection.class, d -> neighbor(d, true));
+    private static final Map<AnnulmentDirection, String> NEIGHBOR_ANY =
+            byEnum(AnnulmentDirection.class, d -> neighbor(d, false));
+
+    /** El SQL fijo de la factura vecina; sin factura de partida no se filtra por ella. */
+    static String neighborSql(AnnulmentDirection direction, Integer from) {
+        return (from == null ? NEIGHBOR_ANY : NEIGHBOR_FROM).get(direction);
+    }
 
     /**
      * Cns_Compras por numero de factura. Seco, verde y pasilla comparten el consecutivo (Q7), pero las
@@ -67,12 +84,7 @@ public class PurchaseAnnulmentRepository {
 
     /** RN-23.2: la factura vecina de "from" en la agencia, en los 3 modulos; vacio si no hay mas. */
     public Optional<Integer> neighborInvoice(Long agencyId, Integer from, AnnulmentDirection direction) {
-        String filter = from == null || direction.comparison == null ? ""
-                : " AND p.numero_factura " + direction.comparison + " :from";
-        String sql = "SELECT " + direction.aggregate + "(numero_factura) FROM ("
-                + unionOfModules(m -> "SELECT p.numero_factura FROM " + m.table + " p WHERE TRUE" + OF_AGENCY + filter)
-                + ") f";
-        return Optional.ofNullable(jdbc.queryForObject(sql,
+        return Optional.ofNullable(jdbc.queryForObject(neighborSql(direction, from),
                 new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("from", from), Integer.class));
     }
 
