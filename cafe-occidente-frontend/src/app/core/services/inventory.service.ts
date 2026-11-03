@@ -32,15 +32,6 @@ export class InventoryService {
     });
   }
 
-  /** "Genera Remesa"/"Genera Remesa Otros": remisiones aun no incluidas en una remesa. */
-  listPendingExportRemissions(): Observable<RemissionResponse[]> {
-    return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions?pendingExport=true`);
-  }
-
-  markRemissionsExported(remissionIds: number[]): Observable<RemissionResponse[]> {
-    return this.http.post<RemissionResponse[]>(`${API_BASE_URL}/remissions/mark-exported`, remissionIds);
-  }
-
   /** Reporte Inventario por Cod. (productCode) o por Esp. (specialType); año en curso. */
   inventoryReport(filter: { productCode: string } | { specialType: string }): Observable<InventoryReportRow[]> {
     let params = new HttpParams();
