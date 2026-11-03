@@ -63,15 +63,9 @@ public class PurchaseAnnulmentRepository {
             + " anulado_en = now(), anulado_por_usuario_id = :userId, numero_cheque = NULL, "
             + m.zeroed.stream().map(c -> c + " = 0").collect(Collectors.joining(", "))
             + " WHERE id = :id AND estado = 'VALIDA' AND NOT anulacion_bloqueada");
-    private static final Map<AnnulmentDirection, String> NEIGHBOR_FROM =
-            byEnum(AnnulmentDirection.class, d -> neighbor(d, true));
-    private static final Map<AnnulmentDirection, String> NEIGHBOR_ANY =
-            byEnum(AnnulmentDirection.class, d -> neighbor(d, false));
-
-    /** El SQL fijo de la factura vecina; sin factura de partida no se filtra por ella. */
-    static String neighborSql(AnnulmentDirection direction, Integer from) {
-        return (from == null ? NEIGHBOR_ANY : NEIGHBOR_FROM).get(direction);
-    }
+    /** Factura vecina con factura de partida (FROM) o sin ella (ANY, no se filtra por ella). */
+    static final Map<AnnulmentDirection, String> NEIGHBOR_FROM = byEnum(AnnulmentDirection.class, d -> neighbor(d, true));
+    static final Map<AnnulmentDirection, String> NEIGHBOR_ANY = byEnum(AnnulmentDirection.class, d -> neighbor(d, false));
 
     /**
      * Cns_Compras por numero de factura. Seco, verde y pasilla comparten el consecutivo (Q7), pero las
@@ -84,7 +78,8 @@ public class PurchaseAnnulmentRepository {
 
     /** RN-23.2: la factura vecina de "from" en la agencia, en los 3 modulos; vacio si no hay mas. */
     public Optional<Integer> neighborInvoice(Long agencyId, Integer from, AnnulmentDirection direction) {
-        return Optional.ofNullable(jdbc.queryForObject(neighborSql(direction, from),
+        return Optional.ofNullable(jdbc.queryForObject(
+                from == null ? NEIGHBOR_ANY.get(direction) : NEIGHBOR_FROM.get(direction),
                 new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("from", from), Integer.class));
     }
 

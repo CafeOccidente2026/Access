@@ -45,8 +45,8 @@ class PurchaseAnnulmentSqlTest {
     @Test
     void theNeighborInvoiceIsTheSameSqlAsBeforeForEveryDirection() {
         for (AnnulmentDirection direction : AnnulmentDirection.values()) {
-            assertThat(PurchaseAnnulmentRepository.neighborSql(direction, 1001)).isEqualTo(oldNeighbor(direction, 1001));
-            assertThat(PurchaseAnnulmentRepository.neighborSql(direction, null)).isEqualTo(oldNeighbor(direction, null));
+            assertThat(PurchaseAnnulmentRepository.NEIGHBOR_FROM.get(direction)).isEqualTo(oldNeighbor(direction, 1001));
+            assertThat(PurchaseAnnulmentRepository.NEIGHBOR_ANY.get(direction)).isEqualTo(oldNeighbor(direction, null));
         }
     }
 
