@@ -223,22 +223,6 @@ public class RemissionServiceImpl implements RemissionService {
                 .map(this::toResponseWithLines);
     }
 
-    @Override
-    public List<RemissionResponse> listPendingExport(Long agencyId) {
-        return remissionRepository.findByAgencyIdAndExportedFalseOrderByRemissionNumberAsc(agencyId).stream()
-                .map(this::toResponseWithLines)
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public List<RemissionResponse> markExported(List<Long> remissionIds) {
-        List<Remission> remissions = remissionRepository.findAllById(remissionIds);
-        remissions.forEach(r -> r.setExported(true));
-        remissionRepository.saveAll(remissions);
-        return remissions.stream().map(this::toResponseWithLines).toList();
-    }
-
     private RemissionResponse toResponseWithLines(Remission remission) {
         return toResponse(remission, remissionLineRepository.findByRemissionId(remission.getId()));
     }

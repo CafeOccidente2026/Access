@@ -238,7 +238,7 @@ export const routes: Routes = [
       {
         path: 'compras/remesa',
         loadComponent: () =>
-          import('./features/remesa-export/remesa-export').then((m) => m.RemesaExportComponent),
+          import('./features/remittance/remittance').then((m) => m.RemittanceComponent),
       },
       {
         path: 'compras/reporte-anuncio',
