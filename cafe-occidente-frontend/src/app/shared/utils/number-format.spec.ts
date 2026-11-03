@@ -118,3 +118,41 @@ describe('asPenalty', () => {
     expect(asPenalty('0')).toBe('0');
   });
 });
+
+/** La version de antes (regex con lookahead, S8786): la nueva debe dar exactamente lo mismo. */
+const oldFormatThousands = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+describe('formatThousands without regex gives exactly the same as before', () => {
+  const fixed = [
+    '', '0', '7', '12', '123', '1234', '12345', '123456', '1234567', '1000000', '2500000', '999999999',
+    '123456789012345678901234567890', '-1', '-1234', '-1234567', '1234.5', '1234567.891', '0.123456', '-0.5',
+    '1234,56', '1.234', '  1234567  ', '12 345 678', 'abc', 'a1234', '1234a', 'a1234567b', '_1234', 'é1234',
+    '$1234567', '1234567$', '1234\n5678', '\t123456', '00001234', '1,234,567', '++1234', '12-3456-789',
+  ];
+
+  it.each(fixed)('"%s"', (value) => {
+    expect(formatThousands(value)).toBe(oldFormatThousands(value));
+  });
+
+  it('agrees on thousands of generated values (digits, signs, dots, commas, spaces and letters)', () => {
+    const alphabet = '0123456789000111999-.,  a_Z';
+    let seed = 20261103;
+    const next = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+    for (let n = 0; n < 5000; n++) {
+      const length = Math.floor(next() * 22);
+      const value = Array.from({ length }, () => alphabet[Math.floor(next() * alphabet.length)]).join('');
+      expect(formatThousands(value), JSON.stringify(value)).toBe(oldFormatThousands(value));
+    }
+    for (let n = 0; n <= 100000; n += 7) {
+      expect(formatThousands(String(n))).toBe(oldFormatThousands(String(n)));
+      expect(formatThousands(String(-n * 1013))).toBe(oldFormatThousands(String(-n * 1013)));
+    }
+  });
+
+  it('like before, null and undefined are not accepted', () => {
+    for (const value of [null, undefined]) {
+      expect(() => oldFormatThousands(value as unknown as string)).toThrow();
+      expect(() => formatThousands(value as unknown as string)).toThrow();
+    }
+  });
+});
