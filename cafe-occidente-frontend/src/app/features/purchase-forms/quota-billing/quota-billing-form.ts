@@ -64,7 +64,7 @@ const num = parseDisplayNumber;
   selector: 'app-quota-billing-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './quota-billing-form.html',
+  templateUrl: '../quota-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QuotaBillingFormComponent {

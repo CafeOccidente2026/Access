@@ -4,7 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import { Announcement, Fund } from '../../../core/models/dry-coffee-purchase.model';
 import { FuturePurchaseRequest, FuturePurchaseResponse } from '../../../core/models/future-purchase.model';
 import { AnnouncementService } from '../../../core/services/announcement.service';
@@ -56,7 +56,7 @@ const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca'
   selector: 'app-future-purchase-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './future-purchase-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FuturePurchaseFormComponent extends UnsavedCloseForm {
@@ -74,6 +74,8 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
+  /** Compra futura no tiene formas de pago: la plantilla compartida la pide, pero nunca se llena. */
+  readonly payment = signal<PurchasePayment | null>(null);
   private readonly tick = signal(0);
 
   override model: FormModel = {};

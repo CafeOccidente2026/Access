@@ -15,7 +15,7 @@ import { HuskFormComponent } from './husk/husk-form';
 /** Lo que el cierre con datos sin imprimir expone a la plantilla y al guard de la ruta. */
 interface ClosableForm {
   model: Record<string, string>;
-  pendingClose: boolean;
+  pendingClose(): boolean;
   onClose(): void;
   canDeactivate(): boolean | Promise<boolean>;
   confirmClose(): void;
@@ -50,7 +50,7 @@ describe.each([
     const { form, back } = setup();
     expect(form.canDeactivate()).toBe(true);
     form.onClose();
-    expect(form.pendingClose).toBe(false);
+    expect(form.pendingClose()).toBe(false);
     expect(back).toHaveBeenCalledTimes(1);
   });
 
@@ -59,18 +59,32 @@ describe.each([
     form.model['idPart1'] = '210514';
 
     form.onClose();
-    expect(form.pendingClose).toBe(true);
+    expect(form.pendingClose()).toBe(true);
     form.cancelClose();
-    expect(form.pendingClose).toBe(false);
+    expect(form.pendingClose()).toBe(false);
     expect(form.model['idPart1']).toBe('210514');
     expect(back).not.toHaveBeenCalled();
 
     form.onClose();
     form.confirmClose();
-    expect(form.pendingClose).toBe(false);
+    expect(form.pendingClose()).toBe(false);
     expect(form.model['idPart1']).toBeUndefined();
     expect(back).toHaveBeenCalledTimes(1);
     expect(form.canDeactivate()).toBe(true);
+  });
+
+  it('leaving by menu or back with data shows the warning at once, without waiting for a click', async () => {
+    setup();
+    const fixture = TestBed.createComponent(type);
+    const form = fixture.componentInstance as ClosableForm;
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    form.model['idPart1'] = '210514';
+
+    void form.canDeactivate();
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-confirm-dialog')).not.toBeNull();
   });
 
   it('leaving by menu or back with data waits for the answer: Cancel stays, Close leaves without going back twice', async () => {
@@ -78,15 +92,15 @@ describe.each([
     form.model['idPart1'] = '210514';
 
     const stay = form.canDeactivate() as Promise<boolean>;
-    expect(form.pendingClose).toBe(true);
+    expect(form.pendingClose()).toBe(true);
     form.cancelClose();
     expect(await stay).toBe(false);
-    expect(form.pendingClose).toBe(false);
+    expect(form.pendingClose()).toBe(false);
 
     const leave = form.canDeactivate() as Promise<boolean>;
     form.confirmClose();
     expect(await leave).toBe(true);
-    expect(form.pendingClose).toBe(false);
+    expect(form.pendingClose()).toBe(false);
     expect(back).not.toHaveBeenCalled();
   });
 });
