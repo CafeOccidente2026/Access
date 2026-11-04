@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -18,6 +18,8 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { advanceFocus, focusField } from '../form-focus';
+import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -82,12 +84,11 @@ const num = parseDisplayNumber;
   templateUrl: './husk-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HuskFormComponent {
+export class HuskFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(HuskPurchaseService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
-  private readonly location = inject(Location);
   private readonly elementRef = inject(ElementRef);
 
   private readonly base = toSignal(this.content.loadJson<HuskContent>('purchase-form-husk'));
@@ -104,13 +105,11 @@ export class HuskFormComponent {
   readonly savedNoticeOpen = signal(false);
   private readonly tick = signal(0);
 
-  model: FormModel = {};
+  override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
-  pendingClose = false;
-  private closeResolver: ((value: boolean) => void) | null = null;
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
     const base = this.base();
@@ -122,13 +121,14 @@ export class HuskFormComponent {
   });
 
   constructor() {
+    super();
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
-        this.focusField(FOCUS_ORDER[0]);
+        focusField(this.elementRef.nativeElement, FOCUS_ORDER[0]);
       }
     });
   }
@@ -162,26 +162,11 @@ export class HuskFormComponent {
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
     if (key !== 'idPart1') {
-      this.advanceFocus(key);
+      advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, key);
     }
   }
 
-  private focusField(key: string): void {
-    setTimeout(() => {
-      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
-      el?.focus();
-      el?.classList.add('field-flash');
-      setTimeout(() => el?.classList.remove('field-flash'), 1000);
-    });
-  }
 
-  private advanceFocus(afterKey: string): void {
-    const idx = FOCUS_ORDER.indexOf(afterKey);
-    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
-      return;
-    }
-    this.focusField(FOCUS_ORDER[idx + 1]);
-  }
 
   private runSideEffects(key: string): void {
     switch (key) {
@@ -259,7 +244,7 @@ export class HuskFormComponent {
           }
         });
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
+        advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, 'idPart1');
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -353,44 +338,10 @@ export class HuskFormComponent {
     this.tick.update((n) => n + 1);
   }
 
-  private hasUnsavedInput(): boolean {
+  protected override hasUnsavedInput(): boolean {
     return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
-  onClose(): void {
-    if (this.hasUnsavedInput()) {
-      this.pendingClose = true;
-    } else {
-      this.location.back();
-    }
-  }
-
-  canDeactivate(): boolean | Promise<boolean> {
-    if (!this.hasUnsavedInput()) {
-      return true;
-    }
-    this.pendingClose = true;
-    return new Promise<boolean>((resolve) => (this.closeResolver = resolve));
-  }
-
-  confirmClose(): void {
-    this.pendingClose = false;
-    if (this.closeResolver) {
-      this.closeResolver(true);
-      this.closeResolver = null;
-      return;
-    }
-    // Descarta los datos antes de navegar: si no, canDeactivate() vuelve a encontrar
-    // input sin guardar y reabre este mismo dialogo, obligando a un segundo clic.
-    this.model = {};
-    this.location.back();
-  }
-
-  cancelClose(): void {
-    this.pendingClose = false;
-    this.closeResolver?.(false);
-    this.closeResolver = null;
-  }
 
   private canPrint(): boolean {
     return (
