@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
 import { asPenalty, formatDisplayNumber } from '../../utils/number-format';
@@ -17,7 +17,7 @@ import { ComboboxComponent } from '../combobox/combobox';
   templateUrl: './form-field.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FormFieldComponent {
+export class FormFieldComponent implements OnChanges {
   @Input({ required: true }) field!: FormFieldDefinition;
   @Input() labelClass = 'text-slate-700';
   @Input() labelWidthClass = 'w-32';
