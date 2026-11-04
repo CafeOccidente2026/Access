@@ -10,10 +10,14 @@ import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
+import com.cafeoccidente.backend.vendors.dto.NessQuotaPage;
+import com.cafeoccidente.backend.vendors.dto.NessQuotaRow;
 import com.cafeoccidente.backend.vendors.dto.NessQuotaUploadRecord;
 import com.cafeoccidente.backend.vendors.dto.NessQuotaUploadResult;
 import com.cafeoccidente.backend.vendors.service.NessQuotaUploadService;
 import com.cafeoccidente.backend.vendors.service.NessXlsx;
+import com.cafeoccidente.backend.vendors.service.VendorReportService;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -42,6 +46,8 @@ class NessQuotaUploadIntegrationTest {
     private NessQuotaUploadService uploads;
     @Autowired
     private GrowerService growers;
+    @Autowired
+    private VendorReportService vendorReports;
     @Autowired
     private UserRepository users;
     @Autowired
@@ -172,6 +178,18 @@ class NessQuotaUploadIntegrationTest {
         assertThat(notExcel.errors()).containsExactly("Solo se acepta archivo Excel (.xlsx)");
         assertThat(ness()).isEqualTo(before);
         assertThat(loads()).isZero();
+    }
+
+    @Test
+    void consultaCuposNessFiltersTheNewListByCedula() {
+        uploads.apply(FILE, newList());
+
+        // HU-55 CA-1 y CA-2: la consulta muestra la lista cargada y filtra por la cedula digitada.
+        NessQuotaPage page = vendorReports.nessQuotas("990054004", 0);
+
+        assertThat(page.total()).isOne();
+        assertThat(page.rows()).containsExactly(
+                new NessQuotaRow("990054004", "DORA", "NESPRESSO", new BigDecimal("200")));
     }
 
     @Test
