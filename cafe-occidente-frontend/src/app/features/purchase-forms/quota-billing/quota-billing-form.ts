@@ -17,7 +17,6 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { SampleWeightKey, loadSampleQuality } from '../sample-quality';
-import { advanceFocus, focusField } from '../form-focus';
 
 type FormModel = Record<string, string>;
 
@@ -142,7 +141,22 @@ export class QuotaBillingFormComponent {
     }
   }
 
+  private focusField(key: string): void {
+    setTimeout(() => {
+      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
+      el?.focus();
+      el?.classList.add('field-flash');
+      setTimeout(() => el?.classList.remove('field-flash'), 1000);
+    });
+  }
 
+  private advanceFocus(afterKey: string): void {
+    const idx = FOCUS_ORDER.indexOf(afterKey);
+    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
+      return;
+    }
+    this.focusField(FOCUS_ORDER[idx + 1]);
+  }
 
   private runSideEffects(key: string): void {
     switch (key) {
@@ -375,8 +389,4 @@ export class QuotaBillingFormComponent {
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
-
-  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
-  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
-  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }
