@@ -148,6 +148,15 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     expect(component.canUnmark()).toBe(false);
   });
 
+  it('the summary shows the packaging only when the remittance has it (those of Access do not)', async () => {
+    const { component } = await render();
+    component.found.set(REMITTANCE);
+    expect(component.summary(content)).toBe('Vigente · 2 factura(s) · 500,50 kg · 10 USADO');
+
+    component.found.set({ ...REMITTANCE, number: 'TA0436', packagingQuantity: null, packagingType: null });
+    expect(component.summary(content)).toBe('Vigente · 2 factura(s) · 500,50 kg');
+  });
+
   it('says so when no remittance has that number', async () => {
     const { component } = await render();
     component.search('NO-EXISTE');
