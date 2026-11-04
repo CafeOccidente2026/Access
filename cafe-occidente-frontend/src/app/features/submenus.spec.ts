@@ -114,7 +114,9 @@ describe('submenus (HU-02)', () => {
     expect(option(vendors, 'Ingresar Vendedores')).toBeUndefined();
   });
 
-  it('Actualiza Cupos NESS only shows up for the Administrator', () => {
-    expect(option(vendors, 'Actualiza Cupos NESS')?.roles).toEqual(['ADMINISTRADOR']);
+  it('Actualiza Cupos NESS (RN-28.4.1) is enabled only for the Administrator, also in the route', () => {
+    expect(option(vendors, 'Actualiza Cupos NESS')).toMatchObject({ roles: ['ADMINISTRADOR'], route: '/vendedores/actualiza-cupos-ness' });
+    expect(option(vendors, 'Actualiza Cupos NESS')?.disabled).toBeFalsy();
+    expect(routeRoles('vendedores/actualiza-cupos-ness')).toEqual(['ADMINISTRADOR']);
   });
 });
