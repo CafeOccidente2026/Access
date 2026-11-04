@@ -33,6 +33,8 @@ export interface RemittanceContent {
   readonly searchLabel: string;
   readonly searchButton: string;
   readonly summary: string;
+  /** Empaques del resumen; las remesas de Access no tienen y no se muestran. */
+  readonly packagingSummary: string;
   readonly statuses: Record<string, string>;
   readonly filesLabel: string;
   readonly fileLabels: Record<string, string>;
@@ -227,7 +229,8 @@ export class RemittanceComponent {
       status: content.statuses[r.status] ?? r.status,
       purchases: r.purchases,
       kg: formatDisplayNumber(r.netKg, 'currency'),
-      packaging: [r.packagingQuantity, r.packagingType].filter((v) => v != null).join(' '),
+      packaging: r.packagingQuantity == null ? ''
+        : fill(content.packagingSummary, { quantity: r.packagingQuantity, type: r.packagingType ?? '' }),
     });
   }
 

@@ -19,7 +19,7 @@ import csv
 import os
 import re
 import secrets
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -62,13 +62,19 @@ def parse_date(value):
     return None
 
 
+# Access guarda la hora local de Colombia (sin horario de verano). Sin zona, PostgreSQL la leia como UTC
+# y creado_en quedaba 5 h antes (16/01 19:00 en vez de 17/01 00:00).
+ACCESS_ZONE = timezone(timedelta(hours=-5), "America/Bogota")
+
+
 def parse_timestamp(value):
+    """Fecha y hora de Access, en hora de Colombia; None si viene vacia o no se entiende."""
     value = (value or "").strip()
     if not value:
         return None
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
         try:
-            return datetime.strptime(value[:19], fmt)
+            return datetime.strptime(value[:19], fmt).replace(tzinfo=ACCESS_ZONE)
         except ValueError:
             continue
     return None
@@ -468,7 +474,7 @@ def load_dry_coffee_purchases(cur, el_tambo_id, admin_user_id):
             payment_method = "EFECTIVO"
             check_number = None
 
-        purchase_ts = parse_timestamp(row["fecha_compra"]) or datetime.now()
+        purchase_ts = parse_timestamp(row["fecha_compra"]) or datetime.now(ACCESS_ZONE)
 
         records.append(
             (
