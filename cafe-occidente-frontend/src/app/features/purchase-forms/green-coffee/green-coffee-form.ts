@@ -131,7 +131,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
-        focusField(this.elementRef.nativeElement, FOCUS_ORDER[0]);
+        this.focusField(FOCUS_ORDER[0]);
       }
     });
   }
@@ -165,7 +165,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
     if (key !== 'idPart1') {
-      advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, key);
+      this.advanceFocus(key);
     }
   }
 
@@ -258,7 +258,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
           }
         });
         this.tick.update((n) => n + 1);
-        advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, 'idPart1');
+        this.advanceFocus('idPart1');
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -456,4 +456,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     };
   }
 
+  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
+  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
+  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }

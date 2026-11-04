@@ -152,7 +152,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     // siempre (advanceFocus).
     effect(() => {
       if (this.base()) {
-        focusField(this.elementRef.nativeElement, FOCUS_ORDER[0]);
+        this.focusField(FOCUS_ORDER[0]);
       }
     });
   }
@@ -189,7 +189,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
     if (key !== 'idPart1') {
-      advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, key);
+      this.advanceFocus(key);
     }
   }
 
@@ -274,7 +274,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         });
         this.lookupProgram();
         this.tick.update((n) => n + 1);
-        advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, 'idPart1');
+        this.advanceFocus('idPart1');
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -407,7 +407,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
     this.errorMessage.set(err.error.message ?? null);
     this.tick.update((n) => n + 1);
-    focusField(this.elementRef.nativeElement, 'totalStoredWeight');
+    this.focusField('totalStoredWeight');
     return true;
   }
 
@@ -624,4 +624,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     };
   }
 
+  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
+  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
+  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }
