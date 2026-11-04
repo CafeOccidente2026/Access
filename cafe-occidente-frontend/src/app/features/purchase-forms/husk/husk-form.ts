@@ -81,7 +81,7 @@ const num = parseDisplayNumber;
   selector: 'app-husk-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './husk-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HuskFormComponent extends UnsavedCloseForm {

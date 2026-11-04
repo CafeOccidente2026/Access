@@ -89,7 +89,7 @@ const num = parseDisplayNumber;
   selector: 'app-dry-coffee-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './dry-coffee-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DryCoffeeFormComponent extends UnsavedCloseForm {

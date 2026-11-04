@@ -82,7 +82,7 @@ const num = parseDisplayNumber;
   selector: 'app-green-coffee-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './green-coffee-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GreenCoffeeFormComponent extends UnsavedCloseForm {
