@@ -15,5 +15,7 @@ public record RemissionResponse(
         String transportCompany,
         String vehiclePlate,
         boolean exported,
-        List<RemissionLineResponse> lines) {
+        List<RemissionLineResponse> lines,
+        /** Numero impreso ({prefijo}-{LF|RP}-{0000}; en las viejas, remissionNumber tal cual). */
+        String displayNumber) {
 }

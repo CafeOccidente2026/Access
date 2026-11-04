@@ -27,7 +27,6 @@ public class ControlRecordMapper {
                 controlRecord.getSampleSize(),
                 controlRecord.getExcelsoKg(),
                 controlRecord.getGreenCoffeePercentage(),
-                controlRecord.getSpecialtyThreshold(),
                 controlRecord.getAssociatePercentage(),
                 controlRecord.getNonAssociateDiscount(),
                 controlRecord.getTrustedId(),
@@ -35,6 +34,12 @@ public class ControlRecordMapper {
                 controlRecord.getResolutionDate(),
                 controlRecord.getResolutionFrom(),
                 controlRecord.getResolutionTo(),
-                controlRecord.getValidity());
+                controlRecord.getValidity(),
+                controlRecord.getSpecialtyThreshold(),
+                controlRecord.getGreenTotalStoredWeight(),
+                controlRecord.getGreenTotalHuskWeight(),
+                controlRecord.getGreenHealthyStoredWeight(),
+                controlRecord.getGreenHealthyUnitPrice(),
+                controlRecord.getGreenDefectiveUnitPrice());
     }
 }

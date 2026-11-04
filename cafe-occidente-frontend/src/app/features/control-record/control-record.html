@@ -10,7 +10,9 @@
           (change)="onAgencyChange($any($event.target).value)"
         >
           <option value=""></option>
-          <option *ngFor="let agency of agencies()" [value]="agency.id">{{ agency.name }}</option>
+          <option *ngFor="let agency of agencies()" [value]="agency.id" [selected]="agency.id === agencyId()">
+            {{ agency.name }}
+          </option>
         </select>
       </label>
 
@@ -19,7 +21,8 @@
       <div class="grid grid-cols-2 gap-x-12 gap-y-3">
         <div class="flex flex-col gap-3">
           <app-form-field
-            *ngFor="let field of leftFields()"
+            *ngFor="let field of leftFields(); trackBy: trackByKey"
+            [formatWhenIdle]="true"
             [field]="field"
             labelClass="text-blue-900"
             labelWidthClass="w-52"
@@ -28,7 +31,8 @@
         </div>
         <div class="flex flex-col gap-3">
           <app-form-field
-            *ngFor="let field of rightFields()"
+            *ngFor="let field of rightFields(); trackBy: trackByKey"
+            [formatWhenIdle]="true"
             [field]="field"
             labelClass="text-blue-900"
             labelWidthClass="w-52"
@@ -40,10 +44,21 @@
       <p *ngIf="savedMessage()" class="text-sm text-green-700">{{ savedMessage() }}</p>
       <p *ngIf="errorMessage()" class="text-sm text-red-600">{{ errorMessage() }}</p>
 
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-3">
+        <button
+          *ngIf="isAdmin && agencyId()"
+          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50"
+          data-testid="apply-green"
+          [disabled]="saving()"
+          (click)="askApplyGreenToAll()"
+        >
+          {{ p.applyGreenButton }}
+        </button>
         <button
           *ngIf="agencyId()"
-          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200"
+          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50"
+          data-testid="save"
+          [disabled]="saving()"
           (click)="save()"
         >
           {{ p.saveButton }}
@@ -51,4 +66,12 @@
       </div>
     </div>
   </app-access-window>
+  <app-confirm-dialog
+    *ngIf="confirmingGreen()"
+    [message]="p.applyGreenConfirm.replace('{count}', '' + agenciesWithRecord())"
+    [confirmLabel]="p.applyGreenAccept"
+    [cancelLabel]="p.applyGreenCancel"
+    (confirmed)="applyGreenToAll()"
+    (cancelled)="confirmingGreen.set(false)"
+  ></app-confirm-dialog>
 </div>

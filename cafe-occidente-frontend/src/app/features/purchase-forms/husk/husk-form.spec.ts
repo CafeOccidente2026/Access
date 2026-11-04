@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
+import pdfMake from 'pdfmake/build/pdfmake';
 import { describe, expect, it, vi } from 'vitest';
 
 import { HuskFormComponent } from './husk-form';
@@ -10,13 +11,14 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
+import { HUSK } from '../../purchase-query/purchase-query.testing';
 
 /**
- * Husk (Pasilla) usa un gate distinto al de Café Seco: buildRequest() no exige los campos REQUIRED
- * (solo agencyId/invoiceNumber/announcementInfo, que ya estan listos desde el constructor) - el
- * REQUIRED array solo gatea canPrint(). Igual comparte el mismo mecanismo de auto-lock en
+ * Husk (Pasilla) usa el mismo gate que Café Seco: buildRequest() exige los campos REQUIRED, asi el
+ * calculo previo no se pide (ni avisa error) mientras se llena el formulario. Igual comparte el mismo mecanismo de auto-lock en
  * lookupGrower() donde vivia el bug del celular bloqueado (ver dry-coffee-form.spec.ts).
  */
+
 describe('HuskFormComponent - gates de captura', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
     windowTitle: 'Compra Pasilla',
@@ -30,6 +32,7 @@ describe('HuskFormComponent - gates de captura', () => {
       idNumberNotFound: 'Este número de cédula no existe.',
       saveError: 'No se pudo registrar la compra. Verifique los datos.',
       savedNotice: 'Compra registrada.',
+      invoiceError: 'No se pudo generar la factura',
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
@@ -78,6 +81,7 @@ describe('HuskFormComponent - gates de captura', () => {
   };
 
   let previewSpy: ReturnType<typeof vi.fn>;
+  let createSpy: ReturnType<typeof vi.fn>;
   let component: HuskFormComponent;
 
   function setup(grower: Grower) {
@@ -86,7 +90,7 @@ describe('HuskFormComponent - gates de captura', () => {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
       announcementInfo: () => of(announcementInfo),
       preview: previewSpy,
-      create: vi.fn(() => of({})),
+      create: (createSpy = vi.fn(() => of({}))),
     };
     const fakeGrowerService = { findByIdNumber: vi.fn(() => of(grower)) };
 
@@ -143,7 +147,7 @@ describe('HuskFormComponent - gates de captura', () => {
     expect((component as any).locked.has('lastName')).toBe(true);
   });
 
-  it('canPrint() stays false until every REQUIRED field is filled and otherDiscounts is confirmed', () => {
+  it('canPrint() stays false until every REQUIRED field is filled, otherDiscounts is confirmed and the payment balances', () => {
     setup(growerWithPhone);
     expect((component as any).canPrint()).toBe(false);
 
@@ -152,7 +156,26 @@ describe('HuskFormComponent - gates de captura', () => {
     expect((component as any).canPrint()).toBe(false);
 
     fillEverythingAfterGrower();
+    // Ademas hace falta FORMAS DE PAGO cuadrado (lo emite el panel de pago).
+    expect((component as any).canPrint()).toBe(false);
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
     expect((component as any).canPrint()).toBe(true);
+  });
+
+  it('does not ask for the preview (nor warn) while a required field is still missing, like Cafe Seco', () => {
+    setup(growerWithPhone);
+    previewSpy.mockReturnValue(throwError(() => new Error('400')));
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    component.model['almondWeight'] = '200';
+    component.onFieldCommitted('almondWeight');
+    component.model['bags'] = '10';
+    component.onFieldCommitted('bags');
+    component.model['grossKg'] = '1250';
+    component.onFieldCommitted('grossKg');
+
+    expect(previewSpy).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toBeNull();
   });
 
   it('recalculate() populates calc() once the full cascade is confirmed', () => {
@@ -173,5 +196,71 @@ describe('HuskFormComponent - gates de captura', () => {
     expect(component.blockedByDeceased()).toBe(true);
     expect(component.errorMessage()).toBe(content.messages['deceasedBlocked']);
     expect((component as any).canPrint()).toBe(false);
+  });
+
+  it('HU-15: two clicks on Imprimir create a single purchase, without sending the invoice number', () => {
+    setup(growerWithPhone);
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const pending = new Subject<never>();
+    createSpy.mockReturnValue(pending);
+
+    component.print();
+    component.print();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    // El numero lo asigna el servidor al guardar; el encabezado solo lo muestra.
+    expect(createSpy.mock.calls[0][0]).not.toHaveProperty('invoiceNumber');
+    // 6b: precios, costos y datos del vendedor los pone el servidor (anuncio vigente y TERCEROS).
+    for (const key of ['healthyUnitPrice', 'bonus', 'costs', 'pointPrice', 'firstName', 'lastName', 'growerType']) {
+      expect(createSpy.mock.calls[0][0]).not.toHaveProperty(key);
+    }
+    expect(component.saving()).toBe(true);
+
+    pending.error(new Error('fallo'));
+    expect(component.saving()).toBe(false);
+  });
+
+  it('Imprimir saves, opens the invoice with the payment and leaves the form clean with the next invoice', async () => {
+    setup(growerWithPhone);
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    const nextInvoice = vi.spyOn(TestBed.inject(HuskPurchaseService), 'nextInvoiceNumber');
+    const open = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
+    createSpy.mockReturnValue(of(HUSK));
+
+    component.print();
+
+    expect(component.model['idPart1']).toBeUndefined();
+    expect(component.payment()).toBeNull();
+    expect(component.savedNoticeOpen()).toBe(true);
+    expect(nextInvoice).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    const doc = JSON.stringify(createPdf.mock.lastCall![0]);
+    expect(doc).toContain('SDBU - 27.872');
+    expect(doc).toContain('7.777.777');
+    createPdf.mockRestore();
+  });
+
+  it('says "No se pudo generar la factura" when the invoice PDF fails', async () => {
+    setup(growerWithPhone);
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
+      throw new Error('pdfmake');
+    });
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    createSpy.mockReturnValue(of(HUSK));
+
+    component.print();
+
+    await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
+    createPdf.mockRestore();
   });
 });

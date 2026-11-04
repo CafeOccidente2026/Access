@@ -1,6 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { PurchaseFormContent } from '../../../core/models';
+import { PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import { AccessWindowComponent } from '../access-window/access-window';
 import { AppButtonComponent } from '../app-button/app-button';
 import { FieldRowComponent } from '../field-row/field-row';
@@ -44,6 +44,8 @@ export class PurchaseFormViewComponent {
   @Output() readonly reprintPressed = new EventEmitter<void>();
   @Output() readonly fieldValueChange = new EventEmitter<{ key: string; value: string | number }>();
   @Output() readonly fieldCommitted = new EventEmitter<string>();
+  /** FORMAS DE PAGO cuadrado (o null mientras no cuadra). */
+  @Output() readonly paymentChange = new EventEmitter<PurchasePayment | null>();
   /** Igual que en AccessWindow: si el padre lo escucha, decide él; si no, volvemos atrás. */
   @Output() readonly closeRequested = new EventEmitter<void>();
 

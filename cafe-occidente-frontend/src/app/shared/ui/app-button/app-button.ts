@@ -13,6 +13,7 @@ export class AppButtonComponent {
   @Input() label = '';
   @Input() variant: ButtonVariant = 'access';
   @Input() active = false;
+  @Input() disabled = false;
   @Output() readonly pressed = new EventEmitter<void>();
 
   onClick(): void {

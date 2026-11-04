@@ -3,6 +3,9 @@ package com.cafeoccidente.backend.purchases.drycoffee.service;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
+import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -13,7 +16,7 @@ import org.springframework.stereotype.Component;
  * Unica responsabilidad: reproducir la cascada de calculo del formulario Access original
  * (Destare -> Kilos_Netos -> W_TotAlm/W_AlmSana/W_AlmDefec -> PorcMerma/PorcAlmSana/PorcAlmDefec
  * -> Sacos -> Castigo -> Vr_Kilo -> Vr_Bruto -> Aporte_Socio/Descuento_Coop -> Retefuente ->
- * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica; el acumulado mensual
+ * Neto_a_Pagar). No persiste nada ni conoce HTTP: solo hace la matematica; el acumulado diario
  * del caficultor y los valores del anuncio los consulta el servicio y se pasan como parametro.
  */
 @Component
@@ -23,22 +26,22 @@ public class DryCoffeePurchaseCalculator {
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
 
     /**
-     * @param announcementBasePriceLoad valor crudo del anuncio (vrcps en el VBA)
-     * @param announcementDefectiveUnitPrice Pr_AlmDefec vigente en el anuncio (ver
-     *     Announcement.defectiveUnitPrice)
-     * @param monthlyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
-     *     mes actual (Texto105 en el VBA / macro CalculoReteFteMes)
-     * @param monthlyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el mes
-     *     actual (Texto107 en el VBA / macro CalculoReteFteMes)
+     * @param announcement anuncio vigente (lo resuelve el servidor): Pr_Base_CPS crudo (vrcps en el
+     *     VBA), Pr_AlmDefec, Pr Sustentacion, Bonificacion y Costos - nunca los del navegador
+     * @param seller vendedor desde TERCEROS (tipo S/C/F y si es asociacion)
+     * @param dailyAccumulatedGrossValue suma de Vr_Bruto ya registrado para esta cedula en el
+     *     dia de la compra (Texto105 en el VBA / macro CalculoReteFteMes)
+     * @param dailyAccumulatedWithholding suma de Retefuente ya aplicada a esta cedula en el dia
+     *     de la compra (Texto107 en el VBA / macro CalculoReteFteMes)
      */
     public DryCoffeePurchaseCalculation calculate(
             DryCoffeePurchaseRequest request,
             ControlRecord controlRecord,
-            BigDecimal announcementBasePriceLoad,
-            BigDecimal announcementDefectiveUnitPrice,
-            BigDecimal monthlyAccumulatedGrossValue,
-            BigDecimal monthlyAccumulatedWithholding) {
-        if ("F".equalsIgnoreCase(request.growerType())) {
+            AnnouncementResponse announcement,
+            PurchaseSeller seller,
+            BigDecimal dailyAccumulatedGrossValue,
+            BigDecimal dailyAccumulatedWithholding) {
+        if ("F".equalsIgnoreCase(seller.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
 
@@ -46,14 +49,14 @@ public class DryCoffeePurchaseCalculator {
         // El textbox "Costos" del VBA lo fija la macro "Asignar numero anuncio * PCompras" con el
         // valor CONGELADO del anuncio vigente al elegir el producto; en todo Form_COMPRAS.bas no hay
         // ninguna otra escritura de Costos (grep confirma solo esa macro + resets a 0 por cupo
-        // excedido) -> request.costs(), no ControlRecord.costos (que si es vivo para BaseCarga).
-        BigDecimal basePriceLoad = announcementBasePriceLoad
-                .subtract(request.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
+        // excedido) -> announcement.costs(), no ControlRecord.costos (que si es vivo para BaseCarga).
+        BigDecimal basePriceLoad = announcement.basePriceLoad()
+                .subtract(announcement.costs().multiply(BigDecimal.valueOf(controlRecord.getBaseLoad())))
                 .setScale(SCALE, RoundingMode.HALF_UP);
         MoneyValidation.requireNonNegative(basePriceLoad, "Precio Base Carga PC");
         // Pr Sustentacion (Texto190 en el VBA): no se recalcula aca, llega ya resuelto por el
         // anuncio/specialInfo() - se valida igual porque alimenta var5/var1 mas abajo.
-        MoneyValidation.requireNonNegative(request.healthyUnitPrice(), "Pr Sustentación");
+        MoneyValidation.requireNonNegative(announcement.healthyUnitPrice(), "Pr Sustentación");
 
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
@@ -67,22 +70,19 @@ public class DryCoffeePurchaseCalculator {
                 defectivePercentageRaw(request.defectiveStoredWeight(), controlRecord);
         BigDecimal defectivePercentage = defectivePercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
-        BigDecimal totalStored = request.defectiveStoredWeight().add(request.healthyStoredWeight());
-        if (totalStored.compareTo(request.totalStoredWeight()) != 0) {
-            throw new BusinessRuleException(
-                    "La almendra total debe ser igual a la suma de la almendra sana mas la defectuosa");
-        }
-
-        BigDecimal healthyPercentageRaw = healthyPercentageRaw(request.healthyStoredWeight(), controlRecord);
+        // Q2: se digitan Peso Tot Alm y Peso Pasilla; Peso Alm Sana = Tot - Pasilla (siempre suman exacto).
+        BigDecimal healthyStoredWeight = healthyStoredWeight(request.totalStoredWeight(), request.defectiveStoredWeight());
+        BigDecimal healthyPercentageRaw = healthyPercentageRaw(healthyStoredWeight, controlRecord);
         BigDecimal healthyPercentage = healthyPercentageRaw.setScale(SCALE, RoundingMode.HALF_UP);
 
         // Sacos_LostFocus: precios unitarios intermedios (Texto190/Texto191 en el VBA original).
-        BigDecimal var5 = request.healthyUnitPrice().subtract(request.penalty());
-        BigDecimal var1 = var5.add(request.bonus());
+        // Q1: el castigo (siempre <= 0) se suma al Pr Sustentacion, que es restarlo.
+        BigDecimal var5 = announcement.healthyUnitPrice().add(PenaltyRule.normalize(request.penalty()));
+        BigDecimal var1 = var5.add(announcement.bonus());
         if (healthyPercentageRaw.signum() == 0) {
             throw new BusinessRuleException("El porcentaje de almendra sana no puede ser cero");
         }
-        BigDecimal var2 = controlRecord.getSpecialtyThreshold().divide(healthyPercentageRaw, MathContext.DECIMAL64);
+        BigDecimal var2 = controlRecord.getBaseFactor().divide(healthyPercentageRaw, MathContext.DECIMAL64);
         BigDecimal var3 =
                 healthyPercentageRaw.multiply(defectivePercentageRaw).divide(HUNDRED, MathContext.DECIMAL64);
         // var4 = (var3 - PorcKgPasProm) / PorcAlmSana * Pr_AlmDefec.
@@ -90,7 +90,7 @@ public class DryCoffeePurchaseCalculator {
         // Pr_AlmDefec = Announcement.defectiveUnitPrice (lo trae el anuncio vigente).
         BigDecimal var4 = var3.subtract(controlRecord.getAvgHuskPercentage())
                 .divide(healthyPercentageRaw, MathContext.DECIMAL64)
-                .multiply(announcementDefectiveUnitPrice);
+                .multiply(announcement.defectiveUnitPrice());
         BigDecimal qualityUnitPrice = var2.multiply(var1).add(var4);
 
         // Castigo_lostFocus: Vr_Kilo siempre toma la rama viva del VBA (Texto191). Vr_Kilo, Vr_Bruto,
@@ -101,36 +101,35 @@ public class DryCoffeePurchaseCalculator {
         // decimales en ninguna de las 904 filas historicas.
         BigDecimal unitPrice = roundToWholePeso(qualityUnitPrice);
         MoneyValidation.requireNonNegative(unitPrice, "Vr. Kilo");
-        BigDecimal grossValue = unitPrice.multiply(netKg).setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal grossValue = roundToWholePeso(unitPrice.multiply(netKg));
         MoneyValidation.requireNonNegative(grossValue, "Vr. Bruto");
         BigDecimal inventoryValue = grossValue;
 
         BigDecimal associateContribution = BigDecimal.ZERO;
         BigDecimal cooperativeDiscount = BigDecimal.ZERO;
-        if ("S".equalsIgnoreCase(request.growerType())) {
+        if ("S".equalsIgnoreCase(seller.growerType())) {
             associateContribution = roundToWholePeso(grossValue.multiply(controlRecord.getAssociatePercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64));
-        } else if ("C".equalsIgnoreCase(request.growerType())) {
+        } else if ("C".equalsIgnoreCase(seller.growerType())) {
             cooperativeDiscount = roundToWholePeso(grossValue.multiply(controlRecord.getNonAssociateDiscount())
                     .divide(HUNDRED, MathContext.DECIMAL64));
         }
 
-        // Retefuente incremental sobre el acumulado mensual del caficultor (macro CalculoReteFteMes):
-        // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado este
-        // mes), y se descuenta la Retefuente ya practicada este mes, dejando solo el diferencial.
-        // NOTA a revisar con el negocio: hoy el acumulado solo mira compras del modulo drycoffee.
-        // Cuando existan othercoffee/greencoffee/husk habra que decidir si tambien deben sumar.
-        // SIN VERIFICAR: CalculoReteFteMes solo abre el reporte "ReteMesCurso" y copia sus totales
-        // (TotalVrBruto/TotalRetefuente) a Texto105/Texto107; el RecordSource real de ese reporte
-        // (filtro de mes, agrupacion por cedula/agencia) no esta en el export de VBA disponible
-        // (docs/legacy-vba-export/eltambo/ solo trae modulos y macros, no reportes). La query
-        // sumMonthlyTotalsByIdNumber de abajo es el mejor esfuerzo hasta poder confirmarlo.
-        BigDecimal thresholdBase = grossValue.add(monthlyAccumulatedGrossValue);
+        // Retefuente incremental sobre el acumulado DIARIO del caficultor (macro CalculoReteFteMes):
+        // el umbral y el porcentaje se aplican sobre (Vr_Bruto de esta compra + lo ya comprado hoy),
+        // y se descuenta la Retefuente ya practicada hoy, dejando solo el diferencial.
+        // Q10 (area de compras): el acumulado es conjunto, seco + verde + pasilla del dia en todas las
+        // agencias (GrowerDailyTotalsRepository).
+        // Ventana: CalculoReteFteMes copia TotalVrBruto/TotalRetefuente del reporte "ReteMesCurso",
+        // cuyo RecordSource es una consulta guardada que no esta en el export. Pese al nombre "Mes",
+        // la ventana diaria reproduce mejor la Retefuente historica de compras_migrar.csv (750/844
+        // vs 673/844 mensual) - ver docs/informe-formulas-compras-vs-vba.md seccion Retefuente.
+        BigDecimal thresholdBase = grossValue.add(dailyAccumulatedGrossValue);
         BigDecimal withholding = BigDecimal.ZERO;
-        if (!request.withholdingExempt() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
+        if (!seller.association() && thresholdBase.compareTo(controlRecord.getBaseWithholding()) > 0) {
             withholding = roundToWholePeso(thresholdBase.multiply(controlRecord.getWithholdingPercentage())
                     .divide(HUNDRED, MathContext.DECIMAL64)
-                    .subtract(monthlyAccumulatedWithholding));
+                    .subtract(dailyAccumulatedWithholding));
         }
 
         BigDecimal netToPay = roundToWholePeso(grossValue
@@ -146,6 +145,7 @@ public class DryCoffeePurchaseCalculator {
                 netKg.setScale(SCALE, RoundingMode.HALF_UP),
                 wastePercentage,
                 defectivePercentage,
+                healthyStoredWeight,
                 healthyPercentage,
                 unitPrice,
                 grossValue,
@@ -175,6 +175,15 @@ public class DryCoffeePurchaseCalculator {
     }
 
     /** PorcAlmSana (Factor): paso "Peso Alm Sana" (independiente del resto de la cascada). */
+    /** Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla; si no queda almendra sana, no se puede facturar. */
+    public BigDecimal healthyStoredWeight(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight) {
+        BigDecimal healthy = totalStoredWeight.subtract(defectiveStoredWeight);
+        if (healthy.signum() <= 0) {
+            throw new BusinessRuleException("La pasilla debe ser menor que la almendra total");
+        }
+        return healthy.setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
     public BigDecimal healthyPercentage(BigDecimal healthyStoredWeight, ControlRecord controlRecord) {
         return healthyPercentageRaw(healthyStoredWeight, controlRecord).setScale(SCALE, RoundingMode.HALF_UP);
     }
@@ -183,7 +192,7 @@ public class DryCoffeePurchaseCalculator {
         if (healthyStoredWeight.signum() == 0) {
             throw new BusinessRuleException("La almendra sana no puede ser cero");
         }
-        return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getBaseFactor()))
+        return sampleSize(controlRecord).multiply(BigDecimal.valueOf(controlRecord.getExcelsoKg()))
                 .divide(healthyStoredWeight, MathContext.DECIMAL64);
     }
 

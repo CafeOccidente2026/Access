@@ -1,14 +1,17 @@
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
   ViewChild,
+  inject,
 } from '@angular/core';
 
 /** Sin tildes/mayusculas, para que "narino" encuentre "NARIÑO" mientras se escribe. */
@@ -36,12 +39,14 @@ function normalize(text: string): string {
   templateUrl: './combobox.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ComboboxComponent implements OnChanges {
+export class ComboboxComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) options: readonly string[] = [];
   @Input() value: string | number = '';
   @Input() disabled = false;
   @Input() dataFieldKey = '';
   @Input() inputClass = '';
+  /** Nombre del campo para lectores de pantalla (la etiqueta visible esta fuera del componente). */
+  @Input() ariaLabel = '';
 
   @Output() readonly valueChange = new EventEmitter<string>();
   @Output() readonly committed = new EventEmitter<void>();
@@ -54,7 +59,20 @@ export class ComboboxComponent implements OnChanges {
   filteredOptions: readonly string[] = [];
   highlightedIndex = -1;
 
+  /**
+   * Posicion fija de la lista, medida desde el input: asi no la recorta ninguna ventana con overflow
+   * (bug de las listas cortadas en los dialogos de informes). Si no entra abajo se abre hacia arriba.
+   */
+  listBox: { left: number; width: number; top: number | null; bottom: number | null } = {
+    left: 0, width: 0, top: 0, bottom: null,
+  };
+  private readonly reposition = () => {
+    this.placeList();
+    this.changeDetector.markForCheck();
+  };
+
   private closeTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value'] && !this.isOpen) {
@@ -62,6 +80,11 @@ export class ComboboxComponent implements OnChanges {
     }
     if (changes['options']) {
       this.filteredOptions = this.options;
+      // Opciones que llegan despues de escribir (busqueda en el backend, ej. cedula del conductor):
+      // resaltar la primera para que Enter la confirme. Con listas fijas nunca pasa con la lista abierta.
+      if (this.isOpen) {
+        this.highlightedIndex = this.options.length ? 0 : -1;
+      }
     }
   }
 
@@ -73,10 +96,43 @@ export class ComboboxComponent implements OnChanges {
     this.filteredOptions = this.options;
     this.highlightedIndex = this.options.findIndex((o) => o === this.inputText);
     this.isOpen = true;
+    this.placeList();
+    // Captura: tambien el scroll de cualquier contenedor, no solo el de la pagina.
+    window.addEventListener('scroll', this.reposition, true);
+    window.addEventListener('resize', this.reposition);
+  }
+
+  ngOnDestroy(): void {
+    this.stopTracking();
+  }
+
+  private stopTracking(): void {
+    window.removeEventListener('scroll', this.reposition, true);
+    window.removeEventListener('resize', this.reposition);
+  }
+
+  /** max-h-48 = 192px de lista; 2px de separacion con el input. */
+  private placeList(): void {
+    const rect = this.inputEl?.nativeElement.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+    const listHeight = 192;
+    const below = window.innerHeight - rect.bottom;
+    const openUp = below < listHeight + 4 && rect.top > below;
+    this.listBox = {
+      left: rect.left,
+      width: rect.width,
+      top: openUp ? null : rect.bottom + 2,
+      bottom: openUp ? window.innerHeight - rect.top + 2 : null,
+    };
   }
 
   onInputChange(text: string): void {
     this.inputText = text;
+    if (!this.isOpen) {
+      this.placeList();
+    }
     this.filteredOptions = text.trim()
       ? this.options.filter((o) => normalize(o).includes(normalize(text)))
       : this.options;
@@ -136,7 +192,11 @@ export class ComboboxComponent implements OnChanges {
     // preventDefault (nunca llega a disparar blur). Esto solo cubre Tab/click afuera.
     this.closeTimer = setTimeout(() => {
       this.isOpen = false;
+      this.stopTracking();
       this.commitIfValid();
+      // OnPush: el timeout no marca la vista; sin esto la lista quedaba abierta al salir del campo
+      // (en Compras no se notaba porque el campo se bloquea al confirmarse).
+      this.changeDetector.markForCheck();
     }, 150);
   }
 

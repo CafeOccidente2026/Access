@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import pdfMake from 'pdfmake/build/pdfmake';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RemissionFormComponent } from './remission-form';
@@ -17,7 +18,7 @@ describe('RemissionFormComponent', () => {
       sacos: 10, grossKg: 1250, netKg: 1200, remainingKg: 700, healthyPercentage: 90, inventoryValue: 8661600,
     },
     {
-      id: 11, purchaseModule: 'OTHER_COFFEE', purchaseId: 1, agencyId: 1, agencyName: 'Buesaco',
+      id: 11, purchaseModule: 'GREEN_COFFEE', purchaseId: 1, agencyId: 1, agencyName: 'Buesaco',
       productCode: '0110002000002', specialType: 'RN', invoiceNumber: 27868, purchaseDate: '2026-09-23',
       sacos: 5, grossKg: 520, netKg: 500, remainingKg: 0, healthyPercentage: 88, inventoryValue: 1510500,
     },
@@ -27,7 +28,7 @@ describe('RemissionFormComponent', () => {
   let component: RemissionFormComponent;
 
   function setup() {
-    createSpy = vi.fn(() => of({ id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central', conductorIdNumber: null, conductorName: null, transportCompany: null, vehiclePlate: null, exported: false, lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }] }));
+    createSpy = vi.fn(() => of({ id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central', conductorIdNumber: null, conductorName: null, transportCompany: null, vehiclePlate: null, exported: false, displayNumber: 'SDBU-RP-0001', lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }] }));
     localStorage.setItem('cafeoccidente.agencyId', '1');
     TestBed.configureTestingModule({
       providers: [
@@ -55,24 +56,41 @@ describe('RemissionFormComponent', () => {
     setup();
     component.selectedMovementId.set(10);
     component.draftQuantity.set('300');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
     component.addLine();
 
     expect(component.lines()).toHaveLength(1);
     expect(component.canSave()).toBe(true);
   });
 
+  it('addLine() requires Sacos and Kilos Brutos of the dispatch', () => {
+    setup();
+    component.selectedMovementId.set(10);
+    component.draftQuantity.set('300');
+    component.addLine();
+    expect(component.lines()).toHaveLength(0);
+
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
+    component.addLine();
+    expect(component.lines()).toHaveLength(1);
+  });
+
   it('save() sends the accumulated lines and shows the saved remission', () => {
     setup();
     component.selectedMovementId.set(10);
     component.draftQuantity.set('300');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
     component.addLine();
 
     component.save();
 
     expect(createSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ agencyId: 1, lines: [{ inventoryMovementId: 10, quantity: 300 }] }),
+      expect.objectContaining({ lines: [{ inventoryMovementId: 10, quantity: 300, sacos: 8, grossKg: 305 }] }),
     );
-    expect(component.result()?.remissionNumber).toBe(1);
+    expect(component.result()?.displayNumber).toBe('SDBU-RP-0001');
   });
 
   it('shows the real backend error (e.g. saldo excedido) instead of a generic one', () => {
@@ -82,10 +100,31 @@ describe('RemissionFormComponent', () => {
     );
     component.selectedMovementId.set(10);
     component.draftQuantity.set('9999');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
     component.addLine();
 
     component.save();
 
     expect(component.errorMessage()).toBe('La salida no puede ser superior al saldo disponible (saldo: 700 kg, factura 27867)');
   });
+
+  it('print() says so when the PDF cannot be built, instead of leaving the promise unhandled', async () => {
+    setup();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
+      throw new Error('pdfmake');
+    });
+    component.selectedMovementId.set(10);
+    component.draftQuantity.set('300');
+    component.draftSacos.set('8');
+    component.draftGrossKg.set('305');
+    component.addLine();
+    component.save();
+
+    component.print();
+
+    await vi.waitFor(() => expect(component.errorMessage()).toBe('No se pudo generar la remisión'));
+    createPdf.mockRestore();
+  });
 });
+

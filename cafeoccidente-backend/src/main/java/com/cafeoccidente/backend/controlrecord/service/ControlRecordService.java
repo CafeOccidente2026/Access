@@ -2,6 +2,8 @@ package com.cafeoccidente.backend.controlrecord.service;
 
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import java.util.List;
 
@@ -16,4 +18,7 @@ public interface ControlRecordService {
     ControlRecordResponse create(Long agencyId, ControlRecordRequest request);
 
     ControlRecordResponse update(Long agencyId, ControlRecordRequest request);
+
+    /** Los 5 valores de cafe verde para todas las agencias con Registro de Control activo. */
+    GreenCoffeeAppliedResponse applyGreenCoffeeToAll(GreenCoffeeValuesRequest request);
 }

@@ -1,0 +1,48 @@
+{
+  "windowTitle": "Asociados",
+  "heading": "Asociados",
+  "trueLabel": "Verdadero",
+  "falseLabel": "Falso",
+  "recordLabel": "Registro",
+  "ofLabel": "de",
+  "searchLabel": "Buscar cédula",
+  "searchButton": "Buscar",
+  "backLabel": "Volver",
+  "backRoute": "/vendedores",
+  "nav": { "first": "|◀", "previous": "◀", "next": "▶", "last": "▶|" },
+  "messages": { "notFound": "No existe un asociado con esa cédula", "error": "No se pudo cargar el asociado" },
+  "columns": [
+    [
+      { "key": "idNumber", "label": "IdAsociado" },
+      { "key": "firstName", "label": "1er Nombre" },
+      { "key": "secondName", "label": "2o Nombre" },
+      { "key": "lastName", "label": "1er Apellido" },
+      { "key": "secondLastName", "label": "2o Apellido" },
+      { "key": "agencyName", "label": "Agencia" },
+      { "key": "birthDate", "label": "FechaNacimiento", "type": "date" },
+      { "key": "birthPlace", "label": "LugarNacimiento" },
+      { "key": "maritalStatus", "label": "EstadoCivil" },
+      { "key": "coffeeIdCard", "label": "CedulaCafetera" },
+      { "key": "address", "label": "Direccion" },
+      { "key": "phone", "label": "Telefono" },
+      { "key": "affiliationDate", "label": "FechaAfiliación", "type": "date" },
+      { "key": "actNumber", "label": "Acta" },
+      { "key": "accepted", "label": "Aceptado", "type": "bool" }
+    ],
+    [
+      { "key": "eligible", "label": "Habil", "type": "bool" },
+      { "key": "withdrawn", "label": "Retirado", "type": "bool" },
+      { "key": "deceased", "label": "Fallecido", "type": "bool" },
+      { "key": "observation", "label": "Observacion", "type": "memo" },
+      { "key": "growerType", "label": "Tipo" },
+      { "key": "transportCompany", "label": "Emp_Transp" },
+      { "key": "vehiclePlate", "label": "Vehiculo" },
+      { "key": "exported", "label": "Exportado", "type": "bool" },
+      { "key": "isAssociation", "label": "Asociacion", "type": "bool" },
+      { "key": "isNew", "label": "Nuevo", "type": "check" },
+      { "key": "cityCode", "label": "Ciu" },
+      { "key": "sex", "label": "Sexo" },
+      { "key": "country", "label": "Pais" }
+    ]
+  ]
+}

@@ -1,13 +1,15 @@
 package com.cafeoccidente.backend.purchases.greencoffee.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.greencoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseCalculation;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/purchases/green-coffee")
+@PreAuthorize(Roles.ADMIN_USER)
 public class GreenCoffeePurchaseController {
 
     private final GreenCoffeePurchaseService greenCoffeePurchaseService;

@@ -25,6 +25,8 @@ export interface FormFieldDefinition {
   readonly rawDisplay?: boolean;
   /** Campo de texto que solo acepta digitos (ej. Cedula): sin letras ni otros caracteres. */
   readonly digitsOnly?: boolean;
+  /** Solo cero o negativo (Castigo, Q1/RN-14.7): al confirmar, 23 queda -23 y vacio queda 0. */
+  readonly negativeOnly?: boolean;
 }
 
 export interface FormFieldSection {

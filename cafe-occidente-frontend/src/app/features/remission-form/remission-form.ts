@@ -1,22 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { InventoryMovementResponse, RemissionLineRequest, RemissionResponse } from '../../core/models/inventory.model';
 import { Grower, GrowerCreateRequest } from '../../core/models/grower.model';
-import { AuthService } from '../../core/services/auth.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent } from '../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber } from '../../shared/utils/number-format';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from './remission-invoice';
+import { openPdf } from '../../shared/utils/pdf-preview';
 
 interface DraftLine {
   readonly inventoryMovementId: number;
   readonly label: string;
   readonly quantity: number;
+  readonly sacos: number;
+  readonly grossKg: number;
 }
 
 /**
@@ -33,7 +33,6 @@ interface DraftLine {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RemissionFormComponent {
-  private readonly authService = inject(AuthService);
   private readonly growerService = inject(GrowerService);
   private readonly inventoryService = inject(InventoryService);
 
@@ -55,19 +54,18 @@ export class RemissionFormComponent {
 
   readonly selectedMovementId = signal<number | null>(null);
   readonly draftQuantity = signal('');
+  /** Sacos y Kilos Brutos de esta salida (Form_EXITS: Sacos / Kilos_Brutos), por linea. */
+  readonly draftSacos = signal('');
+  readonly draftGrossKg = signal('');
   readonly lines = signal<DraftLine[]>([]);
 
   readonly result = signal<RemissionResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
-  private readonly logoDataUrlPromise: Promise<string | null>;
+  private readonly logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
 
   constructor() {
-    this.logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
-    const agencyId = this.authService.agencyId();
-    if (agencyId) {
-      this.inventoryService.listMovements(agencyId).subscribe((list) => this.movements.set(list));
-    }
+    this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
   }
 
   print(): void {
@@ -75,11 +73,10 @@ export class RemissionFormComponent {
     if (!remission) {
       return;
     }
-    this.logoDataUrlPromise.then((logoDataUrl) => {
-      const docDefinition = buildRemissionDocDefinition(remission, logoDataUrl);
-      pdfMake.vfs = pdfFonts;
-      pdfMake.createPdf(docDefinition).open();
-    });
+    openPdf(
+      this.logoDataUrlPromise.then((logo) => buildRemissionDocDefinition(remission, logo)),
+      () => this.errorMessage.set('No se pudo generar la remisión'),
+    );
   }
 
   kg(value: number): string {
@@ -112,9 +109,8 @@ export class RemissionFormComponent {
   /** "Ingresar Conductores" (Form_Conductores.bas), a la mano desde acá: la cédula ya está capturada
    *  arriba, solo falta el resto de datos para dar de alta al conductor y seguir con la remisión. */
   saveNewConductor(): void {
-    const agencyId = this.authService.agencyId();
     const idNumber = this.conductorIdNumber().trim();
-    if (!agencyId || !idNumber || !this.newConductorFirstName().trim() || !this.newConductorLastName().trim()) {
+    if (!idNumber || !this.newConductorFirstName().trim() || !this.newConductorLastName().trim()) {
       return;
     }
     this.newConductorError.set(null);
@@ -124,7 +120,6 @@ export class RemissionFormComponent {
       secondName: null,
       lastName: this.newConductorLastName().trim(),
       secondLastName: null,
-      agencyId,
       transportCompany: this.newConductorTransportCompany().trim() || null,
       vehiclePlate: this.newConductorVehiclePlate().trim() || null,
     };
@@ -144,7 +139,9 @@ export class RemissionFormComponent {
   addLine(): void {
     const movementId = this.selectedMovementId();
     const quantity = parseDisplayNumber(this.draftQuantity());
-    if (!movementId || quantity <= 0) {
+    const sacos = parseDisplayNumber(this.draftSacos());
+    const grossKg = parseDisplayNumber(this.draftGrossKg());
+    if (!movementId || quantity <= 0 || sacos <= 0 || grossKg <= 0) {
       return;
     }
     const movement = this.movements().find((m) => m.id === movementId);
@@ -153,10 +150,12 @@ export class RemissionFormComponent {
     }
     this.lines.update((list) => [
       ...list,
-      { inventoryMovementId: movementId, label: `Factura ${movement.invoiceNumber} - ${movement.specialType}`, quantity },
+      { inventoryMovementId: movementId, label: `Factura ${movement.invoiceNumber} - ${movement.specialType}`, quantity, sacos, grossKg },
     ]);
     this.selectedMovementId.set(null);
     this.draftQuantity.set('');
+    this.draftSacos.set('');
+    this.draftGrossKg.set('');
   }
 
   removeLine(index: number): void {
@@ -168,18 +167,18 @@ export class RemissionFormComponent {
   }
 
   save(): void {
-    const agencyId = this.authService.agencyId();
-    if (!agencyId || !this.canSave()) {
+    if (!this.canSave()) {
       return;
     }
     this.errorMessage.set(null);
     const lineRequests: RemissionLineRequest[] = this.lines().map((l) => ({
       inventoryMovementId: l.inventoryMovementId,
       quantity: l.quantity,
+      sacos: l.sacos,
+      grossKg: l.grossKg,
     }));
     this.inventoryService
       .createRemission({
-        agencyId,
         remissionDate: this.remissionDate(),
         destination: this.destination() || null,
         conductorIdNumber: this.conductorIdNumber() || null,
@@ -203,9 +202,6 @@ export class RemissionFormComponent {
     this.lines.set([]);
     this.result.set(null);
     this.errorMessage.set(null);
-    const agencyId = this.authService.agencyId();
-    if (agencyId) {
-      this.inventoryService.listMovements(agencyId).subscribe((list) => this.movements.set(list));
-    }
+    this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
   }
 }

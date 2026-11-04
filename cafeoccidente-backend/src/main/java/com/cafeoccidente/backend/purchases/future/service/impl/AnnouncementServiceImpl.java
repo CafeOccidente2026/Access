@@ -1,12 +1,19 @@
 package com.cafeoccidente.backend.purchases.future.service.impl;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
-import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
+import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementTypeRequest;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementTypeResponse;
 import com.cafeoccidente.backend.purchases.future.dto.HuskAnnouncementRequest;
 import com.cafeoccidente.backend.purchases.future.entity.AgencyAnnouncementNumber;
 import com.cafeoccidente.backend.purchases.future.entity.Announcement;
@@ -14,11 +21,16 @@ import com.cafeoccidente.backend.purchases.future.repository.AgencyAnnouncementN
 import com.cafeoccidente.backend.purchases.future.repository.AnnouncementRepository;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
+import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
+import com.cafeoccidente.backend.purchases.shared.repository.ProductCodeRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,23 +52,29 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private final AnnouncementRepository announcementRepository;
     private final AgencyAnnouncementNumberRepository agencyAnnouncementNumberRepository;
     private final FundRepository fundRepository;
+    private final ProductCodeRepository productCodeRepository;
     private final ControlRecordRepository controlRecordRepository;
     private final ControlRecordService controlRecordService;
-    private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
+    private final ChangeHistoryService history;
 
     public AnnouncementServiceImpl(
             AnnouncementRepository announcementRepository,
             AgencyAnnouncementNumberRepository agencyAnnouncementNumberRepository,
             FundRepository fundRepository,
+            ProductCodeRepository productCodeRepository,
             ControlRecordRepository controlRecordRepository,
             ControlRecordService controlRecordService,
-            SecurityUtils securityUtils) {
+            CurrentAgencyProvider currentAgencyProvider,
+            ChangeHistoryService history) {
         this.announcementRepository = announcementRepository;
         this.agencyAnnouncementNumberRepository = agencyAnnouncementNumberRepository;
         this.fundRepository = fundRepository;
+        this.productCodeRepository = productCodeRepository;
         this.controlRecordRepository = controlRecordRepository;
         this.controlRecordService = controlRecordService;
-        this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
+        this.history = history;
     }
 
     @Override
@@ -69,22 +87,87 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         return toResponse(numbering, controlRecord);
     }
 
+    /**
+     * RN-08.3 y RN-08.4: un anuncio por cada tipo de cafe del fondo (Productos, menos PASILLA, que tiene su
+     * propia pantalla), con el precio del dia y la bonificacion, el precio de pasilla y el Pr Inc Calidad
+     * que cada tipo ya tenia (0 si nunca tuvo anuncio). Cada uno sube 1 el consecutivo de cada agencia
+     * (RN-08.10, Q6). Todo o nada: una sola transaccion.
+     */
     @Override
     @Transactional
-    public AnnouncementResponse create(AnnouncementRequest request) {
-        Fund fund = fundRepository.findById(request.fundId())
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
+    public List<AnnouncementResponse> publishAll(AnnouncementRequest request) {
+        Fund fund = fund(request.fundId());
+        return specialTypes(fund).stream().map(specialType -> {
+            Optional<Announcement> current = announcementRepository
+                    .findFirstByFundIdAndSpecialTypeOrderByIdDesc(fund.getId(), specialType);
+            Announcement master = master(fund, specialType, request.basePriceLoad(),
+                    current.map(Announcement::getSpecialSurcharge).orElse(BigDecimal.ZERO),
+                    current.map(Announcement::getDefectiveUnitPrice).orElse(BigDecimal.ZERO));
+            master.setQualityIncrement(current.map(Announcement::getQualityIncrement).orElse(null));
+            return publish(master, fund);
+        }).toList();
+    }
 
+    /** HU-11 CA-1: cada tipo de cafe del fondo con su anuncio vigente (comun a todas las agencias). */
+    @Override
+    public List<AnnouncementTypeResponse> types(Long fundId) {
+        Fund fund = fund(fundId);
+        return specialTypes(fund).stream().map(specialType -> announcementRepository
+                .findFirstByFundIdAndSpecialTypeOrderByIdDesc(fund.getId(), specialType)
+                .map(a -> new AnnouncementTypeResponse(specialType, a.getBasePriceLoad(), a.getSpecialSurcharge(),
+                        a.getDefectiveUnitPrice(), a.getAnnouncementDate()))
+                .orElseGet(() -> new AnnouncementTypeResponse(specialType, null, null, null, null)))
+                .toList();
+    }
+
+    /**
+     * HU-11 CA-2 y RN-08.6: un anuncio nuevo solo para ese tipo (los demas no cambian), con el precio
+     * digitado o, si no viene, el vigente del tipo. Sube 1 el consecutivo de cada agencia, como toda publicacion.
+     */
+    @Override
+    @Transactional
+    public AnnouncementResponse publishType(AnnouncementTypeRequest request) {
+        Fund fund = fund(request.fundId());
+        if (!specialTypes(fund).contains(request.specialType())) {
+            throw new BusinessRuleException("El tipo de cafe " + request.specialType() + " no se publica en el fondo "
+                    + fund.getCode() + " desde este formulario");
+        }
+        Optional<Announcement> current = announcementRepository
+                .findFirstByFundIdAndSpecialTypeOrderByIdDesc(fund.getId(), request.specialType());
+        BigDecimal basePriceLoad = request.basePriceLoad() != null
+                ? request.basePriceLoad()
+                : current.map(Announcement::getBasePriceLoad).orElseThrow(() -> new BusinessRuleException(
+                        "El tipo de cafe " + request.specialType() + " no tiene anuncio: digite el Pr Base Carg Perg Seco"));
+        Announcement master = master(fund, request.specialType(), basePriceLoad, request.specialSurcharge(),
+                request.defectiveUnitPrice());
+        master.setQualityIncrement(current.map(Announcement::getQualityIncrement).orElse(null));
+        return publish(master, fund);
+    }
+
+    private Fund fund(Long fundId) {
+        return fundRepository.findById(fundId).orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
+    }
+
+    /** Los tipos de cafe (Especial) del fondo en Productos, menos PASILLA (RF-09). */
+    private List<String> specialTypes(Fund fund) {
+        return productCodeRepository.findByFundIdOrderByCodeAsc(fund.getId()).stream()
+                .map(ProductCode::getSpecialType)
+                .filter(specialType -> !HUSK_SPECIAL_TYPE.equals(specialType))
+                .distinct()
+                .toList();
+    }
+
+    private static Announcement master(Fund fund, String specialType, BigDecimal basePriceLoad,
+            BigDecimal specialSurcharge, BigDecimal defectiveUnitPrice) {
         Announcement master = new Announcement();
         master.setAnnouncementDate(LocalDate.now());
-        master.setBasePriceLoad(request.basePriceLoad());
-        master.setDefectiveUnitPrice(request.defectiveUnitPrice());
-        master.setSpecialSurcharge(request.specialSurcharge());
-        master.setQualityIncrement(request.qualityIncrement());
+        master.setBasePriceLoad(basePriceLoad);
+        master.setSpecialSurcharge(specialSurcharge);
+        master.setDefectiveUnitPrice(defectiveUnitPrice);
         master.setFund(fund);
-        master.setSpecialType(request.specialType());
+        master.setSpecialType(specialType);
         master.setActive(true);
-        return publish(master, fund);
+        return master;
     }
 
     /**
@@ -111,10 +194,25 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         return publish(master, fund);
     }
 
+    private static Map<String, String> published(Announcement master, Fund fund) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("fund", fund.getCode());
+        values.put("specialType", master.getSpecialType());
+        values.put("announcementDate", Snapshots.text(master.getAnnouncementDate()));
+        values.put("basePriceLoad", Snapshots.text(master.getBasePriceLoad()));
+        values.put("defectiveUnitPrice", Snapshots.text(master.getDefectiveUnitPrice()));
+        values.put("specialSurcharge", Snapshots.text(master.getSpecialSurcharge()));
+        values.put("pointPrice", Snapshots.text(master.getPointPrice()));
+        values.put("qualityIncrement", Snapshots.text(master.getQualityIncrement()));
+        return values;
+    }
+
     private AnnouncementResponse publish(Announcement master, Fund fund) {
         announcementRepository.save(master);
+        // Historial: el anuncio es comun a todas las agencias, asi que no lleva agencia.
+        history.record(Entity.ANUNCIO, master.getId(), Action.PUBLICAR, null, null, published(master, fund));
 
-        Long callerAgencyId = securityUtils.getCurrentAgencyId();
+        Long callerAgencyId = currentAgencyProvider.currentAgencyId();
         AgencyAnnouncementNumber callerNumbering = null;
         ControlRecord callerControlRecord = null;
 
@@ -151,7 +249,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
 
     @Override
     public List<AnnouncementResponse> history() {
-        Long agencyId = securityUtils.getCurrentAgencyId();
+        Long agencyId = currentAgencyProvider.currentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         return agencyAnnouncementNumberRepository.findByAgencyIdOrderByAssignedAtDescIdDesc(agencyId).stream()
                 .map(numbering -> toResponse(numbering, controlRecord))

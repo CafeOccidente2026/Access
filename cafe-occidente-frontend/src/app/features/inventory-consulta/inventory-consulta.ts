@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
 import { InventoryMovementResponse } from '../../core/models/inventory.model';
-import { AuthService } from '../../core/services/auth.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
@@ -16,7 +15,6 @@ import { formatDisplayNumber } from '../../shared/utils/number-format';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InventoryConsultaComponent {
-  private readonly authService = inject(AuthService);
   private readonly inventoryService = inject(InventoryService);
 
   readonly movements = signal<InventoryMovementResponse[]>([]);
@@ -33,10 +31,7 @@ export class InventoryConsultaComponent {
   });
 
   constructor() {
-    const agencyId = this.authService.agencyId();
-    if (agencyId) {
-      this.inventoryService.listMovements(agencyId).subscribe((list) => this.movements.set(list));
-    }
+    this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
   }
 
   kg(value: number): string {

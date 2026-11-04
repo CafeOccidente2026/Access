@@ -9,6 +9,7 @@ export interface LoginContent {
   readonly showPasswordLabel: string;
   readonly hidePasswordLabel: string;
   readonly invalidCredentialsError: string;
+  readonly userDisabledError: string;
 }
 
 export interface ShellContent {

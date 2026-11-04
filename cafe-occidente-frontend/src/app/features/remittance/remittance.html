@@ -1,0 +1,112 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window *ngIf="content() as c" [title]="c.windowTitle" bodyClass="bg-panel-sky" closeRoute="/compras">
+    <div class="flex h-full flex-col gap-2 p-3 text-sm text-slate-800">
+      <!-- Dialogo Remesa: Especial + Aceptar; a la derecha, buscar una remesa ya generada. -->
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col" for="remittance-fund">
+          <span class="font-medium">{{ c.fundLabel }}:</span>
+          <select id="remittance-fund" data-testid="fund" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="fund()"
+            (change)="fund.set($any($event.target).value)">
+            <option *ngFor="let f of c.funds" [value]="f">{{ f }}</option>
+          </select>
+        </label>
+        <label class="flex flex-col" for="remittance-special">
+          <span class="font-medium">{{ c.specialLabel }}:</span>
+          <select id="remittance-special" data-testid="special" class="w-72 rounded border border-slate-300 bg-white px-2 py-1" [value]="special()"
+            (change)="special.set($any($event.target).value)">
+            <option value="">{{ c.allLabel }}</option>
+            <option *ngFor="let s of specials()" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+        <app-button [label]="c.acceptLabel" (pressed)="accept()"></app-button>
+
+        <form class="ml-auto flex items-end gap-2" (submit)="$event.preventDefault(); search(number.value)">
+          <label class="flex flex-col" for="remittance-number">
+            <span class="font-medium">{{ c.searchLabel }}:</span>
+            <input #number id="remittance-number" data-testid="remittance-number" class="w-40 rounded border border-slate-300 bg-white px-2 py-1 uppercase" />
+          </label>
+          <app-button [label]="c.searchButton" (pressed)="search(number.value)"></app-button>
+        </form>
+      </div>
+
+      <div *ngIf="found() as r" class="flex flex-wrap items-center gap-3 rounded border border-slate-400 bg-white/60 px-3 py-1.5">
+        <span class="font-semibold">{{ r.number }}</span>
+        <span>{{ summary(c) }}</span>
+        <span class="ml-auto font-medium" [class.invisible]="!books().length">{{ c.filesLabel }}:</span>
+        <app-button *ngFor="let book of books()" [label]="c.fileLabels[book.sheet] ?? book.sheet" [disabled]="!filesReady()" (pressed)="download(book)"></app-button>
+        <app-button *ngIf="books().length" [label]="c.downloadAllLabel" [disabled]="!filesReady()" (pressed)="downloadAll()"></app-button>
+        <app-button *ngIf="canUnmark()" [label]="c.unmarkLabel" [disabled]="unmarking()" (pressed)="askUnmark()"></app-button>
+      </div>
+
+      <p *ngIf="message() as m" data-testid="message" class="font-semibold text-blue-900">{{ m }}</p>
+
+      <!-- Genera Plano: facturas pendientes, una casilla por factura. -->
+      <div class="min-h-0 flex-1 overflow-auto rounded border border-slate-400 bg-white">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 bg-slate-200 text-left">
+            <tr>
+              <th class="px-2 py-1 text-center">{{ c.columns.selected }}</th>
+              <th class="px-2 py-1">{{ c.columns.invoice }}</th>
+              <th class="px-2 py-1">{{ c.columns.purchaseDate }}</th>
+              <th class="px-2 py-1">{{ c.columns.specialType }}</th>
+              <th class="px-2 py-1">{{ c.columns.idNumber }}</th>
+              <th class="px-2 py-1">{{ c.columns.sellerName }}</th>
+              <th class="px-2 py-1 text-right">{{ c.columns.netKg }}</th>
+              <th class="px-2 py-1 text-right">{{ c.columns.grossValue }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of pending() ?? []" class="border-t border-slate-200 odd:bg-slate-50">
+              <td class="px-2 py-0.5 text-center">
+                <input type="checkbox" [attr.data-testid]="'pick-' + p.module + '-' + p.id" [attr.aria-label]="pickLabel(c, p)" [checked]="isSelected(p)"
+                  (change)="toggle(p)" />
+              </td>
+              <td class="px-2 py-0.5">{{ p.invoice }}</td>
+              <td class="px-2 py-0.5">{{ date(p.purchaseDate) }}</td>
+              <td class="px-2 py-0.5">{{ p.specialType }}</td>
+              <td class="px-2 py-0.5">{{ p.idNumber }}</td>
+              <td class="px-2 py-0.5">{{ p.sellerName }}</td>
+              <td class="px-2 py-0.5 text-right">{{ kg(p.netKg) }}</td>
+              <td class="px-2 py-0.5 text-right">{{ money(p.grossValue) }}</td>
+            </tr>
+            <tr *ngIf="pending() === undefined || pending()!.length === 0">
+              <td colspan="8" class="p-3 text-center text-slate-500">{{ pending() === undefined ? c.pickFirst : c.empty }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie de Genera Plano: Acumulado, empaques de la remesa (RN-11.8) y Genera Remesa. -->
+      <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col" for="remittance-accumulated">
+          <span class="font-medium">{{ c.accumulatedLabel }}:</span>
+          <input id="remittance-accumulated" data-testid="accumulated" class="w-32 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-right"
+            [value]="kg(accumulated())" readonly />
+        </label>
+        <label class="flex flex-col" for="remittance-packaging-quantity">
+          <span class="font-medium">{{ c.packagingQuantityLabel }}:</span>
+          <input id="remittance-packaging-quantity" data-testid="packaging-quantity" inputmode="numeric" class="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-right"
+            [value]="packagingQuantity()" (input)="packagingQuantity.set($any($event.target).value.replace(/\D/g, '')); $any($event.target).value = packagingQuantity()" />
+        </label>
+        <label class="flex flex-col" for="remittance-packaging-type">
+          <span class="font-medium">{{ c.packagingTypeLabel }}:</span>
+          <select id="remittance-packaging-type" data-testid="packaging-type" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="packagingType()"
+            (change)="packagingType.set($any($event.target).value)">
+            <option value=""></option>
+            <option *ngFor="let t of c.packagingTypes" [value]="t">{{ t }}</option>
+          </select>
+        </label>
+        <app-button class="ml-auto" [label]="c.generateLabel" [disabled]="!canGenerate() || saving()" (pressed)="generate()"></app-button>
+      </div>
+    </div>
+  </app-access-window>
+
+  <app-confirm-dialog
+    *ngIf="confirmingUnmark() && content() as c"
+    [message]="confirmText(c)"
+    [confirmLabel]="c.yesLabel"
+    [cancelLabel]="c.noLabel"
+    (confirmed)="unmark()"
+    (cancelled)="confirmingUnmark.set(false)"
+  ></app-confirm-dialog>
+</div>

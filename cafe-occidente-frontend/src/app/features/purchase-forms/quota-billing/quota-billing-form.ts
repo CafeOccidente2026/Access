@@ -2,7 +2,7 @@ import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   DryCoffeePurchaseCalculation,
   DryCoffeePurchaseRequest,
@@ -16,6 +16,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { SampleWeightKey, loadSampleQuality } from '../sample-quality';
 
 type FormModel = Record<string, string>;
 
@@ -24,17 +25,19 @@ type FormModel = Record<string, string>;
  *  (Factura la tipea el cajero, Cedula_AfterUpdate solo valida el consecutivo contra la resolucion). */
 const EDITABLE: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
+  'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 const REQUIRED: string[] = [
-  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'bags', 'grossKg', 'tare',
+  'fund', 'invoice', 'idPart1', 'special', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
 ];
 
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
+  // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
+  'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'basePricePergaminoLoad', 'huskPrice',
   'sustentationPrice', 'bonus', 'costs',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
@@ -42,8 +45,8 @@ const READONLY: string[] = [
 
 const FOCUS_ORDER: string[] = [
   'fund', 'invoice', 'idPart1', 'special',
-  'totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'totalStoredWeight', 'totalHuskWeight',
+  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -61,7 +64,7 @@ const num = parseDisplayNumber;
   selector: 'app-quota-billing-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './quota-billing-form.html',
+  templateUrl: '../quota-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QuotaBillingFormComponent {
@@ -76,6 +79,8 @@ export class QuotaBillingFormComponent {
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
   private readonly tick = signal(0);
 
@@ -163,7 +168,6 @@ export class QuotaBillingFormComponent {
         break;
       case 'totalStoredWeight':
       case 'totalHuskWeight':
-      case 'healthyStoredWeight':
         this.loadQualityPercentage(key);
         this.recalculate();
         break;
@@ -210,13 +214,12 @@ export class QuotaBillingFormComponent {
   }
 
   private loadSpecialInfo(): void {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const specialType = this.model['special'];
-    if (!agencyId || !fundId || !specialType) {
+    if (!fundId || !specialType) {
       return;
     }
-    this.service.specialInfo(agencyId, fundId, specialType).subscribe({
+    this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
@@ -229,26 +232,9 @@ export class QuotaBillingFormComponent {
     });
   }
 
-  private loadQualityPercentage(key: 'totalStoredWeight' | 'totalHuskWeight' | 'healthyStoredWeight'): void {
-    const value = num(this.model[key]);
-    const args: [number?, number?, number?] =
-      key === 'totalStoredWeight'
-        ? [value, undefined, undefined]
-        : key === 'totalHuskWeight'
-          ? [undefined, value, undefined]
-          : [undefined, undefined, value];
-    this.service.qualityPercentages(...args).subscribe((q) => {
-      const target: Record<string, string> = {
-        totalStoredWeight: 'wastePercentage',
-        totalHuskWeight: 'huskPercentage',
-        healthyStoredWeight: 'factor',
-      };
-      const value2 =
-        key === 'totalStoredWeight' ? q.wastePercentage : key === 'totalHuskWeight' ? q.defectivePercentage : q.healthyPercentage;
-      this.model[target[key]] = value2 != null ? String(value2) : '';
-      this.locked.add(target[key]);
-      this.tick.update((n) => n + 1);
-    });
+  /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
+  private loadQualityPercentage(key: SampleWeightKey): void {
+    loadSampleQuality(this.service, this.model, this.locked, key, () => this.tick.update((n) => n + 1));
   }
 
   private recalculate(): void {
@@ -269,22 +255,16 @@ export class QuotaBillingFormComponent {
   }
 
   private buildRequest(): DryCoffeePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = num(this.model['invoice']);
     const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!agencyId || !fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
       return null;
     }
     return {
-      agencyId,
       fundId,
-      invoiceNumber,
       specialType: this.model['special'],
       idNumber: this.model['idPart1'],
-      firstName: this.model['firstNames'] ?? '',
-      lastName: this.model['lastNames'] ?? '',
-      growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'],
       cellphone: this.model['cellphone'],
       bagsCount: num(this.model['bags']),
@@ -292,16 +272,10 @@ export class QuotaBillingFormComponent {
       tareKg: num(this.model['tare']),
       totalStoredWeight: num(this.model['totalStoredWeight']),
       defectiveStoredWeight: num(this.model['totalHuskWeight']),
-      healthyStoredWeight: num(this.model['healthyStoredWeight']),
-      healthyUnitPrice: this.specialInfo()?.healthyUnitPrice ?? 0,
-      bonus: this.specialInfo()?.bonus ?? 0,
       penalty: num(this.model['penalty']),
-      costs: this.specialInfo()?.costs ?? 0,
-      withholdingExempt: false,
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -309,7 +283,7 @@ export class QuotaBillingFormComponent {
   print(): void {}
 
   private canPrint(): boolean {
-    return !!this.specialInfo() && !!this.calc() && this.locked.has('otherDiscounts') && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    return !!this.payment() && !!this.specialInfo() && !!this.calc() && this.locked.has('otherDiscounts') && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   @HostListener('document:keydown.escape')
@@ -380,7 +354,7 @@ export class QuotaBillingFormComponent {
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
@@ -410,6 +384,8 @@ export class QuotaBillingFormComponent {
       settlementSecondaryFields: row(base.settlementSecondaryFields),
       additionalDiscountFields: row(base.additionalDiscountFields),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
+      paymentLocked: false,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }

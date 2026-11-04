@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
@@ -19,12 +20,13 @@ import lombok.Setter;
 
 /**
  * Entrada de inventario (Access "INVENTARIO"/INVENTARIOTB.txt): una fila por CADA compra real
- * (Seco/Verde/Pasilla/Otros/Fertifuturo), creada automáticamente al guardarse la compra (ver
+ * (Seco/Verde/Pasilla), creada automáticamente al guardarse la compra (ver
  * InventoryMovementService, enganchado desde cada *PurchaseServiceImpl.create()). remainingKg se
  * consume vía {@link RemissionLine} - ver esa clase para la regla de saldo (Form_EXITS.bas,
  * Cantidad_AfterUpdate).
  */
 @Entity
+@Table(name = "inventarios")
 @Getter
 @Setter
 public class InventoryMovement {
@@ -34,54 +36,54 @@ public class InventoryMovement {
     private Long id;
 
     /** De qué módulo de compra viene esta entrada (5 tablas de origen distintas). */
-    @Column(name = "purchase_module", nullable = false)
+    @Column(name = "modulo_compra", nullable = false)
     @Enumerated(EnumType.STRING)
     private PurchaseModule purchaseModule;
 
-    /** Id de la fila en la tabla del módulo de origen (DryCoffeePurchase/.../FertiFuturoPurchase). */
-    @Column(name = "purchase_id", nullable = false)
+    /** Id de la fila en la tabla del módulo de origen (DryCoffeePurchase, GreenCoffeePurchase o HuskPurchase). */
+    @Column(name = "compra_id", nullable = false)
     private Long purchaseId;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
     @ManyToOne
-    @JoinColumn(name = "product_code_id", nullable = false)
+    @JoinColumn(name = "producto_id", nullable = false)
     private ProductCode productCode;
 
-    @Column(name = "special_type", nullable = false)
+    @Column(name = "especial", nullable = false)
     private String specialType;
 
-    @Column(name = "invoice_number", nullable = false)
+    @Column(name = "numero_factura", nullable = false)
     private Integer invoiceNumber;
 
-    @Column(name = "purchase_date", nullable = false)
+    @Column(name = "fecha_compra", nullable = false)
     private LocalDate purchaseDate;
 
-    @Column
+    @Column(name = "sacos")
     private Integer sacos;
 
-    @Column(name = "gross_kg", precision = 10, scale = 2)
+    @Column(name = "kilos_brutos", precision = 10, scale = 2)
     private BigDecimal grossKg;
 
-    @Column(name = "net_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "kilos_netos", nullable = false, precision = 10, scale = 2)
     private BigDecimal netKg;
 
     /** Saldo disponible para despachar (Salidas!Saldo, ParaSalidas!saldokg) - arranca en netKg. */
-    @Column(name = "remaining_kg", nullable = false, precision = 10, scale = 2)
+    @Column(name = "saldo_kilos", nullable = false, precision = 10, scale = 2)
     private BigDecimal remainingKg;
 
-    @Column(name = "healthy_percentage", precision = 6, scale = 2)
+    @Column(name = "factor", precision = 6, scale = 2)
     private BigDecimal healthyPercentage;
 
-    @Column(name = "inventory_value", nullable = false, precision = 15, scale = 2)
+    @Column(name = "vr_inventario", nullable = false, precision = 15, scale = 2)
     private BigDecimal inventoryValue;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
 
     public enum PurchaseModule {
-        DRY_COFFEE, GREEN_COFFEE, HUSK, OTHER_COFFEE, FERTI_FUTURO
+        DRY_COFFEE, GREEN_COFFEE, HUSK
     }
 }

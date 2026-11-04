@@ -67,6 +67,7 @@ public class DryCoffeePurchaseMapper {
                 controlRecord.getResolutionDate(),
                 controlRecord.getResolutionFrom(),
                 controlRecord.getResolutionTo(),
-                controlRecord.getValidity());
+                controlRecord.getValidity(),
+                purchase.getProductCode().getName());
     }
 }

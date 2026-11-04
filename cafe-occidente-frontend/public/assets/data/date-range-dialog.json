@@ -3,5 +3,23 @@
   "fromLabel": "Desde Fecha",
   "toLabel": "Hasta Fecha",
   "acceptLabel": "Aceptar",
-  "cancelLabel": "Cancelar"
+  "cancelLabel": "Cancelar",
+  "pdfTitle": "COMPRAS POR FECHA",
+  "messages": {
+    "fromAfterTo": "La fecha Desde no puede ser posterior a la fecha Hasta",
+    "empty": "No hay compras entre esas fechas",
+    "error": "No se pudo generar el reporte"
+  },
+  "pdf": {
+    "title": "COMPRAS POR FECHA",
+    "range": "Desde {from} hasta {to}",
+    "columns": ["Anun", "Fecha Compra", "Fdo", "Factura", "Cédula", "KN", "Porc", "VR Kilo", "Vr Inventario", "Ap Socio", "Dto Coop", "Dto Fro", "Retefuente", "Ot Dsctos", "Neto a Pag", "Especial"],
+    "groupSummary": "Resumir por 'Agencia' = {agency} ({count} {records})",
+    "oneRecord": "registro de detalle",
+    "manyRecords": "registros de detalle",
+    "sum": "Suma",
+    "total": "Suma total",
+    "annulled": "ANULADA",
+    "page": "Página {page} de {pages}"
+  }
 }

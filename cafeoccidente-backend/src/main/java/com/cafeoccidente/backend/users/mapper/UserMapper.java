@@ -12,6 +12,7 @@ public class UserMapper {
         return new UserResponse(
                 user.getId(),
                 user.getUsername(),
+                user.getIdNumber(),
                 user.isActive(),
                 user.getRole().getId(),
                 user.getRole().getName(),

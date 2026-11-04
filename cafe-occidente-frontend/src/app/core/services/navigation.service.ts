@@ -11,6 +11,6 @@ export class NavigationService {
     if (!route) {
       return;
     }
-    this.router.navigateByUrl(route);
+    void this.router.navigateByUrl(route);
   }
 }

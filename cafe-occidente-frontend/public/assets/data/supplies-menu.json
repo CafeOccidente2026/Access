@@ -1,0 +1,24 @@
+{
+  "windowTitle": "SUMINISTROS",
+  "columns": [
+    [
+      { "label": "Registrar Suministro Efectivo", "route": "/suministros/caja", "emphasis": true },
+      { "label": "Ajustes Caja Café", "route": "/suministros/ajustes-caja" },
+      { "label": "Informe Caja", "route": "/suministros/informe-caja" },
+      { "label": "Relación Cheques", "route": "/suministros/relacion-cheques" },
+      { "label": "Rel Cheques Especial", "route": "/suministros/relacion-cheques-especial" },
+      { "label": "Rel Formas de Pago", "route": "/suministros/formas-de-pago" },
+      { "label": "Suministro Empaques", "route": "/suministros/empaques" },
+      { "label": "Préstamo Empaques", "route": "/suministros/prestamo-empaques" },
+      { "label": "Informe Empaques", "route": "/suministros/informe-empaques" }
+    ],
+    [
+      { "label": "Ingresar Suministros", "route": "/suministros/ingresar" },
+      { "label": "Cheques Girados", "route": "/suministros/cheques-girados" },
+      { "label": "Informe Suministros RP", "route": "/suministros/informe-rp" },
+      { "label": "Informe Suministros LF", "route": "/suministros/informe-lf" },
+      { "label": "Caja Menor", "route": "/suministros/caja-menor" }
+    ]
+  ],
+  "back": { "label": "Volver al Pánel de Control Principal", "route": "/menu-principal" }
+}

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -80,7 +81,12 @@ export class LoginComponent {
         this.navigation.goTo(
           this.auth.isAdmin() ? this.page()?.form.successRoute : this.page()?.form.userSuccessRoute,
         ),
-      error: () => this.errorMessage.set(this.page()?.form.invalidCredentialsError ?? null),
+      // El servidor marca con code USER_DISABLED al usuario desactivado que digito bien su contrasena.
+      error: (error: unknown) => {
+        const form = this.page()?.form;
+        const disabled = error instanceof HttpErrorResponse && error.error?.code === 'USER_DISABLED';
+        this.errorMessage.set((disabled ? form?.userDisabledError : form?.invalidCredentialsError) ?? null);
+      },
     });
   }
 

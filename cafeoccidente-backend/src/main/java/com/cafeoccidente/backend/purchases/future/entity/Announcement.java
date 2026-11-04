@@ -1,12 +1,12 @@
 package com.cafeoccidente.backend.purchases.future.entity;
 
-import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
@@ -19,14 +19,12 @@ import lombok.Setter;
  * compartido por TODAS las agencias con ControlRecord activo (ver docs/diseno-anuncios-compartidos.md).
  * Se crea desde "Actualizar Anuncio con Factor" (ADMIN); cada actualizacion de precio inserta un
  * anuncio nuevo, nunca edita uno existente. La numeracion propia de cada agencia vive en
- * {@link AgencyAnnouncementNumber}, no aqui.
- *
- * <p>announcementNumber/agency/healthyUnitPrice/bonus/costs quedan SIN USAR por el codigo nuevo
- * (Costos/Pr Sustentacion/Bonificacion ahora se calculan en el momento de la compra con el
- * ControlRecord vivo de la agencia que compra, ver AnnouncementServiceImpl) - se conservan solo para
- * no perder los anuncios historicos que ya los tenian poblados.
+ * {@link AgencyAnnouncementNumber}, no aqui. Costos, Pr Sustentacion y Bonificacion se calculan en el
+ * momento de la compra con el ControlRecord vivo de la agencia que compra (AnnouncementServiceImpl); las
+ * columnas viejas que los guardaban se borraron en V11 (D5).
  */
 @Entity
+@Table(name = "anuncios")
 @Getter
 @Setter
 public class Announcement {
@@ -35,17 +33,10 @@ public class Announcement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** @deprecated sin usar desde el anuncio compartido - la numeracion vive en
-     *  {@link AgencyAnnouncementNumber}, una por agencia. Se conserva sin usar solo para no perder
-     *  los anuncios historicos que ya lo tenian poblado. */
-    @Deprecated
-    @Column(name = "announcement_number")
-    private String announcementNumber;
-
-    @Column(name = "announcement_date", nullable = false)
+    @Column(name = "fecha_anuncio", nullable = false)
     private LocalDate announcementDate;
 
-    @Column(name = "base_price_load", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_base_cps", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePriceLoad;
 
     /**
@@ -53,7 +44,7 @@ public class Announcement {
      * basePriceLoad/Pr_AlmSana, lo trae el anuncio - no se captura a mano en el formulario de
      * compra). Usado en DryCoffeePurchaseCalculator.
      */
-    @Column(name = "defective_unit_price", nullable = false, precision = 15, scale = 2)
+    @Column(name = "pr_alm_defec", nullable = false, precision = 15, scale = 2)
     private BigDecimal defectiveUnitPrice;
 
     /**
@@ -61,7 +52,7 @@ public class Announcement {
      * basePriceLoad es el dato crudo del maestro; Bonificacion (SobrePr_CPS / BaseCarga) se deriva
      * de este valor con el BaseCarga de cada agencia al momento de la compra, no aqui.
      */
-    @Column(name = "special_surcharge", precision = 15, scale = 2)
+    @Column(name = "sobrepr_carga_esp", precision = 15, scale = 2)
     private BigDecimal specialSurcharge;
 
     /**
@@ -70,7 +61,7 @@ public class Announcement {
      * admin lo digita directo en "Actualizar Anuncio Pasilla". Solo poblado cuando specialType =
      * PASILLA; para los demas se sigue derivando en toResponse().
      */
-    @Column(name = "point_price", precision = 15, scale = 2)
+    @Column(name = "pr_punto", precision = 15, scale = 2)
     private BigDecimal pointPrice;
 
     /**
@@ -81,39 +72,18 @@ public class Announcement {
      * pantalla real de publicacion) - se expone igual en AnnouncementRequest por ser un dato real
      * del maestro. Nullable: los anuncios existentes no lo tienen poblado.
      */
-    @Column(name = "quality_increment", precision = 15, scale = 2)
+    @Column(name = "pr_inc_calidad", precision = 15, scale = 2)
     private BigDecimal qualityIncrement;
 
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @Column(name = "healthy_unit_price", precision = 15, scale = 2)
-    private BigDecimal healthyUnitPrice;
-
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @Column(precision = 15, scale = 2)
-    private BigDecimal bonus;
-
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
-    @Column(precision = 15, scale = 2)
-    private BigDecimal costs;
-
-    /** @deprecated sin usar desde el anuncio compartido - ver Javadoc de la clase. */
-    @Deprecated
     @ManyToOne
-    @JoinColumn(name = "agency_id")
-    private Agency agency;
-
-    @ManyToOne
-    @JoinColumn(name = "fund_id", nullable = false)
+    @JoinColumn(name = "fondo_id", nullable = false)
     private Fund fund;
 
     /** Especial (Cod_Prod): tipo especial de cafe al que aplica este anuncio (ESTANDAR si no aplica
-     * ninguno especifico). Junto con agencia/fondo identifica el anuncio vigente a consultar. */
-    @Column(name = "special_type", nullable = false)
+     * ninguno especifico). Junto con el fondo identifica el anuncio vigente a consultar. */
+    @Column(name = "especial", nullable = false)
     private String specialType;
 
-    @Column(nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean active = true;
 }

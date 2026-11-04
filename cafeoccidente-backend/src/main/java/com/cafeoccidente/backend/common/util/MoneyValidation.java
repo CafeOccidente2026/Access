@@ -19,7 +19,7 @@ public class MoneyValidation {
         if (value.signum() < 0) {
             throw new BusinessRuleException(
                     "\"" + fieldLabel + "\" dio un valor negativo (" + value
-                            + "). Revise el anuncio vigente o el ControlRecord de la agencia antes de continuar.");
+                            + "). Revise el anuncio vigente o el Registro de Control de la agencia antes de continuar.");
         }
     }
 }

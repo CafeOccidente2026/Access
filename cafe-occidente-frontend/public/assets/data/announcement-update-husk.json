@@ -4,6 +4,6 @@
   "basePriceLoadLabel": "Pr Base Carg Perg Seco",
   "pointPriceLabel": "Pr Por Punto",
   "updateButton": "Actualizar",
-  "successMessage": "Anuncio actualizado. Número asignado:",
+  "successMessage": "Anuncio actualizado",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
 }

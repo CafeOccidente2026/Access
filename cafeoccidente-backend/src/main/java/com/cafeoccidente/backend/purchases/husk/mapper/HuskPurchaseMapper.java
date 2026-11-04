@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.husk.mapper;
 
+import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseResponse;
 import com.cafeoccidente.backend.purchases.husk.entity.HuskPurchase;
 import org.springframework.stereotype.Component;
@@ -7,7 +8,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class HuskPurchaseMapper {
 
-    public HuskPurchaseResponse toResponse(HuskPurchase purchase) {
+    /**
+     * @param controlRecord ControlRecord VIVO de la agencia de la compra (igual que Cafe Seco): trae
+     *     los datos de pie de factura (resolucion DIAN, prefijo, punto de compra) del PDF.
+     */
+    public HuskPurchaseResponse toResponse(HuskPurchase purchase, ControlRecord controlRecord) {
         return new HuskPurchaseResponse(
                 purchase.getId(),
                 purchase.getPurchaseDate(),
@@ -47,6 +52,13 @@ public class HuskPurchaseMapper {
                 purchase.getNetToPay(),
                 purchase.getPaymentMethod(),
                 purchase.getCheckNumber(),
-                purchase.getCreatedByUserId());
+                purchase.getCreatedByUserId(),
+                controlRecord.getPurchasePoint(),
+                controlRecord.getPrefix(),
+                controlRecord.getDianResolution(),
+                controlRecord.getResolutionDate(),
+                controlRecord.getResolutionFrom(),
+                controlRecord.getResolutionTo(),
+                controlRecord.getValidity());
     }
 }

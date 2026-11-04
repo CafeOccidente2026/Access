@@ -1,16 +1,22 @@
 package com.cafeoccidente.backend.purchases.shared.controller;
 
+import com.cafeoccidente.backend.common.security.Roles;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,12 +26,31 @@ import org.springframework.web.bind.annotation.RestController;
 /** Busqueda de caficultor por cedula (paso "Cedula" del formulario Compras Cafe Seco) y alta de conductores. */
 @RestController
 @RequestMapping("/api/growers")
+@PreAuthorize(Roles.ADMIN_USER)
 public class GrowerController {
 
     private final GrowerService growerService;
 
     public GrowerController(GrowerService growerService) {
         this.growerService = growerService;
+    }
+
+    /** "Actualizar uno ya existente": busqueda global (una sola base), solo conductores. La ruta
+     *  literal tiene prioridad sobre /{idNumber} en Spring. */
+    @GetMapping("/conductors")
+    public List<ConductorResponse> searchConductors(@RequestParam String idNumber) {
+        return growerService.searchConductors(idNumber);
+    }
+
+    @GetMapping("/conductors/{idNumber}")
+    public ConductorResponse findConductor(@PathVariable String idNumber) {
+        return growerService.findConductor(idNumber);
+    }
+
+    @PutMapping("/conductors/{idNumber}")
+    public ConductorResponse updateConductor(
+            @PathVariable String idNumber, @RequestBody ConductorUpdateRequest request) {
+        return growerService.updateConductor(idNumber, request);
     }
 
     @GetMapping("/{idNumber}")

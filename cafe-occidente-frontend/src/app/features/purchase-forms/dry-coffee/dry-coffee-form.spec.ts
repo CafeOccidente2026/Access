@@ -1,7 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
+import pdfMake from 'pdfmake/build/pdfmake';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DryCoffeeFormComponent } from './dry-coffee-form';
@@ -10,6 +11,7 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { GrowerService } from '../../../core/services/grower.service';
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
+import { DRY } from '../../purchase-query/purchase-query.testing';
 
 /**
  * Cubre el gate REQUIRED/hasRequiredCascadeInputs de buildRequest() (dry-coffee-form.ts) - el mismo
@@ -17,6 +19,7 @@ import { PurchaseFormContent } from '../../../core/models/purchase-form-content.
  * telefono vacio dejaba `cellphone` en REQUIRED pero bloqueado y sin valor, y la cascada de calculo
  * (preview()) nunca llegaba a dispararse.
  */
+
 describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
     windowTitle: 'Compras Café Seco',
@@ -30,6 +33,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       idNumberNotFound: 'Este número de cédula no existe.',
       saveError: 'No se pudo registrar la compra. Verifique los datos.',
       savedNotice: 'Compra registrada.',
+      invoiceError: 'No se pudo generar la factura',
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
@@ -71,6 +75,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   };
 
   let previewSpy: ReturnType<typeof vi.fn>;
+  let createSpy: ReturnType<typeof vi.fn>;
+  let qualitySpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
 
   function setup(grower: Grower) {
@@ -89,9 +95,11 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
           bonus: 40,
           costs: 692,
         }),
-      qualityPercentages: () => of({ wastePercentage: 12, defectivePercentage: 8, healthyPercentage: 90.9 }),
+      qualityPercentages: (qualitySpy = vi.fn(() =>
+        of({ wastePercentage: 12, defectivePercentage: 8, healthyStoredWeight: 200, healthyPercentage: 90.9 }),
+      )),
       preview: previewSpy,
-      create: vi.fn(() => of({})),
+      create: (createSpy = vi.fn(() => of({}))),
     };
     const fakeGrowerService = {
       findByIdNumber: vi.fn(() => of(grower)),
@@ -207,5 +215,142 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     expect(component.blockedByDeceased()).toBe(true);
     expect(component.errorMessage()).toBe(content.messages['deceasedBlocked']);
     expect(component.model['cellphone']).toBeUndefined();
+  });
+
+  it('HU-15: two clicks on Imprimir create a single purchase, without sending the invoice number', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const pending = new Subject<never>();
+    createSpy.mockReturnValue(pending);
+
+    component.print();
+    component.print();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    // El numero lo asigna el servidor al guardar; el encabezado solo lo muestra.
+    expect(createSpy.mock.calls[0][0]).not.toHaveProperty('invoiceNumber');
+    // 6b: precios, costos y datos del vendedor los pone el servidor (anuncio vigente y TERCEROS).
+    for (const key of ['healthyUnitPrice', 'bonus', 'costs', 'pointPrice', 'firstName', 'lastName', 'growerType']) {
+      expect(createSpy.mock.calls[0][0]).not.toHaveProperty(key);
+    }
+    expect(component.saving()).toBe(true);
+
+    pending.error(new Error('fallo'));
+    expect(component.saving()).toBe(false);
+  });
+
+  it('Q2: the healthy almond is not typed; the server computes it from total and husk weights', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+    component.model['totalHuskWeight'] = '20';
+    component.onFieldCommitted('totalHuskWeight');
+
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
+    expect(component.model['healthyStoredWeight']).toBe('200');
+    component.model['healthyStoredWeight'] = '999';
+    component.onFieldCommitted('healthyStoredWeight');
+    expect((component as any).locked.has('healthyStoredWeight')).toBe(false);
+  });
+
+  it('Q15: a NESPRESSO Factor over the threshold warns, clears the sample weights and goes back to them', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    const message = 'El Factor (94,00) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+    qualitySpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+    component.model['totalHuskWeight'] = '20';
+    component.onFieldCommitted('totalHuskWeight');
+
+    expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
+    expect(component.errorMessage()).toBe(message);
+    expect(component.model['totalStoredWeight']).toBe('');
+    expect(component.model['totalHuskWeight']).toBe('');
+    expect((component as any).locked.has('totalStoredWeight')).toBe(false);
+    expect((component as any).locked.has('totalHuskWeight')).toBe(false);
+  });
+
+  it('Q15: if the save is rejected over the threshold, the sample weights are cleared too', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    const message = 'El Factor (94,00) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    createSpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+
+    component.print();
+
+    expect(component.errorMessage()).toBe(message);
+    expect(component.model['totalStoredWeight']).toBe('');
+  });
+
+  it('a failed weight that is not the threshold keeps the generic message', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    qualitySpy.mockReturnValue(throwError(() => ({ error: { message: 'otro' } })));
+    component.model['totalStoredWeight'] = '220';
+    component.onFieldCommitted('totalStoredWeight');
+
+    expect(component.errorMessage()).toBe('otro');
+    expect(component.model['totalStoredWeight']).toBe('220');
+  });
+
+  it('Imprimir saves, opens the invoice with the payment and leaves the form clean with the next invoice', async () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    const nextInvoice = vi.spyOn(TestBed.inject(DryCoffeePurchaseService), 'nextInvoiceNumber');
+    const open = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
+    createSpy.mockReturnValue(of(DRY));
+
+    component.print();
+
+    expect(component.model['idPart1']).toBeUndefined();
+    expect(component.payment()).toBeNull();
+    expect(component.savedNoticeOpen()).toBe(true);
+    expect(nextInvoice).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    const doc = JSON.stringify(createPdf.mock.lastCall![0]);
+    expect(doc).toContain('SDBU - 27.869');
+    expect(doc).toContain('7.777.777');
+    createPdf.mockRestore();
+  });
+
+  it('says "No se pudo generar la factura" when the invoice PDF fails', async () => {
+    setup(growerWithPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
+      throw new Error('pdfmake');
+    });
+    component.payment.set({ cashAmount: 1, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+    createSpy.mockReturnValue(of(DRY));
+
+    component.print();
+
+    await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
+    createPdf.mockRestore();
   });
 });

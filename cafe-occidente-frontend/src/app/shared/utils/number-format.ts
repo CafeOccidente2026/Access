@@ -9,8 +9,19 @@ export function formatDisplayNumber(value: string | number, decimals: 'currency'
     return typeof value === 'string' ? value : '';
   }
   return decimals === 'currency'
-    ? num.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    ? truncateToCents(num).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : num.toLocaleString('es-CO');
+}
+
+/**
+ * Q3: en pantalla los calculados van con 2 decimales SIN redondear, cortando hacia cero
+ * (92,118 -> 92,11; -235,569 -> -235,56). Se corta sobre el texto, no con Math.trunc(x * 100), para
+ * que errores de coma flotante (1,005 * 100 = 100,49999...) no quiten un centavo.
+ */
+function truncateToCents(num: number): number {
+  const [whole, fraction = ''] = Math.abs(num).toFixed(12).split('.');
+  const cut = Number(`${whole}.${fraction.slice(0, 2)}`);
+  return num < 0 && cut !== 0 ? -cut : cut;
 }
 
 function normalizeDecimalComma(value: string): string {
@@ -20,8 +31,26 @@ function normalizeDecimalComma(value: string): string {
 /** Separador de miles con punto, estilo colombiano (ej. "2500000" -> "2.500.000"), para inputs que
  *  formatean en vivo mientras el usuario digita (solo dígitos, sin decimales). */
 export function formatThousands(digits: string): string {
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  // Sin regex (S8786): un punto antes de cada grupo de 3 digitos que cierra un tramo de digitos, si lo
+  // precede una letra, digito o "_" (lo mismo que hacia /\B(?=(\d{3})+(?!\d))/g).
+  let out = '';
+  let run = 0; // digitos seguidos desde la posicion actual hasta el primer no digito
+  const runs = new Array<number>(digits.length + 1).fill(0);
+  for (let i = digits.length - 1; i >= 0; i--) {
+    run = isDigit(digits[i]) ? run + 1 : 0;
+    runs[i] = run;
+  }
+  for (let i = 0; i < digits.length; i++) {
+    if (i > 0 && runs[i] >= 3 && runs[i] % 3 === 0 && isWordChar(digits[i - 1])) {
+      out += '.';
+    }
+    out += digits[i];
+  }
+  return out;
 }
+
+const isDigit = (c: string) => c >= '0' && c <= '9';
+const isWordChar = (c: string) => isDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_';
 
 /** "SDTA-3500" -> "3500": el Anuncio se guarda y numera con prefijo por agencia, pero en
  *  pantalla se muestra solo el numero. */
@@ -60,4 +89,13 @@ export function parseDisplayNumber(value: string | undefined | null): number {
   }
   const n = Number(normalizeDecimalComma(s));
   return Number.isNaN(n) ? 0 : n;
+}
+
+/**
+ * Castigo confirmado (Q1, RN-14.7): solo cero o negativo. "23" queda "-23", "-23" se respeta y vacio o
+ * cero quedan "0". El servidor aplica la misma regla, esto es solo lo que ve el cajero.
+ */
+export function asPenalty(value: string): string {
+  const digits = value.trim().replace(/^[+-]/, '');
+  return parseDisplayNumber(digits) === 0 ? '0' : `-${digits}`;
 }

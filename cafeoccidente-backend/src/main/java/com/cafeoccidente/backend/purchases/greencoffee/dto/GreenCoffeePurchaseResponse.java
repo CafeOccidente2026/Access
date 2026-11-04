@@ -45,5 +45,15 @@ public record GreenCoffeePurchaseResponse(
         BigDecimal netToPay,
         String paymentMethod,
         String checkNumber,
-        Long createdByUserId) {
+        Long createdByUserId,
+        /** Muestra fija guardada con la compra (HU-23 CA-2); null en las anteriores a la V15. */
+        GreenCoffeeSample sample,
+        /** Encabezado de "Factura verdes" (Registro de Control activo), igual que seco y pasilla. */
+        String purchasePoint,
+        String prefix,
+        String dianResolution,
+        LocalDate resolutionDate,
+        Integer resolutionFrom,
+        Integer resolutionTo,
+        Integer validity) {
 }

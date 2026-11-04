@@ -8,4 +8,8 @@ public class BusinessRuleException extends ApiException {
     public BusinessRuleException(String message) {
         super(message, HttpStatus.BAD_REQUEST);
     }
+
+    public BusinessRuleException(String message, String code) {
+        super(message, HttpStatus.BAD_REQUEST, code);
+    }
 }

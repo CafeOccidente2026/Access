@@ -2,6 +2,9 @@ package com.cafeoccidente.backend.purchases.shared.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerProgramResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
@@ -13,9 +16,12 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,39 +29,44 @@ public class GrowerServiceImpl implements GrowerService {
 
     /**
      * Especial (formulario Compras) -> Programa (staging_legacy_ness). Evidencia: Form_COMPRAS.bas,
-     * Cuadro_combinado61_AfterUpdate - solo estos 3 Especiales llaman una macro "Abrir NESS/NESSLH/
-     * RN4C pcompras" que cruza contra la tabla de programa; el resto de Especiales (~17) no tiene
-     * tabla de programa migrada todavia.
+     * Cuadro_combinado61_AfterUpdate - estos Especiales (NESPRESSO y NESPRESSO LATE HARVEST con y
+     * sin taza, REGIONAL NARIÑO 4C) llaman una macro "Abrir NESS/NESSLH/RN4C pcompras" que cruza
+     * contra la tabla de programa; el resto de Especiales no tiene tabla de programa migrada.
      *
      * Form_COMPRAS.bas tiene DOS bloqueos distintos sobre estos mismos Especiales, evidencia
      * separada en el VBA:
      * <ul>
      *   <li><b>Cupo excedido</b> ({@code Kilos_Netos > Texto118}, lineas 412/465/518/571/624):
      *       implementado en {@link #checkQuota} desde 2026-09-23 (Item C).</li>
-     *   <li><b>Pendiente (EnProg)</b>: bloqueo si el caficultor no aparece en su programa (EnProg=0),
-     *       para estos mismos Especiales + RAINFOREST/EXPON (lineas 761-779, "Abrir RAIN/EXPON
-     *       pcompras" - tablas de programa de esos dos aun no migradas). Sigue SIN activar: con
-     *       cobertura de datos parcial (3 de ~20 Especiales), bloquear impediria facturar por falta
-     *       de dato migrado, no porque el caficultor realmente este fuera del programa. Revisar
-     *       cuando se migren las tablas de programa restantes.</li>
+     *   <li><b>No pertenece (EnProg = 0)</b>, lineas 761-779: activado para Cafe Seco en la fase 6c
+     *       (Q8) en {@link #requireProgramToInvoice}, solo para los Especiales de este mapa.
+     *       RAINFOREST/EXPON tambien lo tenian en Access, pero sus tablas de programa no estan
+     *       migradas: no se bloquean.</li>
      * </ul>
      */
     private static final Map<String, String> SPECIAL_TO_PROGRAMA = Map.of(
             "NESPRESSO - FTUSA", "NESPRESSO",
+            // Q8 (area de compras, 2026-10-27): las variantes CON TAZA exigen el mismo programa, como
+            // en Access (W_AlmSana_AfterUpdate las bloquea con EnProg = 0).
+            "NESPRESSO CON TAZA - FTUSA", "NESPRESSO",
             "NESPRESSO LATE HARVEST - FTUSA", "NESPRESSO LATE HARVEST",
+            "NESPRESSO LATE HARVEST CON TAZA - FTUSA", "NESPRESSO LATE HARVEST",
             "REGIONAL NARIÑO 4C", "REGIONAL NARIÑO 4C");
 
     private final GrowerRepository growerRepository;
     private final LegacyNessProgramRepository legacyNessProgramRepository;
     private final AgencyRepository agencyRepository;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
     public GrowerServiceImpl(
             GrowerRepository growerRepository,
             LegacyNessProgramRepository legacyNessProgramRepository,
-            AgencyRepository agencyRepository) {
+            AgencyRepository agencyRepository,
+            CurrentAgencyProvider currentAgencyProvider) {
         this.growerRepository = growerRepository;
         this.legacyNessProgramRepository = legacyNessProgramRepository;
         this.agencyRepository = agencyRepository;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @Override
@@ -80,11 +91,18 @@ public class GrowerServiceImpl implements GrowerService {
     }
 
     @Override
+    public boolean isAssociation(String idNumber) {
+        return idNumber != null && growerRepository.findByIdNumber(idNumber.trim())
+                .map(g -> Boolean.TRUE.equals(g.getIsAssociation()))
+                .orElse(false);
+    }
+
+    @Override
     public GrowerResponse createConductor(GrowerCreateRequest request) {
         if (growerRepository.findByIdNumber(request.idNumber()).isPresent()) {
             throw new BusinessRuleException("Ya existe un caficultor/conductor con esa cedula");
         }
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
 
         Grower grower = new Grower();
@@ -94,9 +112,11 @@ public class GrowerServiceImpl implements GrowerService {
         grower.setLastName(request.lastName());
         grower.setSecondLastName(request.secondLastName());
         grower.setAgency(agency);
-        grower.setAddress("");
+        grower.setAddress(request.address() == null ? "" : request.address().trim());
         grower.setPhone("");
         grower.setGrowerType("C");
+        // FechaAfiliacion: DefaultValue "Date()" en Form_Conductores.txt.
+        grower.setAffiliationDate(LocalDate.now());
         grower.setTransportCompany(request.transportCompany());
         grower.setVehiclePlate(request.vehiclePlate());
         Grower saved = growerRepository.save(grower);
@@ -116,6 +136,58 @@ public class GrowerServiceImpl implements GrowerService {
                 saved.isWithdrawn(),
                 saved.getTransportCompany(),
                 saved.getVehiclePlate());
+    }
+
+    /** Minimo de digitos antes de buscar y tope de resultados: la tabla tiene ~27.000 caficultores. */
+    private static final int CONDUCTOR_SEARCH_MIN_DIGITS = 3;
+    private static final int CONDUCTOR_SEARCH_LIMIT = 10;
+
+    @Override
+    public List<ConductorResponse> searchConductors(String idNumberPrefix) {
+        String prefix = idNumberPrefix == null ? "" : idNumberPrefix.trim();
+        if (prefix.length() < CONDUCTOR_SEARCH_MIN_DIGITS) {
+            return List.of();
+        }
+        return growerRepository.findConductorsByIdNumberPrefix(prefix, PageRequest.of(0, CONDUCTOR_SEARCH_LIMIT))
+                .stream()
+                .map(GrowerServiceImpl::toConductorResponse)
+                .toList();
+    }
+
+    @Override
+    public ConductorResponse findConductor(String idNumber) {
+        return toConductorResponse(requireGrower(idNumber));
+    }
+
+    @Override
+    public ConductorResponse updateConductor(String idNumber, ConductorUpdateRequest request) {
+        Grower grower = requireGrower(idNumber);
+        grower.setTransportCompany(blankToNull(request.transportCompany()));
+        grower.setVehiclePlate(blankToNull(request.vehiclePlate()));
+        grower.setUpdatedAt(Instant.now());
+        return toConductorResponse(growerRepository.save(grower));
+    }
+
+    private Grower requireGrower(String idNumber) {
+        return growerRepository.findByIdNumber(idNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe un conductor con esa cedula"));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static ConductorResponse toConductorResponse(Grower grower) {
+        return new ConductorResponse(
+                grower.getIdNumber(),
+                grower.getFirstName(),
+                grower.getLastName(),
+                grower.getAgency() == null ? null : grower.getAgency().getName(),
+                grower.getAddress(),
+                grower.getAffiliationDate(),
+                grower.getUpdatedAt(),
+                grower.getTransportCompany(),
+                grower.getVehiclePlate());
     }
 
     @Override
@@ -145,15 +217,23 @@ public class GrowerServiceImpl implements GrowerService {
 
     @Override
     public void requireProgramMembership(String idNumber, String specialType) {
-        if (!SPECIAL_TO_PROGRAMA.containsKey(specialType)) {
-            // Sin cobertura de datos confirmada para este Especial - no se puede distinguir "no
-            // pertenece" de "dato no migrado" (ver Javadoc de la interfaz), no se bloquea.
-            return;
-        }
-        if (findMatch(idNumber, specialType) == null) {
+        if (isOutsideProgram(idNumber, specialType)) {
             throw new BusinessRuleException(
                     "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE");
         }
+    }
+
+    @Override
+    public void requireProgramToInvoice(String idNumber, String specialType) {
+        if (isOutsideProgram(idNumber, specialType)) {
+            throw new BusinessRuleException(
+                    "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO LE PUEDE FACTURAR ESTE TIPO DE CAFE.");
+        }
+    }
+
+    /** Solo para los Especiales de programa (SPECIAL_TO_PROGRAMA); los demas nunca se bloquean. */
+    private boolean isOutsideProgram(String idNumber, String specialType) {
+        return SPECIAL_TO_PROGRAMA.containsKey(specialType) && findMatch(idNumber, specialType) == null;
     }
 
     /** Mismo cruce cedula+Especial->Programa que usan findProgram/checkQuota (Form_COMPRAS.bas

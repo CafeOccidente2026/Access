@@ -1,10 +1,15 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
+import com.cafeoccidente.backend.purchases.shared.service.SpecialtyThresholdRule;
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.entity.Announcement;
@@ -14,7 +19,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.YearMonth;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -22,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,14 +64,26 @@ import org.springframework.boot.test.context.SpringBootTest;
  *       asociados_migrar.csv, y withholding_exempt = retefuente historico == 0) al insertar en
  *       dry_coffee_purchase - este test lee esos campos YA resueltos de la fila persistida, no los
  *       vuelve a inferir.</li>
- *   <li>El acumulado mensual (Texto105/Texto107) se reconstruye ordenando las compras de cada
+ *   <li>El acumulado diario (Texto105/Texto107) se reconstruye ordenando las compras de cada
  *       cedula por fecha+factura y sumando el Vr_Bruto/Retefuente HISTORICO (no el recalculado) de
- *       las compras anteriores del mismo mes calendario - asi es como el sistema real lo habria
+ *       las compras anteriores del mismo dia - asi es como el sistema real lo habria
  *       visto en su momento. La formula de origen de ese acumulado sigue sin confirmar contra el
  *       VBA (ver informe de formulas); este test no resuelve esa limitacion, solo la reproduce.</li>
  *   <li>Filas con {@code forma_de_pago = ANULADA} ya fueron excluidas por el script de migracion,
  *       no llegan a estar en {@code dry_coffee_purchase}.</li>
  * </ul>
+ *
+ * <p><b>Lista de excepciones (fase 6c):</b> filas que una regla nueva del area de compras cambia a
+ * proposito frente a Access. No entran al porcentaje; cada una verifica que la diferencia es la
+ * esperada y el conteo por motivo queda fijado en {@link #EXPECTED_EXCEPTIONS}:
+ * <ul>
+ *   <li><b>Q2</b> (pesos que no suman): Access acepto Peso Tot Alm distinto de Pasilla + Alm Sana; ahora
+ *       Alm Sana = Tot - Pasilla, asi que la Alm Sana (y el Factor) recalculados cambian.</li>
+ *   <li><b>Q15</b> (umbral de especiales, no existia en Access): NESPRESSO con Factor mayor que el umbral
+ *       del Registro de Control; hoy se rechazarian.</li>
+ * </ul>
+ * Castigo (Q1), retencion conjunta (Q10) y decimales (Q3) no dejan excepciones: en El Tambo el castigo
+ * siempre es 0, solo hay cafe seco y el guardado no cambio.
  */
 @SpringBootTest
 class DryCoffeePurchaseCalculatorHistoricalValidationTest {
@@ -81,6 +99,11 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
      *  (42.72%/35.20%, de un script no reproducible). Subir este piso si una mejora real lo supera
      *  con margen, nunca bajarlo para que un cambio que empeora las cosas pase el test. */
     private static final double MINIMUM_ALL_FIELDS_MATCH_PERCENTAGE = 35.0;
+
+    private static final String Q2 = "Q2 pesos que no suman";
+    private static final String Q15 = "Q15 umbral de especiales";
+    /** Conteo de la lista de excepciones (ver Javadoc). Si cambia, algo cambio en la regla o en los datos. */
+    private static final Map<String, Integer> EXPECTED_EXCEPTIONS = Map.of(Q2, 6, Q15, 76);
 
     @Autowired
     private DryCoffeePurchaseCalculator calculator;
@@ -98,8 +121,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
     @Test
     void recalculatesEveryHistoricalElTamboPurchaseAndReportsExactMatchRate() throws IOException {
         Assumptions.assumeTrue(Files.exists(CSV_PATH),
-                "No esta " + CSV_PATH + " en este checkout (docs/ esta en .gitignore) - "
-                        + "se salta la validacion historica.");
+                "FALTA el CSV de Access " + CSV_PATH + " (docs/ es local, no esta en git).");
 
         Set<Integer> historicalInvoiceNumbers = validInvoiceNumbersFromCsv();
 
@@ -111,17 +133,17 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 .toList();
 
         Assumptions.assumeTrue(!historicalPurchases.isEmpty(),
-                "El CSV esta pero dry_coffee_purchase no tiene esas facturas todavia - corra "
-                        + "'python scripts/migrate_eltambo.py' contra la base de este entorno primero.");
+                "FALTAN en compras_cafe_seco las facturas del CSV: corra 'python scripts/migrate_eltambo.py' contra esta base.");
 
         Map<Long, ControlRecord> controlRecordByAgencyId = new HashMap<>();
-        Map<String, List<MonthlyEntry>> historyByIdNumber = new HashMap<>();
+        Map<String, List<DailyEntry>> historyByIdNumber = new HashMap<>();
 
         int rowsCompared = 0;
         int allFieldsMatch = 0;
         int netToPayMatch = 0;
         int calculationErrors = 0;
         Map<String, Integer> mismatchesByField = new HashMap<>();
+        Map<String, Integer> exceptionsByReason = new TreeMap<>();
 
         for (DryCoffeePurchase historical : historicalPurchases) {
             ControlRecord controlRecord = controlRecordByAgencyId.computeIfAbsent(
@@ -133,22 +155,27 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 continue;
             }
 
-            YearMonth yearMonth = YearMonth.from(historical.getPurchaseDate());
-            BigDecimal[] accumulated = priorMonthlyTotals(historyByIdNumber, historical.getIdNumber(), yearMonth);
+            LocalDate purchaseDate = historical.getPurchaseDate();
+            BigDecimal[] accumulated = priorDailyTotals(historyByIdNumber, historical.getIdNumber(), purchaseDate);
 
             DryCoffeePurchaseCalculation recalculated;
             try {
                 recalculated = calculator.calculate(
-                        toRequest(historical), controlRecord, announcement.getBasePriceLoad(),
-                        announcement.getDefectiveUnitPrice(), accumulated[0], accumulated[1]);
+                        toRequest(historical), controlRecord, toAnnouncement(historical, announcement),
+                        toSeller(historical), accumulated[0], accumulated[1]);
             } catch (RuntimeException ex) {
                 calculationErrors++;
                 continue;
             } finally {
                 historyByIdNumber.computeIfAbsent(historical.getIdNumber(), id -> new ArrayList<>())
-                        .add(new MonthlyEntry(yearMonth, historical.getGrossValue(), historical.getWithholding()));
+                        .add(new DailyEntry(purchaseDate, historical.getGrossValue(), historical.getWithholding()));
             }
 
+            List<String> reasons = exceptionReasons(historical, recalculated, controlRecord);
+            if (!reasons.isEmpty()) {
+                reasons.forEach(reason -> exceptionsByReason.merge(reason, 1, Integer::sum));
+                continue;
+            }
             rowsCompared++;
             List<String> mismatches = fieldMismatches(historical, recalculated);
             if (mismatches.isEmpty()) {
@@ -172,22 +199,50 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
                 allFieldsPct, allFieldsMatch, rowsCompared);
         System.out.printf("Coincidencia exacta solo Neto a Pagar: %.2f%% (%d/%d)%n",
                 netToPayPct, netToPayMatch, rowsCompared);
+        System.out.println("Excepciones por regla nueva (no entran al porcentaje):");
+        exceptionsByReason.forEach((reason, count) -> System.out.printf("  %-26s %d%n", reason, count));
         System.out.println("Filas que fallaron cada campo (una fila puede fallar mas de uno):");
         mismatchesByField.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .forEach(e -> System.out.printf("  %-24s %d%n", e.getKey(), e.getValue()));
 
+        assertThat(exceptionsByReason).as("Lista de excepciones de El Tambo").isEqualTo(EXPECTED_EXCEPTIONS);
         assertThat(allFieldsPct)
                 .as("Piso de regresion historica (ver Javadoc de esta clase) - si esto baja, algo "
                         + "empeoro la precision de la cascada de Cafe Seco frente a Access")
                 .isGreaterThanOrEqualTo(MINIMUM_ALL_FIELDS_MATCH_PERCENTAGE);
     }
 
+    /** Motivos por los que esta fila es una excepcion (vacio si no lo es); cada motivo verifica su diferencia. */
+    private static List<String> exceptionReasons(
+            DryCoffeePurchase historical, DryCoffeePurchaseCalculation recalculated, ControlRecord controlRecord) {
+        List<String> reasons = new ArrayList<>();
+        BigDecimal typedSum = historical.getDefectiveStoredWeight().add(historical.getHealthyStoredWeight());
+        if (historical.getTotalStoredWeight().compareTo(typedSum) != 0) {
+            assertThat(recalculated.healthyStoredWeight())
+                    .isEqualByComparingTo(historical.getTotalStoredWeight().subtract(historical.getDefectiveStoredWeight()))
+                    .isNotEqualByComparingTo(historical.getHealthyStoredWeight());
+            reasons.add(Q2);
+        }
+        BigDecimal threshold = controlRecord.getSpecialtyThreshold();
+        if (historical.getProductCode().isAppliesSpecialtyThreshold()
+                && recalculated.healthyPercentage().compareTo(threshold) > 0) {
+            assertThatThrownBy(() -> SpecialtyThresholdRule.check(true, recalculated.healthyPercentage(), threshold))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .extracting("code").isEqualTo(SpecialtyThresholdRule.CODE);
+            reasons.add(Q15);
+        }
+        return reasons;
+    }
+
     private Announcement findHistoricalAnnouncement(DryCoffeePurchase historical) {
+        // Las compras migradas guardan "3416"; las de la web, "SDTA-3416".
+        String number = historical.getAnnouncementNumber();
+        // El numero de Access vive en anuncios_agencias (V11 borro las columnas viejas de anuncios).
         List<Announcement> matches = entityManager.createQuery(
-                        "SELECT a FROM Announcement a WHERE a.announcementNumber = :number "
-                                + "AND a.agency.id = :agencyId", Announcement.class)
-                .setParameter("number", historical.getAnnouncementNumber())
+                        "SELECT n.masterAnnouncement FROM AgencyAnnouncementNumber n WHERE n.announcementNumber = :number "
+                                + "AND n.agency.id = :agencyId", Announcement.class)
+                .setParameter("number", Integer.valueOf(number.substring(number.lastIndexOf('-') + 1)))
                 .setParameter("agencyId", historical.getAgency().getId())
                 .getResultList();
         return matches.isEmpty() ? null : matches.get(0);
@@ -195,24 +250,34 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
 
     private static DryCoffeePurchaseRequest toRequest(DryCoffeePurchase p) {
         return new DryCoffeePurchaseRequest(
-                p.getAgency().getId(), p.getFund().getId(), p.getInvoiceNumber(), p.getSpecialType(),
-                p.getIdNumber(), p.getFirstName(), p.getLastName(), p.getGrowerType(), p.getAddress(),
-                p.getCellphone(), p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
-                p.getTotalStoredWeight(), p.getDefectiveStoredWeight(), p.getHealthyStoredWeight(),
-                p.getHealthyUnitPrice(), p.getBonus(), p.getPenalty(), p.getCosts(),
-                p.isWithholdingExempt(), p.getFreightDiscount(), p.getOtherDiscounts(),
-                p.getPaymentMethod(), p.getCheckNumber());
+                p.getFund().getId(), p.getSpecialType(), p.getIdNumber(), p.getAddress(), p.getCellphone(),
+                p.getBagsCount(), p.getGrossKg(), p.getTareKg(),
+                p.getTotalStoredWeight(), p.getDefectiveStoredWeight(),
+                p.getPenalty(), p.getFreightDiscount(), p.getOtherDiscounts(), null);
+    }
+
+    /** El anuncio tal como quedo en la compra de Access: Pr Sustentacion, Bonificacion y Costos
+     *  guardados en la fila (los que el cajero vio), mas el Pr_Base_CPS y Pr_AlmDefec del anuncio. */
+    private static AnnouncementResponse toAnnouncement(DryCoffeePurchase p, Announcement announcement) {
+        return new AnnouncementResponse(announcement.getId(), p.getAnnouncementNumber(), p.getAnnouncementDate(),
+                announcement.getBasePriceLoad(), announcement.getDefectiveUnitPrice(), p.getHealthyUnitPrice(),
+                p.getBonus(), p.getCosts(), p.getAgency().getId(), p.getFund().getId(), p.getSpecialType(), null);
+    }
+
+    private static PurchaseSeller toSeller(DryCoffeePurchase p) {
+        return new PurchaseSeller(p.getIdNumber(), p.getFirstName(), p.getLastName(), p.getGrowerType(),
+                p.getAddress(), p.getCellphone(), p.isWithholdingExempt());
     }
 
     /** Suma el Vr_Bruto/Retefuente HISTORICO de las compras ya registradas para esta cedula en el
-     *  mismo mes calendario, en el orden en que realmente ocurrieron - ver limitaciones en el
+     *  mismo dia, en el orden en que realmente ocurrieron - ver limitaciones en el
      *  Javadoc de la clase. */
-    private static BigDecimal[] priorMonthlyTotals(
-            Map<String, List<MonthlyEntry>> historyByIdNumber, String idNumber, YearMonth yearMonth) {
+    private static BigDecimal[] priorDailyTotals(
+            Map<String, List<DailyEntry>> historyByIdNumber, String idNumber, LocalDate purchaseDate) {
         BigDecimal grossValue = BigDecimal.ZERO;
         BigDecimal withholding = BigDecimal.ZERO;
-        for (MonthlyEntry entry : historyByIdNumber.getOrDefault(idNumber, List.of())) {
-            if (entry.yearMonth().equals(yearMonth)) {
+        for (DailyEntry entry : historyByIdNumber.getOrDefault(idNumber, List.of())) {
+            if (entry.purchaseDate().equals(purchaseDate)) {
                 grossValue = grossValue.add(entry.grossValue());
                 withholding = withholding.add(entry.withholding());
             }
@@ -220,7 +285,7 @@ class DryCoffeePurchaseCalculatorHistoricalValidationTest {
         return new BigDecimal[] {grossValue, withholding};
     }
 
-    private record MonthlyEntry(YearMonth yearMonth, BigDecimal grossValue, BigDecimal withholding) {
+    private record DailyEntry(LocalDate purchaseDate, BigDecimal grossValue, BigDecimal withholding) {
     }
 
     private static List<String> fieldMismatches(DryCoffeePurchase historical, DryCoffeePurchaseCalculation r) {

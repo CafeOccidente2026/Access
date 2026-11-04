@@ -3,7 +3,7 @@
     <app-access-window [title]="d.windowTitle" bodyClass="bg-gradient-to-br from-panel-welcome to-panel-teal-soft">
       <div class="flex items-center justify-end gap-2 bg-panel-welcome-bar px-4 py-2">
         <span class="text-sm font-semibold text-slate-700">{{ d.welcomeLabel }}</span>
-        <span class="text-sm font-bold text-slate-800">{{ d.userName }}</span>
+        <span class="text-sm font-bold text-slate-800">{{ auth.username() }}</span>
       </div>
 
       <div class="p-8">

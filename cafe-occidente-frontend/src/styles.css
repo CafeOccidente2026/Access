@@ -27,6 +27,9 @@
   --color-btn-face-hover: #c7ddf2;
   --color-btn-border: #7fa8cc;
 
+  /* Marca "ANULADA" de las reimpresiones (Consultar Compras). */
+  --color-annulled: #b91c1c;
+
   --font-sans: "Segoe UI", "Inter", system-ui, sans-serif;
 }
 
@@ -47,4 +50,11 @@ body {
 
 .field-flash {
   animation: field-flash 1s ease-in-out;
+}
+
+/* Pantallas con appFormFlow (Suministros, Vendedores): el mismo foco que los campos de Compras
+   (form-field: focus:border-blue-400 focus:outline-none). */
+.form-flow :is(input, select, textarea):focus {
+  border-color: var(--color-blue-400);
+  outline: none;
 }

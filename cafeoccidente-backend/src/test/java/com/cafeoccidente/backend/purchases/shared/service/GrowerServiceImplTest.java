@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
@@ -28,8 +29,10 @@ class GrowerServiceImplTest {
     private final GrowerRepository growerRepository = mock(GrowerRepository.class);
     private final LegacyNessProgramRepository legacyNessProgramRepository = mock(LegacyNessProgramRepository.class);
     private final AgencyRepository agencyRepository = mock(AgencyRepository.class);
+    /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
+    private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final GrowerService growerService =
-            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository);
+            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository, currentAgencyProvider);
 
     /** LegacyNessProgram es una entidad de staging de solo lectura (solo @Getter, sin setters) -
      *  se instancia real y se llenan los campos por reflexion en vez de mockearla. */
@@ -110,11 +113,26 @@ class GrowerServiceImplTest {
     }
 
     @Test
+    void isAssociationReadsAsociadosAsociacionAndTreatsNullOrMissingAsNo() {
+        Grower association = new Grower();
+        association.setIsAssociation(true);
+        Grower legacyNull = new Grower();
+        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(association));
+        when(growerRepository.findByIdNumber("1")).thenReturn(Optional.of(legacyNull));
+        when(growerRepository.findByIdNumber("2")).thenReturn(Optional.empty());
+
+        assertThat(growerService.isAssociation(" 900723205 ")).isTrue();
+        assertThat(growerService.isAssociation("1")).isFalse();
+        assertThat(growerService.isAssociation("2")).isFalse();
+        assertThat(growerService.isAssociation(null)).isFalse();
+    }
+
+    @Test
     void createConductorRejectsDuplicateIdNumber() {
         when(growerRepository.findByIdNumber("123456")).thenReturn(Optional.of(new Grower()));
 
         GrowerCreateRequest request =
-                new GrowerCreateRequest("123456", "Juan", null, "Perez", null, 1L, "Coop", "ABC123");
+                new GrowerCreateRequest("123456", "Juan", null, "Perez", null, "Coop", "ABC123");
 
         assertThatThrownBy(() -> growerService.createConductor(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -131,11 +149,88 @@ class GrowerServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         GrowerCreateRequest request =
-                new GrowerCreateRequest("999888", "Ana", null, "Gomez", null, 1L, "Coop", "XYZ987");
+                new GrowerCreateRequest("999888", "Ana", null, "Gomez", null, "Coop", "XYZ987");
         GrowerResponse response = growerService.createConductor(request);
 
         assertThat(response.growerType()).isEqualTo("C");
         assertThat(response.transportCompany()).isEqualTo("Coop");
         assertThat(response.vehiclePlate()).isEqualTo("XYZ987");
+    }
+
+    @Test
+    void createConductorSavesTheAddressAndTodayAsAffiliationDate() {
+        when(growerRepository.findByIdNumber("777")).thenReturn(Optional.empty());
+        Agency agency = new Agency();
+        agency.setId(1L);
+        when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency));
+        org.mockito.ArgumentCaptor<Grower> saved = org.mockito.ArgumentCaptor.forClass(Grower.class);
+        when(growerRepository.save(saved.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        growerService.createConductor(new GrowerCreateRequest(
+                "777", "Ana", null, "Gomez", null, "Coop", "XYZ987", " Vereda El Tambo "));
+
+        assertThat(saved.getValue().getAddress()).isEqualTo("Vereda El Tambo");
+        assertThat(saved.getValue().getAffiliationDate()).isEqualTo(java.time.LocalDate.now());
+    }
+
+    @Test
+    void updateConductorChangesOnlyTransportFieldsAndNeverTheAffiliationDate() {
+        Agency agency = new Agency();
+        agency.setName("El Tambo");
+        Grower grower = new Grower();
+        grower.setIdNumber("555");
+        grower.setFirstName("Luis");
+        grower.setLastName("Rosero");
+        grower.setAddress("Calle 1");
+        grower.setAgency(agency);
+        grower.setGrowerType("S");
+        grower.setAffiliationDate(java.time.LocalDate.of(2010, 5, 1));
+        when(growerRepository.findByIdNumber("555")).thenReturn(Optional.of(grower));
+        when(growerRepository.save(grower)).thenReturn(grower);
+
+        var response = growerService.updateConductor(
+                "555", new com.cafeoccidente.backend.purchases.shared.dto.ConductorUpdateRequest("Trans Sur", "XYZ123"));
+
+        assertThat(grower.getAffiliationDate()).isEqualTo(java.time.LocalDate.of(2010, 5, 1));
+        assertThat(response.affiliationDate()).isEqualTo(java.time.LocalDate.of(2010, 5, 1));
+        assertThat(grower.getFirstName()).isEqualTo("Luis");
+        assertThat(grower.getLastName()).isEqualTo("Rosero");
+        assertThat(grower.getAddress()).isEqualTo("Calle 1");
+        assertThat(grower.getGrowerType()).isEqualTo("S");
+        assertThat(grower.getAgency()).isSameAs(agency);
+        assertThat(grower.getTransportCompany()).isEqualTo("Trans Sur");
+        assertThat(grower.getVehiclePlate()).isEqualTo("XYZ123");
+        assertThat(grower.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void conductorWithoutAgencyOrLastNameIsReturnedWithNullsInsteadOfFailing() {
+        // Asociados de Access: asociaciones sin "1er Apellido" y filas sin Agencia (V34).
+        Grower grower = new Grower();
+        grower.setIdNumber("900723205");
+        grower.setFirstName("FUNDACION SUYUSAMA");
+        grower.setAddress("");
+        grower.setTransportCompany("TRANSORIENTE");
+        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(grower));
+
+        var response = growerService.findConductor("900723205");
+
+        assertThat(response.firstName()).isEqualTo("FUNDACION SUYUSAMA");
+        assertThat(response.lastName()).isNull();
+        assertThat(response.agencyName()).isNull();
+        assertThat(response.transportCompany()).isEqualTo("TRANSORIENTE");
+    }
+
+    @Test
+    void conductorSearchNeedsThreeDigitsAndReturnsAtMostTen() {
+        assertThat(growerService.searchConductors("12")).isEmpty();
+        org.mockito.Mockito.verify(growerRepository, org.mockito.Mockito.never())
+                .findConductorsByIdNumberPrefix(anyString(), org.mockito.ArgumentMatchers.any());
+
+        when(growerRepository.findConductorsByIdNumberPrefix(
+                org.mockito.ArgumentMatchers.eq("123"), org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        growerService.searchConductors("123");
+        org.mockito.Mockito.verify(growerRepository).findConductorsByIdNumberPrefix(
+                "123", org.springframework.data.domain.PageRequest.of(0, 10));
     }
 }

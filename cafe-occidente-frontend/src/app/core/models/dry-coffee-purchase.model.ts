@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 export interface Fund {
   readonly id: number;
   readonly code: string;
@@ -18,13 +20,28 @@ export interface Announcement {
   readonly specialType: string;
 }
 
-/** Los campos que llena el admin en "Actualizar Anuncio con Factor" (el resto se resuelve en el backend). */
+/** "Actualizar Anuncio con Factor" (RN-08.2, RN-08.3): un precio para todos los tipos de cafe del fondo. */
 export interface AnnouncementRequest {
-  readonly basePriceLoad: number;
-  readonly defectiveUnitPrice: number;
-  readonly specialSurcharge: number;
-  readonly specialType: string;
   readonly fundId: number;
+  readonly basePriceLoad: number;
+}
+
+/** Fila del listado "Actualizar" (HU-11): el tipo de cafe con su anuncio vigente (null si no tiene). */
+export interface AnnouncementType {
+  readonly specialType: string;
+  readonly basePriceLoad: number | null;
+  readonly specialSurcharge: number | null;
+  readonly defectiveUnitPrice: number | null;
+  readonly announcementDate: string | null;
+}
+
+/** Guardar un solo tipo desde el listado (RN-08.6); sin precio se usa el vigente del tipo. */
+export interface AnnouncementTypeRequest {
+  readonly fundId: number;
+  readonly specialType: string;
+  readonly basePriceLoad: number | null;
+  readonly specialSurcharge: number;
+  readonly defectiveUnitPrice: number;
 }
 
 /** Los dos campos que llena el admin en "Actualizar Anuncio Pasilla" (Fondo/Especial van fijos). */
@@ -45,7 +62,7 @@ export interface SpecialInfo {
   readonly costs: number;
 }
 
-/** Siguiente factura a reservar al confirmar "Fondo" (paso 3). */
+/** Proxima factura del punto, solo para mostrarla: la asigna el servidor al guardar (HU-15). */
 export interface NextInvoiceNumber {
   readonly invoiceNumber: number;
   readonly prefix: string;
@@ -56,6 +73,8 @@ export interface NextInvoiceNumber {
 export interface QualityPercentages {
   readonly wastePercentage: number | null;
   readonly defectivePercentage: number | null;
+  /** Peso Alm Sana = Peso Tot Alm - Peso Pasilla (Q2); solo cuando llegan los dos pesos. */
+  readonly healthyStoredWeight?: number | null;
   readonly healthyPercentage: number | null;
 }
 
@@ -76,15 +95,11 @@ export interface DryCoffeePurchaseCalculation {
 }
 
 /** Campos de entrada manual del formulario Compras Café Seco (Pr_AlmDefec no va: lo trae el anuncio). */
+/** Solo lo que digita el cajero: precios, costos, factura y vendedor los pone el servidor (6b). */
 export interface DryCoffeePurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
-  readonly invoiceNumber: number;
   readonly specialType: string;
   readonly idNumber: string;
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly growerType: string;
   readonly address: string;
   readonly cellphone: string;
   readonly bagsCount: number;
@@ -92,16 +107,11 @@ export interface DryCoffeePurchaseRequest {
   readonly tareKg: number;
   readonly totalStoredWeight: number;
   readonly defectiveStoredWeight: number;
-  readonly healthyStoredWeight: number;
-  readonly healthyUnitPrice: number;
-  readonly bonus: number;
   readonly penalty: number;
-  readonly costs: number;
-  readonly withholdingExempt: boolean;
   readonly freightDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */
@@ -155,4 +165,6 @@ export interface DryCoffeePurchaseResponse {
   readonly resolutionFrom: number;
   readonly resolutionTo: number;
   readonly validity: number;
+  /** "Nom" del Cod_Prod (null si no vino en producto_migrar.csv). */
+  readonly productName: string | null;
 }

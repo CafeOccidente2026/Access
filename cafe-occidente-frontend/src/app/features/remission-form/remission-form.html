@@ -69,9 +69,17 @@
               </option>
             </select>
           </label>
-          <label class="flex w-40 flex-col gap-1 text-sm">
-            <span>Cantidad (kg)</span>
+          <label class="flex w-32 flex-col gap-1 text-sm">
+            <span>Kilos Netos</span>
             <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="draftQuantity()" (input)="draftQuantity.set($any($event.target).value)" />
+          </label>
+          <label class="flex w-24 flex-col gap-1 text-sm">
+            <span>Sacos</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="draftSacos()" (input)="draftSacos.set($any($event.target).value)" />
+          </label>
+          <label class="flex w-32 flex-col gap-1 text-sm">
+            <span>Kilos Brutos</span>
+            <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="draftGrossKg()" (input)="draftGrossKg.set($any($event.target).value)" />
           </label>
           <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="addLine()">
             Agregar
@@ -83,7 +91,9 @@
         <thead>
           <tr class="border-b border-slate-300 text-left">
             <th class="p-2">Origen</th>
-            <th class="p-2 text-right">Cantidad (kg)</th>
+            <th class="p-2 text-right">Kilos Netos</th>
+            <th class="p-2 text-right">Sacos</th>
+            <th class="p-2 text-right">Kilos Brutos</th>
             <th class="p-2"></th>
           </tr>
         </thead>
@@ -91,6 +101,8 @@
           <tr *ngFor="let line of lines(); let i = index" class="border-b border-slate-100">
             <td class="p-2">{{ line.label }}</td>
             <td class="p-2 text-right">{{ kg(line.quantity) }}</td>
+            <td class="p-2 text-right">{{ line.sacos }}</td>
+            <td class="p-2 text-right">{{ kg(line.grossKg) }}</td>
             <td class="p-2 text-right">
               <button type="button" class="text-red-600 hover:underline" (click)="removeLine(i)">Quitar</button>
             </td>
@@ -113,7 +125,7 @@
     </div>
 
     <div class="flex flex-col gap-3 p-6" *ngIf="result() as r">
-      <p class="text-lg font-semibold text-green-700">Remisión N° {{ r.remissionNumber }} registrada correctamente.</p>
+      <p class="text-lg font-semibold text-green-700">Remisión N° {{ r.displayNumber }} registrada correctamente.</p>
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-slate-300 text-left">

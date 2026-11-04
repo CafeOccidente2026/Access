@@ -1,10 +1,17 @@
+import { Screen, UserRole } from './auth.model';
+
 /** Representa un boton de navegacion dentro de un menu tipo panel. */
 export interface MenuOption {
   readonly label: string;
   readonly route?: string;
   readonly emphasis?: boolean;
-  /** Si es true, solo el rol ADMIN ve esta opcion (ej: Usuarios, Actualizar Anuncio). */
-  readonly adminOnly?: boolean;
+  /** Roles que ven la opcion (RF-01, RN-05.1). Si falta, la ven todos los que entran a ese menu. */
+  readonly roles?: readonly UserRole[];
+  /** Pantallas concedidas (RF-02) que tambien muestran la opcion, aunque el rol no este en roles. */
+  readonly screens?: readonly Screen[];
+  /** Boton visible pero inactivo (funcion de Access que no aplica todavia); hint explica por que. */
+  readonly disabled?: boolean;
+  readonly hint?: string;
 }
 
 export interface MenuOptionGroup {

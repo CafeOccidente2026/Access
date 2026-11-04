@@ -2,9 +2,9 @@
   "windowTitle": "INVENTARIOS",
   "options": [
     { "label": "Registrar Salidas", "route": "/compras/inventarios/salidas", "emphasis": true },
-    { "label": "Reporte Inventario por Esp.", "route": "/compras/inventarios/consulta" },
-    { "label": "Reporte Inventario por Cod.", "route": "/compras/inventarios/consulta" },
-    { "label": "Ingresar Conductores", "route": "/compras/inventarios/salidas" },
+    { "label": "Reporte Inventario por Esp.", "route": "/compras/inventarios/reporte-esp" },
+    { "label": "Reporte Inventario por Cod.", "route": "/compras/inventarios/reporte-cod" },
+    { "label": "Ingresar Conductores", "route": "/compras/inventarios/conductores" },
     { "label": "Reimprimir Remisión", "route": "/compras/inventarios/reimprimir-remision" },
     { "label": "Volver al Pánel de Control Compras", "route": "/compras" }
   ]

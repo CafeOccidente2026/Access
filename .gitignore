@@ -49,10 +49,10 @@ capturas
 target/
 *.class
 *.jar
-.mvn/
 *.iml
 
 docs/
 .env 
 .idea/ 
 .vscode/
+requerimientos_del_sistema

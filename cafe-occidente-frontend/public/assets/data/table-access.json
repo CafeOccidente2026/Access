@@ -1,0 +1,24 @@
+{
+  "windowTitle": "Acceso a Tablas",
+  "closeButton": "Cerrar",
+  "backButton": "Volver a las tablas",
+  "previousButton": "Anterior",
+  "nextButton": "Siguiente",
+  "totalLabel": "registro(s)",
+  "emptyMessage": "La tabla no tiene registros para esta agencia.",
+  "errorMessage": "No se pudo consultar la tabla.",
+  "agencyNote": "Agencia:",
+  "allAgenciesNote": "Común a todas las agencias",
+  "tables": {
+    "CAJA_MENOR": "Caja Menor",
+    "COMPRAS_CAFE_SECO": "Compras Café Seco",
+    "COMPRAS_CAFE_VERDE": "Compras Café Verde",
+    "COMPRAS_PASILLA": "Compras Pasilla",
+    "COMPRAS_A_FUTURO": "Compras a Futuro",
+    "INVENTARIO": "Inventario",
+    "PRODUCTOS": "Productos",
+    "EMPAQUE": "Empaque",
+    "SUMINISTROS": "Suministros",
+    "CAJA": "Caja"
+  }
+}

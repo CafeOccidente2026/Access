@@ -1,8 +1,10 @@
 package com.cafeoccidente.backend.purchases.drycoffee.controller;
 
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
+import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
-import com.cafeoccidente.backend.purchases.drycoffee.dto.NextInvoiceNumberResponse;
+import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.QualityPercentagesResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.SpecialInfoResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculation;
@@ -10,6 +12,7 @@ import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseSe
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,12 +24,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/purchases/dry-coffee")
+@PreAuthorize(Roles.ADMIN_USER)
 public class DryCoffeePurchaseController {
 
     private final DryCoffeePurchaseService dryCoffeePurchaseService;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
-    public DryCoffeePurchaseController(DryCoffeePurchaseService dryCoffeePurchaseService) {
+    public DryCoffeePurchaseController(DryCoffeePurchaseService dryCoffeePurchaseService, CurrentAgencyProvider currentAgencyProvider) {
         this.dryCoffeePurchaseService = dryCoffeePurchaseService;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @PostMapping
@@ -52,16 +58,16 @@ public class DryCoffeePurchaseController {
 
     @GetMapping("/special-info")
     public SpecialInfoResponse specialInfo(
-            @RequestParam Long agencyId, @RequestParam Long fundId, @RequestParam String specialType) {
-        return dryCoffeePurchaseService.specialInfo(agencyId, fundId, specialType);
+            @RequestParam Long fundId, @RequestParam String specialType) {
+        return dryCoffeePurchaseService.specialInfo(currentAgencyProvider.currentAgencyId(), fundId, specialType);
     }
 
     @GetMapping("/quality-percentages")
     public QualityPercentagesResponse qualityPercentages(
             @RequestParam(required = false) BigDecimal totalStoredWeight,
             @RequestParam(required = false) BigDecimal defectiveStoredWeight,
-            @RequestParam(required = false) BigDecimal healthyStoredWeight) {
-        return dryCoffeePurchaseService.qualityPercentages(
-                totalStoredWeight, defectiveStoredWeight, healthyStoredWeight);
+            @RequestParam(required = false) Long fundId,
+            @RequestParam(required = false) String specialType) {
+        return dryCoffeePurchaseService.qualityPercentages(totalStoredWeight, defectiveStoredWeight, fundId, specialType);
     }
 }

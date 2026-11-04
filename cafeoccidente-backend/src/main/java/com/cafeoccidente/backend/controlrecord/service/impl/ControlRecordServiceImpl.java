@@ -4,13 +4,20 @@ import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
+import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,21 +27,24 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     private final ControlRecordRepository controlRecordRepository;
     private final AgencyRepository agencyRepository;
     private final ControlRecordMapper mapper;
+    private final ChangeHistoryService history;
 
     public ControlRecordServiceImpl(
             ControlRecordRepository controlRecordRepository,
             AgencyRepository agencyRepository,
-            ControlRecordMapper mapper) {
+            ControlRecordMapper mapper,
+            ChangeHistoryService history) {
         this.controlRecordRepository = controlRecordRepository;
         this.agencyRepository = agencyRepository;
         this.mapper = mapper;
+        this.history = history;
     }
 
     @Override
     public ControlRecord getActive(Long agencyId) {
         return controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Esta agencia no tiene parametros de compra (ControlRecord) configurados todavia"));
+                        "La agencia no tiene Registro de Control; pídale al Administrador que lo configure"));
     }
 
     @Override
@@ -52,7 +62,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public ControlRecordResponse create(Long agencyId, ControlRecordRequest request) {
         if (controlRecordRepository.existsByAgencyIdAndActiveTrue(agencyId)) {
             throw new BusinessRuleException(
-                    "Esta agencia ya tiene un ControlRecord activo; use editar en vez de crear uno nuevo");
+                    "Esta agencia ya tiene un Registro de Control activo; use editar en vez de crear uno nuevo");
         }
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
@@ -62,15 +72,52 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setActive(true);
         applyRequest(controlRecord, request);
 
-        return mapper.toResponse(controlRecordRepository.save(controlRecord));
+        ControlRecordResponse created = mapper.toResponse(controlRecordRepository.save(controlRecord));
+        history.record(Entity.REGISTRO_CONTROL, created.id(), Action.CREAR, agencyId, null, snapshot(created));
+        return created;
     }
 
     @Override
     @Transactional
     public ControlRecordResponse update(Long agencyId, ControlRecordRequest request) {
         ControlRecord controlRecord = getActive(agencyId);
+        Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
         applyRequest(controlRecord, request);
-        return mapper.toResponse(controlRecordRepository.save(controlRecord));
+        ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
+        history.record(Entity.REGISTRO_CONTROL, updated.id(), Action.MODIFICAR, agencyId, before, snapshot(updated));
+        return updated;
+    }
+
+    /**
+     * Area de compras, 2026-10-26: los 5 valores de cafe verde se aplican a todos los Registros de Control
+     * activos a la vez (para una sola agencia esta update()). Una fila de historial por agencia que cambio.
+     */
+    @Override
+    @Transactional
+    public GreenCoffeeAppliedResponse applyGreenCoffeeToAll(GreenCoffeeValuesRequest request) {
+        List<ControlRecord> records = controlRecordRepository.findByActiveTrue();
+        for (ControlRecord controlRecord : records) {
+            Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
+            controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
+            controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
+            controlRecord.setGreenHealthyStoredWeight(request.greenHealthyStoredWeight());
+            controlRecord.setGreenHealthyUnitPrice(request.greenHealthyUnitPrice());
+            controlRecord.setGreenDefectiveUnitPrice(request.greenDefectiveUnitPrice());
+            ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
+            history.record(Entity.REGISTRO_CONTROL, updated.id(), Action.MODIFICAR, updated.agencyId(), before,
+                    snapshot(updated));
+        }
+        return new GreenCoffeeAppliedResponse(records.size());
+    }
+
+    private static Map<String, String> snapshot(ControlRecordResponse record) {
+        return Snapshots.of(record, "id", "agencyId", "agencyName");
+    }
+
+    /** RN-06.3: el punto de compra es el nombre de la agencia en Access (o su nombre si no viene de Access). */
+    private static String purchasePoint(Agency agency) {
+        String accessName = agency.getAccessAgencyValue();
+        return accessName == null || accessName.isBlank() ? agency.getName() : accessName;
     }
 
     private void applyRequest(ControlRecord controlRecord, ControlRecordRequest request) {
@@ -81,13 +128,12 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setWithholdingPercentage(request.withholdingPercentage());
         controlRecord.setBaseHusk(request.baseHusk());
         controlRecord.setAvgHuskPercentage(request.avgHuskPercentage());
-        controlRecord.setPurchasePoint(request.purchasePoint());
+        controlRecord.setPurchasePoint(purchasePoint(controlRecord.getAgency()));
         controlRecord.setPrefix(request.prefix());
         controlRecord.setCosts(request.costs());
         controlRecord.setSampleSize(request.sampleSize());
         controlRecord.setExcelsoKg(request.excelsoKg());
         controlRecord.setGreenCoffeePercentage(request.greenCoffeePercentage());
-        controlRecord.setSpecialtyThreshold(request.specialtyThreshold());
         controlRecord.setAssociatePercentage(request.associatePercentage());
         controlRecord.setNonAssociateDiscount(request.nonAssociateDiscount());
         controlRecord.setTrustedId(request.trustedId());
@@ -96,5 +142,11 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         controlRecord.setResolutionFrom(request.resolutionFrom());
         controlRecord.setResolutionTo(request.resolutionTo());
         controlRecord.setValidity(request.validity());
+        controlRecord.setSpecialtyThreshold(request.specialtyThreshold());
+        controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
+        controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
+        controlRecord.setGreenHealthyStoredWeight(request.greenHealthyStoredWeight());
+        controlRecord.setGreenHealthyUnitPrice(request.greenHealthyUnitPrice());
+        controlRecord.setGreenDefectiveUnitPrice(request.greenDefectiveUnitPrice());
     }
 }

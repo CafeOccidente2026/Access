@@ -2,22 +2,26 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { finalize, of } from 'rxjs';
 
 import { FormFieldDefinition } from '../../core/models';
 import { Agency } from '../../core/models/agency.model';
 import { ControlRecordRequest, ControlRecordResponse } from '../../core/models/control-record.model';
 import { AgencyService } from '../../core/services/agency.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { ControlRecordService } from '../../core/services/control-record.service';
-import { AccessWindowComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent } from '../../shared/ui';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
 import { ControlRecordContent } from './control-record.model';
 
-/** Pantalla ADMIN "Registro de Control": ver/crear/editar el ControlRecord de una agencia. */
+/** Pantalla ADMIN "Registro de Control": ver/crear/editar el ControlRecord de una agencia. Como en
+ *  Access, abre ya con el registro de la agencia de la sesion cargado; el selector queda para
+ *  crear/editar el de otra agencia. */
 @Component({
   selector: 'app-control-record',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent],
   templateUrl: './control-record.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -25,6 +29,7 @@ export class ControlRecordComponent {
   private readonly content = inject(ContentService);
   private readonly agencyService = inject(AgencyService);
   private readonly controlRecordService = inject(ControlRecordService);
+  private readonly authService = inject(AuthService);
 
   readonly page = toSignal(this.content.loadJson<ControlRecordContent>('control-record'));
   readonly agencies = signal<Agency[]>([]);
@@ -32,6 +37,8 @@ export class ControlRecordComponent {
   readonly isCreate = signal(false);
   readonly savedMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
+  /** Hay un guardado en curso: los botones que guardan quedan deshabilitados y Enter no vuelve a enviar. */
+  readonly saving = signal(false);
   private readonly model = signal<Record<string, string>>({});
 
   /** Recalculan solo cuando cambian sus dependencias (model/agencyId/page) - nunca en cada
@@ -40,7 +47,18 @@ export class ControlRecordComponent {
   readonly rightFields = computed(() => this.buildFields(this.page()?.rightColumn));
 
   constructor() {
-    this.agencyService.list().subscribe((agencies) => this.agencies.set(agencies));
+    // La lista primero: el prefijo sugerido de una agencia sin registro sale de ella. Con el permiso de
+    // la pantalla (RF-02), quien no es Administrador solo ve su agencia.
+    const sessionAgencyId = this.authService.agencyId();
+    const agencies$ = this.authService.isAdmin()
+      ? this.agencyService.list()
+      : of<Agency[]>(sessionAgencyId === null ? [] : [{ id: sessionAgencyId, name: this.authService.agencyName() ?? '' }]);
+    agencies$.subscribe((agencies) => {
+      this.agencies.set(agencies);
+      if (sessionAgencyId !== null) {
+        this.onAgencyChange(String(sessionAgencyId));
+      }
+    });
   }
 
   onAgencyChange(value: string): void {
@@ -52,20 +70,37 @@ export class ControlRecordComponent {
     if (id === null) {
       return;
     }
+    // Si se cambia de agencia antes de que llegue la respuesta, la respuesta vieja se descarta: si
+    // no, los valores de la agencia anterior quedaban en el formulario de la nueva (y al guardar se
+    // escribian sobre ella).
     this.controlRecordService.getByAgency(id).subscribe({
       next: (record) => {
+        if (this.agencyId() !== id) {
+          return;
+        }
         this.isCreate.set(false);
         this.model.set(this.toModel(record));
       },
       error: (err: HttpErrorResponse) => {
+        if (this.agencyId() !== id) {
+          return;
+        }
         if (err.status === 404) {
           this.isCreate.set(true);
-          this.model.set({});
+          // D2: si la agencia traia prefijo de Access, el Prefijo aparece prellenado.
+          const suggested = this.agencies().find((a) => a.id === id)?.suggestedPrefix;
+          this.model.set(suggested ? { prefix: suggested } : {});
         } else {
           this.errorMessage.set(this.page()?.errorMessage ?? null);
         }
       },
     });
+  }
+
+  /** Sin esto, cada tecla recrea todos los campos (buildFields devuelve objetos nuevos) y el input
+   *  en edicion pierde el foco. */
+  trackByKey(_: number, field: FormFieldDefinition): string {
+    return field.key;
   }
 
   onFieldValueChange(event: { key: string; value: string | number }): void {
@@ -74,7 +109,7 @@ export class ControlRecordComponent {
 
   save(): void {
     const id = this.agencyId();
-    if (!id) {
+    if (this.saving() || !id) {
       return;
     }
     this.savedMessage.set(null);
@@ -83,8 +118,12 @@ export class ControlRecordComponent {
     const call = this.isCreate()
       ? this.controlRecordService.create(id, request)
       : this.controlRecordService.update(id, request);
-    call.subscribe({
+    this.saving.set(true);
+    call.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (record) => {
+        if (this.agencyId() !== id) {
+          return; // ya se guardo contra su agencia; no pintarlo sobre la que se eligio despues
+        }
         this.isCreate.set(false);
         this.model.set(this.toModel(record));
         this.savedMessage.set(this.page()?.savedMessage ?? null);
@@ -97,11 +136,54 @@ export class ControlRecordComponent {
     });
   }
 
+  /** Agencias con Registro de Control activo: las que reciben el cafe verde de "Aplicar a todas". */
+  readonly agenciesWithRecord = computed(() => this.agencies().filter((agency) => agency.hasControlRecord).length);
+  readonly confirmingGreen = signal(false);
+  /** "Aplicar a todas" es solo del Administrador; con el permiso de la pantalla (RF-02) se trabaja solo la propia agencia. */
+  readonly isAdmin = this.authService.isAdmin();
+
+  /** Area de compras, 2026-10-26: los 5 valores de cafe verde a todas las agencias, previa confirmacion. */
+  askApplyGreenToAll(): void {
+    if (!this.saving()) {
+      this.confirmingGreen.set(true);
+    }
+  }
+
+  applyGreenToAll(): void {
+    this.confirmingGreen.set(false);
+    if (this.saving()) {
+      return;
+    }
+    const request = this.buildRequest();
+    this.savedMessage.set(null);
+    this.errorMessage.set(null);
+    this.saving.set(true);
+    this.controlRecordService
+      .applyGreenCoffeeToAll({
+        greenTotalStoredWeight: request.greenTotalStoredWeight,
+        greenTotalHuskWeight: request.greenTotalHuskWeight,
+        greenHealthyStoredWeight: request.greenHealthyStoredWeight,
+        greenHealthyUnitPrice: request.greenHealthyUnitPrice,
+        greenDefectiveUnitPrice: request.greenDefectiveUnitPrice,
+      })
+      .pipe(finalize(() => this.saving.set(false)))
+      .subscribe({
+        next: (result) =>
+          this.savedMessage.set(this.page()?.applyGreenDone.replace('{count}', String(result.agencies)) ?? null),
+        error: (err: HttpErrorResponse) => this.errorMessage.set(err.error?.message ?? this.page()?.errorMessage ?? null),
+      });
+  }
+
   private toModel(record: ControlRecordResponse): Record<string, string> {
     const model: Record<string, string> = {};
     (Object.keys(record) as (keyof ControlRecordResponse)[])
       .filter((key) => !['id', 'agencyId', 'agencyName', 'active'].includes(key))
-      .forEach((key) => (model[key] = String(record[key] ?? '')));
+      .forEach((key) => {
+        const value = record[key];
+        // Decimales con coma, como los escribe el usuario: con punto ("0.5"), el campo numerico lo
+        // toma como separador de miles al editar y "0.6" terminaba guardandose como 6.
+        model[key] = typeof value === 'number' ? String(value).replace('.', ',') : String(value ?? '');
+      });
     return model;
   }
 
@@ -117,13 +199,11 @@ export class ControlRecordComponent {
       withholdingPercentage: num('withholdingPercentage'),
       baseHusk: num('baseHusk'),
       avgHuskPercentage: num('avgHuskPercentage'),
-      purchasePoint: str('purchasePoint'),
       prefix: str('prefix'),
       costs: num('costs'),
       sampleSize: num('sampleSize'),
       excelsoKg: num('excelsoKg'),
       greenCoffeePercentage: num('greenCoffeePercentage'),
-      specialtyThreshold: num('specialtyThreshold'),
       associatePercentage: num('associatePercentage'),
       nonAssociateDiscount: num('nonAssociateDiscount'),
       trustedId: str('trustedId'),
@@ -132,6 +212,12 @@ export class ControlRecordComponent {
       resolutionFrom: num('resolutionFrom'),
       resolutionTo: num('resolutionTo'),
       validity: num('validity'),
+      specialtyThreshold: num('specialtyThreshold'),
+      greenTotalStoredWeight: num('greenTotalStoredWeight'),
+      greenTotalHuskWeight: num('greenTotalHuskWeight'),
+      greenHealthyStoredWeight: num('greenHealthyStoredWeight'),
+      greenHealthyUnitPrice: num('greenHealthyUnitPrice'),
+      greenDefectiveUnitPrice: num('greenDefectiveUnitPrice'),
     };
   }
 
@@ -144,7 +230,7 @@ export class ControlRecordComponent {
     return base.map((f) => ({
       ...f,
       value: model[f.key] ?? '',
-      readonly: !agencySelected,
+      readonly: !agencySelected || !!f.readonly,
     }));
   }
 }

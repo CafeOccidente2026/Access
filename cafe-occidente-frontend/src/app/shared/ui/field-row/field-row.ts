@@ -18,6 +18,7 @@ export class FieldRowComponent {
   @Input() fieldWidthClass = 'min-w-[240px] flex-1';
   @Input() labelWidthClass = 'w-32';
   @Input() inputWidthClass = 'min-w-[100px]';
+  @Input() labelAbove = false;
 
   @Output() readonly fieldValueChange = new EventEmitter<{ key: string; value: string | number }>();
   @Output() readonly fieldCommitted = new EventEmitter<string>();

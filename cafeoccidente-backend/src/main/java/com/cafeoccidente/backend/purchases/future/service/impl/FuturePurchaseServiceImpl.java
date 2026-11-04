@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.future.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
@@ -37,6 +38,7 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     private final AnnouncementService announcementService;
     private final GrowerService growerService;
     private final SecurityUtils securityUtils;
+    private final CurrentAgencyProvider currentAgencyProvider;
 
     public FuturePurchaseServiceImpl(
             FuturePurchaseRepository futurePurchaseRepository,
@@ -44,19 +46,20 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
             FundRepository fundRepository,
             AnnouncementService announcementService,
             GrowerService growerService,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider) {
         this.futurePurchaseRepository = futurePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
         this.announcementService = announcementService;
         this.growerService = growerService;
         this.securityUtils = securityUtils;
+        this.currentAgencyProvider = currentAgencyProvider;
     }
 
     @Override
     @Transactional
     public FuturePurchaseResponse create(FuturePurchaseRequest request) {
-        Agency agency = agencyRepository.findById(request.agencyId())
+        Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         GrowerResponse grower = growerService.findByIdNumber(request.idNumber());
 
@@ -105,7 +108,9 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
 
     @Override
     public FuturePurchaseResponse findById(Long id) {
+        // Solo de la agencia de trabajo (RF-05.1): la de otra agencia es "no encontrada", como Consultar Compras.
         FuturePurchase purchase = futurePurchaseRepository.findById(id)
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Compromiso de compra a futuro no encontrado"));
         return toResponse(purchase);
     }

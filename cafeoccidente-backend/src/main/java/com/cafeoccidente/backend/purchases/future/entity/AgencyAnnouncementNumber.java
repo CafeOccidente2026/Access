@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ import lombok.Setter;
  * se duplica aqui.
  */
 @Entity
+@Table(name = "anuncios_agencias")
 @Getter
 @Setter
 public class AgencyAnnouncementNumber {
@@ -30,16 +32,16 @@ public class AgencyAnnouncementNumber {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "agency_id", nullable = false)
+    @JoinColumn(name = "agencia_id", nullable = false)
     private Agency agency;
 
     @ManyToOne
-    @JoinColumn(name = "master_announcement_id", nullable = false)
+    @JoinColumn(name = "anuncio_id", nullable = false)
     private Announcement masterAnnouncement;
 
-    @Column(name = "announcement_number", nullable = false)
+    @Column(name = "numero_anuncio", nullable = false)
     private Integer announcementNumber;
 
-    @Column(name = "assigned_at", nullable = false)
+    @Column(name = "fecha_asignacion", nullable = false)
     private LocalDate assignedAt;
 }

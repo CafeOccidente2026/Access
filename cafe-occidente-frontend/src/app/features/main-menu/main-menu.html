@@ -1,7 +1,21 @@
 <div class="h-screen bg-gradient-to-br from-panel-sky to-panel-cyan p-4" *ngIf="data() as d">
   <app-access-window [title]="d.windowTitle" bodyClass="bg-gradient-to-br from-panel-sky to-panel-cyan" closeRoute="/login">
     <div class="grid h-full grid-cols-[280px_1fr] gap-8 p-8">
-      <app-menu-button-grid [options]="options()" [columns]="1"></app-menu-button-grid>
+      <div class="flex flex-col gap-3">
+        <label *ngIf="isAdmin" class="flex flex-col gap-1 text-sm" data-testid="agencies">
+          <span class="font-semibold text-blue-900">{{ d.agencies.label }}</span>
+          <select
+            class="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+            (change)="onAgencyChange($any($event.target).value)"
+          >
+            <option *ngFor="let agency of agencies()" [value]="agency.id" [selected]="agency.id === auth.agencyId()">
+              {{ agency.name }}
+            </option>
+          </select>
+          <span *ngIf="agencyError() as error" class="text-xs text-red-700">{{ error }}</span>
+        </label>
+        <app-menu-button-grid [options]="d.options" [columns]="1"></app-menu-button-grid>
+      </div>
 
       <div class="flex flex-col items-center justify-center gap-6">
         <img [src]="d.logo.src" [alt]="d.logo.alt" class="h-44 w-44 object-contain" />

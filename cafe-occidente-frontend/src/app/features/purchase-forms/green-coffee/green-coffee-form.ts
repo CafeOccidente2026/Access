@@ -1,13 +1,12 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   GreenAnnouncementInfo,
   GreenCoffeePurchaseCalculation,
   GreenCoffeePurchaseRequest,
-  GreenCoffeePurchaseResponse,
   GreenNextInvoiceNumber,
 } from '../../../core/models/green-coffee-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -15,8 +14,12 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
+import { hasRequired, saveAndPrint } from '../purchase-print';
+import { advanceFocus, focusField } from '../form-focus';
+import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -25,9 +28,11 @@ interface GreenCoffeeMessages {
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
+  readonly sampleMissing: string;
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
+  readonly invoiceError: string;
   readonly closeWarning: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
@@ -56,11 +61,13 @@ const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoicePrefix',
   'invoiceNumber', 'basePriceLoad', 'special', 'idNumber', 'healthyStoredPrice', 'defectStoredPrice',
   'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding',
+  // HU-23 CA-2: muestra fija del Registro de Control.
+  'totalStoredWeight', 'wastePercentage', 'totalHuskWeight', 'huskPercentage', 'healthyStoredWeight', 'factor',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario. */
 const FOCUS_ORDER: string[] = [
-  'idPart1', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -75,35 +82,37 @@ const num = parseDisplayNumber;
   selector: 'app-green-coffee-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './green-coffee-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GreenCoffeeFormComponent {
+export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(GreenCoffeePurchaseService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
-  private readonly location = inject(Location);
   private readonly elementRef = inject(ElementRef);
 
   private readonly base = toSignal(this.content.loadJson<GreenCoffeeContent>('purchase-form-green'));
   readonly messages = computed<GreenCoffeeMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<GreenAnnouncementInfo | null>(null);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
+  readonly saving = signal(false);
   readonly invoiceReservation = signal<GreenNextInvoiceNumber | null>(null);
   readonly calc = signal<GreenCoffeePurchaseCalculation | null>(null);
-  readonly result = signal<GreenCoffeePurchaseResponse | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
+  /** Q23: el Registro de Control no tiene los pesos de verde; la pantalla no deja digitar. */
+  readonly sampleMissing = signal(false);
   readonly savedNoticeOpen = signal(false);
   private readonly tick = signal(0);
 
-  model: FormModel = {};
+  override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
-  pendingClose = false;
-  private closeResolver: ((value: boolean) => void) | null = null;
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
     const base = this.base();
@@ -115,6 +124,7 @@ export class GreenCoffeeFormComponent {
   });
 
   constructor() {
+    super();
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
@@ -139,7 +149,7 @@ export class GreenCoffeeFormComponent {
   }
 
   onFieldCommitted(key: string): void {
-    if (!EDITABLE.includes(key)) {
+    if (this.sampleMissing() || !EDITABLE.includes(key)) {
       return;
     }
     const value = (this.model[key] ?? '').trim();
@@ -159,22 +169,7 @@ export class GreenCoffeeFormComponent {
     }
   }
 
-  private focusField(key: string): void {
-    setTimeout(() => {
-      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
-      el?.focus();
-      el?.classList.add('field-flash');
-      setTimeout(() => el?.classList.remove('field-flash'), 1000);
-    });
-  }
 
-  private advanceFocus(afterKey: string): void {
-    const idx = FOCUS_ORDER.indexOf(afterKey);
-    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
-      return;
-    }
-    this.focusField(FOCUS_ORDER[idx + 1]);
-  }
 
   private runSideEffects(key: string): void {
     switch (key) {
@@ -213,7 +208,13 @@ export class GreenCoffeeFormComponent {
   private loadAnnouncementInfo(): void {
     this.service.announcementInfo().subscribe({
       next: (info) => {
-        this.announcementInfo.set(info);
+        // HU-23 CA-2 / Q23: sin los pesos de verde no hay cálculo ni factura (sin info no hay preview
+        // ni Imprimir); se avisa apenas abre la pantalla.
+        this.announcementInfo.set(info.sampleReady ? info : null);
+        this.sampleMissing.set(!info.sampleReady);
+        if (!info.sampleReady) {
+          this.errorMessage.set(this.messages()?.sampleMissing ?? null);
+        }
         this.tick.update((n) => n + 1);
       },
       error: () => {
@@ -287,35 +288,24 @@ export class GreenCoffeeFormComponent {
   }
 
   private buildRequest(): GreenCoffeePurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!agencyId || !invoiceNumber || !info) {
+    if (!invoiceNumber || !info || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
-      agencyId,
       fundId: info.fundId,
-      invoiceNumber,
       idNumber: this.model['idPart1'],
-      firstName: this.model['firstName'] ?? '',
-      lastName: this.model['lastName'] ?? '',
-      growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'] ?? '',
       cellphone: this.model['cellphone'] ?? '',
       bagsCount: num(this.model['bags']),
       grossKg: num(this.model['grossKg']),
       tareKg: num(this.model['tare']),
-      healthyUnitPrice: info.healthyUnitPrice,
-      bonus: info.bonus,
-      costs: info.costs,
       penalty: num(this.model['penalty']),
       compKgPrice: num(this.model['compKgPrice']),
-      withholdingExempt: false,
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -327,18 +317,12 @@ export class GreenCoffeeFormComponent {
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    this.service.create(request).subscribe({
-      next: (res) => {
-        this.result.set(res);
-        this.savedNoticeOpen.set(true);
-        this.tick.update((n) => n + 1);
-      },
-      error: (err) => {
-        console.error('Error al registrar compra Cafe Verde:', err?.error ?? err);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
+    saveAndPrint(this, {
+      name: 'Cafe Verde',
+      save: () => this.service.create(request),
+      invoice: buildGreenCoffeeInvoiceDocDefinition,
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
     });
   }
 
@@ -353,11 +337,11 @@ export class GreenCoffeeFormComponent {
 
   @HostListener('document:keydown.escape')
   reset(): void {
+    this.payment.set(null);
     this.model = {};
     this.locked.clear();
     this.invoiceReservation.set(null);
     this.calc.set(null);
-    this.result.set(null);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
@@ -368,49 +352,14 @@ export class GreenCoffeeFormComponent {
     this.tick.update((n) => n + 1);
   }
 
-  private hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+  protected override hasUnsavedInput(): boolean {
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
-  onClose(): void {
-    if (this.hasUnsavedInput()) {
-      this.pendingClose = true;
-    } else {
-      this.location.back();
-    }
-  }
-
-  canDeactivate(): boolean | Promise<boolean> {
-    if (!this.hasUnsavedInput()) {
-      return true;
-    }
-    this.pendingClose = true;
-    return new Promise<boolean>((resolve) => (this.closeResolver = resolve));
-  }
-
-  confirmClose(): void {
-    this.pendingClose = false;
-    if (this.closeResolver) {
-      this.closeResolver(true);
-      this.closeResolver = null;
-      return;
-    }
-    // Descarta los datos antes de navegar: si no, canDeactivate() vuelve a encontrar
-    // input sin guardar y reabre este mismo dialogo, obligando a un segundo clic.
-    this.model = {};
-    this.location.back();
-  }
-
-  cancelClose(): void {
-    this.pendingClose = false;
-    this.closeResolver?.(false);
-    this.closeResolver = null;
-  }
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
-      !!this.authService.agencyId() &&
+      !!this.payment() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
@@ -454,6 +403,12 @@ export class GreenCoffeeFormComponent {
       defectStoredPrice: info?.defectiveUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
+      totalStoredWeight: info?.sample?.totalStoredWeight ?? '',
+      wastePercentage: info?.sample?.wastePercentage ?? '',
+      totalHuskWeight: info?.sample?.huskWeight ?? '',
+      huskPercentage: info?.sample?.huskPercentage ?? '',
+      healthyStoredWeight: info?.sample?.healthyStoredWeight ?? '',
+      factor: info?.sample?.factor ?? '',
       idNumber: this.model['idPart1'] ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
@@ -491,21 +446,17 @@ export class GreenCoffeeFormComponent {
       federationFields: row(base.federationFields),
       contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
-      weightFields: base.weightFields,
+      weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
       priceFields: row(base.priceFields),
       settlementFields: row(base.settlementFields)!,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
-      paymentPanel: base.paymentPanel
-        ? {
-            ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) =>
-              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
-            ),
-            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
-          }
-        : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
+
+  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
+  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
+  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }

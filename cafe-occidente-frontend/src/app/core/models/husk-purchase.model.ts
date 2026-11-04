@@ -1,3 +1,5 @@
+import { PurchasePayment } from './payment-method.model';
+
 /** Autocompletado al iniciar el formulario (Especial "PASILLA" / Fondo "RP" fijos en la practica). */
 export interface HuskAnnouncementInfo {
   readonly fundId: number;
@@ -9,7 +11,7 @@ export interface HuskAnnouncementInfo {
   readonly costs: number;
 }
 
-/** Factura: "Para asignar # factura pasilla" (siguiente consecutivo propio de PASILLA). */
+/** Proxima factura del punto (Q7: consecutivo compartido con seco y verde); la asigna el servidor al guardar. */
 export interface HuskNextInvoiceNumber {
   readonly invoiceNumber: number;
   readonly prefix: string;
@@ -30,27 +32,20 @@ export interface HuskPurchaseCalculation {
 }
 
 /** Campos de entrada manual del formulario Compra Pasilla (PASILLA). */
+/** Solo lo que digita el cajero: precios, costos, factura y vendedor los pone el servidor (6b). */
 export interface HuskPurchaseRequest {
-  readonly agencyId: number;
   readonly fundId: number;
-  readonly invoiceNumber: number;
   readonly idNumber: string;
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly growerType: string;
   readonly address: string;
   readonly cellphone: string;
   readonly almondWeight: number;
   readonly bagsCount: number;
   readonly grossKg: number;
   readonly tareKg: number;
-  readonly pointPrice: number;
-  readonly costs: number;
-  readonly withholdingExempt: boolean;
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
-  readonly paymentMethod: string;
-  readonly checkNumber: string | null;
+  /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
+  readonly payment: PurchasePayment | null;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */
@@ -86,4 +81,15 @@ export interface HuskPurchaseResponse {
   readonly shrinkageDiscount: number;
   readonly otherDiscounts: number;
   readonly netToPay: number;
+  readonly address: string;
+  readonly cellphone: string;
+  readonly paymentMethod: string;
+  /** Pie de factura: ControlRecord vivo de la agencia (igual que Cafe Seco). */
+  readonly purchasePoint: string;
+  readonly prefix: string;
+  readonly dianResolution: string;
+  readonly resolutionDate: string;
+  readonly resolutionFrom: number;
+  readonly resolutionTo: number;
+  readonly validity: number;
 }

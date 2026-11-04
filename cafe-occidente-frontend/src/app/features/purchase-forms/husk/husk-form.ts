@@ -1,22 +1,25 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
-import { FormFieldDefinition, PurchaseFormContent } from '../../../core/models';
+import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
   HuskAnnouncementInfo,
   HuskNextInvoiceNumber,
   HuskPurchaseCalculation,
   HuskPurchaseRequest,
-  HuskPurchaseResponse,
 } from '../../../core/models/husk-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
+import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { hasRequired, saveAndPrint } from '../purchase-print';
+import { advanceFocus, focusField } from '../form-focus';
+import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -28,6 +31,7 @@ interface HuskMessages {
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
+  readonly invoiceError: string;
   readonly closeWarning: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
@@ -62,7 +66,7 @@ const READONLY: string[] = [
 /** Orden en que el foco salta de un campo al siguiente (sigue el orden visual del JSON: calidad
  *  antes que pesos - igual que W_AlmSana_AfterUpdate/Destare_LostFocus son independientes). */
 const FOCUS_ORDER: string[] = [
-  'idPart1', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts',
+  'idPart1', 'almondWeight', 'bags', 'grossKg', 'tare', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
 ];
 
 const num = parseDisplayNumber;
@@ -77,35 +81,35 @@ const num = parseDisplayNumber;
   selector: 'app-husk-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './husk-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HuskFormComponent {
+export class HuskFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(HuskPurchaseService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
-  private readonly location = inject(Location);
   private readonly elementRef = inject(ElementRef);
 
   private readonly base = toSignal(this.content.loadJson<HuskContent>('purchase-form-husk'));
   readonly messages = computed<HuskMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<HuskAnnouncementInfo | null>(null);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
+  readonly saving = signal(false);
   readonly invoiceReservation = signal<HuskNextInvoiceNumber | null>(null);
   readonly calc = signal<HuskPurchaseCalculation | null>(null);
-  readonly result = signal<HuskPurchaseResponse | null>(null);
+  /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
+  readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
   private readonly tick = signal(0);
 
-  model: FormModel = {};
+  override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
-  pendingClose = false;
-  private closeResolver: ((value: boolean) => void) | null = null;
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
     const base = this.base();
@@ -117,6 +121,7 @@ export class HuskFormComponent {
   });
 
   constructor() {
+    super();
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
@@ -161,22 +166,7 @@ export class HuskFormComponent {
     }
   }
 
-  private focusField(key: string): void {
-    setTimeout(() => {
-      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
-      el?.focus();
-      el?.classList.add('field-flash');
-      setTimeout(() => el?.classList.remove('field-flash'), 1000);
-    });
-  }
 
-  private advanceFocus(afterKey: string): void {
-    const idx = FOCUS_ORDER.indexOf(afterKey);
-    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
-      return;
-    }
-    this.focusField(FOCUS_ORDER[idx + 1]);
-  }
 
   private runSideEffects(key: string): void {
     switch (key) {
@@ -284,33 +274,23 @@ export class HuskFormComponent {
   }
 
   private buildRequest(): HuskPurchaseRequest | null {
-    const agencyId = this.authService.agencyId();
     const info = this.announcementInfo();
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    if (!agencyId || !invoiceNumber || !info) {
+    if (!invoiceNumber || !info || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
-      agencyId,
       fundId: info.fundId,
-      invoiceNumber,
       idNumber: this.model['idPart1'],
-      firstName: this.model['firstName'] ?? '',
-      lastName: this.model['lastName'] ?? '',
-      growerType: (this.model['idType'] ?? '').trim().toUpperCase(),
       address: this.model['address'] ?? '',
       cellphone: this.model['cellphone'] ?? '',
       almondWeight: num(this.model['almondWeight']),
       bagsCount: num(this.model['bags']),
       grossKg: num(this.model['grossKg']),
       tareKg: num(this.model['tare']),
-      pointPrice: info.pointPrice,
-      costs: info.costs,
-      withholdingExempt: false,
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
-      paymentMethod: 'EFECTIVO',
-      checkNumber: null,
+      payment: this.payment(),
     };
   }
 
@@ -322,20 +302,15 @@ export class HuskFormComponent {
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    this.service.create(request).subscribe({
-      next: (res) => {
-        this.result.set(res);
-        this.savedNoticeOpen.set(true);
-        this.tick.update((n) => n + 1);
-      },
-      error: (err) => {
-        console.error('Error al registrar compra Pasilla:', err?.error ?? err);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
+    saveAndPrint(this, {
+      name: 'Pasilla',
+      save: () => this.service.create(request),
+      invoice: buildHuskInvoiceDocDefinition,
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
     });
   }
+
 
   dismissError(): void {
     const wasBlocked = this.blockedByDeceased();
@@ -348,11 +323,11 @@ export class HuskFormComponent {
 
   @HostListener('document:keydown.escape')
   reset(): void {
+    this.payment.set(null);
     this.model = {};
     this.locked.clear();
     this.invoiceReservation.set(null);
     this.calc.set(null);
-    this.result.set(null);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
@@ -363,49 +338,14 @@ export class HuskFormComponent {
     this.tick.update((n) => n + 1);
   }
 
-  private hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+  protected override hasUnsavedInput(): boolean {
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
-  onClose(): void {
-    if (this.hasUnsavedInput()) {
-      this.pendingClose = true;
-    } else {
-      this.location.back();
-    }
-  }
-
-  canDeactivate(): boolean | Promise<boolean> {
-    if (!this.hasUnsavedInput()) {
-      return true;
-    }
-    this.pendingClose = true;
-    return new Promise<boolean>((resolve) => (this.closeResolver = resolve));
-  }
-
-  confirmClose(): void {
-    this.pendingClose = false;
-    if (this.closeResolver) {
-      this.closeResolver(true);
-      this.closeResolver = null;
-      return;
-    }
-    // Descarta los datos antes de navegar: si no, canDeactivate() vuelve a encontrar
-    // input sin guardar y reabre este mismo dialogo, obligando a un segundo clic.
-    this.model = {};
-    this.location.back();
-  }
-
-  cancelClose(): void {
-    this.pendingClose = false;
-    this.closeResolver?.(false);
-    this.closeResolver = null;
-  }
 
   private canPrint(): boolean {
     return (
-      !this.result() &&
-      !!this.authService.agencyId() &&
+      !!this.payment() &&
       !!this.announcementInfo() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
@@ -419,7 +359,7 @@ export class HuskFormComponent {
     const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
     collect(base.topFields);
     collect(base.identificationFields);
-    collect(base.federationFields);
+    collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.netWeightFields);
     collect(base.settlementFields);
@@ -476,21 +416,17 @@ export class HuskFormComponent {
       ...base,
       topFields: row(base.topFields)!,
       identificationFields: row(base.identificationFields)!,
-      federationFields: row(base.federationFields),
+      contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       netWeightFields: row(base.netWeightFields),
       settlementFields: row(base.settlementFields)!,
       discountField: base.discountField ? field(base.discountField.key) : undefined,
-      paymentPanel: base.paymentPanel
-        ? {
-            ...base.paymentPanel,
-            methods: base.paymentPanel.methods.map((m, i) =>
-              i === 0 ? { ...m, value: c ? formatDisplayNumber(c.netToPay, 'currency') : '' } : m,
-            ),
-            totalValue: c ? formatDisplayNumber(c.netToPay, 'currency') : '',
-          }
-        : undefined,
+      paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
     };
   }
+
+  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
+  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
+  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }

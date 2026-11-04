@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.shared.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -16,17 +17,21 @@ import lombok.Getter;
  */
 @Entity
 @Getter
-@Table(name = "staging_legacy_ness")
+@Table(name = "cupos_ness")
 public class LegacyNessProgram {
 
     @Id
     private Integer id;
 
+    @Column(name = "cedula")
     private String cedula;
 
+    @Column(name = "nombres")
     private String nombres;
 
+    @Column(name = "programa")
     private String programa;
 
+    @Column(name = "cupo")
     private String cupo;
 }

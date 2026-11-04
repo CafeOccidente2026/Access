@@ -60,9 +60,8 @@ export class QuotaAssignmentComponent {
       return;
     }
     const announcement = this.announcements().find((a) => a.announcementNumber === displayNumber);
-    const agencyId = this.authService.agencyId();
     const rawNumber = Number(stripAnnouncementPrefix(displayNumber));
-    if (!announcement || !agencyId || Number.isNaN(rawNumber)) {
+    if (!announcement || Number.isNaN(rawNumber)) {
       return;
     }
     this.announcementNumber.set(rawNumber);
@@ -76,7 +75,7 @@ export class QuotaAssignmentComponent {
       bonus: String(announcement.bonus),
       costs: String(announcement.costs),
     });
-    this.announcementQuotaService.get(agencyId, rawNumber).subscribe({
+    this.announcementQuotaService.get(rawNumber).subscribe({
       next: (quota) => {
         this.isCreate.set(false);
         this.model.update((m) => ({ ...m, ...this.toModel(quota) }));
@@ -96,15 +95,14 @@ export class QuotaAssignmentComponent {
   }
 
   save(): void {
-    const agencyId = this.authService.agencyId();
     const number = this.announcementNumber();
-    if (!agencyId || !number) {
+    if (!number) {
       return;
     }
     this.savedMessage.set(null);
     this.errorMessage.set(null);
     const request: AnnouncementQuotaRequest = { assignedQuota: parseDisplayNumber(this.model()['quota']) };
-    this.announcementQuotaService.assign(agencyId, number, request).subscribe({
+    this.announcementQuotaService.assign(number, request).subscribe({
       next: (quota) => {
         this.isCreate.set(false);
         this.model.update((m) => ({ ...m, ...this.toModel(quota) }));

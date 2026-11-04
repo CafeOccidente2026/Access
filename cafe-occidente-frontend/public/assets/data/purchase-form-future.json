@@ -10,9 +10,9 @@
   ],
   "federationHeading": "Información Federación:",
   "federationFields": [
-    { "key": "idNumber", "label": "Cédula", "type": "text", "readonly": true },
-    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "readonly": true },
-    { "key": "program", "label": "Programa", "type": "text", "readonly": true }
+    { "key": "idNumber", "label": "Cédula", "type": "text", "readonly": true, "rowWidthClass": "w-[110px]", "inputWidthClass": "min-w-0" },
+    { "key": "fullName", "label": "Nombres y Apellidos", "type": "text", "readonly": true, "rowWidthClass": "w-[300px]", "inputWidthClass": "min-w-0" },
+    { "key": "program", "label": "Programa", "type": "text", "readonly": true, "rowWidthClass": "w-[150px]", "inputWidthClass": "min-w-0" }
   ],
   "identificationFields": [
     { "key": "address", "label": "Direccion", "type": "text", "readonly": true },

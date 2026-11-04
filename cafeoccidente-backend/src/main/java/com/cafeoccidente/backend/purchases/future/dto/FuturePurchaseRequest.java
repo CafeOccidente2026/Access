@@ -13,7 +13,6 @@ import java.time.LocalDate;
  * vía {@link com.cafeoccidente.backend.purchases.shared.service.GrowerService#findByIdNumber}.
  */
 public record FuturePurchaseRequest(
-        @NotNull Long agencyId,
         @NotBlank String idNumber,
         @NotBlank String specialType,
         @NotNull @Positive BigDecimal announcedKg,

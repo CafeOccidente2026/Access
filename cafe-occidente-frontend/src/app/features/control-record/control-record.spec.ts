@@ -1,0 +1,283 @@
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { Subject, of, throwError } from 'rxjs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import content from '../../../../public/assets/data/control-record.json';
+import { FormFieldDefinition } from '../../core/models';
+import { FormFieldComponent } from '../../shared/ui';
+import { ControlRecordComponent } from './control-record';
+import { AgencyService } from '../../core/services/agency.service';
+import { ContentService } from '../../core/services/content.service';
+import { ControlRecordService } from '../../core/services/control-record.service';
+
+describe('ControlRecordComponent', () => {
+  function setup(getByAgency: (id: number) => unknown) {
+    localStorage.setItem('cafeoccidente.agencyId', '3');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 3, name: 'El Tambo' }]) } },
+        { provide: ControlRecordService, useValue: { getByAgency } },
+        {
+          provide: ContentService,
+          useValue: { loadJson: () => of({ leftColumn: [
+              { key: 'prefix', label: 'Prefijo', type: 'text' },
+              { key: 'withholdingPercentage', label: 'Porcentaje Rete Fuente', type: 'percentage' },
+            ], rightColumn: [] }) },
+        },
+      ],
+    });
+    return TestBed.createComponent(ControlRecordComponent).componentInstance;
+  }
+
+  it('opens with the session agency preselected and its record loaded', () => {
+    const component = setup(() => of({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true, baseLoad: 125 }));
+    expect(component.agencyId()).toBe(3);
+    expect(component.isCreate()).toBe(false);
+  });
+
+  it('a late response from the previously selected agency never overwrites the current one', () => {
+    const pending: Record<number, Subject<unknown>> = { 3: new Subject(), 1: new Subject(), 7: new Subject() };
+    const component = setup((id: number) => pending[id]);
+    const prefix = () => [...component.leftFields(), ...component.rightFields()].find((f) => f.key === 'prefix')?.value;
+
+    component.onAgencyChange('1'); // Buesaco
+    component.onAgencyChange('7'); // agencia sin registro
+    pending[7].error(new HttpErrorResponse({ status: 404 }));
+    pending[1].next({ id: 1, agencyId: 1, agencyName: 'Buesaco', active: true, prefix: 'SDBU' }); // llega tarde
+    pending[3].next({ id: 2, agencyId: 3, agencyName: 'El Tambo', active: true, prefix: 'SDTA' }); // mas tarde aun
+
+    expect(component.agencyId()).toBe(7);
+    expect(component.isCreate()).toBe(true);
+    expect(prefix()).toBe('');
+  });
+
+  it('loads decimals with a comma so editing 0,5 -> 0,6 saves 0.6, not 6', () => {
+    const component = setup(() => of({ id: 2, agencyId: 3, agencyName: 'El Tambo', active: true, withholdingPercentage: 0.5, prefix: 'SDTA' }));
+    const request = () => (component as unknown as { buildRequest(): { withholdingPercentage: number } }).buildRequest();
+    expect(request().withholdingPercentage).toBe(0.5); // guardar sin tocar no cambia nada
+
+    const loaded = component.leftFields().find((f) => f.key === 'withholdingPercentage')!.value as string;
+    expect(loaded).toBe('0,5');
+    // Lo que hace form-field al editar un campo numerico: deja solo digitos y coma. Con "0.5" quedaba "06".
+    const edited = (loaded.slice(0, -1) + '6').replace(/[^0-9,]/g, '');
+    component.onFieldValueChange({ key: 'withholdingPercentage', value: edited });
+    expect(request().withholdingPercentage).toBe(0.6);
+  });
+
+  it('D1: with the backend response, Kg de Excelso shows 70 and Factor Base shows 94 (real labels)', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 1, name: 'Buesaco' }]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco', active: true, excelsoKg: 70, baseFactor: 94 }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    const byLabel = (label: string) => [...component.leftFields(), ...component.rightFields()].find((f) => f.label === label)?.value;
+    expect(byLabel('Kg de Excelso')).toBe('70');
+    expect(byLabel('Factor Base')).toBe('94');
+  });
+
+  it('CA-1: Punto de Compra is filled by the server and never editable (RN-06.3)', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 1, name: 'Buesaco' }]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco', active: true, purchasePoint: 'BUESACO1 OCCIDENTE' }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    const point = component.leftFields().find((f) => f.key === 'purchasePoint')!;
+    expect(point.value).toBe('BUESACO1 OCCIDENTE');
+    expect(point.readonly).toBe(true);
+    expect(component.leftFields().find((f) => f.key === 'prefix')!.readonly).toBe(false);
+    expect('purchasePoint' in (component as unknown as { buildRequest(): object }).buildRequest()).toBe(false);
+  });
+
+  it('CA-3: the RN-06.2 and green coffee fields are numeric, so typing letters is not possible', () => {
+    const numeric = ['Núm Registro Control', 'Factor Base', 'Base Rete Fuente', 'Base Carga', 'Porcentaje Rete Fuente',
+      'Base Pasilla', '% Kg de Pasilla Promedio', 'Peso Tot Alm Café Verde', 'Peso Tot Pasilla Café Verde',
+      'Peso Alm Sana Café Verde', 'Pr Alm Sana Café Verde', 'Pr_AlmDefec Café Verde'];
+    const fields = [...content.leftColumn, ...content.rightColumn] as FormFieldDefinition[];
+    for (const label of numeric) {
+      expect(['number', 'count', 'currency', 'percentage'], label).toContain(fields.find((f) => f.label === label)?.type);
+    }
+    const input = TestBed.createComponent(FormFieldComponent).componentInstance;
+    input.field = fields.find((f) => f.label === 'Base Pasilla')!;
+    input.onInput('1a2,5b');
+    expect(input.inputValue).toBe('12,5');
+  });
+
+  it('D2: an agency without record gets its suggested prefix prefilled', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '2');
+    localStorage.setItem('cafeoccidente.role', 'ADMINISTRADOR');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 2, name: 'Ancuya', hasControlRecord: false, suggestedPrefix: 'DCAN' }]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => throwError(() => new HttpErrorResponse({ status: 404 })) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    expect(component.isCreate()).toBe(true);
+    expect(component.leftFields().find((f) => f.key === 'prefix')?.value).toBe('DCAN');
+  });
+
+  it('RF-02: with the screen granted, a non administrator only gets their own agency', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    localStorage.setItem('cafeoccidente.role', 'USUARIO');
+    const list = vi.fn(() => of([]));
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco 1', active: true }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    expect(list).not.toHaveBeenCalled();
+    expect(component.agencies()).toEqual([{ id: 1, name: 'Buesaco 1' }]);
+    expect(component.agencyId()).toBe(1);
+  });
+
+  it('shows the empty create form when the session agency has no record yet', () => {
+    const component = setup(() => throwError(() => new HttpErrorResponse({ status: 404 })));
+    expect(component.agencyId()).toBe(3);
+    expect(component.isCreate()).toBe(true);
+  });
+});
+
+describe('ControlRecordComponent - double submit', () => {
+  it('while saving, Guardar sends only once and is disabled until the answer arrives', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '3');
+    const pending = new Subject<unknown>();
+    const update = vi.fn(() => pending);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([{ id: 3, name: 'El Tambo' }]) } },
+        {
+          provide: ControlRecordService,
+          useValue: { getByAgency: () => of({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true, baseLoad: 125 }), update },
+        },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ControlRecordComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.save();
+    component.save();
+    fixture.detectChanges();
+    expect(update).toHaveBeenCalledTimes(1);
+    const button = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="save"]') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    pending.next({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true, baseLoad: 125 });
+    pending.complete();
+    fixture.detectChanges();
+    expect(button.disabled).toBe(false);
+    localStorage.clear();
+  });
+});
+
+describe('ControlRecordComponent - cafe verde en todas las agencias', () => {
+  const RECORD = {
+    id: 1, agencyId: 1, agencyName: 'Buesaco 1', active: true, baseLoad: 125,
+    greenTotalStoredWeight: 140, greenTotalHuskWeight: 7.1, greenHealthyStoredWeight: 132.9,
+    greenHealthyUnitPrice: 12000, greenDefectiveUnitPrice: 6000,
+  };
+  let apply: ReturnType<typeof vi.fn>;
+
+  function setup(role: string) {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    localStorage.setItem('cafeoccidente.role', role);
+    apply = vi.fn(() => of({ agencies: 2 }));
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: AgencyService,
+          useValue: { list: () => of([
+            { id: 1, name: 'Buesaco 1', hasControlRecord: true },
+            { id: 4, name: 'El Tambo', hasControlRecord: true },
+            { id: 22, name: 'Buesaco 2', hasControlRecord: false },
+          ]) },
+        },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of(RECORD), applyGreenCoffeeToAll: apply } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ControlRecordComponent);
+    fixture.detectChanges();
+    return { fixture, component: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  afterEach(() => localStorage.clear());
+
+  it('only the Administrator sees the button', () => {
+    expect(setup('ADMINISTRADOR').el.querySelector('[data-testid="apply-green"]')).not.toBeNull();
+    TestBed.resetTestingModule();
+    expect(setup('USUARIO').el.querySelector('[data-testid="apply-green"]')).toBeNull();
+  });
+
+  it('asks before applying, with the number of agencies; cancelling sends nothing', () => {
+    const { fixture, component, el } = setup('ADMINISTRADOR');
+    (el.querySelector('[data-testid="apply-green"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Se cambiarán los 5 valores de café verde en las 2 agencias con Registro de Control.');
+
+    component.confirmingGreen.set(false);
+    fixture.detectChanges();
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it('confirming sends the 5 green coffee values of the form and says how many agencies got them', () => {
+    const { component } = setup('ADMINISTRADOR');
+    component.askApplyGreenToAll();
+    component.applyGreenToAll();
+    expect(apply).toHaveBeenCalledWith({
+      greenTotalStoredWeight: 140, greenTotalHuskWeight: 7.1, greenHealthyStoredWeight: 132.9,
+      greenHealthyUnitPrice: 12000, greenDefectiveUnitPrice: 6000,
+    });
+    expect(component.savedMessage()).toBe('Café verde aplicado a 2 agencias.');
+  });
+
+  it('double submit: while applying, a second confirmation does not send again and the buttons are disabled', () => {
+    const { fixture, component, el } = setup('ADMINISTRADOR');
+    const pending = new Subject<{ agencies: number }>();
+    apply.mockReturnValue(pending);
+
+    component.applyGreenToAll();
+    component.applyGreenToAll();
+    component.askApplyGreenToAll();
+    fixture.detectChanges();
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(component.confirmingGreen()).toBe(false);
+    expect((el.querySelector('[data-testid="apply-green"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((el.querySelector('[data-testid="save"]') as HTMLButtonElement).disabled).toBe(true);
+
+    pending.error({ error: { message: 'Datos invalidos' } });
+    expect(component.errorMessage()).toBe('Datos invalidos');
+    expect(component.saving()).toBe(false);
+  });
+});

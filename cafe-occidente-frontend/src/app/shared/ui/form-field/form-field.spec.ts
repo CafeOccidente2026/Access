@@ -1,0 +1,103 @@
+import { TestBed } from '@angular/core/testing';
+import { describe, expect, it } from 'vitest';
+
+import { FormFieldComponent } from './form-field';
+import { FormFieldDefinition } from '../../../core/models';
+
+describe('FormFieldComponent formatWhenIdle', () => {
+  function setup(field: FormFieldDefinition) {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.formatWhenIdle = true;
+    component.field = field;
+    component.ngOnChanges();
+    return component;
+  }
+
+  it('shows the Colombian format while idle and the raw value while editing', () => {
+    const component = setup({ key: 'baseWithholding', label: 'Base', type: 'currency', value: '8379840' });
+    expect(component.inputValue).toBe('8.379.840,00');
+
+    component.onFocus();
+    expect(component.inputValue).toBe('8379840');
+
+    // Mientras tiene el foco, el valor que vuelve del padre no reescribe el input (moveria el cursor).
+    component.field = { ...component.field, value: '837984' };
+    component.inputValue = '837984';
+    component.ngOnChanges();
+    expect(component.inputValue).toBe('837984');
+
+    component.onBlur();
+    expect(component.inputValue).toBe('837.984,00');
+  });
+
+  it('leaves rawDisplay and text fields untouched', () => {
+    expect(setup({ key: 'resolutionTo', label: 'Hasta', type: 'number', rawDisplay: true, value: '48753' }).inputValue).toBe('48753');
+    expect(setup({ key: 'prefix', label: 'Prefijo', type: 'text', value: 'SDTA' }).inputValue).toBe('SDTA');
+  });
+
+  it('keeps the purchase-form behavior when the flag is off: raw while editable', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'kg', label: 'Kg', type: 'count', value: '70' };
+    component.ngOnChanges();
+    expect(component.inputValue).toBe('70');
+  });
+});
+
+describe('FormFieldComponent numeric input (HU-07 CA-3)', () => {
+  it('a letter typed after a valid digit does not stay visible in the input', async () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'baseLoad', label: 'Base Carga', type: 'number', value: '' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    for (const typed of ['1', '1a', '12', '12b', '125']) {
+      input.value = typed;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(input.value, `after typing "${typed}"`).toBe(typed.replace(/[^0-9]/g, ''));
+    }
+  });
+});
+
+describe('FormFieldComponent negativeOnly (Castigo, Q1)', () => {
+  it('turns a positive penalty negative before announcing the commit, on blur and on Enter', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'penalty', label: 'Castigo', type: 'currency', negativeOnly: true };
+    const emitted: (string | number)[] = [];
+    let commits = 0;
+    component.valueChange.subscribe((v) => emitted.push(v));
+    component.committed.subscribe(() => commits++);
+
+    component.inputValue = '23';
+    component.onBlur();
+    component.inputValue = '';
+    component.commit();
+
+    expect(emitted).toEqual(['-23', '0']);
+    expect(commits).toBe(2);
+  });
+
+  it('does not touch other fields', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'tare', label: 'Destare', type: 'currency' };
+    const emitted: (string | number)[] = [];
+    component.valueChange.subscribe((v) => emitted.push(v));
+    component.inputValue = '23';
+    component.commit();
+
+    expect(emitted).toEqual([]);
+  });
+});
+
+describe('FormFieldComponent labelAbove', () => {
+  it('puts the whole label above the box, without cutting it', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'fullName', label: 'Nombres y Apellidos', type: 'text' });
+    fixture.componentRef.setInput('labelAbove', true);
+    fixture.detectChanges();
+    const label = (fixture.nativeElement as HTMLElement).querySelector('label')!;
+    expect(label.classList).toContain('flex-col');
+    expect(label.querySelector('span')!.classList).not.toContain('truncate');
+  });
+});
