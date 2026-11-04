@@ -90,3 +90,22 @@ export interface NessQuotaBalanceRow extends NessQuotaRow {
   readonly invoicedKg: number;
   readonly balance: number;
 }
+
+/** Vista previa o resultado de Actualiza Cupos NESS (HU-54); con errores no se cargo nada. */
+export interface NessQuotaUploadResult {
+  readonly errors: string[];
+  readonly warnings: string[];
+  readonly rows: number;
+  readonly added: number;
+  readonly changed: number;
+  readonly unchanged: number;
+  readonly removed: number;
+}
+
+/** Una carga anterior de la lista NESS: quien, cuando y que archivo. */
+export interface NessQuotaUploadRecord extends Omit<NessQuotaUploadResult, 'errors' | 'warnings'> {
+  readonly id: number;
+  readonly date: string;
+  readonly username: string;
+  readonly fileName: string;
+}
