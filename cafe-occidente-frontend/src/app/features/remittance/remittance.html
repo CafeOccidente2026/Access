@@ -34,6 +34,7 @@
         <span>{{ summary(c) }}</span>
         <span class="ml-auto font-medium" [class.invisible]="!books().length">{{ c.filesLabel }}:</span>
         <app-button *ngFor="let book of books()" [label]="c.fileLabels[book.sheet] ?? book.sheet" [disabled]="!filesReady()" (pressed)="download(book)"></app-button>
+        <app-button *ngIf="books().length" [label]="c.downloadAllLabel" [disabled]="!filesReady()" (pressed)="downloadAll()"></app-button>
         <app-button *ngIf="canUnmark()" [label]="c.unmarkLabel" [disabled]="unmarking()" (pressed)="askUnmark()"></app-button>
       </div>
 

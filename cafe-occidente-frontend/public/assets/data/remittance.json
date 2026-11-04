@@ -30,6 +30,7 @@
   "statuses": { "VIGENTE": "Vigente", "DESMARCADA": "Desmarcada" },
   "filesLabel": "Archivos",
   "fileLabels": { "ParaOperaciones": "ParaOperaciones", "ParaOpen": "ParaOpen", "GeneraPlano": "GeneraPlano", "ParaAlmacafe": "ParaAlmacafé" },
+  "downloadAllLabel": "Descargar las 4",
   "unmarkLabel": "Desmarca Remesa",
   "unmarkConfirm": "¿Desmarcar la remesa {number}? Sus facturas vuelven a quedar pendientes y se reversa la salida de empaques.",
   "yesLabel": "Sí",
@@ -39,6 +40,7 @@
     "notFound": "No hay ninguna remesa con ese número.",
     "unmarked": "Se desmarcó la remesa {number}.",
     "error": "No se pudo generar la remesa.",
-    "filesError": "No se pudieron generar los archivos de la remesa."
+    "filesError": "No se pudieron generar los archivos de la remesa.",
+    "downloadAllHint": "Si Chrome pregunta si este sitio puede descargar varios archivos, elija «Permitir» (se hace una sola vez en cada computador). Mientras no responda ese aviso, Chrome no baja ningún otro archivo. Si después no llegaron los 4, use los botones de cada archivo."
   }
 }

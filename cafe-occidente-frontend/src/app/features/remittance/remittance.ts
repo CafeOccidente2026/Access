@@ -38,11 +38,12 @@ export interface RemittanceContent {
   readonly statuses: Record<string, string>;
   readonly filesLabel: string;
   readonly fileLabels: Record<string, string>;
+  readonly downloadAllLabel: string;
   readonly unmarkLabel: string;
   readonly unmarkConfirm: string;
   readonly yesLabel: string;
   readonly noLabel: string;
-  readonly messages: Record<'generated' | 'notFound' | 'unmarked' | 'error' | 'filesError', string>;
+  readonly messages: Record<'generated' | 'notFound' | 'unmarked' | 'error' | 'filesError' | 'downloadAllHint', string>;
 }
 
 /** Aceptar del dialogo: el fondo y el especial elegidos; n vuelve a pedir la lista con lo mismo. */
@@ -191,6 +192,25 @@ export class RemittanceComponent {
     } else {
       this.message.set(this.content()?.messages.filesError ?? null);
     }
+  }
+
+  /**
+   * Los 4 en el mismo clic. Chrome pide permiso la primera vez que un sitio baja varios archivos y la pagina no se
+   * entera de la respuesta: por eso el aviso se muestra siempre (Permitir, o los botones de cada archivo).
+   */
+  downloadAll(): void {
+    const blobs = this.blobsResource.hasValue() ? this.blobsResource.value() : undefined;
+    if (!blobs) {
+      this.message.set(this.content()?.messages.filesError ?? null);
+      return;
+    }
+    for (const book of this.books()) {
+      const blob = blobs.get(book.fileName);
+      if (blob) {
+        this.saveFile(book.fileName, blob);
+      }
+    }
+    this.message.set(this.content()?.messages.downloadAllHint ?? null);
   }
 
   askUnmark(): void {

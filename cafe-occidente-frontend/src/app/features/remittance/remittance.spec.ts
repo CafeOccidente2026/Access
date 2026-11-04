@@ -185,6 +185,41 @@ describe('RemittanceComponent (HU-13, HU-14)', () => {
     expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
   });
 
+  it('Descargar las 4 downloads the 4 prebuilt files in the same click and explains the Chrome prompt', async () => {
+    const { fixture, component } = await render();
+    const saveFile = vi.fn();
+    component.saveFile = saveFile;
+    component.search('SDXX-RP-0008');
+    await settle();
+    http.expectOne((r) => r.url === URL).flush([REMITTANCE]);
+    await settle();
+    http.expectOne(`${URL}/9/files`).flush(FILES);
+    await vi.waitFor(() => expect(component.filesReady()).toBe(true));
+
+    // Todo dentro del clic, sin esperas: si no, Chrome no deja pasar las descargas.
+    component.downloadAll();
+    expect(saveFile.mock.calls.map(([name]) => name)).toEqual([
+      'ParaOperaciones_SDXX-RP-0008.xlsx', 'ParaOpen_SDXX-RP-0008.xlsx', 'SDXX-RP-0008.xlsx',
+      'ParaAlmacafe_SDXX-RP-0008.xlsx',
+    ]);
+    expect(component.message()).toBe(content.messages.downloadAllHint);
+
+    fixture.detectChanges();
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('app-button'))
+      .map((b) => b.textContent?.trim());
+    expect(labels).toContain(content.downloadAllLabel);
+    expect(labels).toContain('ParaAlmacafé');
+  });
+
+  it('Descargar las 4 does nothing but warn while the files are not ready', async () => {
+    const { component } = await render();
+    const saveFile = vi.fn();
+    component.saveFile = saveFile;
+    component.downloadAll();
+    expect(saveFile).not.toHaveBeenCalled();
+    expect(component.message()).toBe(content.messages.filesError);
+  });
+
   it('every field has an accessible name: its label, or the invoice number on each checkbox', async () => {
     const { fixture, component } = await render();
     component.special.set('RN');
