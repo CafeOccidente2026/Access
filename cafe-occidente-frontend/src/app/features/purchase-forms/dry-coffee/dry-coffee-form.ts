@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -20,6 +20,8 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { advanceFocus, focusField } from '../form-focus';
+import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -87,15 +89,14 @@ const num = parseDisplayNumber;
   selector: 'app-dry-coffee-form',
   standalone: true,
   imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: './dry-coffee-form.html',
+  templateUrl: '../purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DryCoffeeFormComponent {
+export class DryCoffeeFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(DryCoffeePurchaseService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
-  private readonly location = inject(Location);
   private readonly elementRef = inject(ElementRef);
 
   private readonly base = toSignal(this.content.loadJson<DryCoffeeContent>('purchase-form-dry'));
@@ -119,15 +120,13 @@ export class DryCoffeeFormComponent {
   /** Se incrementa cuando hay que reconstruir el contenido (commit, respuesta async, guardado, reset). */
   private readonly tick = signal(0);
 
-  model: FormModel = {};
+  override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
   private readonly fundIdByName = new Map<string, number>();
 
-  pendingClose = false;
-  private closeResolver: ((value: boolean) => void) | null = null;
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
     const base = this.base();
@@ -139,6 +138,7 @@ export class DryCoffeeFormComponent {
   });
 
   constructor() {
+    super();
     this.prefillAgency();
     this.service.funds().subscribe((list) => {
       this.funds.set(list);
@@ -193,23 +193,7 @@ export class DryCoffeeFormComponent {
     }
   }
 
-  /** Mueve el foco de teclado al siguiente campo que le toca llenar al usuario, sin que tenga que buscarlo. */
-  private focusField(key: string): void {
-    setTimeout(() => {
-      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
-      el?.focus();
-      el?.classList.add('field-flash');
-      setTimeout(() => el?.classList.remove('field-flash'), 1000);
-    });
-  }
 
-  private advanceFocus(afterKey: string): void {
-    const idx = FOCUS_ORDER.indexOf(afterKey);
-    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
-      return;
-    }
-    this.focusField(FOCUS_ORDER[idx + 1]);
-  }
 
   private runSideEffects(key: string): void {
     switch (key) {
@@ -512,46 +496,10 @@ export class DryCoffeeFormComponent {
     this.tick.update((n) => n + 1);
   }
 
-  private hasUnsavedInput(): boolean {
+  protected override hasUnsavedInput(): boolean {
     return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
-  /** La X del formulario: si hay datos sin imprimir pide confirmación; si no, cierra. */
-  onClose(): void {
-    if (this.hasUnsavedInput()) {
-      this.pendingClose = true;
-    } else {
-      this.location.back();
-    }
-  }
-
-  /** Guard CanDeactivate: cubre las salidas que no pasan por la X (menú, back, etc.). */
-  canDeactivate(): boolean | Promise<boolean> {
-    if (!this.hasUnsavedInput()) {
-      return true;
-    }
-    this.pendingClose = true;
-    return new Promise<boolean>((resolve) => (this.closeResolver = resolve));
-  }
-
-  confirmClose(): void {
-    this.pendingClose = false;
-    if (this.closeResolver) {
-      this.closeResolver(true);
-      this.closeResolver = null;
-      return;
-    }
-    // Descarta los datos antes de navegar: si no, canDeactivate() vuelve a encontrar
-    // input sin guardar y reabre este mismo dialogo, obligando a un segundo clic.
-    this.model = {};
-    this.location.back();
-  }
-
-  cancelClose(): void {
-    this.pendingClose = false;
-    this.closeResolver?.(false);
-    this.closeResolver = null;
-  }
 
   private canPrint(): boolean {
     return (
@@ -676,4 +624,7 @@ export class DryCoffeeFormComponent {
     };
   }
 
+  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
+  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
+  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }

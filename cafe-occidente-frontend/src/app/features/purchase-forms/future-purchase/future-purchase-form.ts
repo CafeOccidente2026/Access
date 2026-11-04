@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import pdfMake from 'pdfmake/build/pdfmake';
@@ -16,6 +16,8 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { parseDisplayNumber } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-invoice';
+import { advanceFocus, focusField } from '../form-focus';
+import { UnsavedCloseForm } from '../unsaved-close';
 
 type FormModel = Record<string, string>;
 
@@ -57,13 +59,12 @@ const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca'
   templateUrl: './future-purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FuturePurchaseFormComponent {
+export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(FuturePurchaseService);
   private readonly announcementService = inject(AnnouncementService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
-  private readonly location = inject(Location);
   private readonly elementRef = inject(ElementRef);
 
   private readonly base = toSignal(this.content.loadJson<FuturePurchaseContent>('purchase-form-future'));
@@ -75,13 +76,11 @@ export class FuturePurchaseFormComponent {
   readonly savedNoticeOpen = signal(false);
   private readonly tick = signal(0);
 
-  model: FormModel = {};
+  override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private rpFundId: number | null = null;
 
-  pendingClose = false;
-  private closeResolver: ((value: boolean) => void) | null = null;
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
     const base = this.base();
@@ -93,6 +92,7 @@ export class FuturePurchaseFormComponent {
   });
 
   constructor() {
+    super();
     this.model['agency'] = this.authService.agencyName() ?? '';
     this.announcementService.funds().subscribe((list) => {
       this.rpFundId = list.find((f: Fund) => f.code === RP_FUND_CODE)?.id ?? null;
@@ -215,22 +215,7 @@ export class FuturePurchaseFormComponent {
     });
   }
 
-  private focusField(key: string): void {
-    setTimeout(() => {
-      const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
-      el?.focus();
-      el?.classList.add('field-flash');
-      setTimeout(() => el?.classList.remove('field-flash'), 1000);
-    });
-  }
 
-  private advanceFocus(afterKey: string): void {
-    const idx = FOCUS_ORDER.indexOf(afterKey);
-    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
-      return;
-    }
-    this.focusField(FOCUS_ORDER[idx + 1]);
-  }
 
   /** Extrae el mensaje real del backend (fallecido, no pertenece a programa) en vez de taparlo con
    *  un mensaje generico - esas validaciones viven solo en el backend. */
@@ -307,42 +292,10 @@ export class FuturePurchaseFormComponent {
     this.tick.update((n) => n + 1);
   }
 
-  private hasUnsavedInput(): boolean {
+  protected override hasUnsavedInput(): boolean {
     return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
-  onClose(): void {
-    if (this.hasUnsavedInput()) {
-      this.pendingClose = true;
-    } else {
-      this.location.back();
-    }
-  }
-
-  canDeactivate(): boolean | Promise<boolean> {
-    if (!this.hasUnsavedInput()) {
-      return true;
-    }
-    this.pendingClose = true;
-    return new Promise<boolean>((resolve) => (this.closeResolver = resolve));
-  }
-
-  confirmClose(): void {
-    this.pendingClose = false;
-    if (this.closeResolver) {
-      this.closeResolver(true);
-      this.closeResolver = null;
-      return;
-    }
-    this.model = {};
-    this.location.back();
-  }
-
-  cancelClose(): void {
-    this.pendingClose = false;
-    this.closeResolver?.(false);
-    this.closeResolver = null;
-  }
 
   private canPrint(): boolean {
     return !this.result() && !!this.announcementInfo() && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
@@ -404,4 +357,8 @@ export class FuturePurchaseFormComponent {
       reprintButtonLabel: this.canPrint() ? base.reprintButtonLabel : undefined,
     };
   }
+
+  /** Salto de foco del formulario (form-focus): mismo orden de siempre. */
+  private readonly focusField = (key: string) => focusField(this.elementRef.nativeElement, key);
+  private readonly advanceFocus = (afterKey: string) => advanceFocus(this.elementRef.nativeElement, FOCUS_ORDER, afterKey);
 }
