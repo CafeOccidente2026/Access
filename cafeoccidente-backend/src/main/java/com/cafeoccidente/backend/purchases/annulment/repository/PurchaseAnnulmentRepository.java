@@ -6,8 +6,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.function.Function;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -38,32 +41,64 @@ public class PurchaseAnnulmentRepository {
         return Arrays.stream(AnnulmentModule.values()).map(sql).collect(Collectors.joining(" UNION ALL "));
     }
 
+    private static <E extends Enum<E>> Map<E, String> byEnum(Class<E> type, Function<E, String> sql) {
+        Map<E, String> map = new EnumMap<>(type);
+        Arrays.stream(type.getEnumConstants()).forEach(e -> map.put(e, sql.apply(e)));
+        return Collections.unmodifiableMap(map);
+    }
+
+    private static String neighbor(AnnulmentDirection direction, boolean fromInvoice) {
+        String filter = fromInvoice && direction.comparison != null
+                ? " AND p.numero_factura " + direction.comparison + " :from" : "";
+        return "SELECT " + direction.aggregate + "(numero_factura) FROM ("
+                + unionOfModules(m -> "SELECT p.numero_factura FROM " + m.table + " p WHERE TRUE" + OF_AGENCY + filter)
+                + ") f";
+    }
+
+    // SQL fijo, armado una sola vez con los datos del enum (S2077): nada del request entra al texto.
+    private static final String COLUMNS = "' AS module, p.id, p.agencia_id, a.nombre AS agency_name,"
+            + " rc.prefijo AS prefijo_factura, p.numero_factura, p.fecha_compra, f.codigo AS fund_code, p.cedula,"
+            + " p.nombres, p.apellidos, p.especial, p.kilos_netos, p.neto_a_pagar, p.forma_pago, p.estado,"
+            + " p.anulacion_bloqueada, p.anulado_en FROM ";
+    private static final String JOINS_BY_INVOICE = " p JOIN agencias a ON a.id = p.agencia_id"
+            + " JOIN fondos f ON f.id = p.fondo_id"
+            + " LEFT JOIN registros_control rc ON rc.agencia_id = p.agencia_id AND rc.activo"
+            + " WHERE p.numero_factura = :invoice" + OF_AGENCY;
+    // Constante escrita completa (no armada con el enum): Sonar solo la acepta asi. La prueba la compara con select().
+    static final String BY_INVOICE =
+            "SELECT 'DRY" + COLUMNS + "compras_cafe_seco" + JOINS_BY_INVOICE
+            + " UNION ALL SELECT 'GREEN" + COLUMNS + "compras_cafe_verde" + JOINS_BY_INVOICE
+            + " UNION ALL SELECT 'HUSK" + COLUMNS + "compras_pasilla" + JOINS_BY_INVOICE
+            + " ORDER BY agency_name, module";
+    static final Map<AnnulmentModule, String> LOCK = byEnum(AnnulmentModule.class, m -> select(m) + " WHERE p.id = :id FOR UPDATE OF p");
+    static final Map<AnnulmentModule, String> ANNUL = byEnum(AnnulmentModule.class, m -> "UPDATE " + m.table + " SET estado = 'ANULADA',"
+            + " anulado_en = now(), anulado_por_usuario_id = :userId, numero_cheque = NULL, "
+            + m.zeroed.stream().map(c -> c + " = 0").collect(Collectors.joining(", "))
+            + " WHERE id = :id AND estado = 'VALIDA' AND NOT anulacion_bloqueada");
+    /** Factura vecina con factura de partida (FROM) o sin ella (ANY, no se filtra por ella). */
+    static final Map<AnnulmentDirection, String> NEIGHBOR_FROM = byEnum(AnnulmentDirection.class, d -> neighbor(d, true));
+    static final Map<AnnulmentDirection, String> NEIGHBOR_ANY = byEnum(AnnulmentDirection.class, d -> neighbor(d, false));
+
     /**
      * Cns_Compras por numero de factura. Seco, verde y pasilla comparten el consecutivo (Q7), pero las
      * compras traidas de Access pueden repetir numero entre modulos, asi que puede haber mas de una.
      */
     public List<AnnulmentCandidate> findByInvoice(Long agencyId, Integer invoiceNumber) {
-        String sql = unionOfModules(m -> select(m) + " WHERE p.numero_factura = :invoice" + OF_AGENCY)
-                + " ORDER BY agency_name, module";
-        return jdbc.query(sql, new MapSqlParameterSource().addValue("invoice", invoiceNumber).addValue("agencyId", agencyId),
+        return jdbc.query(BY_INVOICE, new MapSqlParameterSource().addValue("invoice", invoiceNumber).addValue("agencyId", agencyId),
                 (rs, i) -> toCandidate(rs));
     }
 
     /** RN-23.2: la factura vecina de "from" en la agencia, en los 3 modulos; vacio si no hay mas. */
     public Optional<Integer> neighborInvoice(Long agencyId, Integer from, AnnulmentDirection direction) {
-        String filter = from == null || direction.comparison == null ? ""
-                : " AND p.numero_factura " + direction.comparison + " :from";
-        String sql = "SELECT " + direction.aggregate + "(numero_factura) FROM ("
-                + unionOfModules(m -> "SELECT p.numero_factura FROM " + m.table + " p WHERE TRUE" + OF_AGENCY + filter)
-                + ") f";
-        return Optional.ofNullable(jdbc.queryForObject(sql,
+        return Optional.ofNullable(jdbc.queryForObject(
+                from == null ? NEIGHBOR_ANY.get(direction) : NEIGHBOR_FROM.get(direction),
                 new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("from", from), Integer.class));
     }
 
     /** La compra bloqueada hasta el fin de la transaccion: nadie mas la anula a la vez. */
     public Optional<AnnulmentCandidate> lock(AnnulmentModule module, Long id) {
-        List<AnnulmentCandidate> rows = jdbc.query(select(module) + " WHERE p.id = :id FOR UPDATE OF p",
-                new MapSqlParameterSource("id", id), (rs, i) -> toCandidate(rs));
+        List<AnnulmentCandidate> rows = jdbc.query(LOCK.get(module), new MapSqlParameterSource("id", id),
+                (rs, i) -> toCandidate(rs));
         return rows.stream().findFirst();
     }
 
@@ -113,10 +148,7 @@ public class PurchaseAnnulmentRepository {
             jdbc.update("UPDATE compras_anunciadas a SET saldo = a.saldo + p.kilos_netos FROM compras_cafe_seco p"
                     + " WHERE p.id = :id AND a.id = p.compra_anunciada_id", params);
         }
-        String zeros = module.zeroed.stream().map(c -> c + " = 0").collect(Collectors.joining(", "));
-        int updated = jdbc.update("UPDATE " + module.table + " SET estado = 'ANULADA', anulado_en = now(),"
-                + " anulado_por_usuario_id = :userId, numero_cheque = NULL, " + zeros
-                + " WHERE id = :id AND estado = 'VALIDA' AND NOT anulacion_bloqueada", params);
+        int updated = jdbc.update(ANNUL.get(module), params);
         if (updated != 1) {
             throw new IllegalStateException("La compra cambio mientras se anulaba: " + module + " " + id);
         }
