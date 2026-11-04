@@ -7,7 +7,7 @@
       { "label": "Inf Ventas Benef por Fechas", "route": "/vendedores/beneficiario-fechas" },
       { "label": "Actualizar Vendedores", "disabled": true, "hint": "No aplica con base de datos unificada" },
       { "label": "Consultar Asociados", "route": "/vendedores/asociados" },
-      { "label": "Actualiza Cupos NESS", "disabled": true, "hint": "Pendiente: falta el archivo NESS.xlsx real", "roles": ["ADMINISTRADOR"] },
+      { "label": "Actualiza Cupos NESS", "route": "/vendedores/actualiza-cupos-ness", "roles": ["ADMINISTRADOR"] },
       { "label": "Consulta Cupos Ness", "route": "/vendedores/cupos-ness" },
       { "label": "Consulta Saldos Cupos Ness", "route": "/vendedores/saldos-cupos-ness" }
     ]
