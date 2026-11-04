@@ -56,7 +56,19 @@ public class PurchaseAnnulmentRepository {
     }
 
     // SQL fijo, armado una sola vez con los datos del enum (S2077): nada del request entra al texto.
-    static final String BY_INVOICE = unionOfModules(m -> select(m) + " WHERE p.numero_factura = :invoice" + OF_AGENCY)
+    private static final String COLUMNS = "' AS module, p.id, p.agencia_id, a.nombre AS agency_name,"
+            + " rc.prefijo AS prefijo_factura, p.numero_factura, p.fecha_compra, f.codigo AS fund_code, p.cedula,"
+            + " p.nombres, p.apellidos, p.especial, p.kilos_netos, p.neto_a_pagar, p.forma_pago, p.estado,"
+            + " p.anulacion_bloqueada, p.anulado_en FROM ";
+    private static final String JOINS_BY_INVOICE = " p JOIN agencias a ON a.id = p.agencia_id"
+            + " JOIN fondos f ON f.id = p.fondo_id"
+            + " LEFT JOIN registros_control rc ON rc.agencia_id = p.agencia_id AND rc.activo"
+            + " WHERE p.numero_factura = :invoice" + OF_AGENCY;
+    // Constante escrita completa (no armada con el enum): Sonar solo la acepta asi. La prueba la compara con select().
+    static final String BY_INVOICE =
+            "SELECT 'DRY" + COLUMNS + "compras_cafe_seco" + JOINS_BY_INVOICE
+            + " UNION ALL SELECT 'GREEN" + COLUMNS + "compras_cafe_verde" + JOINS_BY_INVOICE
+            + " UNION ALL SELECT 'HUSK" + COLUMNS + "compras_pasilla" + JOINS_BY_INVOICE
             + " ORDER BY agency_name, module";
     static final Map<AnnulmentModule, String> LOCK = byEnum(AnnulmentModule.class, m -> select(m) + " WHERE p.id = :id FOR UPDATE OF p");
     static final Map<AnnulmentModule, String> ANNUL = byEnum(AnnulmentModule.class, m -> "UPDATE " + m.table + " SET estado = 'ANULADA',"
