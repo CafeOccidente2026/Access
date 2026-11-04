@@ -1,0 +1,76 @@
+<div class="h-screen bg-white p-3">
+  <app-access-window *ngIf="content() as c" [title]="c.windowTitle" bodyClass="bg-panel-sky" [closeRoute]="c.closeRoute">
+    <div class="flex h-full flex-col gap-3 p-3 text-sm text-slate-800">
+      <p class="max-w-4xl">{{ c.instructions }}</p>
+
+      <div class="flex items-center gap-3">
+        <input #picker type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden"
+          data-testid="file" (change)="choose($any($event.target).files?.[0]); $any($event.target).value = ''" />
+        <app-button [label]="c.loadLabel" [disabled]="saving()" (pressed)="picker.click()"></app-button>
+        <span *ngIf="file() as f" class="font-medium">{{ f.name }}</span>
+        <span *ngIf="checking()" class="text-slate-600">{{ c.checking }}</span>
+      </div>
+
+      <p *ngIf="previewFailed()" class="text-red-700" role="alert">{{ c.messages.previewError }}</p>
+
+      <div *ngIf="errors().length" class="max-w-4xl rounded border border-red-300 bg-white p-2 text-red-700" role="alert">
+        <p class="font-bold">{{ c.errorsTitle }}</p>
+        <ul class="list-disc pl-5">
+          <li *ngFor="let error of errors()">{{ error }}</li>
+        </ul>
+      </div>
+
+      <div *ngIf="file() && preview() && !errors().length" class="flex flex-col gap-2">
+        <p class="font-bold">{{ c.previewTitle }}</p>
+        <table class="w-80 bg-white" data-testid="preview">
+          <tbody>
+            <tr *ngFor="let key of countKeys">
+              <th scope="row" class="border border-slate-300 px-2 py-1 text-left font-medium">{{ c.counts[key] }}</th>
+              <td class="border border-slate-300 px-2 py-1 text-right">{{ count(preview()![key]) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="warnings().length" class="max-w-4xl rounded border border-amber-300 bg-white p-2 text-amber-800">
+          <p class="font-bold">{{ c.warningsTitle }}</p>
+          <ul class="list-disc pl-5">
+            <li *ngFor="let warning of warnings()">{{ warning }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div *ngIf="file()" class="flex gap-2">
+        <app-button [label]="c.applyLabel" [disabled]="!canApply()" (pressed)="apply()"></app-button>
+        <app-button [label]="c.cancelLabel" [disabled]="saving()" (pressed)="cancel()"></app-button>
+      </div>
+
+      <p *ngIf="message() as m" class="font-bold" role="status">{{ m }}</p>
+
+      <div class="flex min-h-0 flex-1 flex-col gap-1">
+        <p class="font-bold">{{ c.historyTitle }}</p>
+        <div class="overflow-auto">
+          <table class="bg-white" data-testid="history">
+            <thead>
+              <tr class="bg-slate-100">
+                <th *ngFor="let col of c.historyColumns; let i = index" scope="col" class="border border-slate-300 px-2 py-1"
+                  [class.text-right]="i >= 3">{{ col }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let h of history()">
+                <td class="border border-slate-200 px-2 py-0.5">{{ h.date | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td class="border border-slate-200 px-2 py-0.5">{{ h.username }}</td>
+                <td class="border border-slate-200 px-2 py-0.5">{{ h.fileName }}</td>
+                <td class="border border-slate-200 px-2 py-0.5 text-right">{{ count(h.rows) }}</td>
+                <td class="border border-slate-200 px-2 py-0.5 text-right">{{ count(h.added) }}</td>
+                <td class="border border-slate-200 px-2 py-0.5 text-right">{{ count(h.changed) }}</td>
+                <td class="border border-slate-200 px-2 py-0.5 text-right">{{ count(h.unchanged) }}</td>
+                <td class="border border-slate-200 px-2 py-0.5 text-right">{{ count(h.removed) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p *ngIf="!history().length" class="text-slate-600">{{ c.historyEmpty }}</p>
+      </div>
+    </div>
+  </app-access-window>
+</div>
