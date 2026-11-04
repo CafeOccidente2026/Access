@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { inject } from '@angular/core';
+import { inject, signal } from '@angular/core';
 
 /**
  * Cierre de un formulario de compra con datos sin imprimir: la X (onClose) y las salidas por menú o atrás
@@ -8,7 +8,8 @@ import { inject } from '@angular/core';
 export abstract class UnsavedCloseForm {
   protected readonly location = inject(Location);
   abstract model: Record<string, string>;
-  pendingClose = false;
+  /** Señal: el guard de la ruta la cambia fuera de un evento de la pantalla y la app no usa zone.js. */
+  readonly pendingClose = signal(false);
   private closeResolver: ((value: boolean) => void) | null = null;
 
   protected abstract hasUnsavedInput(): boolean;
@@ -16,7 +17,7 @@ export abstract class UnsavedCloseForm {
   /** La X del formulario: si hay datos sin imprimir pide confirmación; si no, cierra. */
   onClose(): void {
     if (this.hasUnsavedInput()) {
-      this.pendingClose = true;
+      this.pendingClose.set(true);
     } else {
       this.location.back();
     }
@@ -27,12 +28,12 @@ export abstract class UnsavedCloseForm {
     if (!this.hasUnsavedInput()) {
       return true;
     }
-    this.pendingClose = true;
+    this.pendingClose.set(true);
     return new Promise<boolean>((resolve) => (this.closeResolver = resolve));
   }
 
   confirmClose(): void {
-    this.pendingClose = false;
+    this.pendingClose.set(false);
     if (this.closeResolver) {
       this.closeResolver(true);
       this.closeResolver = null;
@@ -45,7 +46,7 @@ export abstract class UnsavedCloseForm {
   }
 
   cancelClose(): void {
-    this.pendingClose = false;
+    this.pendingClose.set(false);
     this.closeResolver?.(false);
     this.closeResolver = null;
   }
