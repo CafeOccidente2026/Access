@@ -66,6 +66,13 @@ describe('NessQuotaUploadComponent (HU-54, RF-28.4)', () => {
     await settle();
   }
 
+  it('the file input has an accessible name', async () => {
+    const { fixture } = await render();
+
+    const input = fixture.nativeElement.querySelector('[data-testid="file"]') as HTMLInputElement;
+    expect(input.getAttribute('aria-label')).toBe(content.loadLabel);
+  });
+
   it('shows the previous loads, newest first as the server sends them', async () => {
     const { text } = await render();
 
