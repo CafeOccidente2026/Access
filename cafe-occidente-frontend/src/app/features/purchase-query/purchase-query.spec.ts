@@ -123,7 +123,8 @@ describe('PurchaseQueryComponent (HU-28)', () => {
 
     component.reprint();
 
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    // Armar el PDF tarda mas de 1 s cuando la suite corre con cobertura.
+    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1), { timeout: 5000 });
     const doc = createPdf.mock.calls[0][0];
     expect(JSON.stringify(doc.content)).toContain('SDBU - 27.869');
     expect(doc.watermark).toMatchObject({ text: content.annulledMark });
