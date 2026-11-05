@@ -51,7 +51,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     /** Una fila de la Caja / Suministros de Access, venga de donde venga. */
     record Line(String source, Long sourceId, String agencyName, String transactionId, String fundCode,
             LocalDate date, String idNumber, String detail, BigDecimal inflow, BigDecimal outflow,
-            String paymentMethod, Integer checkNumber, Instant createdAt) {
+            String paymentMethod, String checkNumber, Instant createdAt) {
 
         CheckRelationMark.Key key() {
             return new CheckRelationMark.Key(source, sourceId);
@@ -118,7 +118,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     @Transactional
     public List<SuppliesReportRow> checkRelation(Long agencyId, LocalDate from, LocalDate to, LocalDate today) {
         List<Line> checks = cashBook(agencyId, yearStart(today), yearEnd(today)).stream()
-                .filter(l -> l.checkNumber() != null && l.checkNumber() > 0)
+                .filter(l -> l.checkNumber() != null && !l.checkNumber().matches("0*"))
                 .toList();
         if (from != null && to != null) {
             // UnCheckCheq: SET Rel_cheques = 0 WHERE Fecha Between FechaDesde And FechaHasta
@@ -239,7 +239,8 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
 
     private static Line line(PurchasePayment p, BigDecimal inflow, BigDecimal outflow) {
         return new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
-                p.purchaseDate(), p.idNumber(), null, inflow, outflow, p.paymentMethod(), p.checkNumber(), p.createdAt());
+                p.purchaseDate(), p.idNumber(), null, inflow, outflow, p.paymentMethod(),
+                p.checkNumber() == null ? null : String.valueOf(p.checkNumber()), p.createdAt());
     }
 
     private static SuppliesReportRow row(Line l, GrowerName g, BigDecimal balance) {

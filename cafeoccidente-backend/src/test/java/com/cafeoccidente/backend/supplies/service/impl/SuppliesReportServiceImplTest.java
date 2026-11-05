@@ -46,7 +46,7 @@ class SuppliesReportServiceImplTest {
             mock(PettyCashEntryRepository.class), supplies, mock(PackagingEntryRepository.class), marks, reads);
 
     private static <T extends LedgerEntry> T entry(T e, long id, LocalDate date, String inflow, String outflow,
-            String method, Integer check) {
+            String method, String check) {
         Agency agency = new Agency();
         agency.setName("EL TAMBO");
         Fund fund = new Fund();
@@ -74,12 +74,12 @@ class SuppliesReportServiceImplTest {
     void setUp() {
         // Caja suministros con cheque (Entradas 1000), Ajustes Caja (Salidas 100)
         when(cash.findInPeriod(any(), any(), any())).thenReturn(List.of(
-                entry(new CashEntry(), 1, DAY1, "1000", "0", "CHEQUE", 5320),
+                entry(new CashEntry(), 1, DAY1, "1000", "0", "CHEQUE", "5320"),
                 entry(new CashEntry(), 2, DAY2, "0", "100", "EFECTIVO", null)));
         // Ingresar Suministros (Valor 5000) y Cheque Girado (300, cheque 5400)
         when(supplies.findInPeriod(any(), any(), any())).thenReturn(List.of(
                 entry(new SupplyEntry(), 3, DAY1, "5000", "0", null, null),
-                entry(new SupplyEntry(), 4, DAY2, "0", "300", "CHEQUE", 5400)));
+                entry(new SupplyEntry(), 4, DAY2, "0", "300", "CHEQUE", "5400")));
         // Compra en efectivo (200) y con cheque (400, cheque 5377)
         when(reads.purchasePayments(any(), any(), any())).thenReturn(List.of(
                 purchase(5, DAY1, "200", "EFECTIVO", null),
@@ -114,7 +114,7 @@ class SuppliesReportServiceImplTest {
         List<SuppliesReportRow> rows = service.checkRelation(null, null, null, TODAY);
 
         // Cheque 5320 ya relacionado; quedan el cheque girado (Por Comp) y la compra con cheque.
-        assertThat(rows).extracting(SuppliesReportRow::checkNumber).containsExactly(5400, 5377);
+        assertThat(rows).extracting(SuppliesReportRow::checkNumber).containsExactly("5400", "5377");
         assertThat(rows.get(0).firstNames()).isEqualTo("WILSON TOBIAS");
         ArgumentCaptor<List<CheckRelationMark>> saved = ArgumentCaptor.forClass(List.class);
         verify(marks).saveAll(saved.capture());

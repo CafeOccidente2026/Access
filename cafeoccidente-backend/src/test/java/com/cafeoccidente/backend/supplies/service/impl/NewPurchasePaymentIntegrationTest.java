@@ -100,7 +100,7 @@ class NewPurchasePaymentIntegrationTest {
         assertThat(cash).filteredOn(l -> l.paymentMethod().equals("CHEQUE"))
                 .singleElement().satisfies(l -> {
                     assertThat(l.outflow()).isEqualByComparingTo(check);
-                    assertThat(l.checkNumber()).isEqualTo(987654);
+                    assertThat(l.checkNumber()).isEqualTo("987654");
                 });
         assertThat(cash).filteredOn(l -> l.paymentMethod().equals("EFECTIVO"))
                 .singleElement().satisfies(l -> assertThat(l.outflow()).isEqualByComparingTo(net.subtract(check)));

@@ -92,7 +92,8 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         if (CHECK.equals(method) && !hasCheck(request)) {
             throw new BusinessRuleException("Con forma de pago CHEQUE debe indicar el número de cheque");
         }
-        CashEntry entry = fill(new CashEntry(), request, LocalDate.now(clock), fund(request.fundCode()), method, request.checkNumber());
+        CashEntry entry = fill(new CashEntry(), request, LocalDate.now(clock), fund(request.fundCode()), method,
+                fourDigits(request.checkNumber()));
         entry.setInflow(request.amount());
         return mapper.toResponse(cashEntryRepository.save(entry));
     }
@@ -139,7 +140,8 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         if (!hasCheck(request)) {
             throw new BusinessRuleException("El número de cheque es obligatorio");
         }
-        SupplyEntry entry = fill(new SupplyEntry(), request, LocalDate.now(clock), fund(request.fundCode()), CHECK, request.checkNumber());
+        SupplyEntry entry = fill(new SupplyEntry(), request, LocalDate.now(clock), fund(request.fundCode()), CHECK,
+                fourDigits(request.checkNumber()));
         entry.setOutflow(request.amount());
         return mapper.toResponse(supplyEntryRepository.save(entry));
     }
@@ -167,7 +169,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     }
 
     private <T extends LedgerEntry> T fill(
-            T entry, LedgerEntryRequest request, LocalDate date, Fund fund, String method, Integer checkNumber) {
+            T entry, LedgerEntryRequest request, LocalDate date, Fund fund, String method, String checkNumber) {
         entry.setTransactionId(request.transactionId().trim());
         entry.setAgency(agency());
         entry.setFund(fund);
@@ -208,6 +210,17 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private Fund fund(String code) {
         return fundRepository.findByCode(oneOf(code, FUNDS, "Fondo"))
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo no encontrado"));
+    }
+
+    /** RN-27.1.4: los ultimos 4 digitos, con ceros a la izquierda (548 -> 0548). La pantalla aun lo manda como numero. */
+    private static String fourDigits(Integer checkNumber) {
+        if (checkNumber == null || checkNumber == 0) {
+            return null;
+        }
+        if (checkNumber > 9999) {
+            throw new BusinessRuleException("El cheque son los últimos 4 dígitos");
+        }
+        return String.format("%04d", checkNumber);
     }
 
     private static boolean hasCheck(LedgerEntryRequest request) {

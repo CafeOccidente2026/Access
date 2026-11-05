@@ -20,7 +20,7 @@ class SpanishSchemaTest {
             "agencias", "anuncios", "anuncios_agencias", "cupos_anuncios", "cheques_relacionados",
             "compras_anunciadas", "compras_cafe_seco", "compras_cafe_verde", "consecutivos_factura",
             "consecutivos_remision", "cuentas_por_cobrar",
-            "cargas_cupos_ness", "compras_pasilla", "cupos_ness", "empaques", "fondos",
+            "cargas_cupos_ness", "compras_pasilla", "consecutivos_transaccion", "cupos_ness", "empaques", "fondos",
             "formas_pago_compras", "historial_cambios", "inventarios", "movimientos_caja", "movimientos_caja_menor", "permisos",
             "prefijos_sugeridos",
             "productos", "registros_control", "remesas", "remisiones", "remisiones_detalle", "roles", "suministros",
