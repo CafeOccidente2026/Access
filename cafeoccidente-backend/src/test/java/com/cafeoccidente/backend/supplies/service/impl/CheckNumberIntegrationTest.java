@@ -67,6 +67,9 @@ class CheckNumberIntegrationTest {
         SecurityUser principal = new SecurityUser(users.save(user));
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+        // D9: la cedula del cheque girado tiene que estar en TERCEROS.
+        jdbc.update("INSERT INTO terceros (identificacion, primer_nombre, primer_apellido, agencia_id, direccion, telefono,"
+                + " tipo, asociacion) VALUES (?, 'FIEL', 'PRUEBA', ?, 'VEREDA', '3001112233', 'C', false)", FIEL, AGENCY);
     }
 
     @AfterEach
@@ -74,9 +77,8 @@ class CheckNumberIntegrationTest {
         SecurityContextHolder.clearContext();
     }
 
-    private static LedgerEntryRequest issuedCheck(Integer checkNumber) {
-        return new LedgerEntryRequest("PRUEBA5A", "RP", null, FIEL, "CHEQUE PRUEBA", new BigDecimal("250000"), null,
-                checkNumber);
+    private static LedgerEntryRequest issuedCheck(String checkNumber) {
+        return new LedgerEntryRequest("RP", null, FIEL, "CHEQUE PRUEBA", new BigDecimal("250000"), null, checkNumber);
     }
 
     /** Un caso por valor: en PostgreSQL, despues de un INSERT rechazado la transaccion queda abortada. */
@@ -94,18 +96,21 @@ class CheckNumberIntegrationTest {
 
     @Test
     void anIssuedCheckKeepsItsLeadingZeroUpToTheReport() {
-        entries.createIssuedCheck(issuedCheck(548));
+        String id = entries.createIssuedCheck(issuedCheck("0548")).transactionId();
 
-        assertThat(jdbc.queryForObject("SELECT numero_cheque FROM suministros WHERE id_transaccion = 'PRUEBA5A'",
-                String.class)).isEqualTo("0548");
+        assertThat(jdbc.queryForObject("SELECT numero_cheque FROM suministros WHERE id_transaccion = ?",
+                String.class, id)).isEqualTo("0548");
         assertThat(reports.supplies(AGENCY, "RP", LocalDate.now(clock)))
-                .filteredOn(row -> "PRUEBA5A".equals(row.transactionId()))
+                .filteredOn(row -> id.equals(row.transactionId()))
                 .extracting(SuppliesReportRow::checkNumber).containsExactly("0548");
     }
 
     @Test
-    void aCheckWithMoreThanFourDigitsIsRejected() {
-        assertThatThrownBy(() -> entries.createIssuedCheck(issuedCheck(12345)))
+    void aCheckThatIsNotFourDigitsIsRejected() {
+        assertThatThrownBy(() -> entries.createIssuedCheck(issuedCheck("548")))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("El cheque son los últimos 4 dígitos");
+        assertThatThrownBy(() -> entries.createIssuedCheck(issuedCheck("12345")))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("El cheque son los últimos 4 dígitos");
     }
