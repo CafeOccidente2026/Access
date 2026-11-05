@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ViewChild, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 
@@ -12,8 +12,9 @@ import { SuppliesService } from '../../core/services/supplies.service';
 import { AccessWindowComponent, AgencyPickerComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
 import { formatThousands } from '../../shared/utils/number-format';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
+import { saveOnce } from '../../shared/utils/save-once';
 import { buildLoanReceiptDoc } from './loan-receipt-pdf';
-import { buildRequest, initialValues, missingField } from './supplies-entry-request';
+import { buildRequest, idSource, initialValues, invalidField } from './supplies-entry-request';
 import { SuppliesEntryContent, SuppliesField } from './supplies-entry.model';
 
 /**
@@ -40,9 +41,35 @@ export class SuppliesEntryComponent {
   readonly screen = computed(() => this.content()?.screens[this.screenKey]);
 
   private readonly edited = signal<Record<string, string> | null>(null);
-  readonly values = computed(() => {
+  /** Lo digitado o elegido, sin el Id. */
+  private readonly typed = computed<Record<string, string>>(() => {
     const screen = this.screen();
     return this.edited() ?? (screen ? initialValues(screen) : {});
+  });
+
+  /** Sube despues de cada guardado para volver a pedir el Id siguiente. */
+  private readonly idVersion = signal(0);
+  /**
+   * RF §2.1: el Id lo genera el servidor; aca se muestra el que tomaria, que depende del fondo o del tipo de empaque.
+   * Los params son un texto: un objeto nuevo en cada tecla volveria a pedir el Id.
+   */
+  private readonly nextIdResource = rxResource({
+    params: () => {
+      const screen = this.screen();
+      const source = screen ? idSource(screen) : undefined;
+      const value = source ? this.typed()[source] : '';
+      return screen && (!source || value) ? `${this.screenKey}|${value}|${this.idVersion()}` : undefined;
+    },
+    stream: ({ params }) => {
+      const [screen, value] = params.split('|');
+      return this.suppliesService.nextTransactionId(screen, value || null);
+    },
+  });
+
+  /** Los valores de la pantalla con el Id: el guardado, o el que tomaria la proxima alta. */
+  readonly values = computed<Record<string, string>>(() => {
+    const next = this.nextIdResource.hasValue() ? this.nextIdResource.value().transactionId : '';
+    return { ...this.typed(), transactionId: this.saved()?.transactionId ?? next };
   });
   readonly growerNames = signal<{ first: string; last: string } | null>(null);
   readonly message = signal<string | null>(null);
@@ -57,7 +84,7 @@ export class SuppliesEntryComponent {
   }
 
   set(key: string, value: string | number): void {
-    this.edited.set({ ...this.values(), [key]: String(value) });
+    this.edited.set({ ...this.typed(), [key]: String(value) });
   }
 
   /** Cedula: solo digitos, con puntos de miles mientras se escribe. */
@@ -92,16 +119,15 @@ export class SuppliesEntryComponent {
   save(): void {
     const screen = this.screen()!;
     const messages = this.content()!.messages;
-    const missing = missingField(screen, this.values());
-    if (missing) {
-      this.fail(messages.required.replace('{label}', missing));
+    const invalid = invalidField(screen, this.values(), messages);
+    if (invalid) {
+      this.fail(invalid);
       return;
     }
-    this.saving.set(true);
-    this.suppliesService.create(screen.endpoint, buildRequest(screen, this.values())).subscribe({
+    saveOnce(this.saving, () => this.suppliesService.create(screen.endpoint, buildRequest(screen, this.values())), {
       next: (saved) => {
-        this.saving.set(false);
         this.error.set(false);
+        this.idVersion.update((v) => v + 1);
         this.message.set(messages.saved.replace('{id}', saved.transactionId));
         if (screen.printLoan) {
           this.saved.set(saved); // quedan los datos a la vista hasta imprimir, como en Access
@@ -111,7 +137,6 @@ export class SuppliesEntryComponent {
         }
       },
       error: (err: unknown) => {
-        this.saving.set(false);
         this.fail((err as { error?: { message?: string } })?.error?.message ?? messages.saveError);
       },
     });

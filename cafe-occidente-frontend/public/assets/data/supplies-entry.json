@@ -7,7 +7,8 @@
     "saved": "Registro guardado: transacción {id}",
     "saveError": "No se pudo guardar el registro",
     "required": "Falta: {label}",
-    "growerNotFound": "La cédula no está registrada como asociado"
+    "growerNotFound": "La cédula no está registrada en TERCEROS",
+    "checkDigits": "El cheque son los últimos 4 dígitos"
   },
   "screens": {
     "cash": {
@@ -15,8 +16,9 @@
       "endpoint": "cash",
       "kind": "ledger",
       "backRoute": "/suministros",
+      "idFrom": "fundCode",
       "fields": [
-        { "key": "transactionId", "label": "Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Transacción", "type": "text", "readonly": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
@@ -24,7 +26,7 @@
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "amount", "label": "Vr. Suministro", "type": "currency", "required": true },
         { "key": "paymentMethod", "label": "Forma de Pago", "type": "select", "options": ["EFECTIVO", "CHEQUE"], "required": true },
-        { "key": "checkNumber", "label": "Cheque", "type": "count", "integer": true }
+        { "key": "checkNumber", "label": "Cheque", "type": "text", "digitsOnly": true }
       ]
     },
     "adjustment": {
@@ -32,10 +34,11 @@
       "endpoint": "cash-adjustments",
       "kind": "ledger",
       "backRoute": "/suministros",
+      "idFrom": "fundCode",
       "fields": [
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
-        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "readonly": true },
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
@@ -48,9 +51,9 @@
       "kind": "ledger",
       "backRoute": "/suministros/caja-menor",
       "fields": [
-        { "key": "transactionId", "label": "Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Transacción", "type": "text", "readonly": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
-        { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "readonly": true, "placeholder": "Fiel (automática)" },
         { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
@@ -66,7 +69,7 @@
       "fields": [
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
-        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "readonly": true },
         { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
@@ -78,13 +81,14 @@
       "endpoint": "supplies",
       "kind": "ledger",
       "backRoute": "/suministros",
+      "idFrom": "fundCode",
       "fields": [
-        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "readonly": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
-        { "key": "entryDate", "label": "Fecha", "type": "date", "required": true },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "defaultToday": true },
         { "key": "amount", "label": "Valor Suministro", "type": "currency", "required": true }
       ]
     },
@@ -93,15 +97,16 @@
       "endpoint": "issued-checks",
       "kind": "ledger",
       "backRoute": "/suministros",
+      "idFrom": "fundCode",
       "fields": [
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
-        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "readonly": true },
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
         { "key": "amount", "label": "Valor Cheque", "type": "currency", "required": true },
-        { "key": "checkNumber", "label": "Cheque", "type": "count", "integer": true, "required": true }
+        { "key": "checkNumber", "label": "Cheque", "type": "text", "digitsOnly": true, "required": true }
       ]
     },
     "packaging": {
@@ -109,12 +114,13 @@
       "endpoint": "packaging",
       "kind": "packaging",
       "backRoute": "/suministros",
+      "idFrom": "packagingType",
       "fields": [
-        { "key": "transactionId", "label": "Id Transacción", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Id Transacción", "type": "text", "readonly": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
         { "key": "packagingType", "label": "Tipo", "type": "select", "options": ["NUEVO", "USADO"], "required": true },
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
-        { "key": "entryDate", "label": "Fecha", "type": "date", "defaultToday": true, "required": true },
+        { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "quantity", "label": "Entradas", "type": "count", "integer": true, "required": true }
       ]
@@ -124,10 +130,11 @@
       "endpoint": "packaging-loans",
       "kind": "packaging",
       "backRoute": "/suministros",
+      "idFrom": "packagingType",
       "lookupGrower": true,
       "printLoan": true,
       "fields": [
-        { "key": "transactionId", "label": "Préstamo No.", "type": "text", "required": true },
+        { "key": "transactionId", "label": "Préstamo No.", "type": "text", "readonly": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
         { "key": "idNumber", "label": "Cédula", "type": "text", "required": true },
         { "key": "packagingType", "label": "Tipo Empaque", "type": "select", "options": ["NUEVO", "USADO"], "required": true },
