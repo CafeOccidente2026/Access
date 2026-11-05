@@ -20,5 +20,5 @@ public record SuppliesReportRow(
         BigDecimal outflow,
         BigDecimal balance,
         String paymentMethod,
-        Integer checkNumber) {
+        String checkNumber) {
 }
