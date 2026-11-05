@@ -1,5 +1,8 @@
 # CaféOccidente — Migración de Access a web
 
+> **Regla obligatoria: responde siempre en español, también en los resúmenes y las tablas.** Vale para todo lo que
+> se le escribe al usuario: respuestas, avisos, preguntas, planes, commits y PR.
+
 Monorepo: `cafe-occidente-frontend/` (Angular 22) y `cafeoccidente-backend/` (Spring Boot 4.1.1,
 Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, ambos en la raíz.
 
