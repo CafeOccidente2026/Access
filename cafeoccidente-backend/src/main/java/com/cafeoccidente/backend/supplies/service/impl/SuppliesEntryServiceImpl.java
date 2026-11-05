@@ -25,6 +25,7 @@ import com.cafeoccidente.backend.supplies.repository.SuppliesReadRepository;
 import com.cafeoccidente.backend.supplies.repository.SupplyEntryRepository;
 import com.cafeoccidente.backend.supplies.service.SuppliesEntryService;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -55,6 +56,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private final CurrentAgencyProvider currentAgencyProvider;
     private final ControlRecordService controlRecordService;
     private final SuppliesMapper mapper;
+    private final Clock clock;
 
     public SuppliesEntryServiceImpl(
             CashEntryRepository cashEntryRepository,
@@ -66,7 +68,9 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
             FundRepository fundRepository,
             CurrentAgencyProvider currentAgencyProvider,
             ControlRecordService controlRecordService,
-            SuppliesMapper mapper) {
+            SuppliesMapper mapper,
+            Clock clock) {
+        this.clock = clock;
         this.cashEntryRepository = cashEntryRepository;
         this.pettyCashEntryRepository = pettyCashEntryRepository;
         this.supplyEntryRepository = supplyEntryRepository;
@@ -88,7 +92,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         if (CHECK.equals(method) && !hasCheck(request)) {
             throw new BusinessRuleException("Con forma de pago CHEQUE debe indicar el número de cheque");
         }
-        CashEntry entry = fill(new CashEntry(), request, LocalDate.now(), fund(request.fundCode()), method, request.checkNumber());
+        CashEntry entry = fill(new CashEntry(), request, LocalDate.now(clock), fund(request.fundCode()), method, request.checkNumber());
         entry.setInflow(request.amount());
         return mapper.toResponse(cashEntryRepository.save(entry));
     }
@@ -96,7 +100,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     @Override
     @Transactional
     public EntryResponse createCashAdjustment(LedgerEntryRequest request) {
-        CashEntry entry = fill(new CashEntry(), request, LocalDate.now(), fund(request.fundCode()), CASH, null);
+        CashEntry entry = fill(new CashEntry(), request, LocalDate.now(clock), fund(request.fundCode()), CASH, null);
         entry.setOutflow(request.amount());
         return mapper.toResponse(cashEntryRepository.save(entry));
     }
@@ -104,7 +108,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     @Override
     @Transactional
     public EntryResponse createPettyCashSupply(LedgerEntryRequest request) {
-        PettyCashEntry entry = fill(new PettyCashEntry(), request, LocalDate.now(), fund(PETTY_CASH_FUND), CASH, null);
+        PettyCashEntry entry = fill(new PettyCashEntry(), request, LocalDate.now(clock), fund(PETTY_CASH_FUND), CASH, null);
         entry.setInflow(request.amount());
         return mapper.toResponse(pettyCashEntryRepository.save(entry));
     }
@@ -112,7 +116,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     @Override
     @Transactional
     public EntryResponse createPettyCashExpense(LedgerEntryRequest request) {
-        PettyCashEntry entry = fill(new PettyCashEntry(), request, LocalDate.now(), fund(PETTY_CASH_FUND), CASH, null);
+        PettyCashEntry entry = fill(new PettyCashEntry(), request, LocalDate.now(clock), fund(PETTY_CASH_FUND), CASH, null);
         entry.setOutflow(request.amount());
         return mapper.toResponse(pettyCashEntryRepository.save(entry));
     }
@@ -135,7 +139,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         if (!hasCheck(request)) {
             throw new BusinessRuleException("El número de cheque es obligatorio");
         }
-        SupplyEntry entry = fill(new SupplyEntry(), request, LocalDate.now(), fund(request.fundCode()), CHECK, request.checkNumber());
+        SupplyEntry entry = fill(new SupplyEntry(), request, LocalDate.now(clock), fund(request.fundCode()), CHECK, request.checkNumber());
         entry.setOutflow(request.amount());
         return mapper.toResponse(supplyEntryRepository.save(entry));
     }
@@ -144,7 +148,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     @Transactional
     public EntryResponse createPackagingEntry(PackagingEntryRequest request) {
         // Fecha editable con Date() por defecto (Form Empaque suministros).
-        LocalDate date = request.entryDate() != null ? request.entryDate() : LocalDate.now();
+        LocalDate date = request.entryDate() != null ? request.entryDate() : LocalDate.now(clock);
         PackagingEntry entry = packaging(request, date);
         entry.setInflow(request.quantity());
         return mapper.toResponse(packagingEntryRepository.save(entry), null);
@@ -157,7 +161,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         if (growers.isEmpty()) {
             throw new BusinessRuleException("La cédula no está registrada como asociado");
         }
-        PackagingEntry entry = packaging(request, LocalDate.now());
+        PackagingEntry entry = packaging(request, LocalDate.now(clock));
         entry.setOutflow(request.quantity());
         return mapper.toResponse(packagingEntryRepository.save(entry), growers.get(0));
     }

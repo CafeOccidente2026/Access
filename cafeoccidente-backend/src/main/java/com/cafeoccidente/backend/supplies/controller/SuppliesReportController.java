@@ -4,6 +4,7 @@ import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.supplies.dto.SuppliesReportRow;
 import com.cafeoccidente.backend.supplies.service.SuppliesReportService;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,8 +26,11 @@ public class SuppliesReportController {
 
     private final SuppliesReportService suppliesReportService;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final Clock clock;
 
-    public SuppliesReportController(SuppliesReportService suppliesReportService, CurrentAgencyProvider currentAgencyProvider) {
+    public SuppliesReportController(
+            SuppliesReportService suppliesReportService, CurrentAgencyProvider currentAgencyProvider, Clock clock) {
+        this.clock = clock;
         this.suppliesReportService = suppliesReportService;
         this.currentAgencyProvider = currentAgencyProvider;
     }
@@ -34,30 +38,30 @@ public class SuppliesReportController {
     @GetMapping("/cash")
     public List<SuppliesReportRow> cashMovement(
             @RequestParam(required = false) String fund) {
-        return suppliesReportService.cashMovement(agency(), fund, LocalDate.now());
+        return suppliesReportService.cashMovement(agency(), fund, LocalDate.now(clock));
     }
 
     @GetMapping("/petty-cash")
     public List<SuppliesReportRow> pettyCashMovement() {
-        return suppliesReportService.pettyCashMovement(agency(), LocalDate.now());
+        return suppliesReportService.pettyCashMovement(agency(), LocalDate.now(clock));
     }
 
     @GetMapping("/supplies")
     public List<SuppliesReportRow> supplies(@RequestParam String fund) {
-        return suppliesReportService.supplies(agency(), fund, LocalDate.now());
+        return suppliesReportService.supplies(agency(), fund, LocalDate.now(clock));
     }
 
     @GetMapping("/packaging")
     public List<SuppliesReportRow> packaging(
             @RequestParam(required = false) String type) {
-        return suppliesReportService.packaging(agency(), type, LocalDate.now());
+        return suppliesReportService.packaging(agency(), type, LocalDate.now(clock));
     }
 
     @PostMapping("/checks")
     public List<SuppliesReportRow> checkRelation(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return suppliesReportService.checkRelation(agency(), from, to, LocalDate.now());
+        return suppliesReportService.checkRelation(agency(), from, to, LocalDate.now(clock));
     }
 
     @GetMapping("/payment-methods")
