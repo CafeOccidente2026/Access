@@ -198,4 +198,19 @@ class ChangeHistoryIntegrationTest {
                         .param("from", "2000-01-01").param("to", "2000-01-02").header("Authorization", token))
                 .andExpect(jsonPath("$.total").value(0));
     }
+
+    @Test
+    void aChangeAtEightPmInColombiaIsFilteredByTheColombianDay() throws Exception {
+        // 2026-01-14 20:00 en Colombia: en UTC (la zona del servidor) ya es el 15. SET LOCAL vale solo en esta
+        // transaccion: el driver toma la zona de la JVM, que en el contenedor es UTC y en esta maquina no.
+        jdbc.execute("SET LOCAL TIME ZONE 'UTC'");
+        jdbc.update("INSERT INTO historial_cambios (fecha, usuario_id, entidad, entidad_id, accion)"
+                + " VALUES ('2026-01-14 20:00:00-05', ?, 'AGENCIA', 1, 'CREAR')", admin.getId());
+
+        for (String[] day : new String[][] {{"2026-01-14", "1"}, {"2026-01-15", "0"}}) {
+            mockMvc.perform(get("/api/history").param("userId", admin.getId().toString())
+                            .param("from", day[0]).param("to", day[0]).header("Authorization", token))
+                    .andExpect(jsonPath("$.total").value(Integer.parseInt(day[1])));
+        }
+    }
 }
