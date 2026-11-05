@@ -53,7 +53,7 @@
       "fields": [
         { "key": "transactionId", "label": "Transacción", "type": "text", "readonly": true },
         { "key": "agency", "label": "Agencia", "type": "text" },
-        { "key": "idNumber", "label": "Cédula", "type": "text", "readonly": true, "placeholder": "Fiel del Registro de Control" },
+        { "key": "idNumber", "label": "Cédula", "type": "text", "readonly": true, "placeholder": "Fiel (automática)" },
         { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
