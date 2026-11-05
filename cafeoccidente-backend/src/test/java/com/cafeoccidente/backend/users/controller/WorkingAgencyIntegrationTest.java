@@ -111,17 +111,21 @@ class WorkingAgencyIntegrationTest {
 
         mockMvc.perform(post("/api/supplies/petty-cash").header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"transactionId\": \"HU06-CAJA\", \"idNumber\": \"123456\", \"amount\": 1000, \"agencyId\": 1}"))
+                        .content("{\"detail\": \"HU06-CAJA\", \"idNumber\": \"123456\", \"amount\": 1000, \"agencyId\": 1}"))
                 .andExpect(status().isCreated());
-        assertThat(jdbc.queryForObject("SELECT agencia_id FROM movimientos_caja_menor WHERE id_transaccion = 'HU06-CAJA'",
+        assertThat(jdbc.queryForObject("SELECT agencia_id FROM movimientos_caja_menor WHERE detalle = 'HU06-CAJA'",
                 Long.class)).isEqualTo(4L);
 
+        // RN-27.6.3: el fiel del suministro de empaques tiene que estar en TERCEROS.
+        jdbc.update("INSERT INTO terceros (identificacion, primer_nombre, primer_apellido, agencia_id, direccion, telefono,"
+                + " tipo, asociacion) SELECT '123456', 'FIEL', 'HU06', 4, 'VEREDA', '3001112233', 'C', false"
+                + " WHERE NOT EXISTS (SELECT 1 FROM terceros WHERE identificacion = '123456')");
         mockMvc.perform(post("/api/supplies/packaging").header("Authorization", admin)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"transactionId\": \"HU06-EMPAQUE\", \"packagingType\": \"NUEVO\", \"idNumber\": \"123456\","
+                        .content("{\"detail\": \"HU06-EMPAQUE\", \"packagingType\": \"NUEVO\", \"idNumber\": \"123456\","
                                 + " \"quantity\": 5, \"agencyId\": 1}"))
                 .andExpect(status().isCreated());
-        assertThat(jdbc.queryForObject("SELECT agencia_id FROM empaques WHERE id_transaccion = 'HU06-EMPAQUE'",
+        assertThat(jdbc.queryForObject("SELECT agencia_id FROM empaques WHERE detalle = 'HU06-EMPAQUE'",
                 Long.class)).isEqualTo(4L);
 
         Integer numbered = jdbc.queryForObject("SELECT count(*) FROM anuncios_agencias WHERE agencia_id = 4", Integer.class);
