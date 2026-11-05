@@ -1,21 +1,21 @@
-/** Alta de Caja / Caja Menor / Suministros (LedgerEntryRequest del backend). */
+/**
+ * Alta de Caja / Caja Menor / Suministros (LedgerEntryRequest del backend). El Id de transaccion lo genera el servidor;
+ * entryDate solo vale en Ingresar Suministros. checkNumber: los ultimos 4 digitos, como texto (0548).
+ */
 export interface LedgerEntryRequest {
-  readonly transactionId: string;
   readonly fundCode: string | null;
   readonly entryDate: string | null;
-  readonly idNumber: string;
+  readonly idNumber: string | null;
   readonly detail: string | null;
   readonly amount: number;
   readonly paymentMethod: string | null;
-  readonly checkNumber: number | null;
+  readonly checkNumber: string | null;
 }
 
 /** Alta de Empaque (Suministro Empaques = Entradas, Prestamo Empaques = Salidas en quantity). */
 export interface PackagingEntryRequest {
-  readonly transactionId: string;
   readonly packagingType: string;
-  readonly entryDate: string | null;
-  readonly idNumber: string;
+  readonly idNumber: string | null;
   readonly detail: string | null;
   readonly quantity: number;
 }
@@ -44,5 +44,5 @@ export interface SuppliesReportRow {
   readonly outflow: number;
   readonly balance: number | null;
   readonly paymentMethod: string | null;
-  readonly checkNumber: number | null;
+  readonly checkNumber: string | null;
 }

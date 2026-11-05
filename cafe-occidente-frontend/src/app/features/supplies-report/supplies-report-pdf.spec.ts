@@ -12,7 +12,7 @@ const data = content as SuppliesReportContent;
 const row = (agencyName: string, transactionId: string, inflow: number, outflow: number): SuppliesReportRow => ({
   agencyName, transactionId, fundCode: 'RP', date: '2026-06-14', idNumber: '87304051', firstNames: 'WILSON TOBIAS',
   lastNames: 'LEGARDA', detail: 'WILSON TOBIAS LEGARDA', inflow, outflow, balance: inflow - outflow,
-  paymentMethod: 'CHEQUE', checkNumber: 5320,
+  paymentMethod: 'CHEQUE', checkNumber: '5320',
 });
 const rows = [row('EL TAMBO', '43901', 0, 6016407.5), row('EL TAMBO', '43902', 100, 0), row('SANDONA', 'T1', 0, 50)];
 
@@ -27,7 +27,7 @@ describe('supplies reports', () => {
       ['Id_Transaccion', 'Agencia', 'Fondo', 'Fecha', 'Cedula', 'Detalle', 'Entradas', 'Salidas', 'Forma_de_Pago', 'Cheque'],
     );
     expect(sheet[1].map((c) => (c as { value: unknown } | null)?.value ?? null)).toEqual(
-      ['43901', 'EL TAMBO', 'RP', new Date(Date.UTC(2026, 5, 14)), '87304051', 'WILSON TOBIAS LEGARDA', 0, 6016407.5, 'CHEQUE', 5320],
+      ['43901', 'EL TAMBO', 'RP', new Date(Date.UTC(2026, 5, 14)), '87304051', 'WILSON TOBIAS LEGARDA', 0, 6016407.5, 'CHEQUE', '5320'],
     );
     expect(sheet).toHaveLength(4);
     const blob = await writeExcelFile(sheet).toBlob();
@@ -42,5 +42,5 @@ describe('supplies reports', () => {
       );
       expect(size, report.windowTitle).toBeGreaterThan(1000);
     }
-  });
+  }, 20_000); // genera un PDF por informe: con cobertura pasa de los 5 s por defecto
 });
