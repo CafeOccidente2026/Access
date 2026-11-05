@@ -29,6 +29,7 @@ import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
+    private final Clock clock;
 
     public HuskPurchaseServiceImpl(
             HuskPurchaseRepository huskPurchaseRepository,
@@ -70,7 +72,9 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
-            PurchasePaymentService purchasePaymentService) {
+            PurchasePaymentService purchasePaymentService,
+            Clock clock) {
+        this.clock = clock;
         this.huskPurchaseRepository = huskPurchaseRepository;
         this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
@@ -100,7 +104,7 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
         Long currentUserId = securityUtils.getCurrentUserId();
 
         HuskPurchase purchase = new HuskPurchase();
-        purchase.setPurchaseDate(LocalDate.now());
+        purchase.setPurchaseDate(LocalDate.now(clock));
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
         purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
         purchase.setAgency(context.agency());

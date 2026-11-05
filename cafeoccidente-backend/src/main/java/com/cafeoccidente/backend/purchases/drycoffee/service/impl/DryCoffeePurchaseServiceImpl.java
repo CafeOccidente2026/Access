@@ -32,6 +32,7 @@ import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import com.cafeoccidente.backend.purchases.shared.service.SpecialtyThresholdRule;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
+    private final Clock clock;
 
     public DryCoffeePurchaseServiceImpl(
             DryCoffeePurchaseRepository dryCoffeePurchaseRepository,
@@ -66,7 +68,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
-            PurchasePaymentService purchasePaymentService) {
+            PurchasePaymentService purchasePaymentService,
+            Clock clock) {
+        this.clock = clock;
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.productCodeResolver = productCodeResolver;
         this.announcementService = announcementService;
@@ -95,7 +99,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         Long currentUserId = securityUtils.getCurrentUserId();
 
         DryCoffeePurchase purchase = new DryCoffeePurchase();
-        purchase.setPurchaseDate(LocalDate.now());
+        purchase.setPurchaseDate(LocalDate.now(clock));
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
         purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
         purchase.setAgency(context.agency());
