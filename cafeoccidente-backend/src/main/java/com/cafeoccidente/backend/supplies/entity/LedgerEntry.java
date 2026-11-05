@@ -55,7 +55,8 @@ public abstract class LedgerEntry {
     private String paymentMethod;
 
     @Column(name = "numero_cheque")
-    private Integer checkNumber;
+    /** RN-27.1.4: los ultimos 4 digitos del cheque, con sus ceros a la izquierda (V21). */
+    private String checkNumber;
 
     @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
