@@ -5,7 +5,7 @@
 
       <div class="flex items-center gap-3">
         <input #picker type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden"
-          data-testid="file" (change)="choose($any($event.target).files?.[0]); $any($event.target).value = ''" />
+          data-testid="file" [attr.aria-label]="c.loadLabel" (change)="choose($any($event.target).files?.[0]); $any($event.target).value = ''" />
         <app-button [label]="c.loadLabel" [disabled]="saving()" (pressed)="picker.click()"></app-button>
         <span *ngIf="file() as f" class="font-medium">{{ f.name }}</span>
         <span *ngIf="checking()" class="text-slate-600">{{ c.checking }}</span>
