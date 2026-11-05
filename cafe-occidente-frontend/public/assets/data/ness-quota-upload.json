@@ -1,0 +1,27 @@
+{
+  "windowTitle": "ACTUALIZA CUPOS NESS",
+  "closeRoute": "/vendedores",
+  "instructions": "Cargue el archivo Excel (.xlsx) de la Federación con las columnas CEDULA, NOMBRES, PROGRAMA y CUPO. Antes de aplicarlo verá cuántos cupos cambian. Al aplicar, la tabla NESS queda igual al archivo: los cupos que no vienen se retiran.",
+  "loadLabel": "Cargar archivo",
+  "checking": "Revisando el archivo…",
+  "errorsTitle": "El archivo tiene errores; no se cargó nada:",
+  "warningsTitle": "Avisos:",
+  "previewTitle": "Si aplica este archivo:",
+  "counts": {
+    "added": "Se agregan",
+    "changed": "Cambian",
+    "unchanged": "Quedan igual",
+    "removed": "Se retiran",
+    "rows": "Cupos en NESS después de aplicar"
+  },
+  "applyLabel": "Aplicar",
+  "cancelLabel": "Cancelar",
+  "historyTitle": "Cargas anteriores",
+  "historyColumns": ["Fecha", "Usuario", "Archivo", "Cupos", "Agregados", "Cambiados", "Iguales", "Retirados"],
+  "historyEmpty": "Todavía no se ha cargado ninguna lista desde el sistema nuevo.",
+  "messages": {
+    "applied": "Cupos actualizados correctamente",
+    "error": "No se pudo cargar el archivo. Intente de nuevo.",
+    "previewError": "No se pudo revisar el archivo. Intente de nuevo."
+  }
+}

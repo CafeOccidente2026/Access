@@ -9,6 +9,8 @@ import {
   BeneficiaryRow,
   NessQuotaBalanceRow,
   NessQuotaPage,
+  NessQuotaUploadRecord,
+  NessQuotaUploadResult,
   VendorCreateRequest,
 } from '../models/vendor.model';
 
@@ -41,6 +43,26 @@ export class VendorService {
   /** Saldos Cupos NESS (fuera del RF, Q5): el Administrador puede pedir todas las agencias (agencyId null). */
   nessQuotaBalances(agencyId: number | null): Observable<NessQuotaBalanceRow[]> {
     return this.http.get<NessQuotaBalanceRow[]>(`${this.url}/ness-quota-balances`, { params: toParams({ agencyId }) });
+  }
+
+  /** Actualiza Cupos NESS (HU-54): el archivo va tal cual en el cuerpo; el servidor lo lee y valida. */
+  previewNessUpload(file: File): Observable<NessQuotaUploadResult> {
+    return this.postFile(`${this.url}/ness-quotas/upload/preview`, file);
+  }
+
+  applyNessUpload(file: File): Observable<NessQuotaUploadResult> {
+    return this.postFile(`${this.url}/ness-quotas/upload`, file);
+  }
+
+  nessUploads(): Observable<NessQuotaUploadRecord[]> {
+    return this.http.get<NessQuotaUploadRecord[]>(`${this.url}/ness-quotas/uploads`);
+  }
+
+  private postFile(url: string, file: File): Observable<NessQuotaUploadResult> {
+    return this.http.post<NessQuotaUploadResult>(url, file, {
+      params: { fileName: file.name },
+      headers: { 'Content-Type': 'application/octet-stream' },
+    });
   }
 }
 

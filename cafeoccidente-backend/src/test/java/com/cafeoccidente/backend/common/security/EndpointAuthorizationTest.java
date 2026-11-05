@@ -34,6 +34,7 @@ import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.service.AuthService;
 import com.cafeoccidente.backend.users.service.UserService;
 import com.cafeoccidente.backend.users.service.WorkingAgencyService;
+import com.cafeoccidente.backend.vendors.service.NessQuotaUploadService;
 import com.cafeoccidente.backend.vendors.service.VendorReportService;
 import com.cafeoccidente.backend.vendors.service.VendorService;
 import java.util.ArrayList;
@@ -231,6 +232,11 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/vendors/reports/beneficiary");
         add(ADMIN_USER, get, "/api/vendors/ness-quotas");
         add(ADMIN_USER, get, "/api/vendors/ness-quota-balances");
+        // RN-28.4.1 Actualiza Cupos NESS: solo el Administrador.
+        add(ADMIN, post, "/api/vendors/ness-quotas/upload/preview",
+                "/api/vendors/ness-quotas/upload/preview?fileName=NESS.xlsx");
+        add(ADMIN, post, "/api/vendors/ness-quotas/upload", "/api/vendors/ness-quotas/upload?fileName=NESS.xlsx");
+        add(ADMIN, get, "/api/vendors/ness-quotas/uploads");
 
         // Sesion y boton Agencias (RF-05.1, RN-05.2: solo el Administrador elige agencia).
         add(ALL, get, "/api/me");
@@ -278,6 +284,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private SuppliesReportService suppliesReportService;
     @MockitoBean private VendorService vendorService;
     @MockitoBean private VendorReportService vendorReportService;
+    @MockitoBean private NessQuotaUploadService nessQuotaUploadService;
     @MockitoBean private PermissionService permissionService;
     @MockitoBean private TableAccessService tableAccessService;
 

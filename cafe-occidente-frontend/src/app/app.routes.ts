@@ -53,6 +53,12 @@ function vendorsRoutes(): Routes {
     { path: 'vendedores/asociados', loadComponent: () => import('./features/associates/associates').then((m) => m.AssociatesComponent) },
     { path: 'vendedores/cupos-ness', loadComponent: ness, data: { view: 'quotas' } },
     { path: 'vendedores/saldos-cupos-ness', loadComponent: ness, data: { view: 'balances' } },
+    {
+      // RN-28.4.1: solo el Administrador.
+      path: 'vendedores/actualiza-cupos-ness',
+      data: { roles: ADMIN },
+      loadComponent: () => import('./features/ness-quota-upload/ness-quota-upload').then((m) => m.NessQuotaUploadComponent),
+    },
   ];
 }
 

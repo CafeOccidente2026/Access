@@ -20,10 +20,10 @@ describe('ness quotas', () => {
 });
 
 describe('vendors menu and associates', () => {
-  it('keeps the 8 Access buttons in order, with the two pending ones disabled', () => {
+  it('keeps the 8 Access buttons in order, with Actualizar Vendedores disabled (Actualiza Cupos NESS is HU-54)', () => {
     const options = menu.columns[0];
     expect(options).toHaveLength(8);
-    expect(options.filter((o) => 'disabled' in o && o.disabled).map((o) => o.label)).toEqual(['Actualizar Vendedores', 'Actualiza Cupos NESS']);
+    expect(options.filter((o) => 'disabled' in o && o.disabled).map((o) => o.label)).toEqual(['Actualizar Vendedores']);
   });
 
   it('shows the 28 Access controls with True/False as Verdadero/Falso', () => {

@@ -15,6 +15,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
+import com.cafeoccidente.backend.purchases.shared.service.NessPrograms;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -45,13 +46,13 @@ public class GrowerServiceImpl implements GrowerService {
      * </ul>
      */
     private static final Map<String, String> SPECIAL_TO_PROGRAMA = Map.of(
-            "NESPRESSO - FTUSA", "NESPRESSO",
+            "NESPRESSO - FTUSA", NessPrograms.NESPRESSO,
             // Q8 (area de compras, 2026-10-27): las variantes CON TAZA exigen el mismo programa, como
             // en Access (W_AlmSana_AfterUpdate las bloquea con EnProg = 0).
-            "NESPRESSO CON TAZA - FTUSA", "NESPRESSO",
-            "NESPRESSO LATE HARVEST - FTUSA", "NESPRESSO LATE HARVEST",
-            "NESPRESSO LATE HARVEST CON TAZA - FTUSA", "NESPRESSO LATE HARVEST",
-            "REGIONAL NARIÑO 4C", "REGIONAL NARIÑO 4C");
+            "NESPRESSO CON TAZA - FTUSA", NessPrograms.NESPRESSO,
+            "NESPRESSO LATE HARVEST - FTUSA", NessPrograms.LATE_HARVEST,
+            "NESPRESSO LATE HARVEST CON TAZA - FTUSA", NessPrograms.LATE_HARVEST,
+            "REGIONAL NARIÑO 4C", NessPrograms.REGIONAL_NARINO_4C);
 
     private final GrowerRepository growerRepository;
     private final LegacyNessProgramRepository legacyNessProgramRepository;
