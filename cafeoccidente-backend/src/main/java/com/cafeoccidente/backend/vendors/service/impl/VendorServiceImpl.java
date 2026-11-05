@@ -12,6 +12,7 @@ import com.cafeoccidente.backend.vendors.dto.AssociateResponse;
 import com.cafeoccidente.backend.vendors.dto.VendorCreateRequest;
 import com.cafeoccidente.backend.vendors.mapper.AssociateMapper;
 import com.cafeoccidente.backend.vendors.service.VendorService;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,11 +26,14 @@ public class VendorServiceImpl implements VendorService {
     private final GrowerRepository growerRepository;
     private final AgencyRepository agencyRepository;
     private final ControlRecordRepository controlRecordRepository;
+    private final Clock clock;
 
     public VendorServiceImpl(
             GrowerRepository growerRepository,
             AgencyRepository agencyRepository,
-            ControlRecordRepository controlRecordRepository) {
+            ControlRecordRepository controlRecordRepository,
+            Clock clock) {
+        this.clock = clock;
         this.growerRepository = growerRepository;
         this.agencyRepository = agencyRepository;
         this.controlRecordRepository = controlRecordRepository;
@@ -55,7 +59,7 @@ public class VendorServiceImpl implements VendorService {
         grower.setIdNumber(idNumber);
         grower.setFirstName(request.firstName().trim());
         grower.setAgency(agency);
-        grower.setAffiliationDate(LocalDate.now());
+        grower.setAffiliationDate(LocalDate.now(clock));
         grower.setGrowerType("C");
         grower.setAddress(trimOrEmpty(request.address()));
         grower.setRegistryNumber(controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId)

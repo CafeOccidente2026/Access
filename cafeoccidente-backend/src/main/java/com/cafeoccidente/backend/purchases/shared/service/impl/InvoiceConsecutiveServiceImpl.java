@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 import com.cafeoccidente.backend.purchases.shared.repository.InvoiceConsecutiveRepository;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -16,8 +17,10 @@ public class InvoiceConsecutiveServiceImpl implements InvoiceConsecutiveService 
     static final String RANGE_EXHAUSTED = "Se agotó el rango de facturas autorizado por la resolución DIAN vigente";
 
     private final InvoiceConsecutiveRepository repository;
+    private final Clock clock;
 
-    public InvoiceConsecutiveServiceImpl(InvoiceConsecutiveRepository repository) {
+    public InvoiceConsecutiveServiceImpl(InvoiceConsecutiveRepository repository, Clock clock) {
+        this.clock = clock;
         this.repository = repository;
     }
 
@@ -26,7 +29,7 @@ public class InvoiceConsecutiveServiceImpl implements InvoiceConsecutiveService 
         int next = withinRange(repository.peek(agencyId, controlRecord.getResolutionFrom()), controlRecord);
         String warning = null;
         LocalDate expiration = controlRecord.getResolutionDate().plusMonths(controlRecord.getValidity());
-        if (LocalDate.now().isAfter(expiration)) {
+        if (LocalDate.now(clock).isAfter(expiration)) {
             warning = "La resolución de facturación está vencida";
         } else if (controlRecord.getResolutionTo() - next < 100) {
             warning = "La resolución de facturación está a punto de agotarse";

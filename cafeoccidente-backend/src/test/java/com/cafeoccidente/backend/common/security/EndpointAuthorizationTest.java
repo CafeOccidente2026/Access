@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.config.CorsConfig;
 import com.cafeoccidente.backend.common.config.SecurityConfig;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -73,7 +74,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * apagada: @Valid corre antes que @PreAuthorize y un 400 taparia el 403.
  */
 @WebMvcTest
-@Import({SecurityConfig.class, CorsConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
+@Import({SecurityConfig.class, CorsConfig.class, ClockConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
 class EndpointAuthorizationTest {
 
     private static final String A = "ADMINISTRADOR";

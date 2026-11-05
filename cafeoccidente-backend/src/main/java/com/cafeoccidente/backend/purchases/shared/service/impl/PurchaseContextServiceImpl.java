@@ -14,6 +14,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerDailyTotalsRe
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -30,6 +31,7 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
     private final ControlRecordService controlRecordService;
     private final PurchaseSellerService purchaseSellerService;
     private final GrowerDailyTotalsRepository dailyTotals;
+    private final Clock clock;
 
     public PurchaseContextServiceImpl(
             CurrentAgencyProvider currentAgencyProvider,
@@ -39,7 +41,9 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
             AnnouncementService announcementService,
             ControlRecordService controlRecordService,
             PurchaseSellerService purchaseSellerService,
-            GrowerDailyTotalsRepository dailyTotals) {
+            GrowerDailyTotalsRepository dailyTotals,
+            Clock clock) {
+        this.clock = clock;
         this.currentAgencyProvider = currentAgencyProvider;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -77,6 +81,6 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
                 announcementService.findLatest(agency.getId(), fund.getId(), specialType),
                 controlRecordService.getActive(agency.getId()),
                 seller,
-                dailyTotals.sum(seller.idNumber(), LocalDate.now()));
+                dailyTotals.sum(seller.idNumber(), LocalDate.now(clock)));
     }
 }

@@ -35,6 +35,7 @@ import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PenaltyRule;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -64,6 +65,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
+    private final Clock clock;
 
     public GreenCoffeePurchaseServiceImpl(
             GreenCoffeePurchaseRepository greenCoffeePurchaseRepository,
@@ -79,7 +81,9 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
-            PurchasePaymentService purchasePaymentService) {
+            PurchasePaymentService purchasePaymentService,
+            Clock clock) {
+        this.clock = clock;
         this.greenCoffeePurchaseRepository = greenCoffeePurchaseRepository;
         this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
@@ -112,7 +116,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         Long currentUserId = securityUtils.getCurrentUserId();
 
         GreenCoffeePurchase purchase = new GreenCoffeePurchase();
-        purchase.setPurchaseDate(LocalDate.now());
+        purchase.setPurchaseDate(LocalDate.now(clock));
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
         purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
         purchase.setAgency(context.agency());

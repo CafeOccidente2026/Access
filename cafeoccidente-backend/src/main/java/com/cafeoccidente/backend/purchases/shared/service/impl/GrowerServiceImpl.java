@@ -17,6 +17,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRe
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import com.cafeoccidente.backend.purchases.shared.service.NessPrograms;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -58,12 +59,15 @@ public class GrowerServiceImpl implements GrowerService {
     private final LegacyNessProgramRepository legacyNessProgramRepository;
     private final AgencyRepository agencyRepository;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final Clock clock;
 
     public GrowerServiceImpl(
             GrowerRepository growerRepository,
             LegacyNessProgramRepository legacyNessProgramRepository,
             AgencyRepository agencyRepository,
-            CurrentAgencyProvider currentAgencyProvider) {
+            CurrentAgencyProvider currentAgencyProvider,
+            Clock clock) {
+        this.clock = clock;
         this.growerRepository = growerRepository;
         this.legacyNessProgramRepository = legacyNessProgramRepository;
         this.agencyRepository = agencyRepository;
@@ -117,7 +121,7 @@ public class GrowerServiceImpl implements GrowerService {
         grower.setPhone("");
         grower.setGrowerType("C");
         // FechaAfiliacion: DefaultValue "Date()" en Form_Conductores.txt.
-        grower.setAffiliationDate(LocalDate.now());
+        grower.setAffiliationDate(LocalDate.now(clock));
         grower.setTransportCompany(request.transportCompany());
         grower.setVehiclePlate(request.vehiclePlate());
         Grower saved = growerRepository.save(grower);

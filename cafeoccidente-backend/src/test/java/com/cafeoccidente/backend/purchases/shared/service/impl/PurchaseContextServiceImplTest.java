@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -24,12 +25,17 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerDailyTotalsRe
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class PurchaseContextServiceImplTest {
+
+    /** 2026-01-14 20:00 en Colombia (ya 2026-01-15 en UTC). */
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-15T01:00:00Z"), ClockConfig.COLOMBIA);
 
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class);
     private final AgencyRepository agencies = mock(AgencyRepository.class);
@@ -40,7 +46,7 @@ class PurchaseContextServiceImplTest {
     private final PurchaseSellerService sellers = mock(PurchaseSellerService.class);
     private final GrowerDailyTotalsRepository totals = mock(GrowerDailyTotalsRepository.class);
     private final PurchaseContextServiceImpl service = new PurchaseContextServiceImpl(
-            currentAgencyProvider, agencies, funds, productCodes, announcements, controlRecords, sellers, totals);
+            currentAgencyProvider, agencies, funds, productCodes, announcements, controlRecords, sellers, totals, CLOCK);
 
     private final Agency agency = new Agency();
     private final Fund fund = new Fund();
@@ -61,7 +67,7 @@ class PurchaseContextServiceImplTest {
         when(productCodes.resolve("RN", 2L)).thenReturn(productCode);
         when(announcements.findLatest(4L, 2L, "RN")).thenReturn(announcement);
         when(controlRecords.getActive(4L)).thenReturn(controlRecord);
-        when(totals.sum("1", LocalDate.now())).thenReturn(today);
+        when(totals.sum("1", LocalDate.of(2026, 1, 14))).thenReturn(today);
     }
 
     @Test

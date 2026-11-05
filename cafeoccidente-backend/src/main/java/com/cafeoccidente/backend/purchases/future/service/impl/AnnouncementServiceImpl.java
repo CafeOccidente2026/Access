@@ -26,6 +26,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.ProductCodeRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +58,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private final ControlRecordService controlRecordService;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final ChangeHistoryService history;
+    private final Clock clock;
 
     public AnnouncementServiceImpl(
             AnnouncementRepository announcementRepository,
@@ -66,7 +68,9 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             ControlRecordRepository controlRecordRepository,
             ControlRecordService controlRecordService,
             CurrentAgencyProvider currentAgencyProvider,
-            ChangeHistoryService history) {
+            ChangeHistoryService history,
+            Clock clock) {
+        this.clock = clock;
         this.announcementRepository = announcementRepository;
         this.agencyAnnouncementNumberRepository = agencyAnnouncementNumberRepository;
         this.fundRepository = fundRepository;
@@ -157,10 +161,10 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                 .toList();
     }
 
-    private static Announcement master(Fund fund, String specialType, BigDecimal basePriceLoad,
+    private Announcement master(Fund fund, String specialType, BigDecimal basePriceLoad,
             BigDecimal specialSurcharge, BigDecimal defectiveUnitPrice) {
         Announcement master = new Announcement();
-        master.setAnnouncementDate(LocalDate.now());
+        master.setAnnouncementDate(LocalDate.now(clock));
         master.setBasePriceLoad(basePriceLoad);
         master.setSpecialSurcharge(specialSurcharge);
         master.setDefectiveUnitPrice(defectiveUnitPrice);
@@ -184,7 +188,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
 
         Announcement master = new Announcement();
-        master.setAnnouncementDate(LocalDate.now());
+        master.setAnnouncementDate(LocalDate.now(clock));
         master.setBasePriceLoad(request.basePriceLoad());
         master.setPointPrice(request.pointPrice());
         master.setDefectiveUnitPrice(BigDecimal.ZERO);

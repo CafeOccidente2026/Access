@@ -16,8 +16,7 @@ public final class NessXlsx {
 
     public static byte[] of(Object[]... rows) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            Workbook workbook = new Workbook(out, "Pruebas", "1.0");
+        try (Workbook workbook = new Workbook(out, "Pruebas", "1.0")) {
             Worksheet sheet = workbook.newWorksheet("NESS");
             for (int r = 0; r < rows.length; r++) {
                 for (int c = 0; c < rows[r].length; c++) {
