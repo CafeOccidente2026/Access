@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
@@ -16,6 +17,8 @@ import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.vendors.dto.VendorCreateRequest;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,10 +27,13 @@ import org.mockito.ArgumentCaptor;
 
 class VendorServiceImplTest {
 
+    /** 2026-01-14 20:00 en Colombia (ya 2026-01-15 en UTC). */
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-15T01:00:00Z"), ClockConfig.COLOMBIA);
+
     private final GrowerRepository growers = mock(GrowerRepository.class);
     private final AgencyRepository agencies = mock(AgencyRepository.class);
     private final ControlRecordRepository controlRecords = mock(ControlRecordRepository.class);
-    private final VendorServiceImpl service = new VendorServiceImpl(growers, agencies, controlRecords);
+    private final VendorServiceImpl service = new VendorServiceImpl(growers, agencies, controlRecords, CLOCK);
     private final Agency agency = new Agency();
 
     @BeforeEach
@@ -65,7 +71,7 @@ class VendorServiceImplTest {
         assertThat(g.getIsAssociation()).isTrue();
         assertThat(g.getAddress()).isEqualTo("CLL 20 24 64");
         assertThat(g.getGrowerType()).isEqualTo("C");
-        assertThat(g.getAffiliationDate()).isEqualTo(LocalDate.now());
+        assertThat(g.getAffiliationDate()).isEqualTo(LocalDate.of(2026, 1, 14));
         assertThat(g.getAgency()).isSameAs(agency);
         assertThat(g.getRegistryNumber()).isEqualTo(2);
         assertThat(g.getExported()).isFalse();

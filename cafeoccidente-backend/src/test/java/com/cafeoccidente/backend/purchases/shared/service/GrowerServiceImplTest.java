@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
@@ -18,6 +19,9 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.impl.GrowerServiceImpl;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -26,13 +30,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 /** Item C (cupo) - ver GrowerService.checkQuota y Form_COMPRAS.bas lineas 412/465/518/571/624. */
 class GrowerServiceImplTest {
 
+    /** 2026-01-14 20:00 en Colombia (ya 2026-01-15 en UTC). */
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-15T01:00:00Z"), ClockConfig.COLOMBIA);
+
     private final GrowerRepository growerRepository = mock(GrowerRepository.class);
     private final LegacyNessProgramRepository legacyNessProgramRepository = mock(LegacyNessProgramRepository.class);
     private final AgencyRepository agencyRepository = mock(AgencyRepository.class);
     /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final GrowerService growerService =
-            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository, currentAgencyProvider);
+            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository, currentAgencyProvider, CLOCK);
 
     /** LegacyNessProgram es una entidad de staging de solo lectura (solo @Getter, sin setters) -
      *  se instancia real y se llenan los campos por reflexion en vez de mockearla. */
@@ -170,7 +177,7 @@ class GrowerServiceImplTest {
                 "777", "Ana", null, "Gomez", null, "Coop", "XYZ987", " Vereda El Tambo "));
 
         assertThat(saved.getValue().getAddress()).isEqualTo("Vereda El Tambo");
-        assertThat(saved.getValue().getAffiliationDate()).isEqualTo(java.time.LocalDate.now());
+        assertThat(saved.getValue().getAffiliationDate()).isEqualTo(LocalDate.of(2026, 1, 14));
     }
 
     @Test
