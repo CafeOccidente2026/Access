@@ -218,6 +218,8 @@ class EndpointAuthorizationTest {
                 "issued-checks", "packaging", "packaging-loans")) {
             add(ADMIN_USER, post, "/api/supplies/" + entry);
         }
+        // RF §2.1: el Id que tomaria cada alta, para mostrarlo en pantalla.
+        add(ADMIN_USER, get, "/api/supplies/next-id", "/api/supplies/next-id?screen=cash&value=RP");
         add(ADMIN_USER, get, "/api/supplies/reports/cash");
         add(ADMIN_USER, get, "/api/supplies/reports/petty-cash");
         add(ADMIN_USER, get, "/api/supplies/reports/supplies", "/api/supplies/reports/supplies?fund=RP");
