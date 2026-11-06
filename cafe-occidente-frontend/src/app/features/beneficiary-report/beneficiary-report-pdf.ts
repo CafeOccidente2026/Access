@@ -2,10 +2,12 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { BeneficiaryRow } from '../../core/models/vendor.model';
 import { formatThousands } from '../../shared/utils/number-format';
+import { themeColor } from '../../shared/utils/theme-color';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 import { BeneficiaryReport, BeneficiaryReportText } from './beneficiary-report.model';
 
-const TEAL = '#008080';
+// Mismo teal de los informes de Suministros (styles.css).
+const teal = () => themeColor('--color-report-teal');
 const peso = (v: number): string => Math.round(v).toLocaleString('es-CO');
 const dec2 = (v: number): string => v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fill = (template: string, values: Record<string, string | number>) =>
@@ -13,7 +15,7 @@ const fill = (template: string, values: Record<string, string | number>) =>
 const sum = (rows: readonly BeneficiaryRow[], f: (r: BeneficiaryRow) => number) => rows.reduce((a, r) => a + f(r), 0);
 const right = (text: string, extra: Partial<Record<'bold' | 'color', unknown>> = {}): TableCell => ({ text, alignment: 'right', ...extra }) as TableCell;
 const dashed = (width: number): Content => ({
-  canvas: [{ type: 'line', x1: 0, y1: 0, x2: width, y2: 0, lineWidth: 1.5, lineColor: TEAL, dash: { length: 2, space: 1 } }],
+  canvas: [{ type: 'line', x1: 0, y1: 0, x2: width, y2: 0, lineWidth: 1.5, lineColor: teal(), dash: { length: 2, space: 1 } }],
 });
 
 /** Grupos por Cedula en el orden del backend (Cedula, Factura). */
@@ -35,7 +37,7 @@ function amounts(r: BeneficiaryRow): TableCell[] {
 function totals(label: string, rows: readonly BeneficiaryRow[], lead: number): TableCell[] {
   const bold = { bold: true };
   return [
-    { text: label, bold: true, color: TEAL, colSpan: lead },
+    { text: label, bold: true, color: teal(), colSpan: lead },
     ...Array.from({ length: lead - 1 }, () => ''),
     right(peso(sum(rows, (r) => r.greenKg)), bold), right(dec2(sum(rows, (r) => r.netKg)), bold), '',
     right(peso(sum(rows, (r) => r.grossValue)), bold), right(peso(sum(rows, (r) => r.associateContribution)), bold),
@@ -71,7 +73,7 @@ export function buildBeneficiaryDoc(
       body.push([...head, ...amounts(r), r.specialType ?? '']);
     });
     const records = group.length === 1 ? text.recordSingular : text.recordPlural;
-    body.push([{ text: fill(text.groupSummary, { id: idNumber, count: group.length, records }), color: TEAL, colSpan: width.length },
+    body.push([{ text: fill(text.groupSummary, { id: idNumber, count: group.length, records }), color: teal(), colSpan: width.length },
       ...Array.from({ length: width.length - 1 }, () => '')]);
     body.push(totals(text.sum, group, lead));
   }
@@ -79,13 +81,13 @@ export function buildBeneficiaryDoc(
 
   const first = rows[0];
   const title: Content = summary
-    ? { text: report.pdfTitle, fontSize: 20, bold: true, color: TEAL }
+    ? { text: report.pdfTitle, fontSize: 20, bold: true, color: teal() }
     : {
         columns: [
           {
             width: 'auto',
             stack: [
-              { text: report.pdfTitle, fontSize: 20, bold: true, color: TEAL },
+              { text: report.pdfTitle, fontSize: 20, bold: true, color: teal() },
               { text: `${formatThousands(first.idNumber)}   ${first.firstName} ${first.lastName ?? ''}`.trimEnd(), bold: true },
             ],
           },
@@ -104,7 +106,7 @@ export function buildBeneficiaryDoc(
       ...(summary ? [] : [dashed(732)]),
       {
         table: { headerRows: 1, widths: width, body },
-        layout: { hLineWidth: (i: number) => (i === 1 ? 1 : 0), hLineColor: () => TEAL, vLineWidth: () => 0, paddingTop: () => 2, paddingBottom: () => 2 },
+        layout: { hLineWidth: (i: number) => (i === 1 ? 1 : 0), hLineColor: () => teal() ?? null, vLineWidth: () => 0, paddingTop: () => 2, paddingBottom: () => 2 },
         margin: [0, 6, 0, 0],
       },
     ],
