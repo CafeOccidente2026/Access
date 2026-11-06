@@ -14,6 +14,8 @@ import java.math.BigDecimal;
  * Factura, Pr Sustentacion, Bonificacion, Costos, Pr_AlmDefec y los datos del vendedor los resuelve
  * el servidor (anuncio vigente, consecutivo y TERCEROS); si el cliente los manda, se ignoran.
  * address y cellphone solo se usan cuando el tercero los tiene vacios.
+ * quotaAnnouncementNumber y quotaDeliveryKg solo los manda "Facturar Anuncios con Cupos" (RF-21.2): el anuncio
+ * con cupo elegido en la ventana (sus precios mandan sobre los del anuncio vigente) y "Esta Entrega".
  */
 public record DryCoffeePurchaseRequest(
         @NotNull Long fundId,
@@ -31,5 +33,16 @@ public record DryCoffeePurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal freightDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
         /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */
-        @Valid PurchasePaymentRequest payment) {
+        @Valid PurchasePaymentRequest payment,
+        @Positive Integer quotaAnnouncementNumber,
+        @Positive BigDecimal quotaDeliveryKg) {
+
+    /** Compra de seco normal: con el anuncio vigente. */
+    public DryCoffeePurchaseRequest(Long fundId, String specialType, String idNumber, String address, String cellphone,
+            Integer bagsCount, BigDecimal grossKg, BigDecimal tareKg, BigDecimal totalStoredWeight,
+            BigDecimal defectiveStoredWeight, BigDecimal penalty, BigDecimal freightDiscount, BigDecimal otherDiscounts,
+            PurchasePaymentRequest payment) {
+        this(fundId, specialType, idNumber, address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight,
+                defectiveStoredWeight, penalty, freightDiscount, otherDiscounts, payment, null, null);
+    }
 }

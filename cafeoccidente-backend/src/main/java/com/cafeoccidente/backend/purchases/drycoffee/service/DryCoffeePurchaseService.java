@@ -20,7 +20,8 @@ public interface DryCoffeePurchaseService {
     NextInvoiceNumberResponse nextInvoiceNumber();
 
     /** Cod Prod + datos del anuncio vigente (paso "Especial"). */
-    SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType);
+    /** {@code announcementNumber} null = anuncio vigente; con numero, el anuncio con cupo elegido (RF-21.2). */
+    SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType, Integer announcementNumber);
 
     /** Porcentajes independientes (pasos "Peso Tot Alm"/"Peso Tot Pasilla"/"Peso Alm Sana"). */
     /** Con fondo y especial, ademas aplica el umbral de especiales al Factor (Q15), igual que el guardado. */
