@@ -185,6 +185,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, post, "/api/purchases/future");
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
         add(ADMIN_USER, get, "/api/announcement-quotas");
+        add(ADMIN_USER, get, "/api/announcement-quotas/available");
         add(ADMIN_USER, get, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
         add(ADMIN_USER, put, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
 
