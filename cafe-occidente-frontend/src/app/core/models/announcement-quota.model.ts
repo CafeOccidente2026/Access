@@ -1,4 +1,6 @@
-/** Cupo asignado a un anuncio (pantalla "Asignar Cupo", Access "ACTUALIZA CUPOS"). Entregados/Saldo
+import { Announcement } from './dry-coffee-purchase.model';
+
+/** Cupo asignado a un anuncio (RF-21.1). Entregados/Saldo
  *  se recalculan en cada consulta contra las compras reales - nunca se guardan. */
 export interface AnnouncementQuotaResponse {
   readonly id: number;
@@ -13,4 +15,10 @@ export interface AnnouncementQuotaResponse {
 
 export interface AnnouncementQuotaRequest {
   readonly assignedQuota: number;
+}
+
+/** Anuncio de la lista de Asignar Cupo, con la suma de los kilos ya comprados con él (RN-21.1.6). */
+export interface QuotaCandidate {
+  readonly announcement: Announcement;
+  readonly deliveredKg: number;
 }
