@@ -1,12 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { QuotaAssignmentComponent } from './quota-assignment';
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
-import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
 
 describe('QuotaAssignmentComponent', () => {
@@ -15,7 +14,6 @@ describe('QuotaAssignmentComponent', () => {
     heading: 'Asignar Cupo a Anuncios',
     announcementLabel: 'Anuncio',
     saveButton: 'Guardar',
-    createNotice: 'Este anuncio todavía no tiene cupo asignado.',
     savedMessage: 'Cupo guardado correctamente.',
     errorMessage: 'Ocurrió un error.',
     leftColumn: [
@@ -35,28 +33,30 @@ describe('QuotaAssignmentComponent', () => {
     ],
   };
 
-  const announcement = {
-    id: 1,
-    announcementNumber: 'SDBU-32',
-    announcementDate: '2026-09-23',
-    basePriceLoad: 1200000,
-    defectiveUnitPrice: 0,
-    healthyUnitPrice: 8908,
-    bonus: 40,
-    costs: 692,
-    agencyId: 1,
-    fundId: 1,
-    specialType: 'RN',
+  const candidate = {
+    announcement: {
+      id: 1,
+      announcementNumber: 'SDBU-32',
+      announcementDate: '2026-09-23',
+      basePriceLoad: 1200000,
+      defectiveUnitPrice: 0,
+      healthyUnitPrice: 8908,
+      bonus: 40,
+      costs: 692,
+      agencyId: 1,
+      fundId: 1,
+      specialType: 'RN',
+    },
+    deliveredKg: 200,
   };
+  const label = 'SDBU-32 · RN · 1200000';
+  const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 200, balance: 376.7 };
 
   let assignSpy: ReturnType<typeof vi.fn>;
-  let getSpy: ReturnType<typeof vi.fn>;
   let component: QuotaAssignmentComponent;
 
   function setup() {
-    assignSpy = vi.fn(() => of({ id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 0, balance: 576.7 }));
-    getSpy = vi.fn(() => throwError(() => ({ status: 404 })));
-
+    assignSpy = vi.fn(() => of(saved));
     localStorage.setItem('cafeoccidente.agencyId', '1');
     localStorage.setItem('cafeoccidente.agencyName', 'Buesaco');
 
@@ -65,59 +65,82 @@ describe('QuotaAssignmentComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(page) } },
-        { provide: AnnouncementService, useValue: { history: () => of([announcement]) } },
-        { provide: AnnouncementQuotaService, useValue: { get: getSpy, assign: assignSpy } },
+        { provide: AnnouncementQuotaService, useValue: { available: () => of([candidate]), assign: assignSpy } },
       ],
     });
-    component = TestBed.createComponent(QuotaAssignmentComponent).componentInstance;
+    const fixture = TestBed.createComponent(QuotaAssignmentComponent);
+    fixture.detectChanges();
+    component = fixture.componentInstance;
   }
+
+  const field = (key: string) => [...component.leftFields(), ...component.rightFields()].find((f) => f.key === key);
 
   it('shows the agency from the session without letting the user pick it', () => {
     setup();
-    expect(component.leftFields().find((f) => f.key === 'agency')?.value).toBe('Buesaco');
-    expect(component.leftFields().find((f) => f.key === 'agency')?.readonly).toBe(true);
+    expect(field('agency')?.value).toBe('Buesaco');
+    expect(field('agency')?.readonly).toBe(true);
   });
 
-  it('selecting an announcement without an existing quota flags isCreate and leaves Cupo editable', () => {
+  it('CA-1: each option shows number, special and price so typing either one filters the list', () => {
     setup();
-    component.onAnnouncementChange('SDBU-32');
-
-    expect(component.isCreate()).toBe(true);
-    expect(component.announcementNumber()).toBe(32);
-    expect(component.rightFields().find((f) => f.key === 'quota')?.readonly).toBe(false);
-    expect(component.leftFields().find((f) => f.key === 'special')?.value).toBe('RN');
+    expect(component.announcementOptions()).toEqual([label]);
   });
 
-  it('selecting an announcement with an existing quota prefills Cupo/Entregado/Saldo', () => {
+  it('CA-2: choosing an announcement fills its data and Kilos Entregados, and only Cupo is editable', () => {
     setup();
-    getSpy.mockReturnValue(
-      of({ id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 200, balance: 376.7 }),
-    );
-    component.onAnnouncementChange('SDBU-32');
+    component.onAnnouncementChange(label);
 
-    expect(component.isCreate()).toBe(false);
-    expect(component.rightFields().find((f) => f.key === 'quota')?.value).toBe('576.7');
-    expect(component.rightFields().find((f) => f.key === 'deliveredKg')?.value).toBe('200');
+    expect(field('special')?.value).toBe('RN');
+    expect(field('basePriceCps')?.value).toBe('1200000');
+    expect(field('deliveredKg')?.value).toBe('200');
+    expect(field('quota')?.readonly).toBe(false);
+    expect(field('deliveredKg')?.readonly).toBe(true);
   });
 
-  it('save() sends the raw announcement number (not the prefixed display string) to assign()', () => {
+  it('CA-3: saving sends the raw number, shows the Saldo and takes the announcement out of the list', () => {
     setup();
-    component.onAnnouncementChange('SDBU-32');
-    component.onFieldValueChange({ key: 'quota', value: '576.7' });
+    component.onAnnouncementChange(label);
+    component.onFieldValueChange({ key: 'quota', value: '576,7' });
 
     component.save();
 
     expect(assignSpy).toHaveBeenCalledWith(32, { assignedQuota: 576.7 });
+    expect(field('balance')?.value).toBe('376.7');
+    expect(field('quota')?.readonly).toBe(true);
+    expect(component.announcementOptions()).toEqual([]);
+    expect(component.savedMessage()).toBe('Cupo guardado correctamente.');
   });
 
-  it('shows the real backend error message on a failed save instead of a generic one', () => {
+  it('two clicks on Guardar send a single request', () => {
     setup();
-    assignSpy.mockReturnValue(throwError(() => ({ error: { message: 'El cupo no puede ser negativo' } })));
-    component.onAnnouncementChange('SDBU-32');
-    component.onFieldValueChange({ key: 'quota', value: '-5' });
+    const pending = new Subject<typeof saved>();
+    assignSpy.mockReturnValue(pending);
+    component.onAnnouncementChange(label);
+    component.onFieldValueChange({ key: 'quota', value: '500' });
+
+    component.save();
+    component.save();
+
+    expect(assignSpy).toHaveBeenCalledTimes(1);
+    expect(component.saving()).toBe(true);
+  });
+
+  it('shows the server message when the quota is rejected (below the kilos delivered)', () => {
+    setup();
+    assignSpy.mockReturnValue(throwError(() => ({ error: { message: 'El cupo no puede ser menor que los kilos ya entregados (200)' } })));
+    component.onAnnouncementChange(label);
+    component.onFieldValueChange({ key: 'quota', value: '150' });
 
     component.save();
 
-    expect(component.errorMessage()).toBe('El cupo no puede ser negativo');
+    expect(component.errorMessage()).toContain('menor que los kilos ya entregados');
+    expect(component.announcementOptions()).toEqual([label]);
+    expect(component.saving()).toBe(false);
+  });
+
+  it('save without an announcement does nothing', () => {
+    setup();
+    component.save();
+    expect(assignSpy).not.toHaveBeenCalled();
   });
 });
