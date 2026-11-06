@@ -260,6 +260,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       next: (info) => {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
+        this.advanceFocus('special');
       },
       error: () => {
         this.clearSpecial();
@@ -355,8 +356,10 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      // Con todos los datos, un rechazo es real (p. ej. kilos netos sobre Esta Entrega): se dice por qué.
+      error: (err) => {
         this.calc.set(null);
+        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
     });

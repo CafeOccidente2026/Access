@@ -46,6 +46,7 @@ describe('QuotaPurchaseFormComponent', () => {
   };
 
   let createSpy: ReturnType<typeof vi.fn>;
+  let previewSpy: ReturnType<typeof vi.fn>;
   let specialInfoSpy: ReturnType<typeof vi.fn>;
   let withBalanceSpy: ReturnType<typeof vi.fn>;
   let qualitySpy: ReturnType<typeof vi.fn>;
@@ -63,6 +64,7 @@ describe('QuotaPurchaseFormComponent', () => {
       basePriceLoad: 1100000, defectiveUnitPrice: 6000, healthyUnitPrice: 8900, bonus: 40, costs: 692 }));
     withBalanceSpy = vi.fn(() => of([quotaRow]));
     createSpy = vi.fn(() => of({}));
+    previewSpy = vi.fn(() => of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, netToPay: 7100000 }));
     localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
     TestBed.configureTestingModule({
       providers: [
@@ -76,7 +78,7 @@ describe('QuotaPurchaseFormComponent', () => {
             nextInvoiceNumber: () => of({ invoiceNumber: 27872, prefix: 'SDBU', warning: null }),
             specialInfo: specialInfoSpy,
             qualityPercentages: qualitySpy,
-            preview: () => of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, netToPay: 7100000 }),
+            preview: previewSpy,
             create: createSpy,
           },
         },
@@ -183,6 +185,15 @@ describe('QuotaPurchaseFormComponent', () => {
     component.print();
 
     expect(component.errorMessage()).toBe('Los kilos netos (1000) superan Esta Entrega (900)');
+  });
+
+  it('the preview already says when the net kilos pass Esta Entrega', () => {
+    setup();
+    previewSpy.mockReturnValue(throwError(() => ({ error: { message: 'Los kilos netos (1000) superan Esta Entrega (500)' } })));
+    fillPurchase();
+
+    expect(component.errorMessage()).toBe('Los kilos netos (1000) superan Esta Entrega (500)');
+    expect(component.calc()).toBeNull();
   });
 
   it('Imprimir does nothing until an announcement with quota is chosen', () => {
