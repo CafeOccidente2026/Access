@@ -252,6 +252,22 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     }
 
     @Override
+    public AnnouncementResponse findForPurchase(
+            Long agencyId, Long fundId, String specialType, Integer announcementNumber) {
+        if (announcementNumber == null) {
+            return findLatest(agencyId, fundId, specialType);
+        }
+        AgencyAnnouncementNumber numbering = agencyAnnouncementNumberRepository
+                .findByAgencyIdAndAnnouncementNumber(agencyId, announcementNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe ese anuncio para esta agencia"));
+        Announcement master = numbering.getMasterAnnouncement();
+        if (!master.getFund().getId().equals(fundId) || !master.getSpecialType().equals(specialType)) {
+            throw new BusinessRuleException("El anuncio " + announcementNumber + " no es de ese fondo y especial");
+        }
+        return toResponse(numbering, controlRecordService.getActive(agencyId));
+    }
+
+    @Override
     public List<AnnouncementResponse> history() {
         Long agencyId = currentAgencyProvider.currentAgencyId();
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);

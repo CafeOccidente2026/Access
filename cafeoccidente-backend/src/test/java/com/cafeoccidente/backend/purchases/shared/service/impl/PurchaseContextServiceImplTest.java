@@ -65,7 +65,7 @@ class PurchaseContextServiceImplTest {
         when(agencies.findById(4L)).thenReturn(Optional.of(agency));
         when(funds.findById(2L)).thenReturn(Optional.of(fund));
         when(productCodes.resolve("RN", 2L)).thenReturn(productCode);
-        when(announcements.findLatest(4L, 2L, "RN")).thenReturn(announcement);
+        when(announcements.findForPurchase(4L, 2L, "RN", null)).thenReturn(announcement);
         when(controlRecords.getActive(4L)).thenReturn(controlRecord);
         when(totals.sum("1", LocalDate.of(2026, 1, 14))).thenReturn(today);
     }
