@@ -1,8 +1,16 @@
 import type { Content } from 'pdfmake/interfaces';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { RemissionResponse } from '../../core/models/inventory.model';
 import { buildRemissionDocDefinition } from './remission-invoice';
+
+/** Primer nodo del documento cuyo texto es exactamente `text`. */
+const findText = (node: unknown, text: string): { color?: string; bold?: boolean } | undefined => {
+  if (Array.isArray(node)) return node.map((n) => findText(n, text)).find(Boolean);
+  if (node === null || typeof node !== 'object') return undefined;
+  if ((node as { text?: unknown }).text === text) return node as { color?: string };
+  return Object.values(node).map((n) => findText(n, text)).find(Boolean);
+};
 
 describe('buildRemissionDocDefinition', () => {
   const remission: RemissionResponse = {
@@ -59,5 +67,19 @@ describe('buildRemissionDocDefinition', () => {
     };
     expect(marks('LF')).toEqual(['X', '']);
     expect(marks('RP')).toEqual(['', 'X']);
+  });
+
+  describe('colors from styles.css', () => {
+    // Los valores que tenia fijos el generador: la remision se ve igual.
+    const tokens = { '--color-remission-number': '#c00000', '--color-print-placeholder': '#aaaaaa' };
+    const root = document.documentElement.style;
+    beforeEach(() => Object.entries(tokens).forEach(([k, v]) => root.setProperty(k, v)));
+    afterEach(() => Object.keys(tokens).forEach((k) => root.removeProperty(k)));
+
+    it('prints the number in red and the departure time guides in gray', () => {
+      const doc = buildRemissionDocDefinition(remission, null).content;
+      expect(findText(doc, 'Nº SDBU-RP-0007')?.color).toBe('#c00000');
+      expect(['HH : MM', 'am', 'pm'].map((t) => findText(doc, t)?.color)).toEqual(['#aaaaaa', '#aaaaaa', '#aaaaaa']);
+    });
   });
 });

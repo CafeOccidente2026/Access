@@ -1,6 +1,7 @@
 import type { Content, ContentStack, ContentTable, CustomTableLayout, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { RemissionResponse } from '../../core/models/inventory.model';
+import { themeColor } from '../../shared/utils/theme-color';
 import { money, wholePeso } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 
 // Encabezado del papel preimpreso (capturas/remision-formato.png). Direccion y NIT como en la factura;
@@ -60,7 +61,7 @@ function header(remission: RemissionResponse, logoDataUrl: string | null): Conte
         table: {
           widths: ['*'],
           heights: [36],
-          body: [[{ text: `Nº ${remission.displayNumber}`, color: '#c00000', bold: true, fontSize: 14, alignment: 'center', margin: [0, 10, 0, 0] }]],
+          body: [[{ text: `Nº ${remission.displayNumber}`, color: themeColor('--color-remission-number'), bold: true, fontSize: 14, alignment: 'center', margin: [0, 10, 0, 0] }]],
         },
         layout: { hLineWidth: () => 1.5, vLineWidth: () => 1.5 },
       },
@@ -100,7 +101,7 @@ function dateBlock(remission: RemissionResponse): ContentTable {
         ],
         [
           { text: 'Hora Salida:', ...T, colSpan: 3 }, {}, {},
-          { text: 'HH : MM', ...HEAD, color: '#aaaaaa' }, { text: 'am', ...HEAD, color: '#aaaaaa' }, { text: 'pm', ...HEAD, color: '#aaaaaa' },
+          { text: 'HH : MM', ...HEAD, color: themeColor('--color-print-placeholder') }, { text: 'am', ...HEAD, color: themeColor('--color-print-placeholder') }, { text: 'pm', ...HEAD, color: themeColor('--color-print-placeholder') },
           { text: 'DESPACHOS', bold: true, fontSize: 10, alignment: 'center' },
           {}, {},
         ],

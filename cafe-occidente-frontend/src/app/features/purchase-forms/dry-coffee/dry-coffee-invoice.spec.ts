@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { buildDryCoffeeInvoiceDocDefinition, paymentAmounts } from './dry-coffee-invoice';
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
 
+/** Primer nodo del documento cuyo texto es exactamente `text`. */
+const findText = (node: unknown, text: string): { color?: string; bold?: boolean } | undefined => {
+  if (Array.isArray(node)) return node.map((n) => findText(n, text)).find(Boolean);
+  if (node === null || typeof node !== 'object') return undefined;
+  if ((node as { text?: unknown }).text === text) return node as { color?: string };
+  return Object.values(node).map((n) => findText(n, text)).find(Boolean);
+};
+
 describe('buildDryCoffeeInvoiceDocDefinition', () => {
   it('prints two identical copies on separate pages, like macro "Imprime Factura"', () => {
     const purchase = {
@@ -24,6 +32,9 @@ describe('buildDryCoffeeInvoiceDocDefinition', () => {
 
     expect(second.pageBreak).toBe('before');
     expect(second.stack).toEqual(content.slice(0, -1));
+    // NETO A PAGAR va en negrita y con el color por defecto (negro), como las demas etiquetas.
+    expect(findText(content, 'NETO A PAGAR  $')).toEqual(expect.objectContaining({ bold: true }));
+    expect(findText(content, 'NETO A PAGAR  $')?.color).toBeUndefined();
   });
 
   it('prints FORMAS DE PAGO from the payment split, falling back to the whole net in its method', () => {

@@ -35,6 +35,10 @@
   --color-report-amber: #b45309;
   --color-report-muted: #6b7280;
 
+  /* Remision impresa: numero en rojo y guias de "HH : MM", "am" y "pm" de Hora Salida. */
+  --color-remission-number: #c00000;
+  --color-print-placeholder: #aaaaaa;
+
   --font-sans: "Segoe UI", "Inter", system-ui, sans-serif;
 }
 
