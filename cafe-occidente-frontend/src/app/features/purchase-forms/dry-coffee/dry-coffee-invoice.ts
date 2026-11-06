@@ -234,10 +234,10 @@ export function dryCoffeeMainTable(
     { text: factor ?? '', ...CELL, alignment: 'right' },
   ];
 
-  /** NETO A PAGAR es la unica fila de esta columna que sale en negro y negrita (no azul) - se
-   *  distingue del resto de las etiquetas de LIQUIDACION en las dos capturas de referencia. */
+  /** NETO A PAGAR es la unica fila de esta columna en negrita: se distingue del resto de las
+   *  etiquetas de LIQUIDACION en las dos capturas de referencia. */
   const liquidationRow = (label: string, value: string, bold = false): Content[] => [
-    { text: label, ...LABEL_CELL, ...(bold ? { color: 'black', bold: true } : {}) },
+    { text: label, ...LABEL_CELL, bold },
     { text: value, ...CELL, alignment: 'right', bold },
   ];
 
