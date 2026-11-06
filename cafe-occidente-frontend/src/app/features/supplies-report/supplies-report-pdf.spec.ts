@@ -68,6 +68,13 @@ describe('supplies reports', () => {
       .filter(Boolean)).toEqual(['Punto de Compra:  EL TAMBO', 'Punto de Compra:  SANDONA']);
   });
 
+  it('writes the NIT with dots in the check relation header', () => {
+    // HU-38: "NIT 891.200.986-8", como se escribe en Colombia (Access usaba comas).
+    const doc = buildSuppliesReportDoc(data.reports['checks'], data.text, rows);
+    const company = (doc.content as { text?: string }[]).find((c) => c.text?.includes('NIT'))?.text;
+    expect(company).toContain('NIT. 891.200.986-8');
+  });
+
   it('titles the packaging report with the chosen type', () => {
     // HU-43 CA-1: "Empaque USADO" o "Empaque NUEVO".
     const doc = buildSuppliesReportDoc(data.reports['packaging'], data.text, rows, 'USADO');
