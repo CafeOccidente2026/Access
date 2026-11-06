@@ -83,7 +83,7 @@ describe('QuotaAssignmentComponent', () => {
 
   it('CA-1: each option shows number, special and price so typing either one filters the list', () => {
     setup();
-    expect(component.announcementField().options).toEqual([label]);
+    expect(component.announcementOptions()).toEqual([label]);
   });
 
   it('CA-2: choosing an announcement fills its data and Kilos Entregados, and only Cupo is editable', () => {
@@ -107,7 +107,7 @@ describe('QuotaAssignmentComponent', () => {
     expect(assignSpy).toHaveBeenCalledWith(32, { assignedQuota: 576.7 });
     expect(field('balance')?.value).toBe('376.7');
     expect(field('quota')?.readonly).toBe(true);
-    expect(component.announcementField().options).toEqual([]);
+    expect(component.announcementOptions()).toEqual([]);
     expect(component.savedMessage()).toBe('Cupo guardado correctamente.');
   });
 
@@ -134,7 +134,7 @@ describe('QuotaAssignmentComponent', () => {
     component.save();
 
     expect(component.errorMessage()).toContain('menor que los kilos ya entregados');
-    expect(component.announcementField().options).toEqual([label]);
+    expect(component.announcementOptions()).toEqual([label]);
     expect(component.saving()).toBe(false);
   });
 

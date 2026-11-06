@@ -8,7 +8,7 @@ import { AnnouncementQuotaResponse, QuotaCandidate } from '../../core/models/ann
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, ComboboxComponent, FormFieldComponent } from '../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
@@ -27,7 +27,7 @@ function optionLabel(candidate: QuotaCandidate): string {
 @Component({
   selector: 'app-quota-assignment',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent],
   templateUrl: './quota-assignment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -47,15 +47,10 @@ export class QuotaAssignmentComponent {
 
   private readonly options = computed(() => (this.candidates.hasValue() ? this.candidates.value() : []));
 
-  readonly announcementField = computed<FormFieldDefinition>(() => {
+  readonly announcementOptions = computed(() => this.options().map(optionLabel));
+  readonly announcementLabel = computed(() => {
     const selected = this.selected();
-    return {
-      key: 'announcement',
-      label: this.page()?.announcementLabel ?? '',
-      type: 'select',
-      options: this.options().map(optionLabel),
-      value: selected ? optionLabel(selected) : '',
-    };
+    return selected ? optionLabel(selected) : '';
   });
 
   // Valores crudos: el formato de Colombia lo pone FormFieldComponent según el "type" del campo.
