@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.drycoffee.repository;
 
 import com.cafeoccidente.backend.purchases.drycoffee.entity.DryCoffeePurchase;
 import java.math.BigDecimal;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,4 +24,12 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
             """)
     BigDecimal sumNetKgByAgencyAndAnnouncementNumber(
             @Param("agencyId") Long agencyId, @Param("displayAnnouncementNumber") String displayAnnouncementNumber);
+
+    /** Lo mismo para todos los anuncios de la agencia en una sola consulta: filas [numero de display, kilos]. */
+    @Query("""
+            SELECT p.announcementNumber, COALESCE(SUM(p.netKg), 0) FROM DryCoffeePurchase p
+            WHERE p.agency.id = :agencyId
+            GROUP BY p.announcementNumber
+            """)
+    List<Object[]> sumNetKgByAnnouncementNumber(@Param("agencyId") Long agencyId);
 }
