@@ -30,7 +30,7 @@
         inputmode="decimal"
         data-field-key="quotaDelivery"
         [value]="delivery()"
-        (input)="delivery.set($any($event.target).value)"
+        (input)="delivery.set($any($event.target).value); error.set(null)"
         (keydown.enter)="accept()"
       />
     </label>

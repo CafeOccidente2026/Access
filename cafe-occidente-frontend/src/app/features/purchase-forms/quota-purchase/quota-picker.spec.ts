@@ -62,6 +62,26 @@ describe('QuotaPickerComponent', () => {
     expect(picker.delivery()).toBe('');
   });
 
+  it('typing again clears the previous error', () => {
+    const fixture = TestBed.createComponent(QuotaPickerComponent);
+    const picker = fixture.componentInstance;
+    picker.content = { title: '', columns: {}, deliveryLabel: 'Esta Entrega', overBalance: 'Supera el saldo',
+      acceptLabel: 'Aceptar', cancelLabel: 'Cancelar' };
+    picker.agency = '';
+    picker.rows = [row('SDBU-12', 100)];
+    fixture.detectChanges();
+    picker.delivery.set('200');
+    picker.accept();
+    expect(picker.error()).toBe('Supera el saldo');
+
+    const input = fixture.nativeElement.querySelector('[data-field-key="quotaDelivery"]') as HTMLInputElement;
+    input.value = '50';
+    input.dispatchEvent(new Event('input'));
+
+    expect(picker.error()).toBeNull();
+    expect(picker.delivery()).toBe('50');
+  });
+
   it('an empty delivery does nothing', () => {
     const { picker, picks } = setup([row('SDBU-12', 1500)]);
     picker.accept();
