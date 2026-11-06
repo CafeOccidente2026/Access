@@ -1,7 +1,7 @@
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import type { ContentTable } from 'pdfmake/interfaces';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { BeneficiaryRow } from '../../core/models/vendor.model';
 import content from '../../../../public/assets/data/beneficiary-report.json';
@@ -44,6 +44,18 @@ describe('beneficiary reports', () => {
     const doc = JSON.stringify(buildBeneficiaryDoc(data.reports['beneficiary'], data.text, rows));
     expect(doc).toContain('NIT. 891.200.986-8');
     expect(doc).not.toContain('891,200');
+  });
+
+  describe('colors from styles.css', () => {
+    afterEach(() => document.documentElement.style.removeProperty('--color-report-teal'));
+
+    it('paints the title and the group summary teal, like before', () => {
+      // El mismo token del informe de Suministros, con el valor que tenia fijo (#008080).
+      document.documentElement.style.setProperty('--color-report-teal', '#008080');
+      const doc = JSON.stringify(buildBeneficiaryDoc(data.reports['beneficiary'], data.text, rows));
+      expect(doc.match(/"color":"([^"]+)"/g)?.every((c) => c === '"color":"#008080"')).toBe(true);
+      expect(doc).toContain(`"text":"${data.reports['beneficiary'].pdfTitle}","fontSize":20,"bold":true,"color":"#008080"`);
+    });
   });
 
   it('summary layout has a Cedula header per group and 16 columns', () => {
