@@ -183,8 +183,15 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
         requireDeliveryWithQuotaAnnouncement(request);
-        return runCalculation(request, purchaseContextService.forPreview(request.fundId(), request.specialType(),
-                request.quotaAnnouncementNumber(), request.idNumber(), request.address(), request.cellphone()));
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, purchaseContextService.forPreview(
+                request.fundId(), request.specialType(), request.quotaAnnouncementNumber(), request.idNumber(),
+                request.address(), request.cellphone()));
+        // Avisa antes de Imprimir; al guardar, reserve() lo vuelve a revisar con el cupo bloqueado.
+        if (request.quotaDeliveryKg() != null && calculation.netKg().compareTo(request.quotaDeliveryKg()) > 0) {
+            throw new BusinessRuleException("Los kilos netos (" + calculation.netKg().toPlainString()
+                    + ") superan Esta Entrega (" + request.quotaDeliveryKg().toPlainString() + ")");
+        }
+        return calculation;
     }
 
     /** RN-21.2.5: con anuncio con cupo, Esta Entrega es obligatoria. */

@@ -156,6 +156,14 @@ class QuotaPurchaseIntegrationTest {
     }
 
     @Test
+    void thePreviewAlreadyWarnsWhenTheNetKgPassTheDelivery() {
+        DryCoffeePurchaseRequest request = request(quotaAnnouncement, new BigDecimal("999"), null);
+
+        assertThatThrownBy(() -> dry.preview(request))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("superan Esta Entrega");
+    }
+
+    @Test
     void theChosenAnnouncementNeedsQuotaAndADelivery() {
         assertThatThrownBy(() -> buy(latestAnnouncement, KG))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("no tiene cupo");
