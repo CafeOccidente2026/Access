@@ -30,6 +30,11 @@
   /* Marca "ANULADA" de las reimpresiones (Consultar Compras). */
   --color-annulled: #b91c1c;
 
+  /* Informes de Suministros en PDF (como los de Access). El rojo del fondo usa --color-annulled. */
+  --color-report-teal: #008080;
+  --color-report-amber: #b45309;
+  --color-report-muted: #6b7280;
+
   --font-sans: "Segoe UI", "Inter", system-ui, sans-serif;
 }
 
