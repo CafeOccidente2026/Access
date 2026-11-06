@@ -1,0 +1,43 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="max-w-[95vw] rounded-lg bg-white p-5 shadow-2xl">
+    <h2 class="mb-3 text-sm font-semibold text-slate-700">{{ content.title }}</h2>
+    <div class="max-h-[50vh] overflow-auto">
+      <table class="text-xs text-slate-700">
+        <thead>
+          <tr>
+            <th *ngFor="let c of columns" class="border border-slate-300 bg-slate-100 px-2 py-1 text-left font-medium">
+              {{ content.columns[c] }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let row of list"
+            class="cursor-pointer"
+            [class.bg-yellow-100]="row === selected()"
+            (click)="select(row)"
+          >
+            <td *ngFor="let c of columns" class="whitespace-nowrap border border-slate-300 px-2 py-1">{{ cell(row, c) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <label class="mt-4 flex items-center gap-2 text-sm">
+      <span class="font-medium text-slate-700">{{ content.deliveryLabel }}:</span>
+      <input
+        class="w-32 rounded border border-slate-300 px-2 py-1 text-sm text-slate-800 focus:border-blue-400 focus:outline-none"
+        type="text"
+        inputmode="decimal"
+        data-field-key="quotaDelivery"
+        [value]="delivery()"
+        (input)="delivery.set($any($event.target).value)"
+        (keydown.enter)="accept()"
+      />
+    </label>
+    <p *ngIf="error() as e" class="mt-2 text-sm text-red-600">{{ e }}</p>
+    <div class="mt-4 flex justify-end gap-3">
+      <app-button [label]="content.cancelLabel" variant="access" (pressed)="cancelled.emit()"></app-button>
+      <app-button [label]="content.acceptLabel" variant="access" (pressed)="accept()"></app-button>
+    </div>
+  </div>
+</div>
