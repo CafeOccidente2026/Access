@@ -196,6 +196,7 @@ export const routes: Routes = [
           import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
             (m) => m.QuotaPurchaseFormComponent,
           ),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
         path: 'compras/futuro/facturar-anunciadas',
