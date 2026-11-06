@@ -1,6 +1,6 @@
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import writeExcelFile from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
@@ -73,6 +73,38 @@ describe('supplies reports', () => {
     const doc = buildSuppliesReportDoc(data.reports['checks'], data.text, rows);
     const company = (doc.content as { text?: string }[]).find((c) => c.text?.includes('NIT'))?.text;
     expect(company).toContain('NIT. 891.200.986-8');
+  });
+
+  describe('colors from styles.css', () => {
+    // Los valores que tenia fijos el generador antes de pasar a tokens: el informe se ve igual.
+    const tokens = {
+      '--color-report-teal': '#008080',
+      '--color-report-amber': '#b45309',
+      '--color-report-muted': '#6b7280',
+      '--color-annulled': '#b91c1c',
+    };
+    const root = document.documentElement.style;
+    beforeEach(() => Object.entries(tokens).forEach(([k, v]) => root.setProperty(k, v)));
+    afterEach(() => Object.keys(tokens).forEach((k) => root.removeProperty(k)));
+    const colors = (cells: unknown[]) => cells.map((c) => (c as { color?: string }).color);
+
+    it('paints the check relation like Access', () => {
+      const content = buildSuppliesReportDoc(data.reports['checks'], data.text, rows).content as { text?: string; color?: string; table?: { body: unknown[][] } }[];
+      expect(content.filter((c) => c.text).map((c) => c.color)).toEqual(['#008080', '#008080']);
+      const header = content.find((c) => c.table)!.table!.body[0];
+      expect(colors(header)).toEqual(['#008080', '#008080', '#008080', '#008080', '#b45309', '#b45309', '#b45309']);
+    });
+
+    it('paints the payment-method title gray and the fund red', () => {
+      const body = (buildSuppliesReportDoc(data.reports['paymentMethods'], data.text, rows).content as { table: { body: unknown[][] } }[])[0].table.body;
+      expect(colors(body[0])[0]).toBe('#6b7280');
+      expect(colors(body[2])[1]).toBe('#b91c1c');
+    });
+
+    it('paints the movement title teal', () => {
+      const doc = buildSuppliesReportDoc(data.reports['cash'], data.text, rows);
+      expect(colors((doc.content as { columns: unknown[] }[])[0].columns)).toEqual(['#008080', '#008080']);
+    });
   });
 
   it('titles the packaging report with the chosen type', () => {
