@@ -39,6 +39,13 @@ describe('beneficiary reports', () => {
     expect(body.every((r) => (r as unknown[]).length === 15)).toBe(true);
   });
 
+  it('writes the NIT with dots, as the RF does', () => {
+    // Access usaba comas (891,200,986-8); en Colombia se escribe con puntos.
+    const doc = JSON.stringify(buildBeneficiaryDoc(data.reports['beneficiary'], data.text, rows));
+    expect(doc).toContain('NIT. 891.200.986-8');
+    expect(doc).not.toContain('891,200');
+  });
+
   it('summary layout has a Cedula header per group and 16 columns', () => {
     const body = table('summary').table.body;
     expect(texts(body[1] as unknown[])[0]).toBe('Cedula   79.374.104');
