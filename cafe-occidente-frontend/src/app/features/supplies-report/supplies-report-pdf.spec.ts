@@ -34,6 +34,54 @@ describe('supplies reports', () => {
     expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
   });
 
+  // Columnas de los CA de HU-37 a HU-49. Rel Formas de Pago lleva "Transaccion" y "Cedula" sin tilde, como Access.
+  const movement = ['Trans', 'Fd', 'Fecha', 'Detalle', 'Entradas', 'Salidas', 'Saldo'];
+  const supplies = ['Transacción', 'Fondo', 'Fecha', 'Detalle', 'Vr Suministro', 'Gastos o Comp', 'Saldo'];
+  const checks = ['Fecha', 'Cédula', 'Nombre', 'Apellidos', 'Cheque', 'Por Sum', 'Por Comp'];
+  const rfColumns: Record<string, string[]> = {
+    cash: movement,
+    pettyCash: movement,
+    suppliesRp: supplies,
+    suppliesLf: supplies,
+    packaging: ['Transac', 'Fecha', 'Detalle', 'Entradas', 'Salidas', 'Saldo'],
+    checks,
+    checksSpecial: checks,
+    paymentMethods: ['Transaccion', 'Fdo', 'Fecha', 'Cedula', 'Detalle', 'Entradas', 'Salidas', 'Forma de Pago'],
+  };
+  const texts = (cells: unknown[]) => cells.map((c) => (typeof c === 'string' ? c : (c as { text?: string }).text ?? ''));
+  const tableRows = (node: unknown): string[][] => {
+    if (Array.isArray(node)) return node.flatMap(tableRows);
+    if (node === null || typeof node !== 'object') return [];
+    const table = (node as { table?: { body: unknown[][] } }).table;
+    return table ? table.body.map(texts) : Object.values(node).flatMap(tableRows);
+  };
+
+  it.each(Object.entries(rfColumns))('prints the RF columns of %s', (key, columns) => {
+    const doc = buildSuppliesReportDoc(data.reports[key], data.text, rows, 'USADO');
+    expect(tableRows(doc.content)).toContainEqual(columns);
+  });
+
+  it('puts the purchase point in the header of each payment-method group', () => {
+    // HU-40 CA-1: "Punto de Compra" en el encabezado.
+    const doc = buildSuppliesReportDoc(data.reports['paymentMethods'], data.text, rows);
+    expect(tableRows(doc.content).map((r) => r.find((t) => t.startsWith(data.text.paymentAgency)))
+      .filter(Boolean)).toEqual(['Punto de Compra:  EL TAMBO', 'Punto de Compra:  SANDONA']);
+  });
+
+  it('writes the NIT with dots in the check relation header', () => {
+    // HU-38: "NIT 891.200.986-8", como se escribe en Colombia (Access usaba comas).
+    const doc = buildSuppliesReportDoc(data.reports['checks'], data.text, rows);
+    const company = (doc.content as { text?: string }[]).find((c) => c.text?.includes('NIT'))?.text;
+    expect(company).toContain('NIT. 891.200.986-8');
+  });
+
+  it('titles the packaging report with the chosen type', () => {
+    // HU-43 CA-1: "Empaque USADO" o "Empaque NUEVO".
+    const doc = buildSuppliesReportDoc(data.reports['packaging'], data.text, rows, 'USADO');
+    const title = (doc.content as { columns: { text: string }[] }[])[0].columns.map((c) => c.text).join(' ');
+    expect(title).toBe('Empaque USADO');
+  });
+
   it('renders every report layout', async () => {
     pdfMake.vfs = pdfFonts;
     for (const report of Object.values(data.reports)) {

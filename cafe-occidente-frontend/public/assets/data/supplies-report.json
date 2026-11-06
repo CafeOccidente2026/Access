@@ -9,7 +9,7 @@
     "required": "Falta: {label}"
   },
   "text": {
-    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.  NIT. 891,200,986-8",
+    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.  NIT. 891.200.986-8",
     "checksTitle": "RELACION CHEQUES",
     "agencyGroup": "Agencia:",
     "checksGroupSummary": "Resumir por 'Agencia' = {agency} ({count} registros de detalle)",
