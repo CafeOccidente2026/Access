@@ -1,25 +1,28 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 
 import { FormFieldDefinition } from '../../core/models';
-import { AnnouncementQuotaRequest, AnnouncementQuotaResponse } from '../../core/models/announcement-quota.model';
-import { Announcement } from '../../core/models/dry-coffee-purchase.model';
+import { AnnouncementQuotaResponse, QuotaCandidate } from '../../core/models/announcement-quota.model';
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
-import { AnnouncementService } from '../../core/services/announcement.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, FormFieldComponent } from '../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
 
+/** Texto de cada anuncio en la lista: número, especial y Pr Base Carg Perg Seco, para buscar por cualquiera (RN-21.1.2, RN-21.1.3). */
+function optionLabel(candidate: QuotaCandidate): string {
+  const a = candidate.announcement;
+  return `${a.announcementNumber} · ${a.specialType} · ${a.basePriceLoad}`;
+}
+
 /**
- * Pantalla ADMIN "Asignar Cupo a Anuncios" (Access "ACTUALIZA CUPOS"): tope total de kilos que se
- * puede recibir bajo un anuncio ya publicado. La agencia es la de la sesión (igual que en los 5
- * formularios de compra - nunca se elige); lo que el admin elige es el anuncio (`history()`, mismo
- * endpoint que ya usa "Actualizar Anuncio"). Entregados/Saldo se recalculan en cada consulta
- * (`AnnouncementQuotaService.get`), nunca se guardan - solo `Cupo` es editable.
+ * "Asignar Cupo a Anuncios" (RF-21.1, Access "AN FUR HEUTE"). La lista la arma el servidor: anuncios de la
+ * agencia de trabajo sin cupo, sin pasilla ni verde, con sus Kilos Entregados. Solo Cupo se digita; Saldo
+ * lo calcula el servidor. Guardado, el anuncio sale de la lista y su cupo ya no se cambia (RN-21.1.9).
  */
 @Component({
   selector: 'app-quota-assignment',
@@ -30,82 +33,86 @@ import { QuotaAssignmentContent } from './quota-assignment.model';
 })
 export class QuotaAssignmentComponent {
   private readonly content = inject(ContentService);
-  private readonly announcementService = inject(AnnouncementService);
   private readonly announcementQuotaService = inject(AnnouncementQuotaService);
   private readonly authService = inject(AuthService);
 
   readonly page = toSignal(this.content.loadJson<QuotaAssignmentContent>('quota-assignment'));
-  readonly announcements = signal<Announcement[]>([]);
-  readonly announcementNumber = signal<number | null>(null);
-  readonly isCreate = signal(false);
+  readonly candidates = rxResource({ stream: () => this.announcementQuotaService.available() });
+  readonly selected = signal<QuotaCandidate | null>(null);
+  readonly saved = signal<AnnouncementQuotaResponse | null>(null);
+  readonly saving = signal(false);
   readonly savedMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
-  private readonly model = signal<Record<string, string>>({});
+  private readonly quota = signal('');
+
+  private readonly options = computed(() => (this.candidates.hasValue() ? this.candidates.value() : []));
+
+  readonly announcementField = computed<FormFieldDefinition>(() => {
+    const selected = this.selected();
+    return {
+      key: 'announcement',
+      label: this.page()?.announcementLabel ?? '',
+      type: 'select',
+      options: this.options().map(optionLabel),
+      value: selected ? optionLabel(selected) : '',
+    };
+  });
+
+  // Valores crudos: el formato de Colombia lo pone FormFieldComponent según el "type" del campo.
+  private readonly model = computed((): Record<string, string> => {
+    const agency = this.authService.agencyName() ?? '';
+    const selected = this.selected();
+    if (!selected) {
+      return { agency };
+    }
+    const a = selected.announcement;
+    const saved = this.saved();
+    return {
+      agency,
+      announcementDate: a.announcementDate,
+      special: a.specialType,
+      basePriceCps: String(a.basePriceLoad),
+      healthyStoredPrice: String(a.healthyUnitPrice),
+      defectStoredPrice: String(a.defectiveUnitPrice),
+      bonus: String(a.bonus),
+      costs: String(a.costs),
+      deliveredKg: String(saved?.deliveredKg ?? selected.deliveredKg),
+      quota: saved ? String(saved.assignedQuota) : this.quota(),
+      balance: saved ? String(saved.balance) : '',
+    };
+  });
 
   readonly leftFields = computed(() => this.buildFields(this.page()?.leftColumn));
   readonly rightFields = computed(() => this.buildFields(this.page()?.rightColumn));
+  readonly canSave = computed(() => !!this.selected() && !this.saved());
 
-  constructor() {
-    this.model.set({ agency: this.authService.agencyName() ?? '' });
-    this.announcementService.history().subscribe((list) => this.announcements.set(list));
-  }
-
-  onAnnouncementChange(displayNumber: string): void {
+  onAnnouncementChange(label: string): void {
+    this.selected.set(this.options().find((c) => optionLabel(c) === label) ?? null);
+    this.saved.set(null);
+    this.quota.set('');
     this.savedMessage.set(null);
     this.errorMessage.set(null);
-    const agency = this.authService.agencyName() ?? '';
-    this.model.set({ agency });
-    if (!displayNumber) {
-      this.announcementNumber.set(null);
-      return;
-    }
-    const announcement = this.announcements().find((a) => a.announcementNumber === displayNumber);
-    const rawNumber = Number(stripAnnouncementPrefix(displayNumber));
-    if (!announcement || Number.isNaN(rawNumber)) {
-      return;
-    }
-    this.announcementNumber.set(rawNumber);
-    this.model.set({
-      agency,
-      announcementDate: announcement.announcementDate,
-      special: announcement.specialType,
-      basePriceCps: String(announcement.basePriceLoad),
-      defectStoredPrice: String(announcement.defectiveUnitPrice),
-      healthyStoredPrice: String(announcement.healthyUnitPrice),
-      bonus: String(announcement.bonus),
-      costs: String(announcement.costs),
-    });
-    this.announcementQuotaService.get(rawNumber).subscribe({
-      next: (quota) => {
-        this.isCreate.set(false);
-        this.model.update((m) => ({ ...m, ...this.toModel(quota) }));
-      },
-      error: (err: HttpErrorResponse) => {
-        if (err.status === 404) {
-          this.isCreate.set(true);
-        } else {
-          this.errorMessage.set(this.page()?.errorMessage ?? null);
-        }
-      },
-    });
   }
 
   onFieldValueChange(event: { key: string; value: string | number }): void {
-    this.model.update((m) => ({ ...m, [event.key]: String(event.value) }));
+    if (event.key === 'quota') {
+      this.quota.set(String(event.value));
+    }
   }
 
   save(): void {
-    const number = this.announcementNumber();
-    if (!number) {
+    const selected = this.selected();
+    if (!selected || this.saved()) {
       return;
     }
     this.savedMessage.set(null);
     this.errorMessage.set(null);
-    const request: AnnouncementQuotaRequest = { assignedQuota: parseDisplayNumber(this.model()['quota']) };
-    this.announcementQuotaService.assign(number, request).subscribe({
+    const number = Number(stripAnnouncementPrefix(selected.announcement.announcementNumber));
+    const request = { assignedQuota: parseDisplayNumber(this.quota()) };
+    saveOnce(this.saving, () => this.announcementQuotaService.assign(number, request), {
       next: (quota) => {
-        this.isCreate.set(false);
-        this.model.update((m) => ({ ...m, ...this.toModel(quota) }));
+        this.saved.set(quota);
+        this.candidates.value.update((list) => list?.filter((c) => c !== selected));
         this.savedMessage.set(this.page()?.savedMessage ?? null);
       },
       error: (err: HttpErrorResponse) => {
@@ -114,28 +121,13 @@ export class QuotaAssignmentComponent {
     });
   }
 
-  // Valores crudos, sin formatear: igual que el resto de los campos de solo lectura de la app
-  // (ver computedValues en dry-coffee-form.ts), el formato Colombia lo aplica FormFieldComponent
-  // segun el "type" del campo - formatear aca tambien duplicaba el formato y lo corrompia
-  // (1700 -> "1.700" -> re-parseado como 1,7 -> mostrado "1,70").
-  private toModel(quota: AnnouncementQuotaResponse): Record<string, string> {
-    return {
-      quota: String(quota.assignedQuota),
-      deliveredKg: String(quota.deliveredKg),
-      balance: String(quota.balance),
-    };
-  }
-
   private buildFields(base: FormFieldDefinition[] | undefined): FormFieldDefinition[] {
-    if (!base) {
-      return [];
-    }
     const model = this.model();
-    const announcementSelected = this.announcementNumber() !== null;
-    return base.map((f) => ({
+    const quotaEditable = this.canSave();
+    return (base ?? []).map((f) => ({
       ...f,
       value: model[f.key] ?? '',
-      readonly: f.key === 'quota' ? !announcementSelected : true,
+      readonly: f.key === 'quota' ? !quotaEditable : true,
     }));
   }
 }

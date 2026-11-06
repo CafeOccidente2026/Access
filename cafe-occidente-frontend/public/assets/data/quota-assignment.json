@@ -3,7 +3,6 @@
   "heading": "Asignar Cupo a Anuncios",
   "announcementLabel": "Anuncio",
   "saveButton": "Guardar",
-  "createNotice": "Este anuncio todavía no tiene cupo asignado: complete Cupo y guarde para crearlo.",
   "savedMessage": "Cupo guardado correctamente.",
   "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo.",
   "leftColumn": [
