@@ -5,7 +5,7 @@
     { "key": "agency", "label": "Agencia", "type": "text", "readonly": true },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
     { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
   ],
   "identificationFields": [
