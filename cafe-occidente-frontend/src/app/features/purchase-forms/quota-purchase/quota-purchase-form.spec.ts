@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +10,7 @@ import { QuotaBalance } from '../../../core/models/announcement-quota.model';
 import { AnnouncementQuotaService } from '../../../core/services/announcement-quota.service';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
+import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 
@@ -45,14 +47,24 @@ describe('QuotaPurchaseFormComponent', () => {
     balance: 1500,
   };
 
+  /** Compra anunciada de 2500 kg con 1500 por entregar. */
+  const futurePurchase = {
+    id: 55, agencyId: 1, agencyName: 'Buesaco 1', announcementNumber: 'SDBU-4', announcementDate: '2026-11-01',
+    idNumber: '210514', firstName: 'PAZ', lastName: 'OSSA', growerType: 'C', address: 'VEREDA',
+    specialType: 'NESPRESSO - FTUSA', announcedKg: 2500, remainingKg: 1500, deliveryDate: '2026-12-01', finca: null,
+    municipality: null, vereda: null, healthyUnitPrice: 9100, defectiveUnitPrice: 6000, bonus: 30, costs: 692,
+    qualityIncrement: 0, basePriceLoad: 1500000,
+  };
+
   let createSpy: ReturnType<typeof vi.fn>;
   let previewSpy: ReturnType<typeof vi.fn>;
   let specialInfoSpy: ReturnType<typeof vi.fn>;
   let withBalanceSpy: ReturnType<typeof vi.fn>;
+  let openForSpy: ReturnType<typeof vi.fn>;
   let qualitySpy: ReturnType<typeof vi.fn>;
   let component: QuotaPurchaseFormComponent;
 
-  function setup() {
+  function setup(mode: 'quota' | 'future' = 'quota') {
     qualitySpy = vi.fn((total?: number, husk?: number) =>
       of(
         husk === undefined
@@ -63,6 +75,7 @@ describe('QuotaPurchaseFormComponent', () => {
     specialInfoSpy = vi.fn(() => of({ productCode: '011', announcementNumber: 'SDBU-12', announcementDate: '2026-11-02',
       basePriceLoad: 1100000, defectiveUnitPrice: 6000, healthyUnitPrice: 8900, bonus: 40, costs: 692 }));
     withBalanceSpy = vi.fn(() => of([quotaRow]));
+    openForSpy = vi.fn(() => of([futurePurchase]));
     createSpy = vi.fn(() => of({}));
     previewSpy = vi.fn(() => of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, netToPay: 7100000 }));
     localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
@@ -83,6 +96,8 @@ describe('QuotaPurchaseFormComponent', () => {
           },
         },
         { provide: AnnouncementQuotaService, useValue: { withBalance: withBalanceSpy } },
+        { provide: FuturePurchaseService, useValue: { openFor: openForSpy } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { mode } } } },
         {
           provide: GrowerService,
           useValue: {
@@ -228,5 +243,75 @@ describe('QuotaPurchaseFormComponent', () => {
     component.reset();
     expect(component.quotaChoice()).toBeNull();
     expect(field('deliveryKg')?.value).toBe('');
+  });
+
+  describe('Facturar Compras Anunciadas (RF-21.5)', () => {
+    function pickFuture(): void {
+      commit('fund', 'RP');
+      commit('idPart1', '210514');
+      component.onQuotaPicked({ row: component.quotaRows()![0], deliveryKg: 1000 });
+    }
+
+    it('CA-1: the cédula opens the window with the open future purchases of that person', () => {
+      setup('future');
+      commit('fund', 'RP');
+      commit('idPart1', '210514');
+
+      expect(openForSpy).toHaveBeenCalledWith('210514');
+      const row = component.quotaRows()![0];
+      expect(row.announcement.id).toBe(55);
+      expect([row.assignedQuota, row.deliveredKg, row.balance]).toEqual([2500, 1000, 1500]);
+      expect(withBalanceSpy).not.toHaveBeenCalled();
+    });
+
+    it('without open future purchases it warns and frees the cédula', () => {
+      setup('future');
+      openForSpy.mockReturnValue(of([]));
+      commit('fund', 'RP');
+      commit('idPart1', '210514');
+
+      expect(component.errorMessage()).toBe(messages.noQuota);
+      expect(component.model['idPart1']).toBe('');
+    });
+
+    it('CA-2: the chosen one brings its special and its own prices; the special is not typed', () => {
+      setup('future');
+      pickFuture();
+
+      expect(component.model['special']).toBe('NESPRESSO - FTUSA');
+      expect(specialInfoSpy).toHaveBeenCalledWith(1, 'NESPRESSO - FTUSA', undefined, 55);
+      expect(field('deliveryKg')?.value).toBe(1000);
+    });
+
+    it('CA-2: Imprimir sends the future purchase and Esta Entrega, once', () => {
+      setup('future');
+      pickFuture();
+      for (const [key, value] of [['totalStoredWeight', '200'], ['totalHuskWeight', '10'], ['bags', '5'],
+        ['grossKg', '1000'], ['tare', '0'], ['penalty', '0'], ['shrinkageDiscount', '0'], ['otherDiscounts', '0']]) {
+        commit(key, value);
+      }
+      component.payment.set({ cashAmount: 7100000, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null });
+      const pending = new Subject<never>();
+      createSpy.mockReturnValue(pending);
+
+      component.print();
+      component.print();
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      const request = createSpy.mock.calls[0][0];
+      expect(request).toMatchObject({ futurePurchaseId: 55, deliveryKg: 1000, specialType: 'NESPRESSO - FTUSA', idNumber: '210514' });
+      expect(request).not.toHaveProperty('quotaAnnouncementNumber');
+    });
+
+    it('CA-4: cancelling the window frees the cédula and nothing is saved', () => {
+      setup('future');
+      commit('fund', 'RP');
+      commit('idPart1', '210514');
+      component.onQuotaCancelled();
+
+      expect(component.quotaRows()).toBeNull();
+      expect(component.model['idPart1']).toBe('');
+      expect(createSpy).not.toHaveBeenCalled();
+    });
   });
 });
