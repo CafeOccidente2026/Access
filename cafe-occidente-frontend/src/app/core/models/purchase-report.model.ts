@@ -32,3 +32,20 @@ export interface PurchaseReportRow {
   readonly paymentMethod: string;
   readonly status: 'VALIDA' | 'ANULADA';
 }
+
+/** Una persona del informe Saldo Anuncios (HU-35): K Anun, K Entr y Saldo Kg. */
+export interface FutureBalanceRow {
+  readonly agencyName: string;
+  readonly announcementNumber: string;
+  readonly announcementDate: string;
+  readonly idNumber: string;
+  readonly firstName: string;
+  readonly lastName: string | null;
+  readonly announcedKg: number;
+  readonly deliveredKg: number;
+  readonly remainingKg: number;
+  readonly healthyUnitPrice: number;
+  readonly bonus: number;
+  readonly specialType: string;
+  readonly deliveryDate: string;
+}
