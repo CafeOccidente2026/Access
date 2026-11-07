@@ -18,14 +18,17 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * "Compras a Futuro" (Form_COMPRAS A FUTURO.bas): registra el compromiso de entrega, sin cascada
- * de precio ni factura (ver FuturePurchase). "Fondo" fijo en RP: el formulario real no tiene
- * Cuadro combinado37 (Fondo) - el anuncio vigente se busca directo por agencia+Especial.
+ * "Ingresar Compras a Futuro" (RF-21.4): registra el compromiso de entrega, sin cascada de precio ni factura
+ * (ver FuturePurchase). "Fondo" fijo en RP: el formulario de Access no tiene Fondo. El anuncio lo elige el
+ * usuario entre los de hoy del especial (RN-21.4.3); Access tomaba el ultimo, sin mirar la fecha.
  */
 @Service
 public class FuturePurchaseServiceImpl implements FuturePurchaseService {
@@ -39,6 +42,7 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     private final GrowerService growerService;
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final Clock clock;
 
     public FuturePurchaseServiceImpl(
             FuturePurchaseRepository futurePurchaseRepository,
@@ -46,7 +50,7 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
             FundRepository fundRepository,
             AnnouncementService announcementService,
             GrowerService growerService,
-            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider) {
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider, Clock clock) {
         this.futurePurchaseRepository = futurePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -54,6 +58,17 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
         this.growerService = growerService;
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
+        this.clock = clock;
+    }
+
+    @Override
+    public List<AnnouncementResponse> todayAnnouncements(String specialType) {
+        Long fundId = rpFund().getId();
+        LocalDate today = LocalDate.now(clock);
+        return announcementService.history().stream()
+                .filter(a -> a.fundId().equals(fundId) && a.specialType().equals(specialType))
+                .filter(a -> today.equals(a.announcementDate()))
+                .toList();
     }
 
     @Override
@@ -70,10 +85,12 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
         // Texto34_AfterUpdate: bloqueo de pertenencia a programa (Id_NessOcci) - ver GrowerService.
         growerService.requireProgramMembership(request.idNumber(), request.specialType());
 
-        Fund fund = fundRepository.findByCode(FUND_CODE)
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
-        AnnouncementResponse announcement =
-                announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
+        AnnouncementResponse announcement = announcementService.findForPurchase(
+                agency.getId(), rpFund().getId(), request.specialType(), request.announcementNumber());
+        // RN-21.4.3: solo con un anuncio del dia; al dia siguiente la lista ya es otra.
+        if (!LocalDate.now(clock).equals(announcement.announcementDate())) {
+            throw new BusinessRuleException("El anuncio " + request.announcementNumber() + " no es de hoy");
+        }
 
         FuturePurchase purchase = new FuturePurchase();
         purchase.setCreatedAt(Instant.now());
@@ -104,6 +121,11 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
         purchase.setCreatedByUserId(securityUtils.getCurrentUserId());
 
         return toResponse(futurePurchaseRepository.save(purchase));
+    }
+
+    private Fund rpFund() {
+        return fundRepository.findByCode(FUND_CODE)
+                .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
     }
 
     @Override

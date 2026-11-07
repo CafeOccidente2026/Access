@@ -3,6 +3,8 @@
 export interface FuturePurchaseRequest {
   readonly idNumber: string;
   readonly specialType: string;
+  /** Número del anuncio del día elegido en la lista (RN-21.4.3). */
+  readonly announcementNumber: number;
   readonly announcedKg: number;
   readonly deliveryDate: string;
   readonly finca: string | null;

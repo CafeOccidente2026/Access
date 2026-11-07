@@ -24,7 +24,9 @@ function money(value: number): string {
  * Especial - por eso no hace falta una tabla de traduccion, se usa specialType tal cual.
  */
 export function buildFuturePurchaseManifestoDocDefinition(purchase: FuturePurchaseResponse): TDocumentDefinitions {
-  const today = new Date().toISOString().slice(0, 10);
+  // Fecha local (Colombia), no UTC: toISOString() daba el día siguiente después de las 7 p. m.
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const fullName = `${purchase.firstName} ${purchase.lastName}`;
   const deliveryDate = longSpanishDate(purchase.deliveryDate);
 
@@ -56,17 +58,20 @@ export function buildFuturePurchaseManifestoDocDefinition(purchase: FuturePurcha
     ],
   };
 
+  const copy: Content[] = [
+    { text: `${purchase.agencyName}, ${longSpanishDate(today)}`, fontSize: 12, alignment: 'right' },
+    { text: 'Señores', bold: true, fontSize: 12, margin: [0, 30, 0, 0] as [number, number, number, number] },
+    { text: 'COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.', bold: true, fontSize: 12 },
+    { text: `${purchase.agencyName} NARIÑO`, bold: true, fontSize: 12 },
+    body,
+    signature,
+  ];
+
   return {
     pageSize: 'LETTER',
     pageMargins: [60, 60, 60, 60],
-    content: [
-      { text: `${purchase.agencyName}, ${longSpanishDate(today)}`, fontSize: 12, alignment: 'right' },
-      { text: 'Señores', bold: true, fontSize: 12, margin: [0, 30, 0, 0] as [number, number, number, number] },
-      { text: 'COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.', bold: true, fontSize: 12 },
-      { text: `${purchase.agencyName} NARIÑO`, bold: true, fontSize: 12 },
-      body,
-      signature,
-    ],
+    // RN-21.4.8: 2 copias, como Comando36_Click (OpenReport "Manifiesto" dos veces).
+    content: [...copy, { stack: structuredClone(copy), pageBreak: 'before' }],
     defaultStyle: { font: 'Roboto' },
   };
 }
