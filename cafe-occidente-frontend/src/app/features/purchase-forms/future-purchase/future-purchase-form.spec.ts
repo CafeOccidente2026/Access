@@ -1,11 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FuturePurchaseFormComponent } from './future-purchase-form';
-import { AnnouncementService } from '../../../core/services/announcement.service';
 import { ContentService } from '../../../core/services/content.service';
 import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
@@ -23,6 +22,11 @@ describe('FuturePurchaseFormComponent', () => {
     theme: 'green',
     topFields: [],
     identificationFields: [],
+    contactFields: [
+      { key: 'announcement', label: 'Anuncio', type: 'select', options: [] },
+      { key: 'announcementDate', label: 'Fecha_Anuncio', type: 'date', readonly: true },
+    ],
+    weightFields: [{ key: 'qualityIncrement', label: 'Pr IncCalidad', type: 'currency', readonly: true }],
     messages: {
       acceptLabel: 'Aceptar',
       noAnnouncement: 'No hay anuncio',
@@ -30,6 +34,7 @@ describe('FuturePurchaseFormComponent', () => {
       idNumberNotFound: 'Este número de cédula no existe.',
       saveError: 'No se pudo registrar el compromiso. Verifique los datos.',
       savedNotice: 'Compromiso registrado.',
+      invoiceError: 'No se pudo generar el manifiesto',
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
@@ -56,6 +61,7 @@ describe('FuturePurchaseFormComponent', () => {
   const announcement = {
     id: 1,
     announcementNumber: 'SDBU-31',
+    qualityIncrement: 50,
     announcementDate: '2026-09-23',
     basePriceLoad: 1200000,
     defectiveUnitPrice: 0,
@@ -68,10 +74,12 @@ describe('FuturePurchaseFormComponent', () => {
   };
 
   let createSpy: ReturnType<typeof vi.fn>;
+  let todaySpy: ReturnType<typeof vi.fn>;
   let component: FuturePurchaseFormComponent;
 
   function setup(grower: Grower) {
     createSpy = vi.fn(() => of({}));
+    todaySpy = vi.fn(() => of([announcement]));
     localStorage.setItem('cafeoccidente.agencyId', '1');
     localStorage.setItem('cafeoccidente.agencyName', 'Buesaco');
 
@@ -80,16 +88,30 @@ describe('FuturePurchaseFormComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
-        { provide: FuturePurchaseService, useValue: { create: createSpy } },
-        {
-          provide: AnnouncementService,
-          useValue: { funds: () => of([{ id: 1, code: 'RP', name: 'Resolución Propia' }]), latest: () => of(announcement) },
-        },
+        { provide: FuturePurchaseService, useValue: { create: createSpy, todayAnnouncements: todaySpy } },
         { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: () => of(null) } },
       ],
     });
     component = TestBed.createComponent(FuturePurchaseFormComponent).componentInstance;
   }
+
+  const label = '31 · 1.200.000,00';
+
+  function fill(): void {
+    component.model['idPart1'] = growerWithoutId.idNumber;
+    component.onFieldCommitted('idPart1');
+    component.model['special'] = 'NESPRESSO - FTUSA';
+    component.onFieldCommitted('special');
+    component.model['announcement'] = label;
+    component.onFieldCommitted('announcement');
+    component.model['deliveryDate'] = '2026-12-01';
+    component.onFieldCommitted('deliveryDate');
+    component.model['kilos'] = '500';
+    component.onFieldCommitted('kilos');
+  }
+
+  const field = (key: string) =>
+    [...(component.viewContent()?.contactFields ?? []), ...(component.viewContent()?.weightFields ?? [])].find((f) => f.key === key);
 
   it('REGRESIÓN: a grower with blank migrated fields is not permanently locked out', () => {
     setup(growerWithoutId);
@@ -103,9 +125,55 @@ describe('FuturePurchaseFormComponent', () => {
     expect(component.model['address']).toBe('EL CIDRAL');
   });
 
-  it('does not call announcementService.latest() until an Especial is committed', () => {
+  it('does not ask for announcements until an Especial is committed', () => {
     setup(growerWithoutId);
+    expect(todaySpy).not.toHaveBeenCalled();
     expect(component.announcementInfo()).toBeNull();
+  });
+
+  it('CA-2: the Especial fills the Anuncio list with today announcements (number and price)', () => {
+    setup(growerWithoutId);
+    component.model['special'] = 'NESPRESSO - FTUSA';
+    component.onFieldCommitted('special');
+
+    expect(todaySpy).toHaveBeenCalledWith('NESPRESSO - FTUSA');
+    expect(field('announcement')?.options).toEqual([label]);
+  });
+
+  it('CA-2: choosing the announcement fills its date and prices, and Pr IncCalidad is read only', () => {
+    setup(growerWithoutId);
+    fill();
+
+    expect(component.announcementInfo()).toEqual(announcement);
+    expect(field('announcementDate')?.value).toBe('2026-09-23');
+    expect(field('qualityIncrement')?.value).toBe(50);
+    expect(field('qualityIncrement')?.readonly).toBe(true);
+  });
+
+  it('without announcements today it warns and frees the Especial', () => {
+    setup(growerWithoutId);
+    todaySpy.mockReturnValue(of([]));
+    component.model['special'] = 'NESPRESSO - FTUSA';
+    component.onFieldCommitted('special');
+
+    expect(component.errorMessage()).toBe(content.messages['noAnnouncement']);
+    expect(component.model['special']).toBe('');
+  });
+
+  it('CA-3: two clicks on Imprimir save once, with the chosen announcement number', () => {
+    setup(growerWithoutId);
+    fill();
+    const pending = new Subject<never>();
+    createSpy.mockReturnValue(pending);
+
+    component.print();
+    component.print();
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy.mock.calls[0][0]).toMatchObject({ announcementNumber: 31, announcedKg: 500, specialType: 'NESPRESSO - FTUSA' });
+    expect(component.saving()).toBe(true);
+    pending.error(new Error('fallo'));
+    expect(component.saving()).toBe(false);
   });
 
   it('canPrint() requires an announcement and every REQUIRED field', () => {
@@ -120,7 +188,10 @@ describe('FuturePurchaseFormComponent', () => {
     component.onFieldCommitted('deliveryDate');
     component.model['kilos'] = '500';
     component.onFieldCommitted('kilos');
+    expect((component as any).canPrint()).toBe(false);
 
+    component.model['announcement'] = label;
+    component.onFieldCommitted('announcement');
     expect((component as any).canPrint()).toBe(true);
   });
 
@@ -129,14 +200,7 @@ describe('FuturePurchaseFormComponent', () => {
     createSpy.mockReturnValue(
       throwError(() => ({ error: { message: 'CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE' } })),
     );
-    component.model['idPart1'] = growerWithoutId.idNumber;
-    component.onFieldCommitted('idPart1');
-    component.model['special'] = 'NESPRESSO - FTUSA';
-    component.onFieldCommitted('special');
-    component.model['deliveryDate'] = '2026-12-01';
-    component.onFieldCommitted('deliveryDate');
-    component.model['kilos'] = '500';
-    component.onFieldCommitted('kilos');
+    fill();
 
     component.print();
 
