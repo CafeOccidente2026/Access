@@ -14,7 +14,7 @@ function purchase(over: Partial<PurchaseReportRow>): PurchaseReportRow {
     specialType: 'NESPRES', productCode: '0110001000007', productName: 'CAFÉ LFTO NESS - FTUSA', announcementNumber: 'SDTA-3443',
     idNumber: '27286462', firstName: 'MARIA', lastName: 'ESPAÑA', greenKg: null, netKg: 100, factor: 90, unitPrice: 19115,
     grossValue: 1911500, inventoryValue: 1911500, associateContribution: 0, cooperativeDiscount: 0, freightDiscount: 0,
-    withholding: 0, otherDiscounts: 0, netToPay: 1911500, paymentMethod: 'EFECTIVO', status: 'VALIDA', ...over,
+    withholding: 0, otherDiscounts: 0, netToPay: 1911500, paymentMethod: 'EFECTIVO', status: 'VALIDA', announcementDate: '2026-05-09', ...over,
   };
 }
 

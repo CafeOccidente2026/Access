@@ -7,7 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/future-report.json';
 import menu from '../../../../public/assets/data/future-purchases-menu.json';
-import { FutureReportComponent } from './future-report';
+import { FutureReportComponent, announcementHeaderDate } from './future-report';
+import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
@@ -92,6 +93,11 @@ describe('FutureReportComponent', () => {
     const { c } = setup('balance');
     c.onCancel();
     expect(goTo).toHaveBeenCalledWith('/compras/futuro');
+  });
+
+  it('the Fecha of the header is the announcement date, like the Access capture', () => {
+    const rows = [{ announcementDate: '2026-05-09', purchaseDate: '2026-09-28' } as PurchaseReportRow];
+    expect(announcementHeaderDate(rows)).toBe('9/05/2026');
   });
 
   it('the menu opens both reports', () => {

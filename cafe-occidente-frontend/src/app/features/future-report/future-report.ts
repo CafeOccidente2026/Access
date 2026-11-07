@@ -6,6 +6,8 @@ import { ActivatedRoute } from '@angular/router';
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Observable, map } from 'rxjs';
 
+import { PurchaseReportRow } from '../../core/models/purchase-report.model';
+
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
@@ -27,6 +29,11 @@ export interface FutureReportContent {
   readonly messages: { fromAfterTo: string; empty: string; error: string };
   readonly announcementPdf: AnnouncementReportText;
   readonly balancePdf: FutureBalanceText;
+}
+
+/** "Fecha" del encabezado: la del anuncio, como la captura de Access (todas las compras son del mismo anuncio). */
+export function announcementHeaderDate(rows: readonly PurchaseReportRow[]): string {
+  return shortDate(rows[0].announcementDate);
 }
 
 interface Request {
@@ -107,9 +114,8 @@ export class FutureReportComponent {
       return this.service.futureBalance(request.announcement).pipe(
         map((rows) => (rows.length ? buildFutureBalanceDoc(rows, data.balancePdf) : null)));
     }
-    const dates = `${shortDate(request.from)} - ${shortDate(request.to)}`;
     return this.service.futureAnnouncement(request.announcement, request.from, request.to).pipe(
-      map((rows) => (rows.length ? buildAnnouncementReportDoc(rows, dates, data.announcementPdf) : null)));
+      map((rows) => (rows.length ? buildAnnouncementReportDoc(rows, announcementHeaderDate(rows), data.announcementPdf) : null)));
   }
 
   onAccept(): void {

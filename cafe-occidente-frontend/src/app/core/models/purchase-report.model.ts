@@ -31,6 +31,8 @@ export interface PurchaseReportRow {
   readonly netToPay: number;
   readonly paymentMethod: string;
   readonly status: 'VALIDA' | 'ANULADA';
+  /** Fecha del anuncio de la compra (yyyy-MM-dd). */
+  readonly announcementDate: string;
 }
 
 /** Una persona del informe Saldo Anuncios (HU-35): K Anun, K Entr y Saldo Kg. */
