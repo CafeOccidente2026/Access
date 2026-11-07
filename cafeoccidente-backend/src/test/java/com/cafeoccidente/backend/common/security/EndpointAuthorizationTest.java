@@ -21,6 +21,7 @@ import com.cafeoccidente.backend.purchases.report.service.PurchaseReportService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
@@ -185,6 +186,9 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, post, "/api/purchases/future");
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
         add(ADMIN_USER, get, "/api/purchases/future/open", "/api/purchases/future/open?idNumber=1");
+        // Restaurar Compras Anunciadas (Q5): solo el Administrador.
+        add(ADMIN, get, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
+        add(ADMIN, post, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
         add(ADMIN_USER, get, "/api/purchases/future/announcements", "/api/purchases/future/announcements?specialType=X");
         add(ADMIN_USER, get, "/api/announcement-quotas");
         add(ADMIN_USER, get, "/api/announcement-quotas/available");
@@ -285,6 +289,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private AnnouncementService announcementService;
     @MockitoBean private AnnouncementQuotaService announcementQuotaService;
     @MockitoBean private FuturePurchaseService futurePurchaseService;
+    @MockitoBean private FuturePurchaseRestoreService futurePurchaseRestoreService;
     @MockitoBean private GreenCoffeePurchaseService greenCoffeePurchaseService;
     @MockitoBean private HuskPurchaseService huskPurchaseService;
     @MockitoBean private GrowerService growerService;
