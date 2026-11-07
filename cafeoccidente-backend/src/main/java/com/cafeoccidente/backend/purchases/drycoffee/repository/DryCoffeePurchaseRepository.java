@@ -32,4 +32,11 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
             GROUP BY p.announcementNumber
             """)
     List<Object[]> sumNetKgByAnnouncementNumber(@Param("agencyId") Long agencyId);
+
+    /** Kilos netos entregados contra una compra anunciada, sin las anuladas (Restaurar Compras Anunciadas). */
+    @Query(value = """
+            SELECT COALESCE(SUM(kilos_netos), 0) FROM compras_cafe_seco
+            WHERE compra_anunciada_id = :futurePurchaseId AND estado <> 'ANULADA'
+            """, nativeQuery = true)
+    BigDecimal sumNetKgOfValidByFuturePurchase(@Param("futurePurchaseId") Long futurePurchaseId);
 }

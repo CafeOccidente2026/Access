@@ -4,6 +4,8 @@ import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRestoreRow;
+import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -24,9 +26,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class FuturePurchaseController {
 
     private final FuturePurchaseService futurePurchaseService;
+    private final FuturePurchaseRestoreService restoreService;
 
-    public FuturePurchaseController(FuturePurchaseService futurePurchaseService) {
+    public FuturePurchaseController(
+            FuturePurchaseService futurePurchaseService, FuturePurchaseRestoreService restoreService) {
         this.futurePurchaseService = futurePurchaseService;
+        this.restoreService = restoreService;
+    }
+
+    /** Restaurar Compras Anunciadas (Q5: solo el Administrador): lo que quedaria, sin escribir. */
+    @GetMapping("/restore")
+    @PreAuthorize(Roles.ADMIN)
+    public List<FuturePurchaseRestoreRow> restorePreview(@RequestParam String idNumber) {
+        return restoreService.preview(idNumber);
+    }
+
+    /** Recalcula el saldo desde cero (P6) y lo deja en el Historial. */
+    @PostMapping("/restore")
+    @PreAuthorize(Roles.ADMIN)
+    public List<FuturePurchaseRestoreRow> restore(@RequestParam String idNumber) {
+        return restoreService.restore(idNumber);
     }
 
     /** Ventana de Facturar Compras Anunciadas (RN-21.5.2). */

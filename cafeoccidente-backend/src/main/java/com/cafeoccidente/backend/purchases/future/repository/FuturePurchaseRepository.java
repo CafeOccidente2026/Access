@@ -16,6 +16,14 @@ public interface FuturePurchaseRepository extends JpaRepository<FuturePurchase, 
     List<FuturePurchase> findByAgencyIdAndIdNumberAndRemainingKgGreaterThanOrderByIdAsc(
             Long agencyId, String idNumber, BigDecimal remainingKg);
 
+    /** Restaurar Compras Anunciadas: todas las de la cedula en la agencia, con saldo o sin el. */
+    List<FuturePurchase> findByAgencyIdAndIdNumberOrderByIdAsc(Long agencyId, String idNumber);
+
+    /** Las mismas, bloqueadas mientras se recalcula su saldo. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT f FROM FuturePurchase f WHERE f.agency.id = :agencyId AND f.idNumber = :idNumber ORDER BY f.id")
+    List<FuturePurchase> lockByAgencyIdAndIdNumber(@Param("agencyId") Long agencyId, @Param("idNumber") String idNumber);
+
     /** SELECT ... FOR UPDATE: dos facturas contra la misma compra anunciada se turnan para gastar el saldo. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT f FROM FuturePurchase f WHERE f.id = :id")
