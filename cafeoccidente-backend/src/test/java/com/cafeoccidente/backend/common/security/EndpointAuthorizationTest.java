@@ -100,7 +100,7 @@ class EndpointAuthorizationTest {
 
     /** Body por defecto "{}"; estos no lo aceptan (lista, o boolean primitivo que no admite null). */
     private static final Map<String, String> BODIES = Map.of(
-            "/api/vendors", "{\"association\": false}");
+            "/api/vendors", "{\"legalPerson\": false}");
 
     /** Las 5 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
     private static final List<String> SCREENS =

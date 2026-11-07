@@ -40,14 +40,22 @@ public class VendorServiceImpl implements VendorService {
     }
 
     /**
-     * Formularios "Vendedores" (persona) y "Asociaciones1" (asociacion o fundacion): FechaAfiliacion =
-     * Date() y Tipo = "C" bloqueados; Agencia = la de RegControl (IdAsociado_AfterUpdate), que en
-     * IngresaVendedor se une por NumRegistro. Asociaciones1 fija Asociacion = Si y Sexo = "E". Los Si/No
-     * que el formulario no toca quedan en No, como en la tabla de Access.
+     * Catalogar Terceros (RF-28.1): FechaAfiliacion = hoy y Tipo = "C" fijos; Agencia = la de trabajo y
+     * NumRegistro el de su RegControl, como en Access. La persona juridica guarda la Razon Social (tambien
+     * en primer_nombre, que es el nombre que muestran Compras e informes) y la Clasificacion, con
+     * Asociacion = Si como "Asociaciones1"; sin Sexo queda "E" (Empresa). Los Si/No que el formulario no
+     * toca quedan en No, como en la tabla de Access.
      */
     @Override
     @Transactional
     public AssociateResponse create(VendorCreateRequest request, Long agencyId) {
+        String name = request.legalPerson() ? blankToNull(request.businessName()) : blankToNull(request.firstName());
+        if (name == null) {
+            throw new BusinessRuleException(request.legalPerson() ? "Falta la Razón Social" : "Falta el 1er Nombre");
+        }
+        if (request.legalPerson() && blankToNull(request.classification()) == null) {
+            throw new BusinessRuleException("Falta la Clasificación");
+        }
         String idNumber = request.idNumber().trim();
         if (growerRepository.findByIdNumber(idNumber).isPresent()) {
             throw new BusinessRuleException("Ya existe un asociado o vendedor con esa cedula");
@@ -57,7 +65,7 @@ public class VendorServiceImpl implements VendorService {
 
         Grower grower = new Grower();
         grower.setIdNumber(idNumber);
-        grower.setFirstName(request.firstName().trim());
+        grower.setFirstName(name);
         grower.setAgency(agency);
         grower.setAffiliationDate(LocalDate.now(clock));
         grower.setGrowerType("C");
@@ -65,23 +73,25 @@ public class VendorServiceImpl implements VendorService {
         grower.setRegistryNumber(controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId)
                 .map(c -> c.getControlNumber())
                 .orElse(null));
-        grower.setIsAssociation(request.association());
+        grower.setIsAssociation(request.legalPerson());
         grower.setActive(false);
         grower.setAccepted(false);
         grower.setEligible(false);
         grower.setExported(false);
         grower.setIsNew(false);
-        if (request.association()) {
-            grower.setSex("E");
-            grower.setPhone("");
+        grower.setPhone(trimOrEmpty(request.phone()));
+        grower.setPostalCode(blankToNull(request.postalCode()));
+        grower.setEmail(blankToNull(request.email()));
+        String sex = blankToNull(request.sex());
+        if (request.legalPerson()) {
+            grower.setBusinessName(name);
+            grower.setClassification(request.classification());
+            grower.setSex(sex == null ? "E" : sex);
         } else {
             grower.setSecondName(blankToNull(request.secondName()));
             grower.setLastName(blankToNull(request.lastName()));
             grower.setSecondLastName(blankToNull(request.secondLastName()));
-            grower.setSex(blankToNull(request.sex()));
-            grower.setPhone(trimOrEmpty(request.phone()));
-            grower.setPostalCode(blankToNull(request.postalCode()));
-            grower.setEmail(blankToNull(request.email()));
+            grower.setSex(sex);
         }
         return AssociateMapper.toResponse(growerRepository.save(grower));
     }
