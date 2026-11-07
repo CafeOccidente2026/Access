@@ -11,10 +11,12 @@ import java.time.LocalDate;
  * Otros, el nombre/apellidos/tipo/dirección NO se capturan a mano: el RecordSource real
  * (COMPRAS A FUTURO.txt) hace JOIN contra Asociados por cédula, así que el servidor los resuelve
  * vía {@link com.cafeoccidente.backend.purchases.shared.service.GrowerService#findByIdNumber}.
+ * announcementNumber: el anuncio del día elegido en la lista (RN-21.4.3); sus precios los pone el servidor.
  */
 public record FuturePurchaseRequest(
         @NotBlank String idNumber,
         @NotBlank String specialType,
+        @NotNull @Positive Integer announcementNumber,
         @NotNull @Positive BigDecimal announcedKg,
         @NotNull LocalDate deliveryDate,
         String finca,

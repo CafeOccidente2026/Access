@@ -1,10 +1,12 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
 import com.cafeoccidente.backend.common.security.Roles;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,6 +27,12 @@ public class FuturePurchaseController {
 
     public FuturePurchaseController(FuturePurchaseService futurePurchaseService) {
         this.futurePurchaseService = futurePurchaseService;
+    }
+
+    /** Lista de anuncios del dia del especial (RN-21.4.3). */
+    @GetMapping("/announcements")
+    public List<AnnouncementResponse> todayAnnouncements(@RequestParam String specialType) {
+        return futurePurchaseService.todayAnnouncements(specialType);
     }
 
     @PostMapping
