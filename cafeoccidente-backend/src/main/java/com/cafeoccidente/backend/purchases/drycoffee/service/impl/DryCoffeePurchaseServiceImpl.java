@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service.impl;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
@@ -19,6 +20,7 @@ import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCa
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
@@ -54,6 +56,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
+    private final AnnouncementQuotaService announcementQuotaService;
     private final Clock clock;
 
     public DryCoffeePurchaseServiceImpl(
@@ -69,8 +72,10 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService,
+            AnnouncementQuotaService announcementQuotaService,
             Clock clock) {
         this.clock = clock;
+        this.announcementQuotaService = announcementQuotaService;
         this.dryCoffeePurchaseRepository = dryCoffeePurchaseRepository;
         this.productCodeResolver = productCodeResolver;
         this.announcementService = announcementService;
@@ -90,11 +95,15 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     @Transactional
     public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request) {
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
-        PurchaseContext context = purchaseContextService.forSave(
-                request.fundId(), request.specialType(), request.idNumber(), request.address(), request.cellphone());
+        requireDeliveryWithQuotaAnnouncement(request);
+        PurchaseContext context = purchaseContextService.forSave(request.fundId(), request.specialType(),
+                request.quotaAnnouncementNumber(), request.idNumber(), request.address(), request.cellphone());
         AnnouncementResponse announcement = context.announcement();
         PurchaseSeller seller = context.seller();
         DryCoffeePurchaseCalculation calculation = runCalculation(request, context);
+        // HU-29 CA-4 y RF-21.2: el saldo del cupo se lee y se gasta con la fila del cupo bloqueada.
+        announcementQuotaService.reserve(context.agency().getId(), announcement.announcementNumber(),
+                calculation.netKg(), request.quotaDeliveryKg());
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
@@ -173,8 +182,23 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
-        return runCalculation(request, purchaseContextService.forPreview(
-                request.fundId(), request.specialType(), request.idNumber(), request.address(), request.cellphone()));
+        requireDeliveryWithQuotaAnnouncement(request);
+        DryCoffeePurchaseCalculation calculation = runCalculation(request, purchaseContextService.forPreview(
+                request.fundId(), request.specialType(), request.quotaAnnouncementNumber(), request.idNumber(),
+                request.address(), request.cellphone()));
+        // Avisa antes de Imprimir; al guardar, reserve() lo vuelve a revisar con el cupo bloqueado.
+        if (request.quotaDeliveryKg() != null && calculation.netKg().compareTo(request.quotaDeliveryKg()) > 0) {
+            throw new BusinessRuleException("Los kilos netos (" + calculation.netKg().toPlainString()
+                    + ") superan Esta Entrega (" + request.quotaDeliveryKg().toPlainString() + ")");
+        }
+        return calculation;
+    }
+
+    /** RN-21.2.5: con anuncio con cupo, Esta Entrega es obligatoria. */
+    private static void requireDeliveryWithQuotaAnnouncement(DryCoffeePurchaseRequest request) {
+        if (request.quotaAnnouncementNumber() != null && request.quotaDeliveryKg() == null) {
+            throw new BusinessRuleException("Digite Esta Entrega para el anuncio con cupo");
+        }
     }
 
     /** Corre la cascada con el ControlRecord ya resuelto por el caller (evita pedirlo dos veces). */
@@ -206,9 +230,10 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     }
 
     @Override
-    public SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType) {
+    public SpecialInfoResponse specialInfo(Long agencyId, Long fundId, String specialType, Integer announcementNumber) {
         ProductCode productCode = productCodeResolver.resolve(specialType, fundId);
-        AnnouncementResponse announcement = announcementService.findLatest(agencyId, fundId, specialType);
+        AnnouncementResponse announcement =
+                announcementService.findForPurchase(agencyId, fundId, specialType, announcementNumber);
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         // Precio Base Carga PC = Pr_Base_CPS crudo del anuncio maestro - (Costos * BaseCarga)
         // (Form_COMPRAS.bas: Pr_Base_PC = vrcps - (Costos * Texto176)). Desde el anuncio compartido

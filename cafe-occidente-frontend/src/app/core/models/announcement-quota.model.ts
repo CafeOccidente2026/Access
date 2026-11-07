@@ -17,6 +17,14 @@ export interface AnnouncementQuotaRequest {
   readonly assignedQuota: number;
 }
 
+/** Fila de la ventana de Facturar Anuncios con Cupos (RN-21.2.4): el anuncio con Cupo, Kl_Entregados y Saldo. */
+export interface QuotaBalance {
+  readonly announcement: Announcement;
+  readonly assignedQuota: number;
+  readonly deliveredKg: number;
+  readonly balance: number;
+}
+
 /** Anuncio de la lista de Asignar Cupo, con la suma de los kilos ya comprados con él (RN-21.1.6). */
 export interface QuotaCandidate {
   readonly announcement: Announcement;

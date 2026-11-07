@@ -58,8 +58,10 @@ public class DryCoffeePurchaseController {
 
     @GetMapping("/special-info")
     public SpecialInfoResponse specialInfo(
-            @RequestParam Long fundId, @RequestParam String specialType) {
-        return dryCoffeePurchaseService.specialInfo(currentAgencyProvider.currentAgencyId(), fundId, specialType);
+            @RequestParam Long fundId, @RequestParam String specialType,
+            @RequestParam(required = false) Integer announcementNumber) {
+        return dryCoffeePurchaseService.specialInfo(
+                currentAgencyProvider.currentAgencyId(), fundId, specialType, announcementNumber);
     }
 
     @GetMapping("/quality-percentages")

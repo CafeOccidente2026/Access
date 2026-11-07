@@ -55,21 +55,23 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
     }
 
     @Override
-    public PurchaseContext forPreview(Long fundId, String specialType, String idNumber, String address, String cellphone) {
+    public PurchaseContext forPreview(
+            Long fundId, String specialType, Integer announcementNumber, String idNumber, String address, String cellphone) {
         PurchaseSeller seller = purchaseSellerService.resolve(idNumber, address, cellphone);
-        return context(fundId, specialType, seller);
+        return context(fundId, specialType, announcementNumber, seller);
     }
 
     /** MANDATORY: el bloqueo del tercero solo sirve dentro de la transaccion del guardado. */
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public PurchaseContext forSave(Long fundId, String specialType, String idNumber, String address, String cellphone) {
+    public PurchaseContext forSave(
+            Long fundId, String specialType, Integer announcementNumber, String idNumber, String address, String cellphone) {
         PurchaseSeller seller = purchaseSellerService.resolveAndComplete(idNumber, address, cellphone);
         dailyTotals.lockGrower(seller.idNumber());
-        return context(fundId, specialType, seller);
+        return context(fundId, specialType, announcementNumber, seller);
     }
 
-    private PurchaseContext context(Long fundId, String specialType, PurchaseSeller seller) {
+    private PurchaseContext context(Long fundId, String specialType, Integer announcementNumber, PurchaseSeller seller) {
         Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(fundId)
@@ -78,7 +80,7 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
                 agency,
                 fund,
                 productCodeResolver.resolve(specialType, fund.getId()),
-                announcementService.findLatest(agency.getId(), fund.getId(), specialType),
+                announcementService.findForPurchase(agency.getId(), fund.getId(), specialType, announcementNumber),
                 controlRecordService.getActive(agency.getId()),
                 seller,
                 dailyTotals.sum(seller.idNumber(), LocalDate.now(clock)));

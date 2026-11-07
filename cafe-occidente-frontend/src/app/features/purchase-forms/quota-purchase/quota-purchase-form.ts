@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -10,6 +10,8 @@ import {
   NextInvoiceNumber,
   SpecialInfo,
 } from '../../../core/models/dry-coffee-purchase.model';
+import { QuotaBalance } from '../../../core/models/announcement-quota.model';
+import { AnnouncementQuotaService } from '../../../core/services/announcement-quota.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
@@ -17,9 +19,30 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
+import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
+import { hasRequired, saveAndPrint } from '../purchase-print';
 import { SampleWeightKey, loadSampleQuality } from '../sample-quality';
+import { UnsavedCloseForm } from '../unsaved-close';
+import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 
 type FormModel = Record<string, string>;
+
+interface QuotaPurchaseMessages {
+  readonly acceptLabel: string;
+  readonly noQuota: string;
+  readonly idNumberNotFound: string;
+  readonly saveError: string;
+  readonly savedNotice: string;
+  readonly invoiceError: string;
+  readonly closeWarning: string;
+  readonly closeConfirm: string;
+  readonly closeCancel: string;
+}
+
+type QuotaPurchaseContent = PurchaseFormContent & {
+  readonly messages: QuotaPurchaseMessages;
+  readonly quotaPicker: QuotaPickerContent;
+};
 
 const EDITABLE: string[] = [
   'fund', 'special', 'idPart1',
@@ -37,7 +60,7 @@ const READONLY: string[] = [
   // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
   'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode', 'basePriceLoad', 'huskPrice',
-  'healthyUnitPrice', 'bonus', 'costs',
+  'healthyUnitPrice', 'bonus', 'costs', 'deliveryKg',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
@@ -50,31 +73,38 @@ const FOCUS_ORDER: string[] = [
 const num = parseDisplayNumber;
 
 /**
- * "Facturar Anuncios con Cupos" (COMPRAS CUPOS): Form_COMPRAS CUPOS.bas tiene la MISMA cascada de
- * calculo que Cafe Seco linea por linea (var1-var5, Vr_Kilo, Vr_Bruto, Aporte_Socio/Descuento_Coop,
- * Retefuente, Neto_a_Pagar) - reusa el mismo backend (DryCoffeePurchaseService). A diferencia de
- * "Facturar Compras Anunciadas" (ver quota-billing-form.ts), este SI tiene "Informacion Federacion"
- * (Texto108/110/111 via "abrir programa pcupos", igual patron que Cafe Seco).
- * SIN CONFIRMAR: el VBA no muestra si Factura se reserva sola (como Cafe Seco) o la tipea el cajero
- * (como Anunciadas) - se asume reserva automatica al confirmar Fondo, mismo patron que Cafe Seco,
- * por ser el flujo mas parecido; revisar con el negocio si no es el caso real.
+ * "Facturar Anuncios con Cupos" (RF-21.2, Access "COMPRAS CUPOS"): una compra de café seco (mismas reglas y cálculo
+ * del servidor) contra un anuncio con cupo. Al confirmar el Especial se abre la ventana con los anuncios con cupo de
+ * ese fondo y especial; el elegido pone sus precios (no los del último anuncio) y "Esta Entrega" queda en el recuadro
+ * Kilos Entregados. El saldo se descuenta solo al generar la factura, en la misma transacción de la compra; salir
+ * antes no guarda nada (RN-21.2.8).
  */
 @Component({
   selector: 'app-quota-purchase-form',
   standalone: true,
-  imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent],
-  templateUrl: '../quota-form.html',
+  imports: [CommonModule, PurchaseFormViewComponent, ConfirmDialogComponent, QuotaPickerComponent],
+  templateUrl: './quota-purchase-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class QuotaPurchaseFormComponent {
+export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(DryCoffeePurchaseService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
-  private readonly location = inject(Location);
+  private readonly quotaService = inject(AnnouncementQuotaService);
   private readonly elementRef = inject(ElementRef);
 
-  private readonly base = toSignal(this.content.loadJson<PurchaseFormContent>('purchase-form-quota-purchase'));
+  private readonly base = toSignal(this.content.loadJson<QuotaPurchaseContent>('purchase-form-quota-purchase'));
+  readonly messages = computed(() => this.base()?.messages);
+  readonly pickerContent = computed(() => this.base()?.quotaPicker);
+  readonly agencyName = this.authService.agencyName() ?? '';
+  /** Filas de la ventana; null = ventana cerrada. */
+  readonly quotaRows = signal<QuotaBalance[] | null>(null);
+  /** Anuncio con cupo elegido y Esta Entrega. */
+  readonly quotaChoice = signal<QuotaPick | null>(null);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar (una sola factura). */
+  readonly saving = signal(false);
+  readonly savedNoticeOpen = signal(false);
   readonly funds = signal<Fund[]>([]);
   readonly specialInfo = signal<SpecialInfo | null>(null);
   readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
@@ -84,7 +114,7 @@ export class QuotaPurchaseFormComponent {
   readonly errorMessage = signal<string | null>(null);
   private readonly tick = signal(0);
 
-  model: FormModel = {};
+  override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly today = new Date().toISOString().slice(0, 10);
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
@@ -101,6 +131,7 @@ export class QuotaPurchaseFormComponent {
   });
 
   constructor() {
+    super();
     this.model['agency'] = this.authService.agencyName() ?? '';
     this.model['date'] = this.today;
     this.service.funds().subscribe((list) => {
@@ -165,7 +196,7 @@ export class QuotaPurchaseFormComponent {
         this.reserveInvoiceNumber();
         break;
       case 'special':
-        this.loadSpecialInfo();
+        this.openQuotaPicker();
         break;
       case 'idPart1':
         this.lookupGrower();
@@ -195,23 +226,62 @@ export class QuotaPurchaseFormComponent {
     });
   }
 
-  private loadSpecialInfo(): void {
+  /** RN-21.2.3: el Especial abre la ventana con los anuncios con cupo de ese fondo y especial. */
+  private openQuotaPicker(): void {
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const specialType = this.model['special'];
     if (!fundId || !specialType) {
       return;
     }
-    this.service.specialInfo(fundId, specialType).subscribe({
+    this.quotaService.withBalance(fundId, specialType).subscribe({
+      next: (rows) => {
+        if (rows.length === 0) {
+          this.clearSpecial();
+          this.errorMessage.set(this.messages()?.noQuota ?? null);
+          return;
+        }
+        this.quotaRows.set(rows);
+        this.focusField('quotaDelivery');
+      },
+      error: () => {
+        this.clearSpecial();
+        this.errorMessage.set(this.messages()?.saveError ?? null);
+      },
+    });
+  }
+
+  /** CA-2: Enter con una entrega válida cierra la ventana y trae los datos del anuncio elegido. */
+  onQuotaPicked(pick: QuotaPick): void {
+    this.quotaRows.set(null);
+    this.quotaChoice.set(pick);
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '')!;
+    const number = Number(stripAnnouncementPrefix(pick.row.announcement.announcementNumber));
+    this.service.specialInfo(fundId, this.model['special'], number).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
+        this.advanceFocus('special');
       },
       error: () => {
-        this.specialInfo.set(null);
-        this.errorMessage.set('No hay un anuncio activo para esa agencia/fondo/especial.');
-        this.tick.update((n) => n + 1);
+        this.clearSpecial();
+        this.errorMessage.set(this.messages()?.saveError ?? null);
       },
     });
+  }
+
+  /** Cancelar la ventana deja el Especial libre para elegir otro. */
+  onQuotaCancelled(): void {
+    this.quotaRows.set(null);
+    this.clearSpecial();
+  }
+
+  private clearSpecial(): void {
+    this.model['special'] = '';
+    this.locked.delete('special');
+    this.quotaChoice.set(null);
+    this.specialInfo.set(null);
+    this.tick.update((n) => n + 1);
+    this.focusField('special');
   }
 
   private lookupGrower(): void {
@@ -246,7 +316,7 @@ export class QuotaPurchaseFormComponent {
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
-        this.errorMessage.set('Este número de cédula no existe.');
+        this.errorMessage.set(this.messages()?.idNumberNotFound ?? null);
         this.tick.update((n) => n + 1);
       },
     });
@@ -286,8 +356,10 @@ export class QuotaPurchaseFormComponent {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      // Con todos los datos, un rechazo es real (p. ej. kilos netos sobre Esta Entrega): se dice por qué.
+      error: (err) => {
         this.calc.set(null);
+        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
     });
@@ -296,8 +368,8 @@ export class QuotaPurchaseFormComponent {
   private buildRequest(): DryCoffeePurchaseRequest | null {
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
     const invoiceNumber = this.invoiceReservation()?.invoiceNumber;
-    const hasRequiredCascadeInputs = REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
-    if (!fundId || !invoiceNumber || !hasRequiredCascadeInputs) {
+    const choice = this.quotaChoice();
+    if (!fundId || !invoiceNumber || !choice || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
@@ -315,15 +387,34 @@ export class QuotaPurchaseFormComponent {
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      quotaAnnouncementNumber: Number(stripAnnouncementPrefix(choice.row.announcement.announcementNumber)),
+      quotaDeliveryKg: choice.deliveryKg,
     };
   }
 
-  /** Sin persistir todavia: no hay tabla propia para "compras con cupo" (ver resumen). */
-  print(): void {}
+  /** RN-21.2.9: Imprimir guarda una sola vez; el servidor descuenta el saldo en la misma transacción. */
+  print(): void {
+    const request = this.canPrint() ? this.buildRequest() : null;
+    if (!request) {
+      return;
+    }
+    saveAndPrint(this, {
+      name: 'Cafe Seco con cupo',
+      save: () => this.service.create(request),
+      invoice: buildDryCoffeeInvoiceDocDefinition,
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
+      // El rechazo del cupo (saldo, Esta Entrega) se le muestra al cajero tal como lo explica el servidor.
+      saveError: (err) => {
+        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
+        this.tick.update((n) => n + 1);
+      },
+    });
+  }
 
   private canPrint(): boolean {
     return (
-      !!this.payment() && !!this.specialInfo() &&
+      !!this.payment() && !!this.specialInfo() && !!this.quotaChoice() &&
       !!this.invoiceReservation() &&
       !!this.calc() &&
       this.locked.has('otherDiscounts') &&
@@ -335,6 +426,10 @@ export class QuotaPurchaseFormComponent {
   reset(): void {
     this.model = { agency: this.authService.agencyName() ?? '', date: this.today };
     this.locked.clear();
+    this.payment.set(null);
+    this.quotaRows.set(null);
+    this.quotaChoice.set(null);
+    this.savedNoticeOpen.set(false);
     this.specialInfo.set(null);
     this.invoiceReservation.set(null);
     this.calc.set(null);
@@ -343,8 +438,8 @@ export class QuotaPurchaseFormComponent {
     this.tick.update((n) => n + 1);
   }
 
-  onClose(): void {
-    this.location.back();
+  protected override hasUnsavedInput(): boolean {
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   private buildContent(base: PurchaseFormContent): PurchaseFormContent {
@@ -384,6 +479,7 @@ export class QuotaPurchaseFormComponent {
       healthyUnitPrice: info?.healthyUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
+      deliveryKg: this.quotaChoice()?.deliveryKg ?? '',
       netKg: c ? c.netKg : netKgLocal,
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',
