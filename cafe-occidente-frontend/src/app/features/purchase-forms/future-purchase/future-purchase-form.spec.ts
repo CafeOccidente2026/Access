@@ -26,7 +26,13 @@ describe('FuturePurchaseFormComponent', () => {
       { key: 'announcement', label: 'Anuncio', type: 'select', options: [] },
       { key: 'announcementDate', label: 'Fecha_Anuncio', type: 'date', readonly: true },
     ],
-    weightFields: [{ key: 'qualityIncrement', label: 'Pr IncCalidad', type: 'currency', readonly: true }],
+    weightFields: [
+      { key: 'qualityIncrement', label: 'Pr IncCalidad', type: 'currency', readonly: true },
+      { key: 'finca', label: 'Finca', type: 'text' },
+      { key: 'municipality', label: 'Mpio', type: 'text' },
+      { key: 'vereda', label: 'Vereda', type: 'text' },
+      { key: 'deliveryDate', label: 'Fecha Entrega', type: 'date' },
+    ],
     messages: {
       acceptLabel: 'Aceptar',
       noAnnouncement: 'No hay anuncio',
@@ -205,6 +211,33 @@ describe('FuturePurchaseFormComponent', () => {
     component.print();
 
     expect(component.errorMessage()).toBe('CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE');
+  });
+
+  it('one Enter on each empty optional field (Finca, Mpio, Vereda) moves on to the next one', async () => {
+    setup(growerWithoutId);
+    const optional = ['finca', 'municipality', 'vereda'];
+    const fixture = TestBed.createComponent(FuturePurchaseFormComponent);
+    component = fixture.componentInstance;
+    fixture.autoDetectChanges();
+    for (const [key, value] of [['idPart1', growerWithoutId.idNumber], ['special', 'NESPRESSO - FTUSA'], ['announcement', label]]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+    await fixture.whenStable();
+    const input = (key: string) => fixture.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLInputElement;
+    const settle = async () => {
+      await new Promise((r) => setTimeout(r));
+      await fixture.whenStable();
+    };
+
+    input('finca').focus();
+    for (const [i, key] of optional.entries()) {
+      expect(document.activeElement).toBe(input(key));
+      input(key).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      await settle();
+      expect(document.activeElement).toBe(input([...optional, 'deliveryDate'][i + 1]));
+    }
+    expect(input('deliveryDate').readOnly).toBe(false);
   });
 
   it('blocks the whole form when the grower is deceased', () => {
