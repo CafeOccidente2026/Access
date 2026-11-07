@@ -31,7 +31,7 @@
         "REGIONAL NARIÑO 4C"
       ]
     },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
+    { "key": "announcement", "label": "Anuncio", "type": "select", "options": [] },
     { "key": "announcementDate", "label": "Fecha_Anuncio", "type": "date", "readonly": true },
     { "key": "basePriceLoad", "label": "Pr carga perg s", "type": "currency", "readonly": true }
   ],
@@ -42,7 +42,7 @@
     { "key": "costs", "label": "Costos", "type": "currency", "readonly": true }
   ],
   "weightFields": [
-    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency" },
+    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency", "readonly": true },
     { "key": "finca", "label": "Finca", "type": "text" },
     { "key": "municipality", "label": "Mpio", "type": "text" },
     { "key": "vereda", "label": "Vereda", "type": "text" },
@@ -53,7 +53,8 @@
   "reprintButtonLabel": "Imprimir Manifiesto",
   "messages": {
     "acceptLabel": "Aceptar",
-    "noAnnouncement": "No hay un anuncio activo para ese Especial.",
+    "noAnnouncement": "No hay anuncios de hoy para ese Especial.",
+    "invoiceError": "No se pudo generar el manifiesto",
     "deceasedBlocked": "No se le puede anunciar una entrega futura a un caficultor fallecido.",
     "idNumberNotFound": "Este número de cédula no existe.",
     "saveError": "No se pudo registrar el compromiso. Verifique los datos.",

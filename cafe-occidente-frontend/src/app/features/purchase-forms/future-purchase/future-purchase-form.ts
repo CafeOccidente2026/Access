@@ -1,22 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
-import { Announcement, Fund } from '../../../core/models/dry-coffee-purchase.model';
-import { FuturePurchaseRequest, FuturePurchaseResponse } from '../../../core/models/future-purchase.model';
-import { AnnouncementService } from '../../../core/services/announcement.service';
+import { Announcement } from '../../../core/models/dry-coffee-purchase.model';
+import { FuturePurchaseRequest } from '../../../core/models/future-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-invoice';
 import { advanceFocus, focusField } from '../form-focus';
+import { hasRequired, saveAndPrint } from '../purchase-print';
 import { UnsavedCloseForm } from '../unsaved-close';
 
 type FormModel = Record<string, string>;
@@ -28,6 +26,7 @@ interface FuturePurchaseMessages {
   readonly idNumberNotFound: string;
   readonly saveError: string;
   readonly savedNotice: string;
+  readonly invoiceError: string;
   readonly closeWarning: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
@@ -35,19 +34,20 @@ interface FuturePurchaseMessages {
 
 type FuturePurchaseContent = PurchaseFormContent & { readonly messages: FuturePurchaseMessages };
 
-/** Fondo fijo en RP: el formulario real (Form_COMPRAS A FUTURO.bas) no tiene Cuadro_combinado37
- *  (Fondo) en ningun lado - el anuncio vigente se busca directo por agencia+Especial, mismo patron
- *  que Verde/Pasilla. */
-const RP_FUND_CODE = 'RP';
+const EDITABLE: string[] = ['idPart1', 'special', 'announcement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
+const REQUIRED: string[] = ['idPart1', 'special', 'announcement', 'kilos', 'deliveryDate'];
+const FOCUS_ORDER: string[] = ['idPart1', 'special', 'announcement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
 
-const EDITABLE: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
-const REQUIRED: string[] = ['idPart1', 'special', 'kilos', 'deliveryDate'];
-const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
+/** Texto de cada anuncio en la lista: número y Pr carga perg s (RN-21.4.4). */
+function announcementLabel(a: Announcement): string {
+  return `${stripAnnouncementPrefix(a.announcementNumber)} · ${formatDisplayNumber(a.basePriceLoad, 'currency')}`;
+}
 
 /**
- * "Ingresar Compras a Futuro" (Form_COMPRAS A FUTURO.bas): sin cascada de precio ni factura - es un
- * compromiso de entrega futura, no una compra liquidada. Cédula busca al caficultor; Especial trae
- * el anuncio vigente (Fondo fijo RP) con sus precios informativos; Kilos_LostFocus simplemente copia
+ * "Ingresar Compras a Futuro" (RF-21.4, Form_COMPRAS A FUTURO.bas): sin cascada de precio ni factura - es un
+ * compromiso de entrega futura, no una compra liquidada. Cédula busca al caficultor; Especial llena la lista de
+ * Anuncio con los anuncios de hoy (RN-21.4.3; Access tomaba el último) y el elegido trae sus precios
+ * informativos; Imprimir guarda una sola vez y abre el Manifiesto con 2 copias; Kilos_LostFocus simplemente copia
  * SaldoKilos = Kilos (arranca igual al anunciado, se descontará al facturar, RF-21.5). El backend
  * valida fallecido y pertenencia a programa (`GrowerService.requireProgramMembership`) - esos
  * mensajes reales se muestran tal cual los devuelve, no se repiten en el frontend.
@@ -62,7 +62,6 @@ const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca'
 export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(FuturePurchaseService);
-  private readonly announcementService = inject(AnnouncementService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
   private readonly elementRef = inject(ElementRef);
@@ -70,18 +69,21 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private readonly base = toSignal(this.content.loadJson<FuturePurchaseContent>('purchase-form-future'));
   readonly messages = computed<FuturePurchaseMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<Announcement | null>(null);
-  readonly result = signal<FuturePurchaseResponse | null>(null);
+  /** Anuncios de hoy del especial elegido. */
+  readonly todayAnnouncements = signal<Announcement[]>([]);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar. */
+  readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
   /** Compra futura no tiene formas de pago: la plantilla compartida la pide, pero nunca se llena. */
   readonly payment = signal<PurchasePayment | null>(null);
   private readonly tick = signal(0);
+  private readonly announcementOptions = computed(() => this.todayAnnouncements().map(announcementLabel));
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
-  private rpFundId: number | null = null;
 
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
@@ -96,9 +98,6 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   constructor() {
     super();
     this.model['agency'] = this.authService.agencyName() ?? '';
-    this.announcementService.funds().subscribe((list) => {
-      this.rpFundId = list.find((f: Fund) => f.code === RP_FUND_CODE)?.id ?? null;
-    });
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
@@ -135,7 +134,9 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     if (key === 'idPart1') {
       this.lookupGrower();
     } else if (key === 'special') {
-      this.loadAnnouncementInfo();
+      this.loadTodayAnnouncements();
+    } else if (key === 'announcement') {
+      this.pickAnnouncement();
     } else if (key === 'kilos') {
       // Kilos_LostFocus (Form_COMPRAS A FUTURO.bas): SaldoKilos = Kilos al momento de anunciar.
       this.model['balance'] = this.model['kilos'];
@@ -196,28 +197,43 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  /** Cuadro_combinado30_AfterUpdate: trae el anuncio vigente (Fondo RP fijo) con sus precios
-   *  informativos - solo para mostrar en pantalla, el backend los vuelve a resolver el mismo al
-   *  guardar (no viajan en el request). */
-  private loadAnnouncementInfo(): void {
+  /** RN-21.4.3: el Especial llena la lista de Anuncio con los anuncios de hoy de ese especial. */
+  private loadTodayAnnouncements(): void {
     const specialType = this.model['special'];
-    if (!this.rpFundId || !specialType) {
-      return;
-    }
-    this.announcementService.latest(this.rpFundId, specialType).subscribe({
-      next: (info) => {
-        this.announcementInfo.set(info);
+    this.service.todayAnnouncements(specialType).subscribe({
+      next: (list) => {
+        this.todayAnnouncements.set(list);
+        if (list.length === 0) {
+          this.unlockSpecial();
+          this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        }
         this.tick.update((n) => n + 1);
       },
       error: () => {
-        this.announcementInfo.set(null);
+        this.unlockSpecial();
         this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
         this.tick.update((n) => n + 1);
       },
     });
   }
 
+  /** RN-21.4.5: el anuncio elegido trae su fecha, sus precios, la bonificación y los costos. */
+  private pickAnnouncement(): void {
+    const picked = this.todayAnnouncements().find((a) => announcementLabel(a) === this.model['announcement']);
+    if (!picked) {
+      this.model['announcement'] = '';
+      this.locked.delete('announcement');
+      return;
+    }
+    this.announcementInfo.set(picked);
+  }
 
+  private unlockSpecial(): void {
+    this.model['special'] = '';
+    this.locked.delete('special');
+    this.todayAnnouncements.set([]);
+    this.focusField('special');
+  }
 
   /** Extrae el mensaje real del backend (fallecido, no pertenece a programa) en vez de taparlo con
    *  un mensaje generico - esas validaciones viven solo en el backend. */
@@ -227,12 +243,14 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   }
 
   private buildRequest(): FuturePurchaseRequest | null {
-    if (!REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '')) {
+    const info = this.announcementInfo();
+    if (!info || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
       idNumber: this.model['idPart1'],
       specialType: this.model['special'],
+      announcementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
       announcedKg: parseDisplayNumber(this.model['kilos']),
       deliveryDate: this.model['deliveryDate'],
       finca: this.model['finca'] || null,
@@ -241,35 +259,24 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     };
   }
 
-  /** Comando36_Click: guarda el compromiso y abre el Manifiesto (la carta-compromiso). */
+  /** Comando36_Click: guarda el compromiso una sola vez y abre el Manifiesto (2 copias, RN-21.4.8). */
   print(): void {
-    if (!this.canPrint()) {
-      return;
-    }
-    const request = this.buildRequest();
+    const request = this.canPrint() ? this.buildRequest() : null;
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    this.service.create(request).subscribe({
-      next: (res) => {
-        this.result.set(res);
-        this.savedNoticeOpen.set(true);
-        this.printManifesto(res);
-        this.tick.update((n) => n + 1);
-      },
-      error: (err) => {
-        console.error('Error al registrar compromiso Compras a Futuro:', err?.error ?? err);
+    saveAndPrint(this, {
+      name: 'Compras a Futuro',
+      save: () => this.service.create(request),
+      invoice: (purchase) => buildFuturePurchaseManifestoDocDefinition(purchase),
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
+      // Fallecido o fuera del programa: el mensaje real del servidor, no uno genérico.
+      saveError: (err) => {
         this.errorMessage.set(this.backendErrorMessage(err));
         this.tick.update((n) => n + 1);
       },
     });
-  }
-
-  private printManifesto(purchase: FuturePurchaseResponse): void {
-    const docDefinition = buildFuturePurchaseManifestoDocDefinition(purchase);
-    pdfMake.vfs = pdfFonts;
-    pdfMake.createPdf(docDefinition).open();
   }
 
   dismissError(): void {
@@ -285,8 +292,9 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   reset(): void {
     this.model = { agency: this.authService.agencyName() ?? '' };
     this.locked.clear();
+    this.payment.set(null);
     this.announcementInfo.set(null);
-    this.result.set(null);
+    this.todayAnnouncements.set([]);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
@@ -295,12 +303,12 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   }
 
   protected override hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
 
   private canPrint(): boolean {
-    return !this.result() && !!this.announcementInfo() && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    return !!this.announcementInfo() && hasRequired(this.model, REQUIRED);
   }
 
   private buildContent(base: FuturePurchaseContent): PurchaseFormContent {
@@ -315,19 +323,22 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
 
     const info = this.announcementInfo();
     const computedValues: Record<string, string | number> = {
-      announcement: info?.announcementNumber ?? '',
       announcementDate: info?.announcementDate ?? '',
       basePriceLoad: info?.basePriceLoad ?? '',
       healthyUnitPrice: info?.healthyUnitPrice ?? '',
       defectiveUnitPrice: info?.defectiveUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
+      qualityIncrement: info?.qualityIncrement ?? '',
     };
     const READONLY_COMPUTED = Object.keys(computedValues);
 
     const field = (key: string): FormFieldDefinition => {
       const b = bmap.get(key)!;
-      const patch: { readonly?: boolean; value?: string | number } = {};
+      const patch: { readonly?: boolean; value?: string | number; options?: string[] } = {};
+      if (key === 'announcement') {
+        patch.options = this.announcementOptions();
+      }
       if (READONLY_COMPUTED.includes(key)) {
         patch.readonly = true;
         patch.value = computedValues[key];
@@ -339,7 +350,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
-      if (prev && prev.value === next.value && prev.readonly === next.readonly) {
+      if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.options === next.options) {
         return prev;
       }
       this.fieldCache.set(key, next);
