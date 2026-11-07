@@ -10,6 +10,12 @@
       "note": "El saldo se recalcula desde cero: kilos anunciados menos los kilos netos de las compras no anuladas que la facturaron. Restaurar solo cambia los que no cuadran y queda en el Historial.",
       "columns": ["Anuncio", "Fecha", "Especial", "Kilos", "Kl_Entregados", "Saldo actual", "Saldo recalculado"]
     },
+    "pending": {
+      "windowTitle": "ANUNCIADAS HOY",
+      "heading": "Anunciadas Hoy",
+      "note": "Compras a futuro que todavía tienen kilos por entregar, de cualquier fecha, agrupadas por anuncio. Solo consulta.",
+      "columns": ["Anuncio", "Fecha Anuncio", "Especial", "Pr Alm Sana", "Productores", "Kilos Anunciados", "Kl_Entregados", "Saldo"]
+    },
     "quota": {
       "windowTitle": "RESTAURAR CUPOS",
       "heading": "Restaurar Anuncios con Cupos",

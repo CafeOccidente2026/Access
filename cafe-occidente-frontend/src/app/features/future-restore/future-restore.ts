@@ -4,7 +4,7 @@ import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 
 import { AnnouncementQuotaResponse } from '../../core/models/announcement-quota.model';
-import { FuturePurchaseRestoreRow } from '../../core/models/future-purchase.model';
+import { FuturePurchaseRestoreRow, PendingAnnouncementRow } from '../../core/models/future-purchase.model';
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
 import { ContentService } from '../../core/services/content.service';
 import { FuturePurchaseService } from '../../core/services/future-purchase.service';
@@ -12,8 +12,11 @@ import { AccessWindowComponent } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 
-/** 'future' = Restaurar Compras Anunciadas; 'quota' = Restaurar Anuncios con Cupos (solo consulta, P5). */
-type View = 'future' | 'quota';
+/**
+ * 'future' = Restaurar Compras Anunciadas; 'quota' = Restaurar Anuncios con Cupos (solo consulta, P5);
+ * 'pending' = Anunciadas Hoy (solo consulta, HU-31 con la respuesta P2).
+ */
+type View = 'future' | 'quota' | 'pending';
 
 export interface FutureRestoreContent {
   readonly idNumberLabel: string;
@@ -36,8 +39,14 @@ export function quotaCells(q: AnnouncementQuotaResponse): string[] {
     kg(q.balance)];
 }
 
+/** Anunciadas Hoy: Kl_Entregados = kilos anunciados menos el saldo. */
+export function pendingCells(p: PendingAnnouncementRow): string[] {
+  return [p.announcementNumber, p.announcementDate, p.specialType, kg(p.healthyUnitPrice), String(p.growers),
+    kg(p.announcedKg), kg(p.announcedKg - p.remainingKg), kg(p.remainingKg)];
+}
+
 /**
- * Los dos "Restaurar" de Compras a Futuro (solo el Administrador, Q5). Restaurar Compras Anunciadas recalcula desde
+ * Tablas de Compras a Futuro: Anunciadas Hoy (Administrador y Usuario) y los dos "Restaurar" (solo el Administrador, Q5). Restaurar Compras Anunciadas recalcula desde
  * cero el saldo de los compromisos de una cédula (P6): primero muestra el saldo guardado y el recalculado, y Restaurar
  * lo aplica. Restaurar Anuncios con Cupos solo muestra el saldo de cada cupo, que ya se calcula al vuelo (P5).
  */
@@ -66,14 +75,22 @@ export class FutureRestoreComponent {
     params: () => (this.viewKey === 'quota' ? true : undefined),
     stream: () => this.quotaService.list(),
   });
+  private readonly pending = rxResource({
+    params: () => (this.viewKey === 'pending' ? true : undefined),
+    stream: () => this.futureService.pending(),
+  });
 
   readonly rows = computed<string[][] | null>(() => {
     if (this.viewKey === 'quota') {
       return this.quotas.hasValue() ? this.quotas.value().map(quotaCells) : null;
     }
+    if (this.viewKey === 'pending') {
+      return this.pending.hasValue() ? this.pending.value().map(pendingCells) : null;
+    }
     return this.futureRows()?.map(futureCells) ?? null;
   });
-  readonly failed = computed(() => this.error() || this.quotas.status() === 'error');
+  readonly failed = computed(() =>
+    this.error() || this.quotas.status() === 'error' || this.pending.status() === 'error');
   /** Hay algo que restaurar: algún saldo guardado no es el recalculado. */
   readonly canRestore = computed(() =>
     (this.futureRows() ?? []).some((r) => r.currentBalance !== r.recalculatedBalance));

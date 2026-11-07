@@ -4,7 +4,12 @@ import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
 import { Announcement } from '../models/dry-coffee-purchase.model';
-import { FuturePurchaseRequest, FuturePurchaseResponse, FuturePurchaseRestoreRow } from '../models/future-purchase.model';
+import {
+  FuturePurchaseRequest,
+  FuturePurchaseResponse,
+  FuturePurchaseRestoreRow,
+  PendingAnnouncementRow,
+} from '../models/future-purchase.model';
 
 /** Unica responsabilidad: llamadas HTTP para "Ingresar Compras a Futuro". Sin preview ni factura -
  *  el compromiso se registra directo (ver FuturePurchaseServiceImpl, backend). */
@@ -23,6 +28,11 @@ export class FuturePurchaseService {
     return this.http.get<FuturePurchaseResponse[]>(
       `${API_BASE_URL}/purchases/future/open?idNumber=${encodeURIComponent(idNumber)}`,
     );
+  }
+
+  /** Anunciadas Hoy (HU-31, P2): compras a futuro con saldo, de cualquier fecha, por anuncio. */
+  pending(): Observable<PendingAnnouncementRow[]> {
+    return this.http.get<PendingAnnouncementRow[]>(`${API_BASE_URL}/purchases/future/pending`);
   }
 
   /** Restaurar Compras Anunciadas: saldo guardado y recalculado, sin escribir (solo el Administrador). */

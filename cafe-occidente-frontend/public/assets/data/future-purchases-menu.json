@@ -5,7 +5,7 @@
     { "label": "Facturar Anuncios con Cupos", "route": "/compras/futuro/facturar-cupos" },
     { "label": "Restaurar Anuncios con Cupos", "route": "/compras/futuro/restaurar-cupos", "roles": ["ADMINISTRADOR"] }
   ],
-  "leftStandaloneOption": { "label": "Anunciadas Hoy", "route": "/compras/futuro" },
+  "leftStandaloneOption": { "label": "Anunciadas Hoy", "route": "/compras/futuro/anunciadas-hoy" },
   "rightOptions": [
     { "label": "Ingresar Compras a Futuro", "route": "/compras/futuro/ingresar", "emphasis": true },
     { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro/facturar-anunciadas" },

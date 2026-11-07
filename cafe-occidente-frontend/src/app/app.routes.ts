@@ -199,6 +199,12 @@ export const routes: Routes = [
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
+        // HU-31 (P2): Administrador y Usuario, solo consulta.
+        path: 'compras/futuro/anunciadas-hoy',
+        data: { view: 'pending' },
+        loadComponent: () => import('./features/future-restore/future-restore').then((m) => m.FutureRestoreComponent),
+      },
+      {
         // Q5: los dos Restaurar, solo el Administrador.
         path: 'compras/futuro/restaurar-anunciadas',
         data: { roles: ADMIN, view: 'future' },

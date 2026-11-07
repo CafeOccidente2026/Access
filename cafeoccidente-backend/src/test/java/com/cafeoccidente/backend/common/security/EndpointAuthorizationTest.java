@@ -186,6 +186,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, post, "/api/purchases/future");
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
         add(ADMIN_USER, get, "/api/purchases/future/open", "/api/purchases/future/open?idNumber=1");
+        add(ADMIN_USER, get, "/api/purchases/future/pending");
         // Restaurar Compras Anunciadas (Q5): solo el Administrador.
         add(ADMIN, get, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
         add(ADMIN, post, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
