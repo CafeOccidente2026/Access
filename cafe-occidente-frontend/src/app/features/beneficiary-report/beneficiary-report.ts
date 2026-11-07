@@ -38,6 +38,8 @@ export class BeneficiaryReportComponent {
   /** RN-28.2.4: solo el Administrador; el servidor lo ignora para otro rol. */
   readonly allAgencies = signal(false);
   readonly idNumber = signal('');
+  /** RN-28.2.2: reporte de todos los beneficiarios. */
+  readonly allBeneficiaries = signal(false);
   readonly from = signal('');
   readonly to = signal('');
   readonly message = signal<string | null>(null);
@@ -53,9 +55,14 @@ export class BeneficiaryReportComponent {
       this.message.set(content.messages.dates);
       return;
     }
+    const idNumber = this.allBeneficiaries() ? '' : this.idNumber().replace(/\D/g, '');
+    if (report.allBeneficiaries && !this.allBeneficiaries() && !idNumber) {
+      this.message.set(content.messages.idNumber);
+      return;
+    }
     const params = {
       allAgencies: this.allAgencies() ? 'true' : null,
-      idNumber: this.idNumber().replace(/\D/g, ''),
+      idNumber,
       from: report.dates ? this.from() : null,
       to: report.dates ? this.to() : null,
     };
