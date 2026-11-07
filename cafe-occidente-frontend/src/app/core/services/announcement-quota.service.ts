@@ -11,6 +11,11 @@ import { AnnouncementQuotaRequest, AnnouncementQuotaResponse, QuotaBalance, Quot
 export class AnnouncementQuotaService {
   private readonly http = inject(HttpClient);
 
+  /** Los cupos de la agencia con su saldo recalculado (Restaurar Anuncios con Cupos). */
+  list(): Observable<AnnouncementQuotaResponse[]> {
+    return this.http.get<AnnouncementQuotaResponse[]>(`${API_BASE_URL}/announcement-quotas`);
+  }
+
   /** Anuncios de la agencia sin cupo, sin pasilla ni verde, con sus Kilos Entregados. */
   available(): Observable<QuotaCandidate[]> {
     return this.http.get<QuotaCandidate[]>(`${API_BASE_URL}/announcement-quotas/available`);
