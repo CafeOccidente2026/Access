@@ -28,6 +28,9 @@ function page(position: number, idNumber: string, total = 3): AssociatePage {
   } as AssociatePage;
 }
 
+const value = (el: HTMLElement, label: string) =>
+  (el.querySelector(`[aria-label="${label}"]`) as HTMLInputElement).value;
+
 describe('AssociatesComponent (HU-53)', () => {
   let http: HttpTestingController;
 
@@ -58,9 +61,6 @@ describe('AssociatesComponent (HU-53)', () => {
     };
     return { fixture, el, click, answer };
   }
-
-  const value = (el: HTMLElement, label: string) =>
-    (el.querySelector(`[aria-label="${label}"]`) as HTMLInputElement).value;
 
   it('RN-28.3.4/5: shows the 28 Access fields and none is editable', () => {
     const { el } = render();
