@@ -19,23 +19,27 @@ describe('FutureRestoreComponent', () => {
     id: 151, announcementNumber: 'SDBU-1', announcementDate: '2026-11-05', specialType: 'ESTANDAR',
     announcedKg: 1500, deliveredKg: 1000, currentBalance: 100, recalculatedBalance: 500,
   };
+  const pending = { announcementNumber: 'SDBU-4', announcementDate: '2026-11-02', specialType: 'NESPRESSO - FTUSA',
+    healthyUnitPrice: 9100, announcedKg: 1500, remainingKg: 1200, growers: 2 };
   const quota = { id: 9, agencyId: 1, announcementNumber: 4, announcementDate: '2026-11-02', specialType: 'RN',
     assignedQuota: 2500, deliveredKg: 1000, balance: 1500 };
 
   let previewSpy: ReturnType<typeof vi.fn>;
   let restoreSpy: ReturnType<typeof vi.fn>;
   let listSpy: ReturnType<typeof vi.fn>;
+  let pendingSpy: ReturnType<typeof vi.fn>;
 
-  function setup(view: 'future' | 'quota') {
+  function setup(view: 'future' | 'quota' | 'pending', pendingFails = false) {
     previewSpy = vi.fn(() => of([wrong]));
     restoreSpy = vi.fn(() => of([wrong]));
     listSpy = vi.fn(() => of([quota]));
+    pendingSpy = vi.fn(() => (pendingFails ? throwError(() => new Error('500')) : of([pending])));
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
-        { provide: FuturePurchaseService, useValue: { restorePreview: previewSpy, restore: restoreSpy } },
+        { provide: FuturePurchaseService, useValue: { restorePreview: previewSpy, restore: restoreSpy, pending: pendingSpy } },
         { provide: AnnouncementQuotaService, useValue: { list: listSpy } },
         { provide: ActivatedRoute, useValue: { snapshot: { data: { view } } } },
         { provide: Location, useValue: { back: vi.fn() } },
@@ -102,6 +106,26 @@ describe('FutureRestoreComponent', () => {
     expect(listSpy).toHaveBeenCalledTimes(1);
     expect(c.rows()).toEqual([['4', '2026-11-02', 'RN', '2.500,00', '1.000,00', '1.500,00']]);
     expect(restoreSpy).not.toHaveBeenCalled();
+  });
+
+  it('HU-31: Anunciadas Hoy shows each announcement with its growers, kilos, delivered and balance, read only', () => {
+    const c = setup('pending');
+
+    expect(pendingSpy).toHaveBeenCalledTimes(1);
+    expect(listSpy).not.toHaveBeenCalled();
+    expect(c.rows()).toEqual([['SDBU-4', '2026-11-02', 'NESPRESSO - FTUSA', '9.100,00', '2', '1.500,00', '300,00', '1.200,00']]);
+    expect(c.canRestore()).toBe(false);
+  });
+
+  it('a failed Anunciadas Hoy says so and shows no table', () => {
+    const c = setup('pending', true);
+
+    expect(c.failed()).toBe(true);
+    expect(c.rows()).toBeNull();
+  });
+
+  it('the menu opens Anunciadas Hoy for everyone', () => {
+    expect(menu.leftStandaloneOption).toEqual({ label: 'Anunciadas Hoy', route: '/compras/futuro/anunciadas-hoy' });
   });
 
   it('the menu opens both screens, only for the Administrator', () => {
