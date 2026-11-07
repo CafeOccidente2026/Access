@@ -25,7 +25,10 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -41,9 +44,13 @@ class FuturePurchaseServiceImplTest {
 
     /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
+    /** Hoy en Colombia: 2026-11-07. */
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 7);
+    private final Clock clock = Clock.fixed(TODAY.atStartOfDay(ZoneId.of("America/Bogota")).toInstant(),
+            ZoneId.of("America/Bogota"));
     private final FuturePurchaseServiceImpl service = new FuturePurchaseServiceImpl(
             futurePurchaseRepository, agencyRepository, fundRepository, announcementService, growerService,
-            securityUtils, currentAgencyProvider);
+            securityUtils, currentAgencyProvider, clock);
 
     private Agency agency() {
         Agency agency = new Agency();
@@ -66,14 +73,18 @@ class FuturePurchaseServiceImplTest {
     }
 
     private AnnouncementResponse announcement() {
+        return announcement("SDBU-1", TODAY, 1L, "RN");
+    }
+
+    private AnnouncementResponse announcement(String number, LocalDate date, Long fundId, String specialType) {
         return new AnnouncementResponse(
-                1L, "SDBU-1", LocalDate.now(), new BigDecimal("1113500.00"), new BigDecimal("0"),
-                new BigDecimal("8908.00"), new BigDecimal("40"), new BigDecimal("692.00"), 1L, 1L, "RN", null);
+                1L, number, date, new BigDecimal("1113500.00"), new BigDecimal("0"),
+                new BigDecimal("8908.00"), new BigDecimal("40"), new BigDecimal("692.00"), 1L, fundId, specialType, null);
     }
 
     private FuturePurchaseRequest request() {
         return new FuturePurchaseRequest(
-                "123456", "RN", new BigDecimal("500.00"), LocalDate.now().plusMonths(1),
+                "123456", "RN", 1, new BigDecimal("500.00"), TODAY.plusMonths(1),
                 "Finca", "Buesaco", "Vereda");
     }
 
@@ -81,7 +92,7 @@ class FuturePurchaseServiceImplTest {
         when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency()));
         when(growerService.findByIdNumber("123456")).thenReturn(grower("S"));
         when(fundRepository.findByCode("RP")).thenReturn(Optional.of(fundRp()));
-        when(announcementService.findLatest(1L, 1L, "RN")).thenReturn(announcement());
+        when(announcementService.findForPurchase(1L, 1L, "RN", 1)).thenReturn(announcement());
         when(futurePurchaseRepository.save(any())).thenAnswer(inv -> {
             FuturePurchase saved = inv.getArgument(0);
             return saved;
@@ -151,5 +162,41 @@ class FuturePurchaseServiceImplTest {
         // A diferencia de Seco/Verde/Otros, Compras a Futuro guarda Pr_Base_CPS crudo del anuncio,
         // sin restar Costos*BaseCarga.
         assertThat(response.basePriceLoad()).isEqualByComparingTo("1113500.00");
+    }
+
+    @Test
+    void ca2ListsOnlyTodaysAnnouncementsOfTheSpecialInFundRp() {
+        when(fundRepository.findByCode("RP")).thenReturn(Optional.of(fundRp()));
+        when(announcementService.history()).thenReturn(List.of(
+                announcement("SDBU-5", TODAY, 1L, "RN"),
+                announcement("SDBU-4", TODAY.minusDays(1), 1L, "RN"),
+                announcement("SDBU-3", TODAY, 2L, "RN"),
+                announcement("SDBU-2", TODAY, 1L, "NESPRESSO - FTUSA")));
+
+        List<AnnouncementResponse> list = service.todayAnnouncements("RN");
+
+        assertThat(list).extracting(AnnouncementResponse::announcementNumber).containsExactly("SDBU-5");
+    }
+
+    @Test
+    void ca2SavesTheChosenAnnouncementAndItsPrices() {
+        mockHappyPath();
+
+        FuturePurchaseResponse response = service.create(request());
+
+        assertThat(response.announcementNumber()).isEqualTo("SDBU-1");
+        assertThat(response.announcementDate()).isEqualTo(TODAY);
+        assertThat(response.healthyUnitPrice()).isEqualByComparingTo("8908.00");
+    }
+
+    @Test
+    void anAnnouncementOfAnotherDayIsRejected() {
+        mockHappyPath();
+        when(announcementService.findForPurchase(1L, 1L, "RN", 1))
+                .thenReturn(announcement("SDBU-1", TODAY.minusDays(1), 1L, "RN"));
+
+        assertThatThrownBy(() -> service.create(request()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("no es de hoy");
+        verify(futurePurchaseRepository, never()).save(any());
     }
 }
