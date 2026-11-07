@@ -1,13 +1,16 @@
 package com.cafeoccidente.backend.purchases.report.repository;
 
+import com.cafeoccidente.backend.purchases.report.dto.FutureBalanceRow;
 import com.cafeoccidente.backend.purchases.report.dto.PurchaseReportRow;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** Lectura de las compras de seco, verde y pasilla para los reportes de Compras (RF-24, RF-25). */
+/** Lectura para los reportes de Compras (RF-24, RF-25) y de Compras a Futuro (RF-21.6, RF-21.7). */
 @Repository
 public class PurchaseReportRepository {
 
@@ -22,6 +25,32 @@ public class PurchaseReportRepository {
             + " UNION ALL SELECT 'GREEN', " + COLUMNS + ", p.kilos_verdes, p.factor FROM compras_cafe_verde p"
             + " UNION ALL SELECT 'HUSK', " + COLUMNS + ", NULL::numeric, p.porc_almendra FROM compras_pasilla p";
 
+    /** Lo que muestran los reportes de cada compra, sin el WHERE. */
+    private static final String REPORT_SELECT = "SELECT c.module, a.nombre AS agency_name, c.numero_anuncio, c.especial,"
+            + " pr.codigo, pr.nombre AS product_name, c.fecha_compra, f.codigo AS fund_code, rc.prefijo, c.numero_factura,"
+            + " c.cedula, c.nombres, c.apellidos, c.kv, c.kilos_netos, c.porc, c.vr_kilo, c.vr_bruto, c.vr_inventario,"
+            + " c.aporte_asociado, c.descuento_cooperativo, c.descuento_financiero, c.retefuente, c.otros_descuentos,"
+            + " c.neto_a_pagar, CASE WHEN c.estado = 'ANULADA' THEN 'ANULADA' ELSE c.forma_pago END AS forma_pago, c.estado"
+            + " FROM (" + PURCHASES + ") c"
+            + " JOIN agencias a ON a.id = c.agencia_id JOIN fondos f ON f.id = c.fondo_id"
+            + " JOIN productos pr ON pr.id = c.producto_id"
+            + " LEFT JOIN registros_control rc ON rc.agencia_id = c.agencia_id AND rc.activo";
+    private static final String BY_DATE = REPORT_SELECT
+            + " WHERE c.agencia_id = :agencyId AND c.fecha_compra BETWEEN :from AND :to"
+            + " ORDER BY c.numero_factura, c.module";
+    /** Informe Anuncios a Futuro (HU-34): solo cafe seco, un anuncio, entre dos fechas. */
+    private static final String FUTURE_ANNOUNCEMENT = REPORT_SELECT
+            + " WHERE c.module = 'DRY' AND c.agencia_id = :agencyId AND c.numero_anuncio = :announcement"
+            + " AND c.fecha_compra BETWEEN :from AND :to"
+            + " ORDER BY c.numero_factura";
+    /** Informe Saldo Anuncios (HU-35): las compras a futuro del anuncio, por cedula. */
+    private static final String FUTURE_BALANCE = "SELECT a.nombre AS agency_name, f.numero_anuncio, f.fecha_anuncio,"
+            + " f.cedula, f.nombres, f.apellidos, f.kilos, f.kilos - f.saldo AS entregados, f.saldo, f.pr_alm_sana,"
+            + " f.bonificacion, f.especial, f.fecha_entrega"
+            + " FROM compras_anunciadas f JOIN agencias a ON a.id = f.agencia_id"
+            + " WHERE f.agencia_id = :agencyId AND f.numero_anuncio = :announcement"
+            + " ORDER BY f.cedula, f.id";
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public PurchaseReportRepository(NamedParameterJdbcTemplate jdbc) {
@@ -30,20 +59,33 @@ public class PurchaseReportRepository {
 
     /** Las compras de la agencia entre dos fechas (ambas incluidas), por numero de factura. */
     public List<PurchaseReportRow> byDate(Long agencyId, LocalDate from, LocalDate to) {
-        String sql = "SELECT c.module, a.nombre AS agency_name, c.numero_anuncio, c.especial, pr.codigo, pr.nombre AS product_name,"
-                + " c.fecha_compra, f.codigo AS fund_code, rc.prefijo, c.numero_factura, c.cedula, c.nombres, c.apellidos,"
-                + " c.kv, c.kilos_netos, c.porc, c.vr_kilo, c.vr_bruto, c.vr_inventario, c.aporte_asociado,"
-                + " c.descuento_cooperativo, c.descuento_financiero, c.retefuente, c.otros_descuentos, c.neto_a_pagar,"
-                + " CASE WHEN c.estado = 'ANULADA' THEN 'ANULADA' ELSE c.forma_pago END AS forma_pago, c.estado"
-                + " FROM (" + PURCHASES + ") c"
-                + " JOIN agencias a ON a.id = c.agencia_id JOIN fondos f ON f.id = c.fondo_id"
-                + " JOIN productos pr ON pr.id = c.producto_id"
-                + " LEFT JOIN registros_control rc ON rc.agencia_id = c.agencia_id AND rc.activo"
-                + " WHERE c.agencia_id = :agencyId AND c.fecha_compra BETWEEN :from AND :to"
-                + " ORDER BY c.numero_factura, c.module";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("agencyId", agencyId).addValue("from", from).addValue("to", to);
-        return jdbc.query(sql, params, (rs, i) -> new PurchaseReportRow(
+        return jdbc.query(BY_DATE, params, (rs, i) -> row(rs));
+    }
+
+    /** Las compras de seco de la agencia con ese anuncio (numero de display) entre dos fechas. */
+    public List<PurchaseReportRow> futureAnnouncement(Long agencyId, String announcement, LocalDate from, LocalDate to) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("agencyId", agencyId).addValue("announcement", announcement)
+                .addValue("from", from).addValue("to", to);
+        return jdbc.query(FUTURE_ANNOUNCEMENT, params, (rs, i) -> row(rs));
+    }
+
+    /** Las compras a futuro de la agencia con ese anuncio (numero de display). */
+    public List<FutureBalanceRow> futureBalance(Long agencyId, String announcement) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("agencyId", agencyId).addValue("announcement", announcement);
+        return jdbc.query(FUTURE_BALANCE, params, (rs, i) -> new FutureBalanceRow(
+                rs.getString("agency_name"), rs.getString("numero_anuncio"),
+                rs.getObject("fecha_anuncio", LocalDate.class), rs.getString("cedula"), rs.getString("nombres"),
+                rs.getString("apellidos"), rs.getBigDecimal("kilos"), rs.getBigDecimal("entregados"),
+                rs.getBigDecimal("saldo"), rs.getBigDecimal("pr_alm_sana"), rs.getBigDecimal("bonificacion"),
+                rs.getString("especial"), rs.getObject("fecha_entrega", LocalDate.class)));
+    }
+
+    private static PurchaseReportRow row(ResultSet rs) throws SQLException {
+        return new PurchaseReportRow(
                 rs.getString("module"), rs.getString("agency_name"), rs.getString("numero_anuncio"),
                 rs.getString("especial"), rs.getString("codigo"), rs.getString("product_name"),
                 rs.getObject("fecha_compra", LocalDate.class), rs.getString("fund_code"), rs.getString("prefijo"),
@@ -53,6 +95,6 @@ public class PurchaseReportRepository {
                 rs.getBigDecimal("vr_inventario"), rs.getBigDecimal("aporte_asociado"),
                 rs.getBigDecimal("descuento_cooperativo"), rs.getBigDecimal("descuento_financiero"),
                 rs.getBigDecimal("retefuente"), rs.getBigDecimal("otros_descuentos"), rs.getBigDecimal("neto_a_pagar"),
-                rs.getString("forma_pago"), rs.getString("estado")));
+                rs.getString("forma_pago"), rs.getString("estado"));
     }
 }
