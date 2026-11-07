@@ -172,6 +172,10 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
         // Generar Reporte Anuncio (Q14: Administrador y Usuario, prima sobre RF-24) y Compras por fecha (RF-25).
         add(ADMIN_USER, get, "/api/purchases/reports/by-date", "/api/purchases/reports/by-date?from=2026-01-01&to=2026-01-01");
+        // Informes de Compras a Futuro (RF-21.6 y RF-21.7): Administrador y Usuario.
+        add(ADMIN_USER, get, "/api/purchases/reports/future-announcement",
+                "/api/purchases/reports/future-announcement?announcement=1&from=2026-01-01&to=2026-01-01");
+        add(ADMIN_USER, get, "/api/purchases/reports/future-balance", "/api/purchases/reports/future-balance?announcement=1");
         // Consultar Compras (RF-26): Administrador y Usuario.
         add(ADMIN_USER, get, "/api/purchases/query", "/api/purchases/query?invoiceNumber=1");
         add(ADMIN_USER, get, "/api/purchases/query/navigate", "/api/purchases/query/navigate?direction=FIRST");

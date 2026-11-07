@@ -2,6 +2,8 @@ package com.cafeoccidente.backend.purchases.report.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
+import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.purchases.report.dto.FutureBalanceRow;
 import com.cafeoccidente.backend.purchases.report.dto.PurchaseReportRow;
 import com.cafeoccidente.backend.purchases.report.repository.PurchaseReportRepository;
 import com.cafeoccidente.backend.purchases.report.service.PurchaseReportService;
@@ -16,10 +18,13 @@ public class PurchaseReportServiceImpl implements PurchaseReportService {
 
     private final PurchaseReportRepository repository;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final ControlRecordService controlRecordService;
 
-    public PurchaseReportServiceImpl(PurchaseReportRepository repository, CurrentAgencyProvider currentAgencyProvider) {
+    public PurchaseReportServiceImpl(PurchaseReportRepository repository, CurrentAgencyProvider currentAgencyProvider,
+            ControlRecordService controlRecordService) {
         this.repository = repository;
         this.currentAgencyProvider = currentAgencyProvider;
+        this.controlRecordService = controlRecordService;
     }
 
     @Override
@@ -28,5 +33,25 @@ public class PurchaseReportServiceImpl implements PurchaseReportService {
             throw new BusinessRuleException(FROM_AFTER_TO);
         }
         return repository.byDate(currentAgencyProvider.currentAgencyId(), from, to);
+    }
+
+    @Override
+    public List<PurchaseReportRow> futureAnnouncement(int announcementNumber, LocalDate from, LocalDate to) {
+        if (from.isAfter(to)) {
+            throw new BusinessRuleException(FROM_AFTER_TO);
+        }
+        Long agencyId = currentAgencyProvider.currentAgencyId();
+        return repository.futureAnnouncement(agencyId, displayNumber(agencyId, announcementNumber), from, to);
+    }
+
+    @Override
+    public List<FutureBalanceRow> futureBalance(int announcementNumber) {
+        Long agencyId = currentAgencyProvider.currentAgencyId();
+        return repository.futureBalance(agencyId, displayNumber(agencyId, announcementNumber));
+    }
+
+    /** Las compras guardan el anuncio como "PREFIJO-numero"; el usuario digita solo el numero, como en Access. */
+    private String displayNumber(Long agencyId, int announcementNumber) {
+        return controlRecordService.getActive(agencyId).getPrefix() + "-" + announcementNumber;
     }
 }

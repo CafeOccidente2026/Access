@@ -12,7 +12,7 @@ function row(over: Partial<PurchaseReportRow>): PurchaseReportRow {
     specialType: 'RN', productCode: '0110002000002', productName: null, announcementNumber: 'SDBU-4', idNumber: '990006002',
     firstName: 'PRUEBA', lastName: 'REPORTE', greenKg: null, netKg: 1000, factor: 92.11, unitPrice: 12417, grossValue: 12417000,
     inventoryValue: 12417000, associateContribution: 0, cooperativeDiscount: 99336, freightDiscount: 0, withholding: 62085,
-    otherDiscounts: 0, netToPay: 12255579, paymentMethod: 'EFECTIVO', status: 'VALIDA', ...over,
+    otherDiscounts: 0, netToPay: 12255579, paymentMethod: 'EFECTIVO', status: 'VALIDA', announcementDate: '2026-05-09', ...over,
   };
 }
 

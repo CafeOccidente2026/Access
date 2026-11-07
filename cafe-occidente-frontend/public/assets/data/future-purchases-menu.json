@@ -10,8 +10,8 @@
     { "label": "Ingresar Compras a Futuro", "route": "/compras/futuro/ingresar", "emphasis": true },
     { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro/facturar-anunciadas" },
     { "label": "Restaurar Compras Anunciadas", "route": "/compras/futuro/restaurar-anunciadas", "roles": ["ADMINISTRADOR"] },
-    { "label": "Generar Informe Anuncios a Futuro", "route": "/compras/futuro" },
-    { "label": "Generar Informe Saldo Anuncios", "route": "/compras/futuro" },
+    { "label": "Generar Informe Anuncios a Futuro", "route": "/compras/futuro/informe-anuncios" },
+    { "label": "Generar Informe Saldo Anuncios", "route": "/compras/futuro/informe-saldo" },
     { "label": "Volver al pánel de Control Compras", "route": "/compras" }
   ]
 }
