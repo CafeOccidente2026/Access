@@ -11,10 +11,10 @@ import java.util.Map;
 public interface ChangeHistoryService {
 
     /** Entidades que se registran (ck_historial_cambios_entidad). */
-    enum Entity { REGISTRO_CONTROL, ANUNCIO, USUARIO, AGENCIA, PERMISO, TERCERO, REMESA }
+    enum Entity { REGISTRO_CONTROL, ANUNCIO, USUARIO, AGENCIA, PERMISO, TERCERO, REMESA, COMPRA_ANUNCIADA }
 
     /** Acciones que se registran (ck_historial_cambios_accion). */
-    enum Action { CREAR, MODIFICAR, REASIGNAR, ACTIVAR, DESACTIVAR, PUBLICAR, CONCEDER, RETIRAR, DESMARCAR }
+    enum Action { CREAR, MODIFICAR, REASIGNAR, ACTIVAR, DESACTIVAR, PUBLICAR, CONCEDER, RETIRAR, DESMARCAR, RESTAURAR }
 
     /**
      * Guarda solo los campos que cambiaron entre {@code before} y {@code after} (null en una creacion).

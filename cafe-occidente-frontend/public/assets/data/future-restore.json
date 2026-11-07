@@ -1,0 +1,26 @@
+{
+  "idNumberLabel": "Cédula",
+  "searchButton": "Buscar",
+  "restoreButton": "Restaurar",
+  "backLabel": "Volver",
+  "views": {
+    "future": {
+      "windowTitle": "RESTAURA COMPRAS A FUTURO",
+      "heading": "Restaurar Compras Anunciadas",
+      "note": "El saldo se recalcula desde cero: kilos anunciados menos los kilos netos de las compras no anuladas que la facturaron. Restaurar solo cambia los que no cuadran y queda en el Historial.",
+      "columns": ["Anuncio", "Fecha", "Especial", "Kilos", "Kl_Entregados", "Saldo actual", "Saldo recalculado"]
+    },
+    "quota": {
+      "windowTitle": "RESTAURAR CUPOS",
+      "heading": "Restaurar Anuncios con Cupos",
+      "note": "El saldo de cada cupo ya se calcula en cada consulta (cupo menos los kilos netos de las compras no anuladas con ese anuncio), así que no hay nada que restaurar: esta pantalla solo lo muestra.",
+      "columns": ["Anuncio", "Fecha", "Especial", "Cupo", "Kl_Entregados", "Saldo"]
+    }
+  },
+  "messages": {
+    "empty": "No hay registros.",
+    "error": "No se pudo consultar. Intente de nuevo.",
+    "restored": "Saldo restaurado en {n} compra(s) anunciada(s).",
+    "unchanged": "Los saldos ya están correctos: no hay nada que restaurar."
+  }
+}

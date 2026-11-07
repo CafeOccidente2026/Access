@@ -1,0 +1,46 @@
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window *ngIf="view() as v" [title]="v.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
+    <div class="flex flex-1 flex-col gap-3 p-4">
+      <h2 class="text-lg font-bold text-slate-600">{{ v.heading }}</h2>
+      <p class="max-w-4xl text-xs text-amber-800">{{ v.note }}</p>
+
+      <form *ngIf="viewKey === 'future'" class="flex items-end gap-2 text-sm" (submit)="search($event, idInput.value)">
+        <label class="flex flex-col gap-1">
+          <span class="font-bold text-blue-900">{{ c.idNumberLabel }}:</span>
+          <input #idInput type="text" inputmode="numeric" data-field-key="restoreIdNumber"
+                 class="w-40 rounded border border-slate-300 px-2 py-1" />
+        </label>
+        <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
+      </form>
+
+      <div class="flex-1 overflow-auto" *ngIf="rows() as list">
+        <table class="text-sm" *ngIf="list.length; else empty">
+          <thead>
+            <tr class="bg-slate-100">
+              <th *ngFor="let col of v.columns; let i = index" class="border border-slate-300 px-2 py-1" [class.text-right]="i >= 3">{{ col }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of list" class="odd:bg-white even:bg-slate-50">
+              <td *ngFor="let cell of row; let i = index" class="border border-slate-200 px-2 py-0.5" [class.text-right]="i >= 3">{{ cell }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #empty><p class="text-sm text-slate-600">{{ c.messages.empty }}</p></ng-template>
+      </div>
+
+      <p *ngIf="viewKey === 'future' && futureRows()?.length && !canRestore() && !message()" class="text-sm text-slate-600">
+        {{ c.messages.unchanged }}
+      </p>
+      <p *ngIf="message() as m" class="text-sm text-green-700">{{ m }}</p>
+      <p *ngIf="failed()" class="text-sm text-red-600">{{ c.messages.error }}</p>
+
+      <div class="flex items-center gap-3 text-sm">
+        <button *ngIf="viewKey === 'future'" type="button" [disabled]="!canRestore() || saving()"
+                class="rounded border border-slate-400 bg-slate-100 px-4 py-1 font-bold hover:bg-slate-200 disabled:opacity-40"
+                (click)="restore()">{{ c.restoreButton }}</button>
+        <button type="button" class="ml-auto rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
+      </div>
+    </div>
+  </app-access-window>
+</div>

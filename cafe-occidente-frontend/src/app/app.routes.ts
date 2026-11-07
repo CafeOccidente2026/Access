@@ -199,6 +199,17 @@ export const routes: Routes = [
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
+        // Q5: los dos Restaurar, solo el Administrador.
+        path: 'compras/futuro/restaurar-anunciadas',
+        data: { roles: ADMIN, view: 'future' },
+        loadComponent: () => import('./features/future-restore/future-restore').then((m) => m.FutureRestoreComponent),
+      },
+      {
+        path: 'compras/futuro/restaurar-cupos',
+        data: { roles: ADMIN, view: 'quota' },
+        loadComponent: () => import('./features/future-restore/future-restore').then((m) => m.FutureRestoreComponent),
+      },
+      {
         path: 'compras/futuro/facturar-anunciadas',
         loadComponent: () =>
           import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(

@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../config/api.config';
 import { Announcement } from '../models/dry-coffee-purchase.model';
-import { FuturePurchaseRequest, FuturePurchaseResponse } from '../models/future-purchase.model';
+import { FuturePurchaseRequest, FuturePurchaseResponse, FuturePurchaseRestoreRow } from '../models/future-purchase.model';
 
 /** Unica responsabilidad: llamadas HTTP para "Ingresar Compras a Futuro". Sin preview ni factura -
  *  el compromiso se registra directo (ver FuturePurchaseServiceImpl, backend). */
@@ -23,6 +23,17 @@ export class FuturePurchaseService {
     return this.http.get<FuturePurchaseResponse[]>(
       `${API_BASE_URL}/purchases/future/open?idNumber=${encodeURIComponent(idNumber)}`,
     );
+  }
+
+  /** Restaurar Compras Anunciadas: saldo guardado y recalculado, sin escribir (solo el Administrador). */
+  restorePreview(idNumber: string): Observable<FuturePurchaseRestoreRow[]> {
+    return this.http.get<FuturePurchaseRestoreRow[]>(`${API_BASE_URL}/purchases/future/restore?idNumber=${encodeURIComponent(idNumber)}`);
+  }
+
+  /** Recalcula el saldo desde cero y lo guarda (P6). */
+  restore(idNumber: string): Observable<FuturePurchaseRestoreRow[]> {
+    return this.http.post<FuturePurchaseRestoreRow[]>(
+      `${API_BASE_URL}/purchases/future/restore?idNumber=${encodeURIComponent(idNumber)}`, null);
   }
 
   create(request: FuturePurchaseRequest): Observable<FuturePurchaseResponse> {

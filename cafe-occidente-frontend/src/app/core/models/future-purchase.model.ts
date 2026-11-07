@@ -12,6 +12,18 @@ export interface FuturePurchaseRequest {
   readonly vereda: string | null;
 }
 
+/** Restaurar Compras Anunciadas: saldo guardado y el que sale de recalcular desde cero. */
+export interface FuturePurchaseRestoreRow {
+  readonly id: number;
+  readonly announcementNumber: string;
+  readonly announcementDate: string;
+  readonly specialType: string;
+  readonly announcedKg: number;
+  readonly deliveredKg: number;
+  readonly currentBalance: number;
+  readonly recalculatedBalance: number;
+}
+
 export interface FuturePurchaseResponse {
   readonly id: number;
   readonly agencyId: number;
