@@ -16,6 +16,7 @@ import com.cafeoccidente.backend.purchases.future.repository.AgencyAnnouncementN
 import com.cafeoccidente.backend.purchases.future.repository.AnnouncementQuotaRepository;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import com.cafeoccidente.backend.purchases.future.service.DeliveryRule;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -102,18 +103,7 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
         }
         BigDecimal balance = quota.getAssignedQuota().subtract(
                 dryCoffeePurchaseRepository.sumNetKgByAgencyAndAnnouncementNumber(agencyId, displayNumber));
-        if (deliveryKg != null && deliveryKg.compareTo(balance) > 0) {
-            throw new BusinessRuleException(
-                    "Esta Entrega (" + deliveryKg.toPlainString() + ") supera el saldo del anuncio (" + balance.toPlainString() + ")");
-        }
-        if (deliveryKg != null && netKg.compareTo(deliveryKg) > 0) {
-            throw new BusinessRuleException(
-                    "Los kilos netos (" + netKg.toPlainString() + ") superan Esta Entrega (" + deliveryKg.toPlainString() + ")");
-        }
-        if (netKg.compareTo(balance) > 0) {
-            throw new BusinessRuleException("Los kilos netos (" + netKg.toPlainString()
-                    + ") superan el saldo del cupo del anuncio " + number + " (" + balance.toPlainString() + ")");
-        }
+        DeliveryRule.check(balance, deliveryKg, netKg, "del cupo del anuncio " + number);
     }
 
     @Override
