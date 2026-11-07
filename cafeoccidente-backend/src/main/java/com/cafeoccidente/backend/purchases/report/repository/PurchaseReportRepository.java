@@ -18,7 +18,7 @@ public class PurchaseReportRepository {
     private static final String COLUMNS = "p.agencia_id, p.fondo_id, p.producto_id, p.numero_anuncio, p.especial,"
             + " p.fecha_compra, p.numero_factura, p.cedula, p.nombres, p.apellidos, p.kilos_netos, p.vr_kilo,"
             + " p.vr_bruto, p.vr_inventario, p.aporte_asociado, p.descuento_cooperativo, p.descuento_financiero,"
-            + " p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.forma_pago, p.estado";
+            + " p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.forma_pago, p.estado, p.fecha_anuncio";
     /** Por modulo: Kilos Verdes (kv) y la columna Porc; NULL = no aplica. */
     private static final String PURCHASES =
             "SELECT 'DRY' AS module, " + COLUMNS + ", NULL::numeric AS kv, p.factor AS porc FROM compras_cafe_seco p"
@@ -30,7 +30,8 @@ public class PurchaseReportRepository {
             + " pr.codigo, pr.nombre AS product_name, c.fecha_compra, f.codigo AS fund_code, rc.prefijo, c.numero_factura,"
             + " c.cedula, c.nombres, c.apellidos, c.kv, c.kilos_netos, c.porc, c.vr_kilo, c.vr_bruto, c.vr_inventario,"
             + " c.aporte_asociado, c.descuento_cooperativo, c.descuento_financiero, c.retefuente, c.otros_descuentos,"
-            + " c.neto_a_pagar, CASE WHEN c.estado = 'ANULADA' THEN 'ANULADA' ELSE c.forma_pago END AS forma_pago, c.estado"
+            + " c.neto_a_pagar, CASE WHEN c.estado = 'ANULADA' THEN 'ANULADA' ELSE c.forma_pago END AS forma_pago, c.estado,"
+            + " c.fecha_anuncio"
             + " FROM (" + PURCHASES + ") c"
             + " JOIN agencias a ON a.id = c.agencia_id JOIN fondos f ON f.id = c.fondo_id"
             + " JOIN productos pr ON pr.id = c.producto_id"
@@ -95,6 +96,6 @@ public class PurchaseReportRepository {
                 rs.getBigDecimal("vr_inventario"), rs.getBigDecimal("aporte_asociado"),
                 rs.getBigDecimal("descuento_cooperativo"), rs.getBigDecimal("descuento_financiero"),
                 rs.getBigDecimal("retefuente"), rs.getBigDecimal("otros_descuentos"), rs.getBigDecimal("neto_a_pagar"),
-                rs.getString("forma_pago"), rs.getString("estado"));
+                rs.getString("forma_pago"), rs.getString("estado"), rs.getObject("fecha_anuncio", LocalDate.class));
     }
 }

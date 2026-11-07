@@ -124,6 +124,7 @@ class FutureReportsIntegrationTest {
         assertThat(rows).allSatisfy(r -> {
             assertThat(r.module()).isEqualTo("DRY");
             assertThat(r.announcementNumber()).isEqualTo("SDBU-" + ANNOUNCEMENT);
+            assertThat(r.announcementDate()).isEqualTo(today);
         });
         assertThat(rows.get(0).netKg()).isEqualByComparingTo(KG);
         assertThat(rows.get(1).netKg()).isZero();

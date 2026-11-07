@@ -36,5 +36,7 @@ public record PurchaseReportRow(
         BigDecimal otherDiscounts,
         BigDecimal netToPay,
         String paymentMethod,
-        String status) {
+        String status,
+        /** Fecha del anuncio de la compra (encabezado "Fecha" del Informe Anuncios a Futuro, como Access). */
+        LocalDate announcementDate) {
 }
