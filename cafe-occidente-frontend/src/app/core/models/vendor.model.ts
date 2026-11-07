@@ -1,8 +1,8 @@
-/** Alta de "Ingresar Vendedores" (VendorCreateRequest del backend). */
+/** Alta de "Catalogar Terceros" (VendorCreateRequest del backend). */
 export interface VendorCreateRequest {
-  readonly association: boolean;
+  readonly legalPerson: boolean;
   readonly idNumber: string;
-  readonly firstName: string;
+  readonly firstName: string | null;
   readonly secondName: string | null;
   readonly lastName: string | null;
   readonly secondLastName: string | null;
@@ -11,6 +11,8 @@ export interface VendorCreateRequest {
   readonly address: string | null;
   readonly postalCode: string | null;
   readonly email: string | null;
+  readonly businessName: string | null;
+  readonly classification: string | null;
 }
 
 /** Los 28 campos del formulario "Asociados" de Access. */

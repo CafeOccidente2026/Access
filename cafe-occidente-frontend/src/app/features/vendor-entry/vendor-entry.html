@@ -27,7 +27,13 @@
       <div class="flex flex-col gap-2 text-sm">
         <div *ngFor="let field of fields()" class="flex items-center gap-2">
           <span class="w-32 shrink-0 font-bold text-blue-900">{{ field.label }}{{ field.required ? ' *' : '' }}</span>
-          <app-agency-picker *ngIf="field.key === 'agency'; else text" class="w-44" [ariaLabel]="field.label"></app-agency-picker>
+          <app-agency-picker *ngIf="field.key === 'agency'; else list" class="w-44" [ariaLabel]="field.label"></app-agency-picker>
+          <ng-template #list>
+            <select *ngIf="field.options; else text" class="w-44 rounded border border-slate-300 px-2 py-1" [attr.data-field-key]="field.key" [attr.aria-label]="field.label" [value]="values()[field.key] ?? ''" (change)="set(field.key, $any($event.target).value)">
+              <option value=""></option>
+              <option *ngFor="let o of field.options" [value]="o.value">{{ o.label }}</option>
+            </select>
+          </ng-template>
           <ng-template #text>
             <input
               class="rounded border border-slate-300 px-2 py-1"
