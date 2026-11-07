@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.purchases.future.service;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
+import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,6 +16,9 @@ public interface FuturePurchaseService {
     FuturePurchaseResponse create(FuturePurchaseRequest request);
 
     FuturePurchaseResponse findById(Long id);
+
+    /** Anunciadas Hoy (HU-31, P2): compras a futuro con saldo de la agencia de trabajo, de cualquier fecha, por anuncio. */
+    List<PendingAnnouncementRow> pending();
 
     /** RN-21.5.2: las compras anunciadas de la cedula con saldo, de la agencia de trabajo. */
     List<FuturePurchaseResponse> openFor(String idNumber);

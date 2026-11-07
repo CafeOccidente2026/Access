@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRestoreRow;
+import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import jakarta.validation.Valid;
@@ -46,6 +47,12 @@ public class FuturePurchaseController {
     @PreAuthorize(Roles.ADMIN)
     public List<FuturePurchaseRestoreRow> restore(@RequestParam String idNumber) {
         return restoreService.restore(idNumber);
+    }
+
+    /** Anunciadas Hoy (HU-31, P2): solo lectura. */
+    @GetMapping("/pending")
+    public List<PendingAnnouncementRow> pending() {
+        return futurePurchaseService.pending();
     }
 
     /** Ventana de Facturar Compras Anunciadas (RN-21.5.2). */

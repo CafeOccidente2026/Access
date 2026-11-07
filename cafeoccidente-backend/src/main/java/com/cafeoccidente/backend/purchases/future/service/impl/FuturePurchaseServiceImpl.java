@@ -7,6 +7,7 @@ import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
+import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
 import com.cafeoccidente.backend.purchases.future.repository.FuturePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
@@ -137,6 +138,11 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
                 .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Compromiso de compra a futuro no encontrado"));
         return toResponse(purchase);
+    }
+
+    @Override
+    public List<PendingAnnouncementRow> pending() {
+        return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId());
     }
 
     @Override
