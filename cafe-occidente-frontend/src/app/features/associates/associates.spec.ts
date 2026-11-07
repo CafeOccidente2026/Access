@@ -25,7 +25,7 @@ function page(position: number, idNumber: string, total = 3): AssociatePage {
       transportCompany: null, vehiclePlate: null, exported: false, isAssociation: false, isNew: true,
       cityCode: null, sex: 'F', country: null,
     },
-  } as AssociatePage;
+  };
 }
 
 const value = (el: HTMLElement, label: string) =>
