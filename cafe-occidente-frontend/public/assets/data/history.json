@@ -23,7 +23,8 @@
     "AGENCIA": "Agencia",
     "PERMISO": "Permiso",
     "TERCERO": "Tercero",
-    "REMESA": "Remesa"
+    "REMESA": "Remesa",
+    "COMPRA_ANUNCIADA": "Compra anunciada"
   },
   "actions": {
     "CREAR": "Crear",
@@ -34,10 +35,12 @@
     "PUBLICAR": "Publicar",
     "CONCEDER": "Conceder",
     "RETIRAR": "Retirar",
-    "DESMARCAR": "Desmarcar"
+    "DESMARCAR": "Desmarcar",
+    "RESTAURAR": "Restaurar"
   },
   "fields": {
     "number": "Número",
+    "remainingKg": "Saldo",
     "status": "Estado",
     "purchases": "Facturas",
     "screen": "Pantalla",

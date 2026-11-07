@@ -3,13 +3,13 @@
   "leftOptions": [
     { "label": "Asignar Cupo a Anuncios", "route": "/compras/futuro/asignar-cupo" },
     { "label": "Facturar Anuncios con Cupos", "route": "/compras/futuro/facturar-cupos" },
-    { "label": "Restaurar Anuncios con Cupos", "route": "/compras/futuro", "roles": ["ADMINISTRADOR"] }
+    { "label": "Restaurar Anuncios con Cupos", "route": "/compras/futuro/restaurar-cupos", "roles": ["ADMINISTRADOR"] }
   ],
   "leftStandaloneOption": { "label": "Anunciadas Hoy", "route": "/compras/futuro" },
   "rightOptions": [
     { "label": "Ingresar Compras a Futuro", "route": "/compras/futuro/ingresar", "emphasis": true },
     { "label": "Facturar Compras Anunciadas", "route": "/compras/futuro/facturar-anunciadas" },
-    { "label": "Restaurar Compras Anunciadas", "route": "/compras/futuro", "roles": ["ADMINISTRADOR"] },
+    { "label": "Restaurar Compras Anunciadas", "route": "/compras/futuro/restaurar-anunciadas", "roles": ["ADMINISTRADOR"] },
     { "label": "Generar Informe Anuncios a Futuro", "route": "/compras/futuro" },
     { "label": "Generar Informe Saldo Anuncios", "route": "/compras/futuro" },
     { "label": "Volver al pánel de Control Compras", "route": "/compras" }
