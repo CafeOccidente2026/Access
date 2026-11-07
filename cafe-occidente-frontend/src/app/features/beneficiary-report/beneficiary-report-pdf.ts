@@ -18,12 +18,16 @@ const dashed = (width: number): Content => ({
   canvas: [{ type: 'line', x1: 0, y1: 0, x2: width, y2: 0, lineWidth: 1.5, lineColor: teal(), dash: { length: 2, space: 1 } }],
 });
 
-/** Grupos por Cedula en el orden del backend (Cedula, Factura). */
-export function groupByIdNumber(rows: readonly BeneficiaryRow[]): [string, BeneficiaryRow[]][] {
+/** Grupos por una clave, en el orden del backend (Cedula, Cod_Prod, Factura). */
+function groupBy(rows: readonly BeneficiaryRow[], key: (r: BeneficiaryRow) => string): [string, BeneficiaryRow[]][] {
   const groups = new Map<string, BeneficiaryRow[]>();
-  rows.forEach((r) => groups.set(r.idNumber, [...(groups.get(r.idNumber) ?? []), r]));
+  rows.forEach((r) => groups.set(key(r), [...(groups.get(key(r)) ?? []), r]));
   return [...groups];
 }
+
+export const groupByIdNumber = (rows: readonly BeneficiaryRow[]) => groupBy(rows, (r) => r.idNumber);
+
+const fullName = (r: BeneficiaryRow) => `${r.firstName} ${r.lastName ?? ''}`.trimEnd();
 
 /** KVerdes, KNetos, Porc y los 7 valores (Porc no se suma en Access). */
 function amounts(r: BeneficiaryRow): TableCell[] {
@@ -48,9 +52,11 @@ function totals(label: string, rows: readonly BeneficiaryRow[], lead: number): T
 }
 
 /**
- * Reportes "Beneficiario" y "Beneficiario resumen" de Access: grupo por Cedula con "Resumir por
- * 'Cedula'" y "Suma", y "Suma total" al final. El primero lleva cedula y nombre en el encabezado; el
- * resumen pone Cedula en el encabezado de cada grupo y Nombre/Apellidos en cada fila.
+ * Reportes "Beneficiario" y "Beneficiario resumen" de Access, con "Suma total" al final.
+ * - Beneficiario (HU-52): dentro de cada cedula, "Suma" por Cod_Prod (RN-28.2.6). Con un beneficiario la
+ *   cedula y el nombre van en el encabezado (RN-28.2.5); con varios, cada cedula lleva su fila con su
+ *   nombre y su "Resumir por 'Cedula'" y "Suma".
+ * - Resumen (por fechas): grupo por Cedula como en Access, con Nombre/Apellidos en cada fila.
  */
 export function buildBeneficiaryDoc(
   report: BeneficiaryReport,
@@ -61,25 +67,40 @@ export function buildBeneficiaryDoc(
   const summary = report.layout === 'summary';
   const lead = summary ? 5 : 4;
   const width = summary ? [48, 40, 30, 55, 55, 22, 32, 28, 50, 36, 36, 32, 34, 32, 48, '*'] : [48, 34, 40, 20, 34, 38, 30, 54, 40, 40, 36, 38, 36, 54, '*'];
+  const span = (cell: { text: string; bold?: boolean; color?: string }): TableCell[] =>
+    [{ ...cell, colSpan: width.length }, ...Array.from({ length: width.length - 1 }, () => '')];
+  const line = (r: BeneficiaryRow): TableCell[] => {
+    const head: TableCell[] = summary
+      ? [r.agencyName, shortDate(r.purchaseDate), right(String(r.invoiceNumber)), r.firstName, r.lastName ?? '']
+      : [r.agencyName, right(String(r.invoiceNumber)), right(shortDate(r.purchaseDate)), r.fundCode];
+    return [...head, ...amounts(r), r.specialType ?? ''];
+  };
+  const groups = groupByIdNumber(rows);
+  const several = groups.length > 1;
   const body: TableCell[][] = [report.columns.map((c) => ({ text: c, bold: true, alignment: 'center' }))];
-  for (const [idNumber, group] of groupByIdNumber(rows)) {
+  for (const [idNumber, group] of groups) {
     if (summary) {
-      body.push([{ text: `${text.cedula}   ${formatThousands(idNumber)}`, bold: true, colSpan: width.length }, ...Array.from({ length: width.length - 1 }, () => '')]);
+      body.push(span({ text: `${text.cedula}   ${formatThousands(idNumber)}`, bold: true }));
+      group.forEach((r) => body.push(line(r)));
+    } else {
+      if (several) {
+        body.push(span({ text: `${text.cedula}   ${formatThousands(idNumber)}   ${fullName(group[0])}`, bold: true }));
+      }
+      for (const [code, products] of groupBy(group, (r) => r.productCode)) {
+        products.forEach((r) => body.push(line(r)));
+        body.push(totals(fill(text.productSum, { code }), products, lead));
+      }
     }
-    group.forEach((r) => {
-      const head: TableCell[] = summary
-        ? [r.agencyName, shortDate(r.purchaseDate), right(String(r.invoiceNumber)), r.firstName, r.lastName ?? '']
-        : [r.agencyName, right(String(r.invoiceNumber)), right(shortDate(r.purchaseDate)), r.fundCode];
-      body.push([...head, ...amounts(r), r.specialType ?? '']);
-    });
-    const records = group.length === 1 ? text.recordSingular : text.recordPlural;
-    body.push([{ text: fill(text.groupSummary, { id: idNumber, count: group.length, records }), color: teal(), colSpan: width.length },
-      ...Array.from({ length: width.length - 1 }, () => '')]);
-    body.push(totals(text.sum, group, lead));
+    if (summary || several) {
+      const records = group.length === 1 ? text.recordSingular : text.recordPlural;
+      body.push(span({ text: fill(text.groupSummary, { id: idNumber, count: group.length, records }), color: teal() }));
+      body.push(totals(text.sum, group, lead));
+    }
   }
   body.push(totals(text.grandTotal, rows, lead));
 
   const first = rows[0];
+  const beneficiary = several ? [] : [{ text: `${formatThousands(first.idNumber)}   ${fullName(first)}`, bold: true }];
   const title: Content = summary
     ? { text: report.pdfTitle, fontSize: 20, bold: true, color: teal() }
     : {
@@ -88,7 +109,7 @@ export function buildBeneficiaryDoc(
             width: 'auto',
             stack: [
               { text: report.pdfTitle, fontSize: 20, bold: true, color: teal() },
-              { text: `${formatThousands(first.idNumber)}   ${first.firstName} ${first.lastName ?? ''}`.trimEnd(), bold: true },
+              ...beneficiary,
             ],
           },
           { width: '*', stack: [{ text: text.company, bold: true }, { text: text.nit, bold: true }], alignment: 'center', margin: [0, 4, 0, 0] },
