@@ -6,14 +6,14 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
 import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
+import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
 import { buildVendorRequest, validationError } from './vendor-entry-request';
 import { VendorEntryContent, VendorKind } from './vendor-entry.model';
 
 /**
- * "Ingresar Vendedores" (Form_MENUS VENDEDORES.bas, Comando0): en Access un MsgBox Si/No abre
- * "Asociaciones1" (6 items) o "Vendedores" (13 items, persona). Aca el dialogo es una seleccion;
- * Fecha Afiliacion = hoy y Tipo = C fijos. Tras guardar el formulario queda en blanco para el
+ * Catalogar Terceros (RF-28.1, antes "Ingresar Vendedores"): el dialogo elige Persona Juridica (NIT,
+ * Razon Social y Clasificacion) o Persona Natural; Fecha Afiliacion = hoy y Tipo = C fijos. Tras guardar el formulario queda en blanco para el
  * siguiente, como hacia Access al cerrar y reabrir el formulario.
  */
 @Component({
@@ -64,16 +64,13 @@ export class VendorEntryComponent {
     if (problem) {
       return;
     }
-    this.saving.set(true);
-    this.vendorService.create(buildVendorRequest(kind, this.fields(), this.values())).subscribe({
+    saveOnce(this.saving, () => this.vendorService.create(buildVendorRequest(kind, this.fields(), this.values())), {
       next: (saved) => {
-        this.saving.set(false);
         this.values.set({});
         this.flow?.restart();
         this.message.set(content.messages.saved.replace('{id}', saved.idNumber));
       },
       error: (err) => {
-        this.saving.set(false);
         this.error.set(true);
         const duplicate = String(err?.error?.message ?? '').includes('Ya existe');
         this.message.set(duplicate ? content.messages.duplicate : content.messages.error);

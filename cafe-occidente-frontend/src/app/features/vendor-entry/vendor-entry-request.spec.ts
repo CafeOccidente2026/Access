@@ -5,39 +5,57 @@ import { buildVendorRequest, validationError } from './vendor-entry-request';
 import { VendorEntryContent } from './vendor-entry.model';
 
 const data = content as VendorEntryContent;
-const association = data.forms.association;
-const person = data.forms.person;
+const legal = data.forms.legal;
+const natural = data.forms.natural;
 
 describe('vendor entry', () => {
-  it('has the Access item counts: 6 for association, 13 for person (with Fecha Afiliación and Tipo)', () => {
-    expect(association.length + 2).toBe(6);
-    expect(person.length + 2 + person.filter((f) => f.besideSex).length).toBe(13);
+  it('has the RF-28.1 field tables: 13 for natural and 11 for legal person (with Fecha Afiliación, Tipo and Sexo)', () => {
+    const count = (fields: typeof natural) => fields.length + 2 + fields.filter((f) => f.besideSex).length;
+    expect(count(natural)).toBe(13);
+    expect(count(legal)).toBe(11);
+  });
+
+  it('RN-28.1.1: asks for Persona Jurídica or Persona Natural', () => {
+    expect(data.dialog.question).toBe('¿Qué tipo de vendedor va a ingresar?');
+    expect(data.dialog.options.map((o) => o.label)).toEqual(['Persona Jurídica', 'Persona Natural']);
   });
 
   it('requires Id and first name, an agency and a valid email', () => {
-    expect(validationError(person, { firstName: 'AURA' }, data.messages)).toBe('Falta: Id Vendedor');
-    expect(validationError(person, { idNumber: '1' }, data.messages)).toBe('Falta: 1er Nombre');
-    expect(validationError(person, { idNumber: '1', firstName: 'A', email: 'no-es-email' }, data.messages)).toBe(data.messages.email);
-    expect(validationError(person, { idNumber: '1', firstName: 'A', email: 'a@b.co' }, data.messages)).toBeNull();
-    expect(validationError(person, { idNumber: '1', firstName: 'A' }, data.messages)).toBeNull();
+    expect(validationError(natural, { firstName: 'AURA' }, data.messages)).toBe('Falta: Id Vendedor');
+    expect(validationError(natural, { idNumber: '1' }, data.messages)).toBe('Falta: 1er Nombre');
+    expect(validationError(natural, { idNumber: '1', firstName: 'A', email: 'no-es-email' }, data.messages)).toBe(data.messages.email);
+    expect(validationError(natural, { idNumber: '1', firstName: 'A', email: 'a@b.co' }, data.messages)).toBeNull();
+    expect(validationError(natural, { idNumber: '1', firstName: 'A' }, data.messages)).toBeNull();
   });
 
-  it('association only sends its 4 editable fields', () => {
-    const request = buildVendorRequest('association', association, {
-      idNumber: ' 900723205 ', firstName: 'FUNDACION SUYUSAMA', address: 'CLL 20 24 64', lastName: 'X', sex: 'M', email: 'a@b.co',
+  it('HU-51 CA-2: legal person requires NIT, Razón Social and Clasificación', () => {
+    expect(validationError(legal, { businessName: 'ASOPEMA', classification: 'ASOCIACION' }, data.messages)).toBe('Falta: Id Vendedor (NIT)');
+    expect(validationError(legal, { idNumber: '900', classification: 'ASOCIACION' }, data.messages)).toBe('Falta: Razón Social');
+    expect(validationError(legal, { idNumber: '900', businessName: 'ASOPEMA' }, data.messages)).toBe('Falta: Clasificación');
+    expect(validationError(legal, { idNumber: '900', businessName: 'ASOPEMA', classification: 'FUNDACION' }, data.messages)).toBeNull();
+  });
+
+  it('legal person sends Razón Social, Clasificación, Sexo and the contact data, not the names', () => {
+    const request = buildVendorRequest('legal', legal, {
+      idNumber: ' 900723205 ', businessName: 'FUNDACION SUYUSAMA', classification: 'FUNDACION', address: 'CLL 20 24 64',
+      lastName: 'X', sex: 'E', phone: '300', postalCode: '520001', email: 'a@b.co',
     });
     expect(request).toEqual({
-      association: true, idNumber: '900723205', firstName: 'FUNDACION SUYUSAMA', secondName: null, lastName: null,
-      secondLastName: null, sex: null, phone: null, address: 'CLL 20 24 64', postalCode: null, email: null,
+      legalPerson: true, idNumber: '900723205', firstName: null, secondName: null, lastName: null, secondLastName: null,
+      sex: 'E', phone: '300', address: 'CLL 20 24 64', postalCode: '520001', email: 'a@b.co',
+      businessName: 'FUNDACION SUYUSAMA', classification: 'FUNDACION',
     });
   });
 
-  it('person sends the 11 editable fields, blanks as null', () => {
-    const request = buildVendorRequest('person', person, {
+  it('natural person sends the 11 editable fields, blanks as null', () => {
+    const request = buildVendorRequest('natural', natural, {
       idNumber: '59124124', firstName: 'AURA', secondName: '', lastName: 'TUTISTAR', sex: 'F', phone: '300',
-      address: 'VDA', postalCode: '522060', email: 'aura@correo.co',
+      address: 'VDA', postalCode: '522060', email: 'aura@correo.co', businessName: 'X',
     });
-    expect(request).toMatchObject({ association: false, secondName: null, lastName: 'TUTISTAR', sex: 'F', postalCode: '522060' });
+    expect(request).toMatchObject({
+      legalPerson: false, firstName: 'AURA', secondName: null, lastName: 'TUTISTAR', sex: 'F', postalCode: '522060',
+      businessName: null, classification: null,
+    });
   });
 });
 
