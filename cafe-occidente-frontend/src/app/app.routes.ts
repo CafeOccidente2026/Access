@@ -199,6 +199,17 @@ export const routes: Routes = [
         canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
+        // HU-34 y HU-35: los dos informes de Compras a Futuro, Administrador y Usuario.
+        path: 'compras/futuro/informe-anuncios',
+        data: { view: 'announcement' },
+        loadComponent: () => import('./features/future-report/future-report').then((m) => m.FutureReportComponent),
+      },
+      {
+        path: 'compras/futuro/informe-saldo',
+        data: { view: 'balance' },
+        loadComponent: () => import('./features/future-report/future-report').then((m) => m.FutureReportComponent),
+      },
+      {
         // HU-31 (P2): Administrador y Usuario, solo consulta.
         path: 'compras/futuro/anunciadas-hoy',
         data: { view: 'pending' },
