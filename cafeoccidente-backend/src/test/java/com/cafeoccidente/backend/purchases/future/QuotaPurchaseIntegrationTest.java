@@ -100,7 +100,7 @@ class QuotaPurchaseIntegrationTest {
 
     private DryCoffeePurchaseRequest request(Integer announcement, BigDecimal delivery, PurchasePaymentRequest payment) {
         return new DryCoffeePurchaseRequest(rp, "RN", SELLER, null, null, 5, KG, BigDecimal.ZERO, new BigDecimal("200"),
-                new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, payment, announcement, delivery);
+                new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, payment, announcement, delivery, null);
     }
 
     private DryCoffeePurchaseResponse buy(Integer announcement, BigDecimal delivery) {
@@ -128,8 +128,8 @@ class QuotaPurchaseIntegrationTest {
 
     @Test
     void ca4BillsWithThePricesOfTheChosenAnnouncementAndTheBalanceGoesDown() {
-        String chosenPrice = dry.specialInfo(AGENCY, rp, "RN", quotaAnnouncement).healthyUnitPrice().toPlainString();
-        assertThat(dry.specialInfo(AGENCY, rp, "RN", null).healthyUnitPrice()).isNotEqualByComparingTo(chosenPrice);
+        String chosenPrice = dry.specialInfo(AGENCY, rp, "RN", quotaAnnouncement, null).healthyUnitPrice().toPlainString();
+        assertThat(dry.specialInfo(AGENCY, rp, "RN", null, null).healthyUnitPrice()).isNotEqualByComparingTo(chosenPrice);
 
         DryCoffeePurchaseResponse p = buy(quotaAnnouncement, KG);
 
@@ -175,7 +175,7 @@ class QuotaPurchaseIntegrationTest {
     void anAnnouncementOfAnotherSpecialIsRejected() {
         DryCoffeePurchaseRequest otherSpecial = new DryCoffeePurchaseRequest(rp, "ESTANDAR", SELLER, null, null, 5, KG,
                 BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.ZERO, null, quotaAnnouncement, KG);
+                BigDecimal.ZERO, null, quotaAnnouncement, KG, null);
 
         assertThatThrownBy(() -> dry.preview(otherSpecial))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("no es de ese fondo y especial");

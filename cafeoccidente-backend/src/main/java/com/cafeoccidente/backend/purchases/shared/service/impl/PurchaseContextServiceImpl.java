@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.purchases.shared.service.impl;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
@@ -56,22 +57,25 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
 
     @Override
     public PurchaseContext forPreview(
-            Long fundId, String specialType, Integer announcementNumber, String idNumber, String address, String cellphone) {
+            Long fundId, String specialType, AnnouncementResponse announcement, String idNumber, String address,
+            String cellphone) {
         PurchaseSeller seller = purchaseSellerService.resolve(idNumber, address, cellphone);
-        return context(fundId, specialType, announcementNumber, seller);
+        return context(fundId, specialType, announcement, seller);
     }
 
     /** MANDATORY: el bloqueo del tercero solo sirve dentro de la transaccion del guardado. */
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public PurchaseContext forSave(
-            Long fundId, String specialType, Integer announcementNumber, String idNumber, String address, String cellphone) {
+            Long fundId, String specialType, AnnouncementResponse announcement, String idNumber, String address,
+            String cellphone) {
         PurchaseSeller seller = purchaseSellerService.resolveAndComplete(idNumber, address, cellphone);
         dailyTotals.lockGrower(seller.idNumber());
-        return context(fundId, specialType, announcementNumber, seller);
+        return context(fundId, specialType, announcement, seller);
     }
 
-    private PurchaseContext context(Long fundId, String specialType, Integer announcementNumber, PurchaseSeller seller) {
+    private PurchaseContext context(
+            Long fundId, String specialType, AnnouncementResponse announcement, PurchaseSeller seller) {
         Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(fundId)
@@ -80,7 +84,7 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
                 agency,
                 fund,
                 productCodeResolver.resolve(specialType, fund.getId()),
-                announcementService.findForPurchase(agency.getId(), fund.getId(), specialType, announcementNumber),
+                announcement != null ? announcement : announcementService.findLatest(agency.getId(), fund.getId(), specialType),
                 controlRecordService.getActive(agency.getId()),
                 seller,
                 dailyTotals.sum(seller.idNumber(), LocalDate.now(clock)));
