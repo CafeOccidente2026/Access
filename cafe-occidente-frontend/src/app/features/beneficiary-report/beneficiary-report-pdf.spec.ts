@@ -9,15 +9,18 @@ import { buildBeneficiaryDoc, groupByIdNumber } from './beneficiary-report-pdf';
 import { BeneficiaryReportContent } from './beneficiary-report.model';
 
 const data = content as BeneficiaryReportContent;
-const row = (idNumber: string, invoiceNumber: number, netKg: number, netToPay: number): BeneficiaryRow => ({
-  agencyName: 'El Tambo', purchaseDate: '2026-06-03', fundCode: 'RP', invoiceNumber, idNumber, firstName: 'JESUS',
+const row = (
+  idNumber: string, invoiceNumber: number, netKg: number, netToPay: number, productCode = '0110002000002', firstName = 'JESUS',
+): BeneficiaryRow => ({
+  agencyName: 'El Tambo', purchaseDate: '2026-06-03', fundCode: 'RP', invoiceNumber, idNumber, firstName,
   lastName: 'BENAVIDES', greenKg: 0, netKg, healthyPercentage: 80.5, grossValue: netToPay, associateContribution: 0,
   cooperativeDiscount: 0, freightDiscount: 0, withholding: 0, otherDiscounts: 0, netToPay, specialType: 'NESPRESSO - FTUSA',
+  productCode,
 });
 const rows = [row('79374104', 43388, 100, 1000), row('79374104', 43390, 50, 500), row('5248772', 43400, 10, 100)];
 
-const table = (report: string) =>
-  (buildBeneficiaryDoc(data.reports[report], data.text, rows).content as unknown[]).find(
+const table = (report: string, list: BeneficiaryRow[] = rows) =>
+  (buildBeneficiaryDoc(data.reports[report], data.text, list).content as unknown[]).find(
     (c) => (c as ContentTable).table,
   ) as ContentTable;
 const texts = (cells: unknown[]) => cells.map((c) => (typeof c === 'string' ? c : (c as { text: string }).text));
@@ -37,6 +40,34 @@ describe('beneficiary reports', () => {
     expect(grand[5]).toBe('160,00');
     expect(grand[13]).toBe('1.600');
     expect(body.every((r) => (r as unknown[]).length === 15)).toBe(true);
+  });
+
+  it('HU-52: one beneficiary has a Suma per Cod_Prod and 440 + 1.000 + 250 = 1.690 KNetos in Suma total', () => {
+    const one = [row('79374104', 1, 440, 4400), row('79374104', 3, 250, 2500), row('79374104', 2, 1000, 10000, '0110002000010')];
+    const lines = table('beneficiary', one).table.body.map((r) => texts(r as unknown[]));
+    const sums = lines.filter((l) => String(l[0]).startsWith('Suma'));
+    expect(sums.map((l) => [l[0], l[5]])).toEqual([
+      ['Suma 0110002000002', '690,00'],
+      ['Suma 0110002000010', '1.000,00'],
+      ['Suma total', '1.690,00'],
+    ]);
+    // Un solo beneficiario: sin "Resumir por 'Cedula'" (la Suma total ya es la suya).
+    expect(lines.some((l) => String(l[0]).startsWith('Resumir'))).toBe(false);
+  });
+
+  it('RN-28.2.5: the header shows the cedula and name of the beneficiary', () => {
+    const doc = JSON.stringify(buildBeneficiaryDoc(data.reports['beneficiary'], data.text, [row('79374104', 1, 10, 100)]));
+    expect(doc).toContain('79.374.104   JESUS BENAVIDES');
+  });
+
+  it('with all the beneficiaries each cedula has its own name, not the first one', () => {
+    const all = [row('79374104', 1, 10, 100), row('5248772', 2, 20, 200, '0110002000002', 'MARIA')];
+    const doc = buildBeneficiaryDoc(data.reports['beneficiary'], data.text, all);
+    const lines = table('beneficiary', all).table.body.map((r) => texts(r as unknown[])[0]);
+    expect(lines).toContain('Cedula   79.374.104   JESUS BENAVIDES');
+    expect(lines).toContain('Cedula   5.248.772   MARIA BENAVIDES');
+    // El título ya no toma el nombre de la primera fila.
+    expect(JSON.stringify((doc.content as unknown[])[1])).not.toContain('JESUS');
   });
 
   it('writes the NIT with dots, as the RF does', () => {

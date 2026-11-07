@@ -4,12 +4,14 @@
   "toLabel": "Hasta Fecha",
   "agencyLabel": "Pto Compra",
   "allAgenciesLabel": "Todas las agencias",
+  "allBeneficiariesLabel": "Todos los beneficiarios",
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
   "backRoute": "/vendedores",
   "messages": {
     "empty": "No hay compras para mostrar",
     "error": "No se pudo generar el informe",
+    "idNumber": "Digite la cédula o elija Todos los beneficiarios",
     "dates": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)"
   },
   "text": {
@@ -20,13 +22,15 @@
     "recordSingular": "registro de detalle",
     "recordPlural": "registros de detalle",
     "sum": "Suma",
+    "productSum": "Suma {code}",
     "grandTotal": "Suma total",
     "page": "Página {page} de {pages}"
   },
   "reports": {
     "beneficiary": {
       "windowTitle": "Búsqueda compras a beneficiario",
-      "prompt": "Escriba el número cédula del Beneficiario",
+      "prompt": "Ingrese el número de cédula del Beneficiario a consultar",
+      "allBeneficiaries": true,
       "pdfTitle": "Beneficiario",
       "layout": "detail",
       "dates": false,

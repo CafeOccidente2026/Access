@@ -30,9 +30,10 @@ public class VendorReadRepository {
             + " f.codigo AS fund_code, p.numero_factura, p.cedula, ";
     private static final String PURCHASE_MIDDLE = " AS kilos_verdes, p.kilos_netos, ";
     private static final String PURCHASE_END = " AS factor, p.vr_bruto, p.aporte_asociado, p.descuento_cooperativo,"
-            + " p.descuento_financiero AS descuento_financiero, p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.especial"
-            + " FROM ";
-    private static final String PURCHASE_JOINS = " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id";
+            + " p.descuento_financiero AS descuento_financiero, p.retefuente, p.otros_descuentos, p.neto_a_pagar, p.especial,"
+            + " pr.codigo AS cod_prod FROM ";
+    private static final String PURCHASE_JOINS = " p JOIN agencias a ON a.id = p.agencia_id JOIN fondos f ON f.id = p.fondo_id"
+            + " JOIN productos pr ON pr.id = p.producto_id";
 
     /** COMPRAS como union de las 3 tablas, en una constante fija (S2077: nada del request entra al SQL).
      *  Kilos_Verdes solo existe en Cafe Verde; Descuento_Fro es la merma en Verde y Pasilla; PorcAlmSana en
@@ -53,14 +54,15 @@ public class VendorReadRepository {
         this.jdbc = jdbc;
     }
 
-    /** "Beneficiario" (sin fechas) y "Beneficiario Resumen": Cedula Like texto & "*"; agencyId null = todas. */
+    /** "Beneficiario" (sin fechas) y "Beneficiario Resumen": Cedula Like texto & "*"; agencyId null = todas.
+     *  Orden cedula, Cod_Prod y factura: el informe agrupa por cedula y, dentro, por tipo de cafe (RN-28.2.6). */
     public List<BeneficiaryRow> beneficiary(Long agencyId, String idNumberPrefix, LocalDate from, LocalDate to) {
         String sql = "SELECT c.*, g.primer_nombre, g.primer_apellido FROM (" + PURCHASES + ") c"
                 + " JOIN terceros g ON g.identificacion = c.cedula"
                 + " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR c.agencia_id = :agencyId)"
                 + " AND c.cedula LIKE :prefix ESCAPE '\\'"
                 + " AND (CAST(:from AS DATE) IS NULL OR c.fecha_compra BETWEEN :from AND :to)"
-                + " ORDER BY c.cedula, c.numero_factura";
+                + " ORDER BY c.cedula, c.cod_prod, c.numero_factura";
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("agencyId", agencyId)
                 .addValue("prefix", likePrefix(idNumberPrefix))
@@ -84,7 +86,8 @@ public class VendorReadRepository {
                 rs.getBigDecimal("retefuente"),
                 rs.getBigDecimal("otros_descuentos"),
                 rs.getBigDecimal("neto_a_pagar"),
-                rs.getString("especial")));
+                rs.getString("especial"),
+                rs.getString("cod_prod")));
     }
 
     /** "CuposNess": la tabla NESS en su orden de carga, filtrada por prefijo de cedula. */

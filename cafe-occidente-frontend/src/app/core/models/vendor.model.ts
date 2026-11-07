@@ -74,6 +74,8 @@ export interface BeneficiaryRow {
   readonly otherDiscounts: number;
   readonly netToPay: number;
   readonly specialType: string | null;
+  /** Cod_Prod: el informe agrupa por tipo de café dentro de cada cédula (RN-28.2.6). */
+  readonly productCode: string;
 }
 
 export interface NessQuotaRow {
