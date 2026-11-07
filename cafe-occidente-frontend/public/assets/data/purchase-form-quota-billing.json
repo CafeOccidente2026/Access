@@ -5,14 +5,15 @@
     { "key": "agency", "label": "Agencia", "type": "text", "readonly": true },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
     { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
   ],
   "identificationFields": [
-    { "key": "invoice", "label": "Factura", "type": "text" },
-    { "key": "productCode", "label": "Cod Prod", "type": "text" },
-    { "key": "basePricePergaminoLoad", "label": "Pr carga Pergamino PC", "type": "currency" },
-    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency" }
+    { "key": "invoice", "label": "Factura", "type": "text", "readonly": true },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "readonly": true },
+    { "key": "basePriceLoad", "label": "Pr carga Pergamino PC", "type": "currency", "readonly": true },
+    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency", "readonly": true },
+    { "key": "deliveryKg", "label": "Kilos Entregados", "type": "number", "readonly": true }
   ],
   "contactFields": [
     { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
@@ -23,8 +24,8 @@
     { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true }
   ],
   "qualityFields": [
-    { "key": "special", "label": "Especial", "type": "select", "options": [] },
-    { "key": "sustentationPrice", "label": "Pr Sustentación", "type": "currency" },
+    { "key": "special", "label": "Especial", "type": "text", "readonly": true },
+    { "key": "healthyUnitPrice", "label": "Pr Sustentación", "type": "currency", "readonly": true },
     { "key": "bonus", "label": "Bonificación", "type": "currency" },
     { "key": "costs", "label": "Costos", "type": "currency" }
   ],
@@ -58,5 +59,40 @@
     { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
     { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
   ],
-  "compactFields": true
+  "compactFields": true,
+  "messages": {
+    "acceptLabel": "Aceptar",
+    "noAnnouncement": "No hay un anuncio activo para la agencia y el fondo seleccionados.",
+    "deceasedBlocked": "No se le puede facturar a un fallecido.",
+    "idNumberNotFound": "Este número de cédula no existe.",
+    "saveError": "No se pudo registrar la compra. Verifique los datos.",
+    "savedNotice": "Compra registrada. Documento soporte generado.",
+    "invoiceError": "No se pudo generar la factura",
+    "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "closeConfirm": "Cerrar sin guardar",
+    "closeCancel": "Seguir en el formulario",
+    "noQuota": "Esta cédula no tiene compras anunciadas con saldo."
+  },
+  "quotaPicker": {
+    "title": "COMPRAS ANUNCIADAS",
+    "columns": {
+      "announcement": "Anuncio",
+      "agency": "Agencia",
+      "date": "Fecha",
+      "healthyUnitPrice": "Pr Almendra Sana",
+      "defectiveUnitPrice": "Pr Almendra Defec",
+      "bonus": "Bonificación",
+      "costs": "Costos",
+      "qualityIncrement": "Pr Inc Calidad",
+      "basePriceLoad": "Pr Base CPS",
+      "specialType": "Especial",
+      "assignedQuota": "Kilos",
+      "deliveredKg": "Kl_Entregados",
+      "balance": "Saldo"
+    },
+    "deliveryLabel": "Esta Entrega",
+    "overBalance": "La entrega no debe ser superior al saldo, vuelva a intentarlo",
+    "acceptLabel": "Aceptar",
+    "cancelLabel": "Cancelar"
+  }
 }

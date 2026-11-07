@@ -29,6 +29,12 @@ public class FuturePurchaseController {
         this.futurePurchaseService = futurePurchaseService;
     }
 
+    /** Ventana de Facturar Compras Anunciadas (RN-21.5.2). */
+    @GetMapping("/open")
+    public List<FuturePurchaseResponse> openFor(@RequestParam String idNumber) {
+        return futurePurchaseService.openFor(idNumber);
+    }
+
     /** Lista de anuncios del dia del especial (RN-21.4.3). */
     @GetMapping("/announcements")
     public List<AnnouncementResponse> todayAnnouncements(@RequestParam String specialType) {

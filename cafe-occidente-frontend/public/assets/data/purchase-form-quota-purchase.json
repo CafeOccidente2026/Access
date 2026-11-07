@@ -17,7 +17,7 @@
       ]
     },
     { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
   ],
   "identificationFields": [

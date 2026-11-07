@@ -118,7 +118,7 @@ class QuotaPurchaseConcurrencyTest {
 
     private DryCoffeePurchaseRequest request(String seller, PurchasePaymentRequest payment) {
         return new DryCoffeePurchaseRequest(rp, "RN", seller, null, null, 5, KG, BigDecimal.ZERO, new BigDecimal("200"),
-                new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, payment, announcementNumber, KG);
+                new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, payment, announcementNumber, KG, null);
     }
 
     /** Guarda la compra y anota como borrarla por id. */

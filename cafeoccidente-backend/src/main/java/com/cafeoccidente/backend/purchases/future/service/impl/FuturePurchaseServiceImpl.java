@@ -10,6 +10,7 @@ import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
 import com.cafeoccidente.backend.purchases.future.repository.FuturePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import com.cafeoccidente.backend.purchases.future.service.DeliveryRule;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
@@ -23,6 +24,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -135,6 +137,52 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
                 .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Compromiso de compra a futuro no encontrado"));
         return toResponse(purchase);
+    }
+
+    @Override
+    public List<FuturePurchaseResponse> openFor(String idNumber) {
+        return futurePurchaseRepository.findByAgencyIdAndIdNumberAndRemainingKgGreaterThanOrderByIdAsc(
+                currentAgencyProvider.currentAgencyId(), idNumber, BigDecimal.ZERO).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    public FuturePurchase forBilling(Long id, String idNumber, boolean lock) {
+        FuturePurchase purchase = (lock ? futurePurchaseRepository.lockById(id) : futurePurchaseRepository.findById(id))
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Compra anunciada no encontrada"));
+        if (idNumber != null && !purchase.getIdNumber().equals(idNumber)) {
+            throw new BusinessRuleException("La cédula no es la de la compra anunciada");
+        }
+        return purchase;
+    }
+
+    @Override
+    public AnnouncementResponse billingAnnouncement(FuturePurchase purchase, Long fundId) {
+        return new AnnouncementResponse(
+                null,
+                purchase.getAnnouncementNumber(),
+                purchase.getAnnouncementDate(),
+                purchase.getBasePriceLoad(),
+                purchase.getDefectiveUnitPrice(),
+                purchase.getHealthyUnitPrice(),
+                purchase.getBonus(),
+                purchase.getCosts(),
+                purchase.getAgency().getId(),
+                fundId,
+                purchase.getSpecialType(),
+                purchase.getQualityIncrement());
+    }
+
+    /** MANDATORY: solo dentro de la transaccion que guarda la compra (con la fila ya bloqueada). */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void deliver(FuturePurchase purchase, BigDecimal deliveryKg, BigDecimal netKg) {
+        DeliveryRule.check(purchase.getRemainingKg(), deliveryKg, netKg, "de la compra anunciada");
+        purchase.setRemainingKg(purchase.getRemainingKg().subtract(netKg));
+        // Escrito ya: el SQL que siga en esta transaccion (p. ej. la anulacion) ve el saldo nuevo.
+        futurePurchaseRepository.saveAndFlush(purchase);
     }
 
     private FuturePurchaseResponse toResponse(FuturePurchase purchase) {
