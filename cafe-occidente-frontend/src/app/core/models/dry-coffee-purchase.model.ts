@@ -114,9 +114,12 @@ export interface DryCoffeePurchaseRequest {
   readonly otherDiscounts: number;
   /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
   readonly payment: PurchasePayment | null;
-  /** Facturar Anuncios con Cupos (RF-21.2): número del anuncio con cupo elegido y "Esta Entrega". */
+  /** Facturar Anuncios con Cupos (RF-21.2): número del anuncio con cupo elegido. */
   readonly quotaAnnouncementNumber?: number;
-  readonly quotaDeliveryKg?: number;
+  /** Facturar Compras Anunciadas (RF-21.5): id de la compra anunciada elegida. */
+  readonly futurePurchaseId?: number;
+  /** "Esta Entrega" (cupos y anunciadas). */
+  readonly deliveryKg?: number;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

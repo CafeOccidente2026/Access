@@ -171,7 +171,7 @@ describe('QuotaPurchaseFormComponent', () => {
     component.print();
 
     expect(createSpy).toHaveBeenCalledTimes(1);
-    expect(createSpy.mock.calls[0][0]).toMatchObject({ quotaAnnouncementNumber: 12, quotaDeliveryKg: 1000, specialType: 'RN' });
+    expect(createSpy.mock.calls[0][0]).toMatchObject({ quotaAnnouncementNumber: 12, deliveryKg: 1000, specialType: 'RN' });
     expect(component.saving()).toBe(true);
     pending.error(new Error('fallo'));
     expect(component.saving()).toBe(false);

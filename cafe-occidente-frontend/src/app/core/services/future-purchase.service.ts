@@ -18,6 +18,13 @@ export class FuturePurchaseService {
     return this.http.get<Announcement[]>(`${API_BASE_URL}/purchases/future/announcements?${params}`);
   }
 
+  /** Compras anunciadas de la cédula con saldo (ventana de Facturar Compras Anunciadas, RN-21.5.2). */
+  openFor(idNumber: string): Observable<FuturePurchaseResponse[]> {
+    return this.http.get<FuturePurchaseResponse[]>(
+      `${API_BASE_URL}/purchases/future/open?idNumber=${encodeURIComponent(idNumber)}`,
+    );
+  }
+
   create(request: FuturePurchaseRequest): Observable<FuturePurchaseResponse> {
     return this.http.post<FuturePurchaseResponse>(`${API_BASE_URL}/purchases/future`, request);
   }

@@ -201,9 +201,11 @@ export const routes: Routes = [
       {
         path: 'compras/futuro/facturar-anunciadas',
         loadComponent: () =>
-          import('./features/purchase-forms/quota-billing/quota-billing-form').then(
-            (m) => m.QuotaBillingFormComponent,
+          import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
+            (m) => m.QuotaPurchaseFormComponent,
           ),
+        data: { mode: 'future' },
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
         path: 'compras/inventarios',

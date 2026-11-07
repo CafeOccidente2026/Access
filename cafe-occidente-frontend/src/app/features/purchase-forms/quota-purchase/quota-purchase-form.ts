@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -11,10 +12,12 @@ import {
   SpecialInfo,
 } from '../../../core/models/dry-coffee-purchase.model';
 import { QuotaBalance } from '../../../core/models/announcement-quota.model';
+import { FuturePurchaseResponse } from '../../../core/models/future-purchase.model';
 import { AnnouncementQuotaService } from '../../../core/services/announcement-quota.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
+import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
@@ -44,11 +47,19 @@ type QuotaPurchaseContent = PurchaseFormContent & {
   readonly quotaPicker: QuotaPickerContent;
 };
 
-const EDITABLE: string[] = [
-  'fund', 'special', 'idPart1',
+/** 'quota' = Facturar Anuncios con Cupos (RF-21.2); 'future' = Facturar Compras Anunciadas (RF-21.5). */
+type Mode = 'quota' | 'future';
+
+const WEIGHTS_AND_DISCOUNTS: string[] = [
   'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
+
+/** En anunciadas el Especial no se elige: viene de la compra anunciada. */
+const EDITABLE: Record<Mode, string[]> = {
+  quota: ['fund', 'special', 'idPart1', ...WEIGHTS_AND_DISCOUNTS],
+  future: ['fund', 'idPart1', ...WEIGHTS_AND_DISCOUNTS],
+};
 
 const REQUIRED: string[] = [
   'fund', 'special', 'idPart1', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
@@ -64,11 +75,25 @@ const READONLY: string[] = [
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
 ];
 
-const FOCUS_ORDER: string[] = [
-  'fund', 'special', 'idPart1',
-  'totalStoredWeight', 'totalHuskWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts', 'payCash',
-];
+const FOCUS_ORDER: Record<Mode, string[]> = {
+  quota: [...EDITABLE.quota, 'payCash'],
+  future: [...EDITABLE.future, 'payCash'],
+};
+
+/** La compra anunciada en la forma de la ventana (RN-21.5.2: la misma de RF-21.2): Kilos, entregados y saldo. */
+function futureRow(f: FuturePurchaseResponse): QuotaBalance {
+  return {
+    announcement: {
+      id: f.id, announcementNumber: f.announcementNumber, announcementDate: f.announcementDate,
+      basePriceLoad: f.basePriceLoad, defectiveUnitPrice: f.defectiveUnitPrice, healthyUnitPrice: f.healthyUnitPrice,
+      bonus: f.bonus, costs: f.costs, agencyId: f.agencyId, fundId: 0, specialType: f.specialType,
+      qualityIncrement: f.qualityIncrement,
+    },
+    assignedQuota: f.announcedKg,
+    deliveredKg: f.announcedKg - f.remainingKg,
+    balance: f.remainingKg,
+  };
+}
 
 const num = parseDisplayNumber;
 
@@ -78,6 +103,9 @@ const num = parseDisplayNumber;
  * ese fondo y especial; el elegido pone sus precios (no los del último anuncio) y "Esta Entrega" queda en el recuadro
  * Kilos Entregados. El saldo se descuenta solo al generar la factura, en la misma transacción de la compra; salir
  * antes no guarda nada (RN-21.2.8).
+ * Con `data.mode = 'future'` en la ruta es "Facturar Compras Anunciadas" (RF-21.5, Access "ANUNCIADAS"): la cédula
+ * abre la misma ventana con las compras anunciadas de esa persona; la elegida pone su especial y sus precios, y su
+ * saldo se descuenta al facturar.
  */
 @Component({
   selector: 'app-quota-purchase-form',
@@ -92,9 +120,16 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
   private readonly quotaService = inject(AnnouncementQuotaService);
+  private readonly futureService = inject(FuturePurchaseService);
   private readonly elementRef = inject(ElementRef);
+  private readonly mode: Mode = inject(ActivatedRoute, { optional: true })?.snapshot.data['mode'] ?? 'quota';
+  private readonly editable = EDITABLE[this.mode];
+  private readonly focusOrder = FOCUS_ORDER[this.mode];
+  private readonly readonlyKeys = this.mode === 'future' ? [...READONLY, 'special'] : READONLY;
 
-  private readonly base = toSignal(this.content.loadJson<QuotaPurchaseContent>('purchase-form-quota-purchase'));
+  private readonly base = toSignal(this.content.loadJson<QuotaPurchaseContent>(
+    this.mode === 'future' ? 'purchase-form-quota-billing' : 'purchase-form-quota-purchase',
+  ));
   readonly messages = computed(() => this.base()?.messages);
   readonly pickerContent = computed(() => this.base()?.quotaPicker);
   readonly agencyName = this.authService.agencyName() ?? '';
@@ -143,7 +178,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
-        this.focusField(FOCUS_ORDER[0]);
+        this.focusField(this.focusOrder[0]);
       }
     });
   }
@@ -153,7 +188,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   }
 
   onFieldCommitted(key: string): void {
-    if (!EDITABLE.includes(key)) {
+    if (!this.editable.includes(key)) {
       return;
     }
     const value = (this.model[key] ?? '').trim();
@@ -183,11 +218,11 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   }
 
   private advanceFocus(afterKey: string): void {
-    const idx = FOCUS_ORDER.indexOf(afterKey);
-    if (idx === -1 || idx === FOCUS_ORDER.length - 1) {
+    const idx = this.focusOrder.indexOf(afterKey);
+    if (idx === -1 || idx === this.focusOrder.length - 1) {
       return;
     }
-    this.focusField(FOCUS_ORDER[idx + 1]);
+    this.focusField(this.focusOrder[idx + 1]);
   }
 
   private runSideEffects(key: string): void {
@@ -250,29 +285,71 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  /** CA-2: Enter con una entrega válida cierra la ventana y trae los datos del anuncio elegido. */
-  onQuotaPicked(pick: QuotaPick): void {
-    this.quotaRows.set(null);
-    this.quotaChoice.set(pick);
-    const fundId = this.fundIdByName.get(this.model['fund'] ?? '')!;
-    const number = Number(stripAnnouncementPrefix(pick.row.announcement.announcementNumber));
-    this.service.specialInfo(fundId, this.model['special'], number).subscribe({
-      next: (info) => {
-        this.specialInfo.set(info);
-        this.tick.update((n) => n + 1);
-        this.advanceFocus('special');
+  /** RN-21.5.2: la cédula abre la ventana con las compras anunciadas de esa persona que tienen saldo. */
+  private openFuturePicker(idNumber: string): void {
+    this.futureService.openFor(idNumber).subscribe({
+      next: (list) => {
+        if (list.length === 0) {
+          this.clearChoice();
+          this.errorMessage.set(this.messages()?.noQuota ?? null);
+          return;
+        }
+        this.quotaRows.set(list.map(futureRow));
+        this.focusField('quotaDelivery');
       },
       error: () => {
-        this.clearSpecial();
+        this.clearChoice();
         this.errorMessage.set(this.messages()?.saveError ?? null);
       },
     });
   }
 
-  /** Cancelar la ventana deja el Especial libre para elegir otro. */
+  /** CA-2: Enter con una entrega válida cierra la ventana y trae los datos del anuncio o de la compra anunciada. */
+  onQuotaPicked(pick: QuotaPick): void {
+    this.quotaRows.set(null);
+    this.quotaChoice.set(pick);
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '')!;
+    const a = pick.row.announcement;
+    if (this.mode === 'future') {
+      this.model['special'] = a.specialType;
+      this.locked.add('special');
+      this.lookupProgram();
+    }
+    const info$ = this.mode === 'future'
+      ? this.service.specialInfo(fundId, a.specialType, undefined, a.id)
+      : this.service.specialInfo(fundId, a.specialType, Number(stripAnnouncementPrefix(a.announcementNumber)));
+    info$.subscribe({
+      next: (info) => {
+        this.specialInfo.set(info);
+        this.tick.update((n) => n + 1);
+        this.advanceFocus(this.mode === 'future' ? 'idPart1' : 'special');
+      },
+      error: () => {
+        this.clearChoice();
+        this.errorMessage.set(this.messages()?.saveError ?? null);
+      },
+    });
+  }
+
+  /** Cancelar la ventana deja libre el Especial (cupos) o la cédula (anunciadas) para elegir otro. */
   onQuotaCancelled(): void {
     this.quotaRows.set(null);
-    this.clearSpecial();
+    this.clearChoice();
+  }
+
+  private clearChoice(): void {
+    if (this.mode === 'quota') {
+      this.clearSpecial();
+      return;
+    }
+    this.model['idPart1'] = '';
+    this.model['special'] = '';
+    this.locked.delete('idPart1');
+    this.locked.delete('special');
+    this.quotaChoice.set(null);
+    this.specialInfo.set(null);
+    this.tick.update((n) => n + 1);
+    this.focusField('idPart1');
   }
 
   private clearSpecial(): void {
@@ -310,8 +387,12 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
             this.locked.add(k);
           }
         });
-        this.lookupProgram();
         this.tick.update((n) => n + 1);
+        if (this.mode === 'future') {
+          this.openFuturePicker(idNumber);
+          return;
+        }
+        this.lookupProgram();
         this.advanceFocus('idPart1');
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
@@ -387,8 +468,10 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
-      quotaAnnouncementNumber: Number(stripAnnouncementPrefix(choice.row.announcement.announcementNumber)),
-      quotaDeliveryKg: choice.deliveryKg,
+      ...(this.mode === 'future'
+        ? { futurePurchaseId: choice.row.announcement.id }
+        : { quotaAnnouncementNumber: Number(stripAnnouncementPrefix(choice.row.announcement.announcementNumber)) }),
+      deliveryKg: choice.deliveryKg,
     };
   }
 
@@ -399,7 +482,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       return;
     }
     saveAndPrint(this, {
-      name: 'Cafe Seco con cupo',
+      name: this.mode === 'future' ? 'Compra anunciada' : 'Cafe Seco con cupo',
       save: () => this.service.create(request),
       invoice: buildDryCoffeeInvoiceDocDefinition,
       messages: () => this.messages(),
@@ -439,7 +522,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   }
 
   protected override hasUnsavedInput(): boolean {
-    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+    return this.editable.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
   private buildContent(base: PurchaseFormContent): PurchaseFormContent {
@@ -493,13 +576,13 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       if (key === 'fund') {
         patch.options = this.fundOptions;
       }
-      if (READONLY.includes(key)) {
+      if (this.readonlyKeys.includes(key)) {
         patch.readonly = true;
         patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
-      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+      } else if (!isSequentialFieldEnabled(key, this.focusOrder, this.locked)) {
         patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
