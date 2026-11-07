@@ -184,6 +184,7 @@ class EndpointAuthorizationTest {
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
         add(ADMIN_USER, post, "/api/purchases/future");
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
+        add(ADMIN_USER, get, "/api/purchases/future/open", "/api/purchases/future/open?idNumber=1");
         add(ADMIN_USER, get, "/api/purchases/future/announcements", "/api/purchases/future/announcements?specialType=X");
         add(ADMIN_USER, get, "/api/announcement-quotas");
         add(ADMIN_USER, get, "/api/announcement-quotas/available");
