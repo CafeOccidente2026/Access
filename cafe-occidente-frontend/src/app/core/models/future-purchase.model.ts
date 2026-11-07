@@ -12,6 +12,17 @@ export interface FuturePurchaseRequest {
   readonly vereda: string | null;
 }
 
+/** Anunciadas Hoy (HU-31, P2): un anuncio con la suma de sus compras a futuro que tienen saldo. */
+export interface PendingAnnouncementRow {
+  readonly announcementNumber: string;
+  readonly announcementDate: string;
+  readonly specialType: string;
+  readonly healthyUnitPrice: number;
+  readonly announcedKg: number;
+  readonly remainingKg: number;
+  readonly growers: number;
+}
+
 /** Restaurar Compras Anunciadas: saldo guardado y el que sale de recalcular desde cero. */
 export interface FuturePurchaseRestoreRow {
   readonly id: number;
