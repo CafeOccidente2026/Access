@@ -31,14 +31,14 @@
   "identificationFields": [
     { "key": "fund", "label": "Fondo", "type": "text" },
     { "key": "invoice", "label": "Factura", "type": "text", "highlighted": true },
-    { "key": "invoiceNumber", "label": "", "type": "text", "highlighted": true },
+    { "key": "invoiceNumber", "label": "", "ariaLabel": "Número de factura", "type": "text", "highlighted": true },
     { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency", "integer": true },
     { "key": "productCode", "label": "Cod Prod", "type": "text" }
   ],
   "contactFields": [
     { "key": "idNumber", "label": "Cedula", "type": "text" },
-    { "key": "firstName", "label": "", "type": "text" },
-    { "key": "lastName", "label": "", "type": "text" },
+    { "key": "firstName", "label": "", "ariaLabel": "Nombres", "type": "text" },
+    { "key": "lastName", "label": "", "ariaLabel": "Apellidos", "type": "text" },
     { "key": "idType", "label": "Tipo", "type": "text" },
     { "key": "address", "label": "Direccion", "type": "text" },
     { "key": "cellphone", "label": "Cel", "type": "text" }

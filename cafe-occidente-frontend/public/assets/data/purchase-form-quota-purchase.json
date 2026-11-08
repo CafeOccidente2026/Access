@@ -35,8 +35,8 @@
   ],
   "contactFields": [
     { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
-    { "key": "firstNames", "label": "", "type": "text", "readonly": true },
-    { "key": "lastNames", "label": "", "type": "text", "readonly": true },
+    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true },
+    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true },
     { "key": "idType", "label": "Tipo", "type": "text", "readonly": true },
     { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
     { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true }
