@@ -30,6 +30,16 @@ describe('PaymentPanelComponent', () => {
     expect(inputs.every((i) => i.readOnly)).toBe(true);
   });
 
+  it('names every box, so it can be found and typed in', () => {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('definition', definition);
+    fixture.componentRef.setInput('saved', { cashAmount: 1, checkAmount: 1, transferAmount: 1, cardAmount: 1, checkNumber: '4321' });
+    fixture.detectChanges();
+
+    const names = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('input')).map((i) => i.getAttribute('aria-label'));
+    expect(names).toEqual(['Efectivo', 'Cheque', 'Núm Cheque', 'Transfer', 'Datáfono', 'Tot F de Pago']);
+  });
+
   it('starts with only Efectivo and the total; lowering a form and leaving it shows the next one beside it', async () => {
     const fixture = TestBed.createComponent(PaymentPanelComponent);
     fixture.componentRef.setInput('definition', definition);

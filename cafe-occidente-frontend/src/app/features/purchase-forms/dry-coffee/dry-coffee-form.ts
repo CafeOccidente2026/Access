@@ -66,6 +66,8 @@ const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoicePrefix', 'invoiceNumber',
   'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idNumber',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
+  // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
+  'withholding',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario
@@ -566,6 +568,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',
       contribution: c ? (growerType === 'C' ? c.cooperativeDiscount : c.associateContribution) : '',
+      withholding: c?.withholding ?? '',
       netToPay: c?.netToPay ?? '',
     };
 

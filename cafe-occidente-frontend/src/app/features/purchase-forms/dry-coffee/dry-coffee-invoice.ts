@@ -197,13 +197,17 @@ export function buildInvoiceDoc(
     { text: legal, fontSize: 7, alignment: 'center', margin: [0, 20, 0, 0] },
   ];
 
-  // Macro "Imprime Factura" abre el reporte "Factura" dos veces (comprador y vendedor), sin rotulo
-  // de Original/Copia -> dos paginas identicas. structuredClone porque pdfmake muta los nodos al
-  // maquetar y no admite reusar las mismas referencias en dos paginas.
+  // Macro "Imprime Factura" abre el reporte "Factura" dos veces; RN-18.3 (decision del usuario): cada
+  // pagina lleva su rotulo. structuredClone porque pdfmake muta los nodos al maquetar y no admite
+  // reusar las mismas referencias en dos paginas.
+  const labeled = (label: string): Content[] => [
+    { text: label, bold: true, fontSize: 8, alignment: 'right', margin: [0, 0, 0, 2] },
+    ...structuredClone(copy),
+  ];
   return {
     pageSize: 'LETTER',
     pageMargins: [30, 30, 30, 30],
-    content: [...copy, { stack: structuredClone(copy), pageBreak: 'before' }],
+    content: [...labeled('Copia Caficultor'), { stack: labeled('Copia Operaciones'), pageBreak: 'before' }],
     defaultStyle: { font: 'Roboto' },
   };
 }

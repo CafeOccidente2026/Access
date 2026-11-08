@@ -24,8 +24,13 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
     windowTitle: 'Compras Café Seco',
     theme: 'sky',
-    topFields: [],
-    identificationFields: [],
+    topFields: [
+      { key: 'agency', label: 'Agencia', type: 'text' },
+      { key: 'announcement', label: 'Anuncio', type: 'number' },
+      { key: 'associated', label: '', ariaLabel: 'Asociado', type: 'text' },
+    ],
+    identificationFields: [{ key: 'productCode', label: 'Cod Prod', type: 'text' }],
+    additionalDiscountFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages: {
       acceptLabel: 'Aceptar',
       noAnnouncement: 'No hay anuncio',
@@ -352,5 +357,40 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  const viewField = (key: string) => {
+    const v = component.viewContent()!;
+    return [...v.topFields, ...v.identificationFields, ...(v.additionalDiscountFields ?? [])].find((f) => f.key === key)!;
+  };
+
+  it('RN-15.6: Retefuente is read-only and shows what the server calculated', () => {
+    setup(growerWithPhone);
+    previewSpy.mockReturnValue(of({ ...calculation, withholding: 6000 }));
+    expect(viewField('withholding').readonly).toBe(true);
+    expect(viewField('withholding').value).toBe('');
+
+    fillCommon();
+    fillWeightsAndBags();
+    component.model['tare'] = '50';
+    component.onFieldCommitted('tare');
+
+    expect(viewField('withholding').readonly).toBe(true);
+    expect(viewField('withholding').value).toBe(6000);
+  });
+
+  it('the agency is not editable, the special brings announcement and Cod Prod, and S/C says if associated', () => {
+    setup(growerWithPhone);
+    expect(viewField('agency').readonly).toBe(true);
+    expect(viewField('agency').value).toBe('Buesaco');
+
+    fillCommon();
+
+    expect(viewField('announcement').value).toBe('32');
+    expect(viewField('productCode').value).toBe('0110002000002');
+    expect(viewField('associated').value).toBe('NO ASOCIADO');
+    component.model['idType'] = 'S';
+    component.onFieldCommitted('special');
+    expect(viewField('associated').value).toBe('ASOCIADO');
   });
 });

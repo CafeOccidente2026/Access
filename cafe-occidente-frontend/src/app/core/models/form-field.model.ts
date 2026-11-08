@@ -5,6 +5,8 @@ export type FieldType = 'text' | 'number' | 'count' | 'date' | 'select' | 'curre
 export interface FormFieldDefinition {
   readonly key: string;
   readonly label: string;
+  /** Nombre accesible cuando la etiqueta va vacia como en Access (Nombres, Apellidos, N° de factura). */
+  readonly ariaLabel?: string;
   readonly type: FieldType;
   readonly value?: string | number;
   readonly options?: string[];

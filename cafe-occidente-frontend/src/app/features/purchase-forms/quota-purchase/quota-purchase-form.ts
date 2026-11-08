@@ -73,6 +73,8 @@ const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode', 'basePriceLoad', 'huskPrice',
   'healthyUnitPrice', 'bonus', 'costs', 'deliveryKg',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
+  // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
+  'withholding',
 ];
 
 const FOCUS_ORDER: Record<Mode, string[]> = {
@@ -567,6 +569,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',
       contribution: c ? (growerType === 'C' ? c.cooperativeDiscount : c.associateContribution) : '',
+      withholding: c?.withholding ?? '',
       netToPay: c?.netToPay ?? '',
     };
 
