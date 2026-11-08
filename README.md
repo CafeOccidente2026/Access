@@ -47,6 +47,10 @@ npm start
 
 Se abre en **http://localhost:4200** (entra directo a `/login`).
 
+El frontend llama al backend en `/api` (ruta relativa). En local, `npm start` manda `/api` al backend del
+**8090** con `proxy.conf.json`; en un servidor, lo hace el mismo proxy que sirve la web. Un solo build sirve
+para cualquier ambiente.
+
 Otros comandos útiles:
 ```bash
 npm run build   # compila para producción (carpeta dist/)
