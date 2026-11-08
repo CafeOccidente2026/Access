@@ -32,6 +32,7 @@ describe('QuotaPurchaseFormComponent', () => {
     topFields: [],
     identificationFields: [{ key: 'deliveryKg', label: 'Kilos Entregados', type: 'number' }],
     qualityFields: [{ key: 'healthyStoredWeight', label: 'Peso Alm Sana', type: 'currency' }],
+    settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages,
     quotaPicker: {},
   } as unknown as PurchaseFormContent;
@@ -235,6 +236,18 @@ describe('QuotaPurchaseFormComponent', () => {
     expect(component.model['healthyStoredWeight']).toBe('190');
     expect(field('healthyStoredWeight')?.readonly).toBe(true);
     expect(field('healthyStoredWeight')?.value).toBe('190');
+  });
+
+  it('RN-15.6: Retefuente is read-only and shows what the server calculated', () => {
+    setup();
+    previewSpy.mockReturnValue(of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, withholding: 6000, netToPay: 7100000 }));
+    const withholding = () => component.viewContent()!.settlementSecondaryFields!.find((f) => f.key === 'withholding')!;
+    expect(withholding().readonly).toBe(true);
+
+    fillPurchase();
+
+    expect(withholding().readonly).toBe(true);
+    expect(withholding().value).toBe(6000);
   });
 
   it('Escape clears the chosen announcement too', () => {
