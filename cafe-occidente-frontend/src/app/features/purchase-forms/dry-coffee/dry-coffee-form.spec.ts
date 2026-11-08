@@ -12,6 +12,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 import { DRY } from '../../purchase-query/purchase-query.testing';
+import dryContent from '../../../../../public/assets/data/purchase-form-dry.json';
 
 /**
  * Cubre el gate REQUIRED/hasRequiredCascadeInputs de buildRequest() (dry-coffee-form.ts) - el mismo
@@ -392,5 +393,13 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.model['idType'] = 'S';
     component.onFieldCommitted('special');
     expect(viewField('associated').value).toBe('ASOCIADO');
+  });
+});
+
+describe('purchase-form-dry.json', () => {
+  it('the ASOCIADO / NO ASOCIADO box is wide enough not to cut "NO ASOCIADO" (text-sm + padding)', () => {
+    const box = dryContent.topFields.find((f) => f.key === 'associated')!;
+    const width = Number(/max-w-\[(\d+)px\]/.exec(box.inputWidthClass ?? '')?.[1]);
+    expect(width).toBeGreaterThanOrEqual(120);
   });
 });
