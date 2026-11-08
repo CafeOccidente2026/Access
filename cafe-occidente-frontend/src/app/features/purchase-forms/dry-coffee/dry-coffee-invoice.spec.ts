@@ -12,7 +12,7 @@ const findText = (node: unknown, text: string): { color?: string; bold?: boolean
 };
 
 describe('buildDryCoffeeInvoiceDocDefinition', () => {
-  it('prints two identical copies on separate pages, like macro "Imprime Factura"', () => {
+  it('RN-18.3: prints the copy for the grower and the copy for Operaciones, same invoice on separate pages', () => {
     const purchase = {
       id: 1, purchaseDate: '2026-09-28', invoiceNumber: 27867, agencyName: 'El Tambo', fundCode: '10',
       specialType: 'A', productCode: '1', announcementNumber: '5', announcementDate: '2026-09-28',
@@ -30,8 +30,11 @@ describe('buildDryCoffeeInvoiceDocDefinition', () => {
     const content = buildDryCoffeeInvoiceDocDefinition(purchase, null).content as unknown[];
     const second = content.at(-1) as { stack: unknown[]; pageBreak: string };
 
+    const first = content.slice(0, -1);
     expect(second.pageBreak).toBe('before');
-    expect(second.stack).toEqual(content.slice(0, -1));
+    expect(first[0]).toEqual(expect.objectContaining({ text: 'Copia Caficultor', alignment: 'right' }));
+    expect(second.stack[0]).toEqual(expect.objectContaining({ text: 'Copia Operaciones', alignment: 'right' }));
+    expect(second.stack.slice(1)).toEqual(first.slice(1));
     // NETO A PAGAR va en negrita y con el color por defecto (negro), como las demas etiquetas.
     expect(findText(content, 'NETO A PAGAR  $')).toEqual(expect.objectContaining({ bold: true }));
     expect(findText(content, 'NETO A PAGAR  $')?.color).toBeUndefined();

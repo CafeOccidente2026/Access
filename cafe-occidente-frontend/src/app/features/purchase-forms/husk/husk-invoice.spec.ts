@@ -16,11 +16,12 @@ describe('buildHuskInvoiceDocDefinition', () => {
     dianResolution: '1', resolutionDate: '2026-01-01', resolutionFrom: 1, resolutionTo: 99999, validity: 12,
   };
 
-  it('prints two identical copies on separate pages, like macro "Imprime Factura Pasilla"', () => {
+  it('RN-18.3: prints the grower and Operaciones copies on separate pages, like macro "Imprime Factura Pasilla"', () => {
     const content = buildHuskInvoiceDocDefinition(purchase, null).content as Content[];
     const second = content.at(-1) as { stack: Content[]; pageBreak: string };
     expect(second.pageBreak).toBe('before');
-    expect(second.stack).toEqual(content.slice(0, -1));
+    expect(second.stack.slice(1)).toEqual(content.slice(1, -1));
+    expect(second.stack[0]).toEqual(expect.objectContaining({ text: 'Copia Operaciones' }));
   });
 
   it('uses the Pasilla rows of reports/Factura Pasilla.txt', () => {
