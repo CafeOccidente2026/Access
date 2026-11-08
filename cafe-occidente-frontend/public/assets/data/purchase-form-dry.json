@@ -90,7 +90,8 @@
     { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
   ],
   "additionalDiscountFields": [
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "integer": true }
   ],
   "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true },
   "compactFields": true,
