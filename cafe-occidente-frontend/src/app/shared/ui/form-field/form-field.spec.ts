@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { FormFieldComponent } from './form-field';
 import { FormFieldDefinition } from '../../../core/models';
+import dry from '../../../../../public/assets/data/purchase-form-dry.json';
+import future from '../../../../../public/assets/data/purchase-form-future.json';
+import green from '../../../../../public/assets/data/purchase-form-green.json';
+import husk from '../../../../../public/assets/data/purchase-form-husk.json';
+import quotaPurchase from '../../../../../public/assets/data/purchase-form-quota-purchase.json';
+import query from '../../../../../public/assets/data/purchase-query.json';
 
 describe('FormFieldComponent formatWhenIdle', () => {
   function setup(field: FormFieldDefinition) {
@@ -99,5 +105,31 @@ describe('FormFieldComponent labelAbove', () => {
     const label = (fixture.nativeElement as HTMLElement).querySelector('label')!;
     expect(label.classList).toContain('flex-col');
     expect(label.querySelector('span')!.classList).not.toContain('truncate');
+  });
+});
+
+describe('FormFieldComponent accessible name', () => {
+  function input(field: FormFieldDefinition): HTMLInputElement {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', field);
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector('input')!;
+  }
+
+  it('names each box with its label, or with ariaLabel when the label is hidden like in Access', () => {
+    expect(input({ key: 'totalStoredWeight', label: 'Peso Tot Alm', type: 'count' }).getAttribute('aria-label'))
+      .toBe('Peso Tot Alm');
+    expect(input({ key: 'firstName', label: '', ariaLabel: 'Nombres', type: 'text' }).getAttribute('aria-label'))
+      .toBe('Nombres');
+  });
+
+  it('every field of the purchase screens has a name to be found and typed in', () => {
+    const screens = [dry, green, husk, future, quotaPurchase, query];
+    const unnamed = screens
+      .flatMap((screen) => Object.values(screen).filter(Array.isArray).flat())
+      .filter((f): f is FormFieldDefinition => typeof f === 'object' && f !== null && 'key' in f && 'label' in f)
+      .filter((f) => !f.label && !f.ariaLabel)
+      .map((f) => f.key);
+    expect(unnamed).toEqual([]);
   });
 });
