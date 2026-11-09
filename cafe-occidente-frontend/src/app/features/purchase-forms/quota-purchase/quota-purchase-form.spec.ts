@@ -262,6 +262,27 @@ describe('QuotaPurchaseFormComponent', () => {
     expect(special.options).toEqual(['RN', 'COLOMBIA TIERRA DE DIVERSIDAD RN']);
   });
 
+  it('Q15 (prueba del 9-nov, punto 9): over the threshold it warns; Aceptar clears the sample and goes back to Peso Tot Alm', () => {
+    setup();
+    const focusSpy = vi.fn();
+    (component as any).focusField = focusSpy;
+    const message = 'El Factor (94,59) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    previewSpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+    fillPurchase();
+
+    expect(component.errorMessage()).toBe(message);
+    expect(focusSpy).not.toHaveBeenCalledWith('totalStoredWeight');
+
+    component.dismissError();
+
+    for (const key of ['totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'wastePercentage', 'huskPercentage', 'factor']) {
+      expect(component.model[key] ?? '', key).toBe('');
+      expect((component as any).locked.has(key), key).toBe(false);
+    }
+    expect(component.calc()).toBeNull();
+    expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
+  });
+
   it('Escape clears the chosen announcement too', () => {
     setup();
     pickQuota();
