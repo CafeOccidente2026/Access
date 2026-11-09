@@ -143,7 +143,7 @@ class SuppliesReportIntegrationTest {
 
         List<SuppliesReportRow> cash = reports.cashMovement(AGENCY, "RP", TODAY);
 
-        assertThat(cash).extracting(SuppliesReportRow::transactionId).containsExactlyInAnyOrder("SDBU2001", "990001");
+        assertThat(cash).extracting(SuppliesReportRow::transactionId).containsExactlyInAnyOrder("SDBU-2-001", "990001");
         assertThat(lastBalance(cash)).isEqualByComparingTo("96412176");
     }
 
