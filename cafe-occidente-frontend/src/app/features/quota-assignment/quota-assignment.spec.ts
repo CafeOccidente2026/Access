@@ -131,7 +131,7 @@ describe('QuotaAssignmentComponent', () => {
 
     expect(box()).toBe(first);
     expect(document.activeElement).toBe(first);
-    expect(first.value).toBe('4000');
+    expect(first.value).toBe('4.000');
     fixture.nativeElement.remove();
   });
 
