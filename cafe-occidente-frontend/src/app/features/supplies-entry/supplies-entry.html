@@ -15,6 +15,7 @@
               type="text"
               inputmode="numeric"
               data-field-key="idNumber"
+              [attr.aria-label]="field.label"
               class="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
               [readonly]="!!saved() || !!field.readonly"
               [placeholder]="field.placeholder ?? ''"
