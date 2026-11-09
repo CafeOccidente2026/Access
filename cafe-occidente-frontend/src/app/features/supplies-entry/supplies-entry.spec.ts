@@ -85,6 +85,23 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     },
   );
 
+  it('after saving, the name beside the cédula is cleared with the rest of the form', async () => {
+    const { component } = await render('supply');
+    component.set('idNumber', '1835221');
+    component.lookupGrower();
+    http.expectOne(`${API_BASE_URL}/growers/1835221`).flush({ idNumber: '1835221', firstName: 'PEREGRINO', lastName: 'ORDOÑEZ' });
+    component.set('fundCode', 'RP');
+    await settle();
+    await answerNextId('supply', 'RP', 'SDTA-3SUM-001');
+    component.set('amount', '140000');
+
+    component.save();
+    http.expectOne(`${URL}/supplies`).flush({ transactionId: 'SDTA-3SUM-001' });
+    await settle();
+
+    expect(component.growerNames()).toBeNull();
+  });
+
   it('Caja Menor asks its Id without a fund and does not ask for a cédula', async () => {
     const { component } = await render('pettyCash');
     await answerNextId('pettyCash', null, 'SDTA7ING001');
