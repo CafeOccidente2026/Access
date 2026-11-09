@@ -52,17 +52,20 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     this.next(target, true);
   }
 
-  /** Opcion elegida en un combobox (clic o Enter): pasa al siguiente campo. */
+  /** Opcion elegida en un combobox (clic o Enter): pasa al siguiente campo cuando la pantalla ya se repinto (puede
+   *  mostrar campos nuevos, como Actualizar conductor al elegir la cedula). */
   @HostListener('flow-next', ['$event'])
   onOptionChosen(event: Event): void {
-    this.next(event.target as HTMLElement, false);
+    const target = event.target as HTMLElement;
+    setTimeout(() => this.next(target, false));
   }
 
   /** Lista nativa: al cambiar la opcion pasa al siguiente campo. */
   @HostListener('change', ['$event'])
   onChange(event: Event): void {
-    if ((event.target as HTMLElement).tagName === 'SELECT') {
-      this.next(event.target as HTMLElement, false);
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'SELECT') {
+      setTimeout(() => this.next(target, false));
     }
   }
 
