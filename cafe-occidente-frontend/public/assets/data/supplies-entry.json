@@ -13,6 +13,7 @@
   "screens": {
     "cash": {
       "windowTitle": "Caja suministros",
+      "lookupGrower": true,
       "endpoint": "cash",
       "kind": "ledger",
       "backRoute": "/suministros",
@@ -31,6 +32,7 @@
     },
     "adjustment": {
       "windowTitle": "Ajustes Caja",
+      "lookupGrower": true,
       "endpoint": "cash-adjustments",
       "kind": "ledger",
       "backRoute": "/suministros",
@@ -63,6 +65,7 @@
     },
     "pettyCashExpense": {
       "windowTitle": "Gastos",
+      "lookupGrower": true,
       "endpoint": "petty-cash-expenses",
       "kind": "ledger",
       "backRoute": "/suministros/caja-menor",
@@ -78,6 +81,7 @@
     },
     "supply": {
       "windowTitle": "SUMINISTROS",
+      "lookupGrower": true,
       "endpoint": "supplies",
       "kind": "ledger",
       "backRoute": "/suministros",
@@ -94,6 +98,7 @@
     },
     "issuedCheck": {
       "windowTitle": "Cheques Girados",
+      "lookupGrower": true,
       "endpoint": "issued-checks",
       "kind": "ledger",
       "backRoute": "/suministros",
@@ -111,6 +116,7 @@
     },
     "packaging": {
       "windowTitle": "Empaque Suministros",
+      "lookupGrower": true,
       "endpoint": "packaging",
       "kind": "packaging",
       "backRoute": "/suministros",
