@@ -25,6 +25,7 @@
       [class]="(field.inputWidthClass || inputWidthClass) + ' ' + (field.highlighted ? (field.highlightClass || highlightClass) : 'bg-white')"
       [attr.data-field-key]="field.key"
       [attr.aria-label]="field.ariaLabel || field.label || null"
+      [attr.title]="inputValue || null"
       [type]="field.type === 'number' || field.type === 'count' || field.type === 'currency' || field.type === 'percentage' ? 'text' : field.type"
       [readonly]="field.readonly"
       [ngModel]="inputValue"
