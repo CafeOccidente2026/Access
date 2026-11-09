@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
-import { asPenalty, formatDisplayNumber, formatThousands } from '../../utils/number-format';
+import { asPenalty, formatDisplayNumber, formatThousands, parseDisplayNumber } from '../../utils/number-format';
 import { ComboboxComponent } from '../combobox/combobox';
 
 /**
@@ -56,7 +56,8 @@ export class FormFieldComponent implements OnChanges {
     // fuerza 2 decimales, igual que 'currency'. `rawDisplay` (Destare, Castigo, Descuento Fro, Otros
     // Desctos) se salta el formateo entero: se ve tal cual se tipeo, sin agregar ni quitar nada.
     if (this.field.liveThousands && !this.field.readonly) {
-      this.inputValue = formatThousands(String(raw).replace(/\D/g, ''));
+      // Solo pesos enteros: un valor guardado con decimales (8379840,00) se ve 8.379.840.
+      this.inputValue = raw === '' ? '' : formatThousands(String(Math.trunc(parseDisplayNumber(String(raw)))));
       return;
     }
     this.inputValue = this.field.readonly || this.formatWhenIdle ? this.formatted(raw) : raw;

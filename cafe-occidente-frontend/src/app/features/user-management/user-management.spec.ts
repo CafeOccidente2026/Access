@@ -172,6 +172,29 @@ describe('UserManagementComponent', () => {
     expect(component.userError()).toBe('Ya existe un usuario con esa cedula');
   });
 
+  it('prueba del 9-nov (segunda): choosing Rol moves to Agencia, and choosing Agencia moves to Crear Usuario without saving', async () => {
+    const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn> };
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const choose = async (key: string) => {
+      const select = el.querySelector<HTMLSelectElement>(`[data-field-key="${key}"]`)!;
+      select.value = select.options[1].value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+    };
+
+    await choose('roleId');
+    expect(document.activeElement?.getAttribute('data-field-key')).toBe('agencyId');
+
+    await choose('agencyId');
+    expect(document.activeElement?.textContent?.trim()).toBe(content.createUserButton);
+    expect(userService.create).not.toHaveBeenCalled();
+    fixture.nativeElement.remove();
+  });
+
   it('creating an agency is optional: an empty name does nothing', () => {
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
     component.createAgency();

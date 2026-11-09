@@ -11,7 +11,7 @@
       >
     </header>
 
-    <div class="flex flex-col gap-5 bg-panel-cyan px-8 py-8">
+    <div class="flex flex-col gap-5 bg-panel-cyan px-8 py-8" appFormFlow>
       <label class="flex items-center gap-3 text-sm font-semibold text-slate-800">
         <span class="w-28 rounded bg-accent-orange px-1 py-0.5">{{ d.fromLabel }}:</span>
         <input
@@ -37,7 +37,7 @@
       <p *ngIf="message() as m" data-testid="message" class="text-sm font-semibold text-red-700">{{ m }}</p>
 
       <div class="mt-2 flex justify-center gap-4">
-        <app-button [label]="d.acceptLabel" variant="access" [disabled]="!canAccept()" (pressed)="onAccept()"></app-button>
+        <app-button data-flow-submit [label]="d.acceptLabel" variant="access" [disabled]="!canAccept()" (pressed)="onAccept()"></app-button>
         <app-button [label]="d.cancelLabel" variant="access" (pressed)="onCancel()"></app-button>
       </div>
     </div>

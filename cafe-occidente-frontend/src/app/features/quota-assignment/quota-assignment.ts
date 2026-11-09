@@ -8,7 +8,7 @@ import { AnnouncementQuotaResponse, QuotaCandidate } from '../../core/models/ann
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, ComboboxComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
@@ -27,7 +27,7 @@ function optionLabel(candidate: QuotaCandidate): string {
 @Component({
   selector: 'app-quota-assignment',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './quota-assignment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

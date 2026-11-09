@@ -6,7 +6,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
-import { AppButtonComponent } from '../../shared/ui';
+import { AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { DateRangeDialogContent } from './date-range-dialog.model';
 import { buildPurchasesByDateDoc } from './purchases-by-date-pdf';
@@ -19,7 +19,7 @@ import { buildPurchasesByDateDoc } from './purchases-by-date-pdf';
 @Component({
   selector: 'app-date-range-dialog',
   standalone: true,
-  imports: [CommonModule, AppButtonComponent],
+  imports: [CommonModule, AppButtonComponent, FormFlowDirective],
   templateUrl: './date-range-dialog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

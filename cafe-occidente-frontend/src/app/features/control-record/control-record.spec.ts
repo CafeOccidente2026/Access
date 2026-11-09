@@ -280,4 +280,23 @@ describe('ControlRecordComponent - cafe verde en todas las agencias', () => {
     expect(component.errorMessage()).toBe('Datos invalidos');
     expect(component.saving()).toBe(false);
   });
+
+  it('teclado (prueba del 9-nov, segunda): abre con el foco en el primer campo y Guardar es el boton de Enter', async () => {
+    const { fixture, el } = setup('ADMINISTRADOR');
+    document.body.appendChild(el);
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
+    expect(el.querySelector('.form-flow')).not.toBeNull();
+    expect(document.activeElement?.tagName).toBe('SELECT');
+    expect(el.querySelector('[data-testid=save]')?.hasAttribute('data-flow-submit')).toBe(true);
+    el.remove();
+  });
+
+  it('control-record.json: los valores en pesos enteros llevan puntos de miles al escribir; Base Pasilla (12,5) no', () => {
+    const fields = [...content.leftColumn, ...content.rightColumn] as (FormFieldDefinition & { liveThousands?: boolean })[];
+    const live = fields.filter((f) => f.liveThousands).map((f) => f.key);
+    expect(live).toEqual(['baseWithholding', 'costs', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']);
+  });
 });
+

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AppButtonComponent } from '../app-button/app-button';
 import { FormFlowDirective } from './form-flow';
 
 @Component({
@@ -31,6 +32,7 @@ describe('appFormFlow', () => {
     const fixture = TestBed.createComponent(Host);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
+    vi.advanceTimersByTime(0);
     const el = (id: string) => fixture.nativeElement.querySelector(`#${id}`) as HTMLElement;
 
     expect(document.activeElement).toBe(el('a'));
@@ -48,6 +50,76 @@ describe('appFormFlow', () => {
 
     vi.advanceTimersByTime(1000);
     expect(el('a').classList).not.toContain('field-flash');
+    vi.useRealTimers();
+    fixture.nativeElement.remove();
+  });
+});
+
+describe('appFormFlow con listas (prueba del 9-nov, segunda)', () => {
+  it('choosing an option of a list or changing a select moves on to the next field (once the screen repaints)', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(Host);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el = (id: string) => fixture.nativeElement.querySelector(`#${id}`) as HTMLElement;
+
+    // Un combobox avisa con flow-next al elegir una opcion (clic o Enter).
+    el('a').dispatchEvent(new CustomEvent('flow-next', { bubbles: true }));
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement).toBe(el('r2'));
+
+    el('s').focus();
+    el('s').dispatchEvent(new Event('change', { bubbles: true }));
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement).toBe(el('d'));
+    vi.useRealTimers();
+    fixture.nativeElement.remove();
+  });
+});
+
+@Component({
+  standalone: true,
+  imports: [FormFlowDirective, AppButtonComponent],
+  template: `
+    <div appFormFlow>
+      <input id="x" />
+      <app-button data-flow-submit label="Generar" (pressed)="pressed = pressed + 1"></app-button>
+    </div>
+  `,
+})
+class HostWithAppButton {
+  pressed = 0;
+}
+
+describe('appFormFlow con app-button', () => {
+  it('Enter on the last field presses the app-button marked data-flow-submit', () => {
+    const fixture = TestBed.createComponent(HostWithAppButton);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    enter(fixture.nativeElement.querySelector('#x'));
+    expect(fixture.componentInstance.pressed).toBe(1);
+    fixture.nativeElement.remove();
+  });
+});
+
+@Component({
+  standalone: true,
+  imports: [FormFlowDirective],
+  template: `
+    <div appFormFlow><input id="first" /></div>
+    <div [appFormFlow]="false"><input id="second" /></div>
+  `,
+})
+class HostWithTwoFlows {}
+
+describe('appFormFlow con dos grupos', () => {
+  it('a group marked [appFormFlow]="false" walks with Enter but does not take the first focus', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(HostWithTwoFlows);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement?.id).toBe('first');
     vi.useRealTimers();
     fixture.nativeElement.remove();
   });

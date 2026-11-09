@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { InventoryService } from '../../core/services/inventory.service';
-import { AccessWindowComponent, AgencyPickerComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from '../remission-form/remission-invoice';
@@ -13,7 +13,7 @@ import { buildRemissionDocDefinition } from '../remission-form/remission-invoice
 @Component({
   selector: 'app-remission-reprint',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './remission-reprint.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

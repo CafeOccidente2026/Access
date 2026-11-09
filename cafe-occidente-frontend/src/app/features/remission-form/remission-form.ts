@@ -5,7 +5,7 @@ import { InventoryMovementResponse, RemissionLineRequest, RemissionResponse } fr
 import { Grower, GrowerCreateRequest } from '../../core/models/grower.model';
 import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
-import { AccessWindowComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber } from '../../shared/utils/number-format';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from './remission-invoice';
@@ -28,7 +28,7 @@ interface DraftLine {
 @Component({
   selector: 'app-remission-form',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
   templateUrl: './remission-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

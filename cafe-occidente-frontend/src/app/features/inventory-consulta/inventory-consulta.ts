@@ -3,14 +3,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 
 import { InventoryMovementResponse } from '../../core/models/inventory.model';
 import { InventoryService } from '../../core/services/inventory.service';
-import { AccessWindowComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 
 /** "Reporte Inventario": de solo lectura - las filas se crean solas desde cada compra. */
 @Component({
   selector: 'app-inventory-consulta',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
   templateUrl: './inventory-consulta.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

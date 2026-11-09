@@ -4,13 +4,13 @@
       <h2 class="text-lg font-bold text-slate-600">{{ v.heading }}</h2>
       <p class="max-w-4xl text-xs text-amber-800">{{ v.note }}</p>
 
-      <form *ngIf="viewKey === 'future'" class="flex items-end gap-2 text-sm" (submit)="search($event, idInput.value)">
+      <form *ngIf="viewKey === 'future'" class="flex items-end gap-2 text-sm" appFormFlow (submit)="search($event, idInput.value)">
         <label class="flex flex-col gap-1">
           <span class="font-bold text-blue-900">{{ c.idNumberLabel }}:</span>
           <input #idInput type="text" inputmode="numeric" data-field-key="restoreIdNumber"
                  class="w-40 rounded border border-slate-300 px-2 py-1" />
         </label>
-        <button type="submit" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
+        <button type="submit" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200">{{ c.searchButton }}</button>
       </form>
 
       <div class="flex-1 overflow-auto" *ngIf="rows() as list">

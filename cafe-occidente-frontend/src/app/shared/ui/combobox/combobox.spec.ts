@@ -40,3 +40,32 @@ describe('ComboboxComponent on leaving', () => {
     vi.useRealTimers();
   });
 });
+
+describe('ComboboxComponent flow-next', () => {
+  function render() {
+    const fixture = TestBed.createComponent(ComboboxComponent);
+    fixture.componentRef.setInput('options', ['RP', 'LF']);
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+    const announced: number[] = [];
+    input.addEventListener('flow-next', () => announced.push(1));
+    return { fixture, input, announced };
+  }
+
+  it('announces flow-next when an option is chosen with the mouse', () => {
+    const { fixture, announced } = render();
+    fixture.componentInstance.onOptionMouseDown(new MouseEvent('mousedown'), 'RP');
+    expect(announced).toHaveLength(1);
+  });
+
+  it('announces flow-next on Enter over the exact text, but not on text that is no option', () => {
+    const { fixture, announced } = render();
+    fixture.componentInstance.inputText = 'lf';
+    fixture.componentInstance.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(announced).toHaveLength(1);
+
+    fixture.componentInstance.inputText = 'XX';
+    fixture.componentInstance.onKeydown(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(announced).toHaveLength(1);
+  });
+});

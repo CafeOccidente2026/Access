@@ -14,14 +14,14 @@
   "leftColumn": [
     { "key": "controlNumber", "label": "Núm Registro Control", "type": "number", "rawDisplay": true },
     { "key": "baseFactor", "label": "Factor Base", "type": "percentage" },
-    { "key": "baseWithholding", "label": "Base Rete Fuente", "type": "currency" },
+    { "key": "baseWithholding", "label": "Base Rete Fuente", "type": "currency", "liveThousands": true },
     { "key": "baseLoad", "label": "Base Carga", "type": "number", "integer": true },
     { "key": "withholdingPercentage", "label": "Porcentaje Rete Fuente", "type": "percentage" },
     { "key": "baseHusk", "label": "Base Pasilla", "type": "currency" },
     { "key": "avgHuskPercentage", "label": "% Kg de Pasilla Promedio", "type": "percentage" },
     { "key": "purchasePoint", "label": "Punto de Compra", "type": "text", "readonly": true },
     { "key": "prefix", "label": "Prefijo", "type": "text" },
-    { "key": "costs", "label": "Costos", "type": "currency" },
+    { "key": "costs", "label": "Costos", "type": "currency", "liveThousands": true },
     { "key": "sampleSize", "label": "Tamaño Muestra", "type": "count" },
     { "key": "excelsoKg", "label": "Kg de Excelso", "type": "number", "integer": true },
     { "key": "greenCoffeePercentage", "label": "Pocentaje Café Verde", "type": "percentage" },
@@ -39,7 +39,7 @@
     { "key": "greenTotalStoredWeight", "label": "Peso Tot Alm Café Verde", "type": "percentage" },
     { "key": "greenTotalHuskWeight", "label": "Peso Tot Pasilla Café Verde", "type": "percentage" },
     { "key": "greenHealthyStoredWeight", "label": "Peso Alm Sana Café Verde", "type": "percentage" },
-    { "key": "greenHealthyUnitPrice", "label": "Pr Alm Sana Café Verde", "type": "currency" },
-    { "key": "greenDefectiveUnitPrice", "label": "Pr_AlmDefec Café Verde", "type": "currency" }
+    { "key": "greenHealthyUnitPrice", "label": "Pr Alm Sana Café Verde", "type": "currency", "liveThousands": true },
+    { "key": "greenDefectiveUnitPrice", "label": "Pr_AlmDefec Café Verde", "type": "currency", "liveThousands": true }
   ]
 }

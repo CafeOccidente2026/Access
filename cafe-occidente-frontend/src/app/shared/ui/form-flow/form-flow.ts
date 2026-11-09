@@ -1,4 +1,4 @@
-import { AfterViewInit, Directive, ElementRef, HostListener, OnDestroy, inject } from '@angular/core';
+import { AfterViewInit, Directive, ElementRef, HostListener, Input, OnDestroy, inject } from '@angular/core';
 
 const FIELDS = 'input:not([type=hidden]):not([type=checkbox]), select, textarea';
 
@@ -22,13 +22,21 @@ function editable(el: HTMLElement): boolean {
 export class FormFlowDirective implements AfterViewInit, OnDestroy {
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private observer?: MutationObserver;
+  /** [appFormFlow]="false": segundo grupo de la pantalla (Remesa); maneja Enter pero no toma el foco al abrir. */
+  @Input() appFormFlow: boolean | '' = '';
 
   ngAfterViewInit(): void {
-    // Los campos pueden llegar despues (JSON, datos del backend): se espera al primero.
-    if (!this.focusFirst()) {
-      this.observer = new MutationObserver(() => this.focusFirst() && this.observer?.disconnect());
-      this.observer.observe(this.host, { childList: true, subtree: true });
+    if (this.appFormFlow === false) {
+      return;
     }
+    // En el siguiente turno, ya pintada y en el documento. Los campos pueden llegar despues (JSON, datos del
+    // backend): se espera al primero.
+    setTimeout(() => {
+      if (!this.focusFirst()) {
+        this.observer = new MutationObserver(() => this.focusFirst() && this.observer?.disconnect());
+        this.observer.observe(this.host, { childList: true, subtree: true });
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -41,12 +49,33 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     if (event.key !== 'Enter' || target.tagName === 'TEXTAREA' || !target.matches(FIELDS)) {
       return;
     }
-    // Combobox: como en Compras, solo avanza si este Enter confirmo una opcion (el combobox hace
-    // preventDefault al elegirla); con texto que no es opcion se queda en el campo.
-    if (target.getAttribute('role') === 'combobox' && !event.defaultPrevented) {
+    // Combobox: avanza solo si eligio una opcion, y eso lo avisa el mismo combobox con flow-next.
+    if (target.getAttribute('role') === 'combobox') {
       return;
     }
     event.preventDefault();
+    this.next(target, true);
+  }
+
+  /** Opcion elegida en un combobox (clic o Enter): pasa al siguiente campo cuando la pantalla ya se repinto (puede
+   *  mostrar campos nuevos, como Actualizar conductor al elegir la cedula). */
+  @HostListener('flow-next', ['$event'])
+  onOptionChosen(event: Event): void {
+    const target = event.target as HTMLElement;
+    setTimeout(() => this.next(target, false));
+  }
+
+  /** Lista nativa: al cambiar la opcion pasa al siguiente campo. */
+  @HostListener('change', ['$event'])
+  onChange(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'SELECT') {
+      setTimeout(() => this.next(target, false));
+    }
+  }
+
+  /** Siguiente campo; despues del ultimo, Enter guarda y elegir una opcion solo deja el foco en el boton. */
+  private next(target: HTMLElement, submit: boolean): void {
     const fields = this.fields();
     const index = fields.findIndex((f) => f === target || (isRadio(f) && isRadio(target) && f.name === (target as HTMLInputElement).name));
     if (index < 0) {
@@ -56,8 +85,20 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     if (next) {
       flash(next);
     } else {
-      this.host.querySelector<HTMLElement>('[data-flow-submit]:not([disabled])')?.click();
+      const button = this.submitButton();
+      if (submit) {
+        button?.click();
+      } else {
+        button?.focus();
+      }
     }
+  }
+
+  /** El boton marcado data-flow-submit: un <button> o un app-button (su <button> de adentro), si esta habilitado. */
+  private submitButton(): HTMLButtonElement | null {
+    const marked = this.host.querySelector<HTMLElement>('[data-flow-submit]');
+    const button = marked instanceof HTMLButtonElement ? marked : (marked?.querySelector('button') ?? null);
+    return button && !button.disabled ? button : null;
   }
 
   /** Formulario vaciado para el siguiente registro: el foco vuelve al primer campo. */

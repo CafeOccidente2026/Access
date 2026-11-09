@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { QuotaAssignmentComponent } from './quota-assignment';
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
 import { ContentService } from '../../core/services/content.service';
+import quotaJson from '../../../../public/assets/data/quota-assignment.json';
 
 describe('QuotaAssignmentComponent', () => {
   const page = {
@@ -28,7 +29,7 @@ describe('QuotaAssignmentComponent', () => {
       { key: 'bonus', label: 'Bonificación', type: 'currency' },
       { key: 'costs', label: 'Costos', type: 'currency' },
       { key: 'deliveredKg', label: 'Kilos Entregados', type: 'number' },
-      { key: 'quota', label: 'Cupo', type: 'number' },
+      { key: 'quota', label: 'Cupo', type: 'number', liveThousands: true },
       { key: 'balance', label: 'Saldo', type: 'number' },
     ],
   };
@@ -130,7 +131,36 @@ describe('QuotaAssignmentComponent', () => {
 
     expect(box()).toBe(first);
     expect(document.activeElement).toBe(first);
-    expect(first.value).toBe('4000');
+    expect(first.value).toBe('4.000');
+    fixture.nativeElement.remove();
+  });
+
+  it('keyboard (prueba del 9-nov, segunda): focus on Anuncio, Cupo with thousands and Enter saves once', async () => {
+    setup();
+    const pending = new Subject<typeof saved>();
+    assignSpy.mockReturnValue(pending);
+    const fixture = TestBed.createComponent(QuotaAssignmentComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+    const host = fixture.nativeElement as HTMLElement;
+    expect(document.activeElement?.getAttribute('data-field-key')).toBe('announcement');
+
+    fixture.componentInstance.onAnnouncementChange(label);
+    fixture.detectChanges();
+    const quota = host.querySelector<HTMLInputElement>('[data-field-key=quota]')!;
+    quota.focus();
+    quota.value = '4000';
+    quota.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(quota.value).toBe('4.000');
+
+    const enter = () => quota.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    enter();
+    enter();
+
+    expect(assignSpy).toHaveBeenCalledTimes(1);
+    expect(assignSpy).toHaveBeenCalledWith(32, { assignedQuota: 4000 });
     fixture.nativeElement.remove();
   });
 
@@ -165,5 +195,10 @@ describe('QuotaAssignmentComponent', () => {
     setup();
     component.save();
     expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it('quota-assignment.json: Cupo lleva los puntos de miles al escribir', () => {
+    const quota = [...quotaJson.leftColumn, ...quotaJson.rightColumn].find((f) => f.key === 'quota') as { liveThousands?: boolean };
+    expect(quota.liveThousands).toBe(true);
   });
 });
