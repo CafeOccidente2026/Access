@@ -1,16 +1,17 @@
 """
-Corrige creado_en de las compras de cafe seco migradas de Access de El Tambo.
+Corrige creado_en de las compras de cafe seco migradas de Access de un punto (por defecto El Tambo).
 
-migrate_eltambo.py guardo la fecha y hora de Access (hora de Colombia) como si fuera UTC: la compra de las
+migrate_eltambo.py (hoy migrar_punto.py, que ya guarda la hora de Colombia) guardo la fecha y hora de Access (hora de Colombia) como si fuera UTC: la compra de las
 00:00 del 17/01 quedo como 16/01 19:00 en hora local (ParaOperaciones de la remesa la muestra asi). Este script
 la deja en hora de Colombia: creado_en = (creado_en en UTC) leido como hora de America/Bogota (+5 h).
 
-Solo toca las compras de El Tambo cuya factura esta en compras_migrar.csv y cuyo creado_en es exactamente la
+Solo toca las compras de la agencia del punto cuya factura esta en su compras_migrar.csv y cuyo creado_en es exactamente la
 fecha_compra de Access leida como UTC (las migradas sin corregir). Correrlo otra vez no cambia nada.
 
 Uso:
   python scripts/corregir_fechas_compras_access.py --base cafeoccidente_test             # modo prueba
   python scripts/corregir_fechas_compras_access.py --base cafeoccidente_test --aplicar   # respaldo y cambio
+  ... --carpeta <CSV del punto>   (la agencia sale de su regcontrol_migrar.csv)
 """
 import argparse
 import csv
@@ -18,11 +19,11 @@ import datetime
 import pathlib
 import subprocess
 
+from cargar_remesas_access import agency_id
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CSV = ROOT / "docs" / "legacy-postgres-reference" / "eltambo" / "compras_migrar.csv"
+FOLDER = ROOT / "docs" / "legacy-postgres-reference" / "eltambo"
 CONTAINER = "cafeoccidente-postgres"
-BASES = ("cafeoccidente_test", "cafeoccidente")
-AGENCY = "El Tambo"
 ZONE = "America/Bogota"
 
 
@@ -50,26 +51,28 @@ def backup(base):
     return target
 
 
-def matches(times):
-    """Compras migradas aun sin corregir: El Tambo, factura de Access y creado_en = hora de Access en UTC."""
-    return (f"FROM compras_cafe_seco p JOIN agencias a ON a.id = p.agencia_id"
+def matches(agency, times):
+    """Compras migradas aun sin corregir: la agencia, factura de Access y creado_en = hora de Access en UTC."""
+    return (f"FROM compras_cafe_seco p"
             f" JOIN (VALUES {values_sql(times)}) AS acc (factura, momento) ON acc.factura = p.numero_factura"
-            f" WHERE a.nombre = '{AGENCY}' AND p.creado_en = acc.momento AT TIME ZONE 'UTC'")
+            f" WHERE p.agencia_id = {agency} AND p.creado_en = acc.momento AT TIME ZONE 'UTC'")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base", choices=BASES, required=True)
+    parser.add_argument("--base", required=True)
+    parser.add_argument("--carpeta", default=str(FOLDER))
     parser.add_argument("--aplicar", action="store_true")
     args = parser.parse_args()
+    folder = pathlib.Path(args.carpeta)
+    agency = agency_id(args.base, folder)
 
-    with CSV.open(encoding="utf-8") as f:
+    with (folder / "compras_migrar.csv").open(encoding="utf-8") as f:
         times = access_times(list(csv.DictReader(f)))
-    where = matches(times)
+    where = matches(agency, times)
     pending = psql(args.base, f"SELECT count(*) {where}")
-    total = psql(args.base, "SELECT count(*) FROM compras_cafe_seco p JOIN agencias a ON a.id = p.agencia_id"
-                            f" WHERE a.nombre = '{AGENCY}'")
-    print(f"Access: {len(times)} compras de {AGENCY}. En {args.base}: {total} compras de cafe seco de {AGENCY},"
+    total = psql(args.base, f"SELECT count(*) FROM compras_cafe_seco WHERE agencia_id = {agency}")
+    print(f"Access: {len(times)} compras. En {args.base}: {total} compras de cafe seco de la agencia {agency},"
           f" {pending} migradas con la hora sin corregir.")
     sample = psql(args.base, f"SELECT p.numero_factura, to_char(p.creado_en AT TIME ZONE '{ZONE}', 'YYYY-MM-DD HH24:MI'),"
                              f" to_char(acc.momento, 'YYYY-MM-DD HH24:MI') {where} ORDER BY p.numero_factura LIMIT 3")
@@ -81,8 +84,8 @@ def main():
         return
     print(f"Respaldo: {backup(args.base)}")
     changed = psql(args.base, f"UPDATE compras_cafe_seco p SET creado_en = acc.momento AT TIME ZONE '{ZONE}'"
-                              f" FROM agencias a, (VALUES {values_sql(times)}) AS acc (factura, momento)"
-                              f" WHERE a.id = p.agencia_id AND a.nombre = '{AGENCY}' AND acc.factura = p.numero_factura"
+                              f" FROM (VALUES {values_sql(times)}) AS acc (factura, momento)"
+                              f" WHERE p.agencia_id = {agency} AND acc.factura = p.numero_factura"
                               " AND p.creado_en = acc.momento AT TIME ZONE 'UTC'")
     print(f"{changed}. Quedan sin corregir: {psql(args.base, f'SELECT count(*) {where}')}")
 
