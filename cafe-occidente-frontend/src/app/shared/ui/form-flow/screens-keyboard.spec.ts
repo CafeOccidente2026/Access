@@ -18,7 +18,7 @@ const SCREENS: [string, number][] = [
   ['future-restore/future-restore.html', 1],
   ['remission-reprint/remission-reprint.html', 1],
   ['conductor-form/conductor-form.html', 2],
-  ['remission-form/remission-form.html', 2],
+  ['remission-form/remission-form.html', 1],
   ['remittance/remittance.html', 2],
 ];
 
