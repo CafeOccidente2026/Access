@@ -213,8 +213,9 @@ def max_remission(rows):
 
 
 def transaction_collisions(ids, prefix):
-    """Id de Access con el formato de la web (PREFIJO + digito + codigo + 3 cifras): chocarian con un consecutivo."""
-    pattern = re.compile(rf"^{re.escape(prefix)}\d[A-Z]{{0,3}}\d{{3}}$", re.IGNORECASE)
+    """Id de Access con el formato de la web (PREFIJO + digito + codigo + 3 cifras, con o sin guiones: SDTA3SUM001
+    o SDTA-3SUM-001): chocarian con un consecutivo."""
+    pattern = re.compile(rf"^{re.escape(prefix)}-?\d[A-Z]{{0,3}}-?\d{{3}}$", re.IGNORECASE)
     return [i for i in ids if pattern.match(i)]
 
 
