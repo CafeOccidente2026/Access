@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ComboboxComponent } from './combobox';
 
@@ -17,5 +17,26 @@ describe('ComboboxComponent', () => {
     fixture.componentRef.setInput('options', []);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('input')!.hasAttribute('aria-label')).toBe(false);
+  });
+});
+
+describe('ComboboxComponent on leaving', () => {
+  it('does not send the same value again (Asignar Cupo cleared Cupo when that late echo arrived, prueba del 9-nov)', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(ComboboxComponent);
+    fixture.componentRef.setInput('options', ['SDTA-3491 · RN · 2450000']);
+    fixture.componentRef.setInput('value', 'SDTA-3491 · RN · 2450000');
+    fixture.detectChanges();
+    const values: string[] = [];
+    let commits = 0;
+    fixture.componentInstance.valueChange.subscribe((v: string) => values.push(v));
+    fixture.componentInstance.committed.subscribe(() => commits++);
+
+    fixture.componentInstance.onBlur();
+    vi.runAllTimers();
+
+    expect(values).toEqual([]);
+    expect(commits).toBe(1);
+    vi.useRealTimers();
   });
 });
