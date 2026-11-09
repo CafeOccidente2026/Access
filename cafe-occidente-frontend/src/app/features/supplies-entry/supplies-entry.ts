@@ -133,6 +133,7 @@ export class SuppliesEntryComponent {
           this.saved.set(saved); // quedan los datos a la vista hasta imprimir, como en Access
         } else {
           this.edited.set(null);
+          this.growerNames.set(null);
           this.flow?.restart();
         }
       },
