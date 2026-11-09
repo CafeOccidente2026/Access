@@ -101,3 +101,26 @@ describe('appFormFlow con app-button', () => {
     fixture.nativeElement.remove();
   });
 });
+
+@Component({
+  standalone: true,
+  imports: [FormFlowDirective],
+  template: `
+    <div appFormFlow><input id="first" /></div>
+    <div [appFormFlow]="false"><input id="second" /></div>
+  `,
+})
+class HostWithTwoFlows {}
+
+describe('appFormFlow con dos grupos', () => {
+  it('a group marked [appFormFlow]="false" walks with Enter but does not take the first focus', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(HostWithTwoFlows);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement?.id).toBe('first');
+    vi.useRealTimers();
+    fixture.nativeElement.remove();
+  });
+});
