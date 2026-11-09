@@ -106,6 +106,7 @@
         [locked]="!!content.paymentLocked"
         [saved]="content.paymentSaved ?? null"
         (paymentChange)="paymentChange.emit($event)"
+        (completed)="focusPrint()"
       ></app-payment-panel>
     </div>
 
@@ -148,7 +149,7 @@
       <app-form-field *ngIf="content.statusField" [field]="content.statusField"></app-form-field>
     </div>
 
-    <div *ngIf="content.reprintButtonLabel" [class]="content.compactFields ? '' : 'pt-2'">
+    <div *ngIf="content.reprintButtonLabel" data-print [class]="content.compactFields ? '' : 'pt-2'">
       <app-button [label]="content.reprintButtonLabel" variant="access" (pressed)="reprintPressed.emit()"></app-button>
     </div>
   </div>

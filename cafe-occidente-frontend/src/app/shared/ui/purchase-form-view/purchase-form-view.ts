@@ -1,5 +1,5 @@
 import { CommonModule, Location } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, inject } from '@angular/core';
 import { PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import { AccessWindowComponent } from '../access-window/access-window';
 import { AppButtonComponent } from '../app-button/app-button';
@@ -48,6 +48,13 @@ export class PurchaseFormViewComponent {
   @Output() readonly paymentChange = new EventEmitter<PurchasePayment | null>();
   /** Igual que en AccessWindow: si el padre lo escucha, decide él; si no, volvemos atrás. */
   @Output() readonly closeRequested = new EventEmitter<void>();
+
+  private readonly host: HTMLElement = inject(ElementRef).nativeElement;
+
+  /** Pago cuadrado con Enter: el foco pasa a Imprimir y Enter imprime (saveOnce evita el doble guardado). */
+  focusPrint(): void {
+    setTimeout(() => this.host.querySelector<HTMLButtonElement>('[data-print] button')?.focus());
+  }
 
   private readonly location = inject(Location);
 
