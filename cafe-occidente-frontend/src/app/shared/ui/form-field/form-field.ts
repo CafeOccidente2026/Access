@@ -36,12 +36,18 @@ export class FormFieldComponent implements OnChanges {
 
   inputValue: string | number = '';
   private focused = false;
+  /** Lo que este campo emitio mientras tiene el foco: si la pantalla lo devuelve tarde (eco), no pisa lo que ya
+   *  se escribio despues (Asignar Cupo, prueba del 9-nov). */
+  private readonly typed = new Set<string>();
 
   ngOnChanges(): void {
     if (this.formatWhenIdle && this.focused) {
       return; // el usuario esta escribiendo: reescribir el valor mueve el cursor
     }
     const raw = this.field.value ?? '';
+    if (this.focused && !this.field.readonly && this.typed.has(String(raw))) {
+      return;
+    }
     // Solo se formatea de solo-lectura: mientras el campo sigue editable siempre se ve el valor
     // crudo (para no pelear con puntos de miles mientras se escribe). Los formularios de compra
     // bloquean (readonly = true) cada campo apenas se confirma (blur/Enter), asi que esto alcanza
@@ -58,6 +64,7 @@ export class FormFieldComponent implements OnChanges {
 
   onFocus(): void {
     this.focused = true;
+    this.typed.clear();
     if (this.formatWhenIdle && !this.field.readonly) {
       this.inputValue = this.field.value ?? '';
     }
@@ -65,6 +72,7 @@ export class FormFieldComponent implements OnChanges {
 
   onBlur(): void {
     this.focused = false;
+    this.typed.clear();
     if (this.formatWhenIdle) {
       this.inputValue = this.formatted(this.field.value ?? '');
     }
@@ -95,6 +103,7 @@ export class FormFieldComponent implements OnChanges {
       if (input) {
         input.value = this.inputValue;
       }
+      this.typed.add(digits);
       this.valueChange.emit(digits);
       return;
     }
@@ -105,6 +114,7 @@ export class FormFieldComponent implements OnChanges {
       input.value = String(sanitized);
     }
     this.inputValue = sanitized;
+    this.typed.add(String(sanitized));
     this.valueChange.emit(sanitized);
   }
 
