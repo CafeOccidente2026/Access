@@ -6,7 +6,7 @@ import { RemittancePurchase } from '../../core/models/remittance.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { RemittanceService } from '../../core/services/remittance.service';
-import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
@@ -66,7 +66,7 @@ const fill = (text: string, values: Record<string, string | number>) =>
 @Component({
   selector: 'app-remittance',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent],
+  imports: [CommonModule, AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective],
   templateUrl: './remittance.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

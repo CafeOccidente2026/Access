@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 
 import { Conductor } from '../../core/models/grower.model';
 import { GrowerService } from '../../core/services/grower.service';
-import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
 
 type Mode = 'choose' | 'new' | 'update';
 
@@ -35,7 +35,7 @@ export function dateTime(instant: string | null): string {
 @Component({
   selector: 'app-conductor-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent],
+  imports: [CommonModule, FormsModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
   templateUrl: './conductor-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -1,6 +1,6 @@
 <div class="h-screen bg-white p-3">
   <app-access-window title="REGISTRAR SALIDAS" bodyClass="bg-white">
-    <div class="flex flex-col gap-4 p-4" *ngIf="!result()">
+    <div class="flex flex-col gap-4 p-4" *ngIf="!result()" appFormFlow>
       <div class="grid grid-cols-3 gap-4">
         <label class="flex flex-col gap-1 text-sm">
           <span class="font-medium text-blue-900">Fecha</span>
@@ -81,7 +81,7 @@
             <span>Kilos Brutos</span>
             <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="draftGrossKg()" (input)="draftGrossKg.set($any($event.target).value)" />
           </label>
-          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="addLine()">
+          <button type="button" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="addLine()">
             Agregar
           </button>
         </div>

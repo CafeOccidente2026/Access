@@ -3,6 +3,7 @@
     <div class="flex h-full flex-col gap-2 p-3 text-sm text-slate-800">
       <!-- Dialogo Remesa: Especial + Aceptar; a la derecha, buscar una remesa ya generada. -->
       <div class="flex flex-wrap items-end gap-3">
+        <div class="flex items-end gap-3" appFormFlow>
         <label class="flex flex-col" for="remittance-fund">
           <span class="font-medium">{{ c.fundLabel }}:</span>
           <select id="remittance-fund" data-testid="fund" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="fund()"
@@ -18,7 +19,8 @@
             <option *ngFor="let s of specials()" [value]="s">{{ s }}</option>
           </select>
         </label>
-        <app-button [label]="c.acceptLabel" (pressed)="accept()"></app-button>
+        <app-button data-flow-submit [label]="c.acceptLabel" (pressed)="accept()"></app-button>
+        </div>
 
         <form class="ml-auto flex items-end gap-2" (submit)="$event.preventDefault(); search(number.value)">
           <label class="flex flex-col" for="remittance-number">
@@ -77,7 +79,7 @@
       </div>
 
       <!-- Pie de Genera Plano: Acumulado, empaques de la remesa (RN-11.8) y Genera Remesa. -->
-      <div class="flex flex-wrap items-end gap-4">
+      <div class="flex flex-wrap items-end gap-4" [appFormFlow]="false">
         <label class="flex flex-col" for="remittance-accumulated">
           <span class="font-medium">{{ c.accumulatedLabel }}:</span>
           <input id="remittance-accumulated" data-testid="accumulated" class="w-32 rounded border border-slate-300 bg-slate-100 px-2 py-1 text-right"
@@ -96,7 +98,7 @@
             <option *ngFor="let t of c.packagingTypes" [value]="t">{{ t }}</option>
           </select>
         </label>
-        <app-button class="ml-auto" [label]="c.generateLabel" [disabled]="!canGenerate() || saving()" (pressed)="generate()"></app-button>
+        <app-button class="ml-auto" data-flow-submit [label]="c.generateLabel" [disabled]="!canGenerate() || saving()" (pressed)="generate()"></app-button>
       </div>
     </div>
   </app-access-window>
