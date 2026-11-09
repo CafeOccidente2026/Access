@@ -8,7 +8,7 @@ import { ProductCodeOption } from '../../core/models/inventory.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { InventoryService } from '../../core/services/inventory.service';
-import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent } from '../../shared/ui';
+import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildInventoryReportDoc } from './inventory-report-pdf';
 
@@ -41,7 +41,7 @@ export function specialOptions(forms: unknown[]): string[] {
 @Component({
   selector: 'app-inventory-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
   templateUrl: './inventory-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

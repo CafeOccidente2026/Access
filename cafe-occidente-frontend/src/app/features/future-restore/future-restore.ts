@@ -8,7 +8,7 @@ import { FuturePurchaseRestoreRow, PendingAnnouncementRow } from '../../core/mod
 import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
 import { ContentService } from '../../core/services/content.service';
 import { FuturePurchaseService } from '../../core/services/future-purchase.service';
-import { AccessWindowComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 
@@ -53,7 +53,7 @@ export function pendingCells(p: PendingAnnouncementRow): string[] {
 @Component({
   selector: 'app-future-restore',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
   templateUrl: './future-restore.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

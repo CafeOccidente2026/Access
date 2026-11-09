@@ -1,5 +1,5 @@
 <app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/acceso-principal">
-  <div class="flex flex-col gap-4 p-6 text-sm" data-testid="permissions">
+  <div class="flex flex-col gap-4 p-6 text-sm" data-testid="permissions" appFormFlow>
     <label class="flex items-center gap-3">
       <span class="font-medium text-slate-700">{{ p.userLabel }}</span>
       <select class="rounded border border-slate-300 bg-white px-2 py-1" data-testid="user"

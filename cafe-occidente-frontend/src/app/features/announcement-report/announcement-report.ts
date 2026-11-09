@@ -5,7 +5,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { ContentService } from '../../core/services/content.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
-import { AccessWindowComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { AnnouncementReportText, buildAnnouncementReportDoc, shortDate } from './announcement-report-pdf';
 
@@ -28,7 +28,7 @@ export interface AnnouncementReportContent {
 @Component({
   selector: 'app-announcement-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
   templateUrl: './announcement-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

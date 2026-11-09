@@ -11,7 +11,7 @@ import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
-import { AppButtonComponent } from '../../shared/ui';
+import { AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { AnnouncementReportText, buildAnnouncementReportDoc, shortDate } from '../announcement-report/announcement-report-pdf';
 import { FutureBalanceText, buildFutureBalanceDoc } from './future-balance-pdf';
@@ -50,7 +50,7 @@ interface Request {
 @Component({
   selector: 'app-future-report',
   standalone: true,
-  imports: [CommonModule, AppButtonComponent],
+  imports: [CommonModule, AppButtonComponent, FormFlowDirective],
   templateUrl: './future-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

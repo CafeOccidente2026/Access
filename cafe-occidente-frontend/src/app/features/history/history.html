@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-4 p-6">
     <h1 class="text-xl font-semibold text-slate-700">{{ p.heading }}</h1>
 
-    <div class="flex flex-wrap items-end gap-3 text-sm">
+    <div class="flex flex-wrap items-end gap-3 text-sm" appFormFlow>
       <label class="flex flex-col gap-1">
         <span class="font-medium text-slate-700">{{ p.entityLabel }}</span>
         <select class="rounded border border-slate-300 bg-white px-2 py-1" data-testid="entity" [(ngModel)]="entity">
@@ -32,7 +32,7 @@
         <span class="font-medium text-slate-700">{{ p.toLabel }}</span>
         <input type="date" class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="to" />
       </label>
-      <app-button [label]="p.searchButton" variant="access" (pressed)="search()"></app-button>
+      <app-button data-flow-submit [label]="p.searchButton" variant="access" (pressed)="search()"></app-button>
     </div>
 
     <p *ngIf="error()" class="text-sm text-red-600">{{ p.errorMessage }}</p>

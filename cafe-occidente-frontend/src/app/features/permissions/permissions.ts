@@ -8,7 +8,7 @@ import { Permission } from '../../core/models/permission.model';
 import { ContentService } from '../../core/services/content.service';
 import { PermissionService } from '../../core/services/permission.service';
 import { UserService } from '../../core/services/user.service';
-import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { PermissionsContent } from './permissions.model';
 
 /**
@@ -19,7 +19,7 @@ import { PermissionsContent } from './permissions.model';
 @Component({
   selector: 'app-permissions',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AppButtonComponent],
+  imports: [CommonModule, AccessWindowComponent, AppButtonComponent, FormFlowDirective],
   templateUrl: './permissions.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

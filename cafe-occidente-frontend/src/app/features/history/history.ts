@@ -12,7 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { HistoryService } from '../../core/services/history.service';
 import { UserService } from '../../core/services/user.service';
-import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { HistoryContent } from './history.model';
 
 /** Filas por pagina; el servidor acepta hasta 200. */
@@ -33,7 +33,7 @@ export interface HistoryDetail {
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
+  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, FormFlowDirective],
   templateUrl: './history.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
