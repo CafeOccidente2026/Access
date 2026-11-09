@@ -4,9 +4,9 @@
   "topFields": [
     { "key": "agency", "label": "Agencia", "type": "text", "readonly": true },
     { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
-    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
+    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true, "inputWidthClass": "max-w-[128px]" },
     { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true },
-    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true, "inputWidthClass": "max-w-[128px]" }
   ],
   "identificationFields": [
     { "key": "invoice", "label": "Factura", "type": "text", "readonly": true },
@@ -16,15 +16,15 @@
     { "key": "deliveryKg", "label": "Kilos Entregados", "type": "number", "readonly": true }
   ],
   "contactFields": [
-    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
-    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true },
-    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true },
-    { "key": "idType", "label": "Tipo", "type": "text", "readonly": true },
-    { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
-    { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true }
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true, "inputWidthClass": "max-w-[110px]" },
+    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true, "inputWidthClass": "min-w-[200px] max-w-[200px]" },
+    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true, "inputWidthClass": "min-w-[220px] max-w-[220px]" },
+    { "key": "idType", "label": "Tipo", "type": "text", "readonly": true, "inputWidthClass": "max-w-[50px]" },
+    { "key": "address", "label": "Direccion", "type": "text", "readonly": true, "rowWidthClass": "flex-1", "inputWidthClass": "max-w-none" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true, "inputWidthClass": "max-w-[110px]" }
   ],
   "qualityFields": [
-    { "key": "special", "label": "Especial", "type": "text", "readonly": true },
+    { "key": "special", "label": "Especial", "type": "text", "readonly": true, "inputWidthClass": "min-w-[332px] max-w-[332px]" },
     { "key": "healthyUnitPrice", "label": "Pr Sustentación", "type": "currency", "readonly": true },
     { "key": "bonus", "label": "Bonificación", "type": "currency" },
     { "key": "costs", "label": "Costos", "type": "currency" }
