@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
+import { map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -132,6 +133,14 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   private readonly base = toSignal(this.content.loadJson<QuotaPurchaseContent>(
     this.mode === 'future' ? 'purchase-form-quota-billing' : 'purchase-form-quota-purchase',
   ));
+  /** Prueba del 9-nov (punto 3): Especial ofrece la misma lista de Compras Cafe Seco, que es la que usan los anuncios
+   *  (la propia de Cupos traia "COLOMBIA TIERRA DE DIVERSIDAD" sin RN y no encontraba el anuncio). */
+  private readonly specialOptions = toSignal(
+    this.content.loadJson<PurchaseFormContent>('purchase-form-dry').pipe(
+      map((dry) => dry.qualityFields?.find((f) => f.key === 'special')?.options ?? []),
+    ),
+    { initialValue: [] as string[] },
+  );
   readonly messages = computed(() => this.base()?.messages);
   readonly pickerContent = computed(() => this.base()?.quotaPicker);
   readonly agencyName = this.authService.agencyName() ?? '';
@@ -578,6 +587,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       const patch: { options?: string[]; readonly?: boolean; value?: string | number } = {};
       if (key === 'fund') {
         patch.options = this.fundOptions;
+      }
+      if (key === 'special' && this.mode === 'quota') {
+        patch.options = this.specialOptions();
       }
       if (this.readonlyKeys.includes(key)) {
         patch.readonly = true;
