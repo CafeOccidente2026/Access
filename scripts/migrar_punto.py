@@ -513,11 +513,16 @@ def purchase_rows(desde):
     return [row for row in read_csv("compras_migrar.csv") if keeps_purchase(row, desde)]
 
 
+def cheque_text(value):
+    """Cheque como lo guarda la web (V21): los ultimos 4 digitos con sus ceros (548 -> 0548); None si no hay."""
+    number = parse_int(value)
+    return f"{number:04d}" if number > 0 else None
+
+
 def payment_of(row):
     """Forma de pago y cheque de la compra (el desglose de pagos mixtos va en formas_pago_compras)."""
     if parse_decimal(row.get("fpch")) > 0:
-        numcheque = s(row, "numcheque")
-        return "CHEQUE", numcheque if numcheque and numcheque != "0" else None
+        return "CHEQUE", cheque_text(row.get("numcheque"))
     return "EFECTIVO", None
 
 
@@ -680,7 +685,7 @@ def load_manual_cash_entries(cur, agency_id, desde):
             continue
         inflow = parse_decimal(s(row, "entradas"))
         outflow = parse_decimal(s(row, "salidas"))
-        check = parse_int(s(row, "cheque", "0")) or None
+        check = cheque_text(row.get("cheque"))
         method = s(row, "forma_de_pago")
         table = "movimientos_caja"
         copy_key = (transaction_id, inflow if inflow > 0 else outflow)
@@ -777,7 +782,7 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
             found, (transaction_id, entry_date, inflow, outflow), ledger_sql.format("suministros"),
             (transaction_id, agency_id, fund_by_code[fund], entry_date, s(row, "cedula"),
              s(row, "detalle") or None, inflow, outflow, s(row, "forma_de_pago") or None,
-             parse_int(s(row, "cheque", "0")) or None, parse_timestamp(s(row, "fecha"))))
+             cheque_text(row.get("cheque")), parse_timestamp(s(row, "fecha"))))
     print(f"  suministros: {inserted} filas propias de Suministros.")
 
     found = existing("movimientos_caja_menor", "entradas, salidas")
