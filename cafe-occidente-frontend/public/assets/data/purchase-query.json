@@ -23,9 +23,9 @@
   },
   "topFields": [
     { "key": "agency", "label": "Agencia", "type": "text" },
-    { "key": "purchaseDate", "label": "Fecha de Compra", "type": "date" },
+    { "key": "purchaseDate", "label": "Fecha de Compra", "type": "date", "inputWidthClass": "min-w-[125px]" },
     { "key": "announcement", "label": "Anuncio", "type": "text" },
-    { "key": "announcementDate", "label": "Fecha de Anuncio", "type": "date" },
+    { "key": "announcementDate", "label": "Fecha de Anuncio", "type": "date", "inputWidthClass": "min-w-[125px]" },
     { "key": "remission", "label": "Remisión", "type": "text" }
   ],
   "identificationFields": [
@@ -33,7 +33,7 @@
     { "key": "invoice", "label": "Factura", "type": "text", "highlighted": true },
     { "key": "invoiceNumber", "label": "", "ariaLabel": "Número de factura", "type": "text", "highlighted": true },
     { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency", "integer": true },
-    { "key": "productCode", "label": "Cod Prod", "type": "text" }
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "min-w-[125px]" }
   ],
   "contactFields": [
     { "key": "idNumber", "label": "Cedula", "type": "text" },
