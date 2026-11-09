@@ -31,6 +31,7 @@ describe('appFormFlow', () => {
     const fixture = TestBed.createComponent(Host);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
+    vi.advanceTimersByTime(0);
     const el = (id: string) => fixture.nativeElement.querySelector(`#${id}`) as HTMLElement;
 
     expect(document.activeElement).toBe(el('a'));

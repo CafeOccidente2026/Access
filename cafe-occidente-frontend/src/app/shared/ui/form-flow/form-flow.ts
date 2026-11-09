@@ -24,11 +24,14 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
   private observer?: MutationObserver;
 
   ngAfterViewInit(): void {
-    // Los campos pueden llegar despues (JSON, datos del backend): se espera al primero.
-    if (!this.focusFirst()) {
-      this.observer = new MutationObserver(() => this.focusFirst() && this.observer?.disconnect());
-      this.observer.observe(this.host, { childList: true, subtree: true });
-    }
+    // En el siguiente turno, ya pintada y en el documento. Los campos pueden llegar despues (JSON, datos del
+    // backend): se espera al primero.
+    setTimeout(() => {
+      if (!this.focusFirst()) {
+        this.observer = new MutationObserver(() => this.focusFirst() && this.observer?.disconnect());
+        this.observer.observe(this.host, { childList: true, subtree: true });
+      }
+    });
   }
 
   ngOnDestroy(): void {
