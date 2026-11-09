@@ -68,6 +68,23 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     expect(component.values()['transactionId']).toBe('SDTA1001');
   });
 
+  it.each(['cash', 'adjustment', 'pettyCashExpense', 'supply', 'issuedCheck', 'packaging'])(
+    '%s: typing the cédula shows the third party name beside it (prueba del 9-nov, punto 2)',
+    async (screen) => {
+      const { fixture, component } = await render(screen);
+      const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('[data-field-key="idNumber"]')!;
+      box.value = '1082656111';
+      box.dispatchEvent(new Event('input'));
+      box.dispatchEvent(new Event('blur'));
+      http.expectOne(`${API_BASE_URL}/growers/1082656111`).flush({
+        idNumber: '1082656111', firstName: 'ANA', secondName: 'MARIA', lastName: 'ERAZO', secondLastName: 'PAZ',
+      });
+      await settle();
+
+      expect(component.growerNames()).toEqual({ first: 'ANA MARIA', last: 'ERAZO PAZ' });
+    },
+  );
+
   it('Caja Menor asks its Id without a fund and does not ask for a cédula', async () => {
     const { component } = await render('pettyCash');
     await answerNextId('pettyCash', null, 'SDTA7ING001');
