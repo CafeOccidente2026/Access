@@ -271,7 +271,8 @@ describe('QuotaPurchaseFormComponent', () => {
     fillPurchase();
 
     expect(component.errorMessage()).toBe(message);
-    expect(focusSpy).not.toHaveBeenCalledWith('totalStoredWeight');
+    // El foco no vuelve a la muestra detras del aviso: eso pasa al Aceptar.
+    expect(focusSpy.mock.lastCall?.[0]).not.toBe('totalStoredWeight');
 
     component.dismissError();
 
