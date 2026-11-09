@@ -77,13 +77,20 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     if (next) {
       flash(next);
     } else {
-      const button = this.host.querySelector<HTMLElement>('[data-flow-submit]:not([disabled])');
+      const button = this.submitButton();
       if (submit) {
         button?.click();
       } else {
         button?.focus();
       }
     }
+  }
+
+  /** El boton marcado data-flow-submit: un <button> o un app-button (su <button> de adentro), si esta habilitado. */
+  private submitButton(): HTMLButtonElement | null {
+    const marked = this.host.querySelector<HTMLElement>('[data-flow-submit]');
+    const button = marked instanceof HTMLButtonElement ? marked : (marked?.querySelector('button') ?? null);
+    return button && !button.disabled ? button : null;
   }
 
   /** Formulario vaciado para el siguiente registro: el foco vuelve al primer campo. */
