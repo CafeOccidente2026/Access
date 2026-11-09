@@ -17,7 +17,7 @@
     { "key": "bonus", "label": "Bonificación", "type": "currency" },
     { "key": "costs", "label": "Costos", "type": "currency" },
     { "key": "deliveredKg", "label": "Kilos Entregados", "type": "number" },
-    { "key": "quota", "label": "Cupo", "type": "number" },
+    { "key": "quota", "label": "Cupo", "type": "number", "liveThousands": true },
     { "key": "balance", "label": "Saldo", "type": "number" }
   ]
 }
