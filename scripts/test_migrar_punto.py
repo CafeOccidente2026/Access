@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    cheque_text,
     control_record_differences,
     husk_purchase,
     keeps_purchase,
@@ -49,6 +50,13 @@ def check_date_cut():
     assert keeps_purchase(purchase("3", "2026-01-02 00:00:00", plano="f"), desde)
     assert not keeps_purchase(purchase("4", "2026-01-02 00:00:00", plano="f", estado="ANULADA"), desde)
     assert keeps_purchase(purchase("5", "2020-01-01 00:00:00"), None)
+
+
+def check_cheque_text():
+    # V21: el cheque son los ultimos 4 digitos con sus ceros (0548). Asi se guarda y asi se reconoce lo ya cargado.
+    assert cheque_text("548") == "0548"
+    assert cheque_text("5249.0") == "5249"
+    assert cheque_text("0") is None and cheque_text("") is None and cheque_text(None) is None
 
 
 def check_husk():
@@ -97,6 +105,7 @@ def check_consecutives():
 def main():
     check_control_record()
     check_date_cut()
+    check_cheque_text()
     check_husk()
     check_out_of_range()
     check_future_purchases()
