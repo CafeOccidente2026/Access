@@ -257,7 +257,8 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
 
     /** PREFIJO + codigo + consecutivo de 3 cifras, que sigue creciendo despues de 999 (SDBU5SUM1000). */
     private static String format(Point point, TransactionCode code, int consecutive) {
-        return point.controlRecord().getPrefix() + code.code() + String.format("%03d", consecutive);
+        // Prueba del 9-nov: con guiones (SDTA-4SUM-001); los Id ya guardados sin guiones no se tocan.
+        return point.controlRecord().getPrefix() + "-" + code.code() + "-" + String.format("%03d", consecutive);
     }
 
     /**
