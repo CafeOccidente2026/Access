@@ -81,6 +81,9 @@ export class QuotaAssignmentComponent {
   readonly rightFields = computed(() => this.buildFields(this.page()?.rightColumn));
   readonly canSave = computed(() => !!this.selected() && !this.saved());
 
+  /** Cada tecla en Cupo arma los campos de nuevo: sin trackBy la caja se volvia a crear y perdia el foco. */
+  readonly trackByKey = (_: number, field: FormFieldDefinition) => field.key;
+
   onAnnouncementChange(label: string): void {
     this.selected.set(this.options().find((c) => optionLabel(c) === label) ?? null);
     this.saved.set(null);
