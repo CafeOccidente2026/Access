@@ -1,4 +1,4 @@
-import { AfterViewInit, Directive, ElementRef, HostListener, OnDestroy, inject } from '@angular/core';
+import { AfterViewInit, Directive, ElementRef, HostListener, Input, OnDestroy, inject } from '@angular/core';
 
 const FIELDS = 'input:not([type=hidden]):not([type=checkbox]), select, textarea';
 
@@ -22,8 +22,13 @@ function editable(el: HTMLElement): boolean {
 export class FormFlowDirective implements AfterViewInit, OnDestroy {
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private observer?: MutationObserver;
+  /** [appFormFlow]="false": segundo grupo de la pantalla (Remesa); maneja Enter pero no toma el foco al abrir. */
+  @Input() appFormFlow: boolean | '' = '';
 
   ngAfterViewInit(): void {
+    if (this.appFormFlow === false) {
+      return;
+    }
     // En el siguiente turno, ya pintada y en el documento. Los campos pueden llegar despues (JSON, datos del
     // backend): se espera al primero.
     setTimeout(() => {
