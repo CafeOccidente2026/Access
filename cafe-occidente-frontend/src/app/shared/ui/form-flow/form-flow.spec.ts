@@ -52,3 +52,21 @@ describe('appFormFlow', () => {
     fixture.nativeElement.remove();
   });
 });
+
+describe('appFormFlow con listas (prueba del 9-nov, segunda)', () => {
+  it('choosing an option of a list or changing a select moves on to the next field', () => {
+    const fixture = TestBed.createComponent(Host);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el = (id: string) => fixture.nativeElement.querySelector(`#${id}`) as HTMLElement;
+
+    // Un combobox avisa con flow-next al elegir una opcion (clic o Enter).
+    el('a').dispatchEvent(new CustomEvent('flow-next', { bubbles: true }));
+    expect(document.activeElement).toBe(el('r2'));
+
+    el('s').focus();
+    el('s').dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.activeElement).toBe(el('d'));
+    fixture.nativeElement.remove();
+  });
+});
