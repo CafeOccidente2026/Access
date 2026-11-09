@@ -29,6 +29,9 @@ export interface FormFieldDefinition {
   readonly digitsOnly?: boolean;
   /** Solo cero o negativo (Castigo, Q1/RN-14.7): al confirmar, 23 queda -23 y vacio queda 0. */
   readonly negativeOnly?: boolean;
+  /** Valor en pesos con puntos de miles mientras se escribe (Caja, Suministros, Caja Menor): se ve 140.000 y se
+   *  entrega 140000. */
+  readonly liveThousands?: boolean;
 }
 
 export interface FormFieldSection {

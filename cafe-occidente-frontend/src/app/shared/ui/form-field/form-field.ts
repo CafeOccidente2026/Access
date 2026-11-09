@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
-import { asPenalty, formatDisplayNumber } from '../../utils/number-format';
+import { asPenalty, formatDisplayNumber, formatThousands } from '../../utils/number-format';
 import { ComboboxComponent } from '../combobox/combobox';
 
 /**
@@ -49,6 +49,10 @@ export class FormFieldComponent implements OnChanges {
     // `integer` (Sacos, Bonificacion, Costos) pide 'count' (sin decimales forzados); el resto siempre
     // fuerza 2 decimales, igual que 'currency'. `rawDisplay` (Destare, Castigo, Descuento Fro, Otros
     // Desctos) se salta el formateo entero: se ve tal cual se tipeo, sin agregar ni quitar nada.
+    if (this.field.liveThousands && !this.field.readonly) {
+      this.inputValue = formatThousands(String(raw).replace(/\D/g, ''));
+      return;
+    }
     this.inputValue = this.field.readonly || this.formatWhenIdle ? this.formatted(raw) : raw;
   }
 
@@ -85,6 +89,15 @@ export class FormFieldComponent implements OnChanges {
   }
 
   onInput(value: string | number, input?: HTMLInputElement): void {
+    if (this.field.liveThousands) {
+      const digits = String(value).replace(/\D/g, '');
+      this.inputValue = formatThousands(digits);
+      if (input) {
+        input.value = this.inputValue;
+      }
+      this.valueChange.emit(digits);
+      return;
+    }
     const sanitized = this.sanitize(value);
     // Si el modelo ya tenia el valor limpio (p. ej. "1" y se escribe "1a"), ngModel no repinta y la
     // letra quedaba visible aunque no se guardara: se corrige el input a mano.
