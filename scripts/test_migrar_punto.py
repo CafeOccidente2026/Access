@@ -13,6 +13,7 @@ from migrar_punto import (
     max_invoice,
     max_remission,
     missing_control_params,
+    out_of_range,
     quota_announcements,
     split_future_purchases,
     transaction_collisions,
@@ -55,6 +56,15 @@ def check_husk():
     assert not husk_purchase(purchase("27967", especial="RN"))
 
 
+def check_out_of_range():
+    # Factura 27959 de Buesaco: Peso Tot Alm digitado 205000 -> Porc Merma -81.900: no cabe y no se inventa otro valor.
+    row = {"porcmerma": "-81900.0", "porcalmdefec": "2.0", "porcalmsana": "87.5", "especial": "RN"}
+    assert out_of_range(row) == ["porcmerma"]
+    assert out_of_range({**row, "porcmerma": "9999.99"}) == []
+    # En la pasilla solo cuenta el % de almendra.
+    assert out_of_range({"porcmerma": "-81900.0", "porcalmsana": "50.0", "especial": "PASILLA"}) == []
+
+
 def check_future_purchases():
     rows = [
         {"anuncio": "1", "saldo_kilos": "293.0", "fecha_entrega": "2021-08-31 00:00:00"},
@@ -88,6 +98,7 @@ def main():
     check_control_record()
     check_date_cut()
     check_husk()
+    check_out_of_range()
     check_future_purchases()
     check_quotas()
     check_consecutives()
