@@ -26,4 +26,20 @@ describe('PurchaseFormViewComponent', () => {
     expect(document.activeElement?.textContent?.trim()).toBe('Imprimir');
     fixture.nativeElement.remove();
   });
+
+  it('without payment panel (Compras a Futuro), the print button takes the focus when it appears', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(PurchaseFormViewComponent);
+    document.body.appendChild(fixture.nativeElement);
+    const base = { ...(dry as unknown as PurchaseFormContent), paymentPanel: undefined };
+    fixture.componentRef.setInput('content', base);
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('content', { ...base, reprintButtonLabel: 'Imprimir Manifiesto' });
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(document.activeElement?.textContent?.trim()).toBe('Imprimir Manifiesto');
+    fixture.nativeElement.remove();
+  });
 });
