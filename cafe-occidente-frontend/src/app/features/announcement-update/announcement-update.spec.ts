@@ -64,6 +64,18 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(service.publishAll).not.toHaveBeenCalled();
   });
 
+  it('prueba del 9-nov (segunda): choosing a Fondo in the list moves on to the price', () => {
+    const { fixture, el } = render();
+    const select = field(el, 'fundId') as HTMLSelectElement;
+
+    select.value = select.options[1].value;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    vi.runOnlyPendingTimers();
+
+    expect(document.activeElement).toBe(field(el, 'basePriceLoad'));
+  });
+
   it('RN-08.1: the mouse cannot skip an empty Fondo', () => {
     const { component, el } = render();
     component.onFocus('basePriceLoad');
