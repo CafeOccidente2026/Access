@@ -25,7 +25,7 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
-import { SampleWeightKey, loadSampleQuality } from '../sample-quality';
+import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 
@@ -155,6 +155,8 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   readonly specialInfo = signal<SpecialInfo | null>(null);
   readonly invoiceReservation = signal<NextInvoiceNumber | null>(null);
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** El aviso abierto es el del umbral de especiales: al Aceptar se vacia la muestra. */
+  private sampleRetry = false;
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
   readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -451,6 +453,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       // Con todos los datos, un rechazo es real (p. ej. kilos netos sobre Esta Entrega): se dice por qué.
       error: (err) => {
         this.calc.set(null);
+        this.sampleRetry = isOverThreshold(err);
         this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
@@ -500,10 +503,24 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       refresh: () => this.tick.update((n) => n + 1),
       // El rechazo del cupo (saldo, Esta Entrega) se le muestra al cajero tal como lo explica el servidor.
       saveError: (err) => {
+        this.sampleRetry = isOverThreshold(err);
         this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
     });
+  }
+
+  /** Cierra el aviso. Q15 (prueba del 9-nov): si era el umbral de especiales, vacia la muestra y vuelve a
+   *  Peso Tot Alm; no se guarda nada. */
+  dismissError(): void {
+    this.errorMessage.set(null);
+    if (this.sampleRetry) {
+      this.sampleRetry = false;
+      clearSample(this.model, this.locked);
+      this.calc.set(null);
+      this.tick.update((n) => n + 1);
+      this.focusField('totalStoredWeight');
+    }
   }
 
   private canPrint(): boolean {

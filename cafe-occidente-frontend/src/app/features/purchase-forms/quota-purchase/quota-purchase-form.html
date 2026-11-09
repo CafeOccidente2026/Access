@@ -22,7 +22,7 @@
     *ngIf="errorMessage() as msg"
     [message]="msg"
     [confirmLabel]="messages()?.acceptLabel ?? 'Aceptar'"
-    (confirmed)="errorMessage.set(null)"
+    (confirmed)="dismissError()"
   ></app-confirm-dialog>
 
   <app-confirm-dialog
