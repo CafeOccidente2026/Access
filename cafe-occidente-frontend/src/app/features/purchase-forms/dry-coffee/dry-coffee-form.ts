@@ -222,6 +222,9 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       case 'penalty':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
+      // Dirección y Celular tambien son obligatorios: si se llenan al final, ahi se calcula (prueba del 9-nov).
+      case 'address':
+      case 'cellphone':
         this.recalculate();
         break;
     }
