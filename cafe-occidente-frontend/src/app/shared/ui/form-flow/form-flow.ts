@@ -41,12 +41,30 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     if (event.key !== 'Enter' || target.tagName === 'TEXTAREA' || !target.matches(FIELDS)) {
       return;
     }
-    // Combobox: como en Compras, solo avanza si este Enter confirmo una opcion (el combobox hace
-    // preventDefault al elegirla); con texto que no es opcion se queda en el campo.
-    if (target.getAttribute('role') === 'combobox' && !event.defaultPrevented) {
+    // Combobox: avanza solo si eligio una opcion, y eso lo avisa el mismo combobox con flow-next.
+    if (target.getAttribute('role') === 'combobox') {
       return;
     }
     event.preventDefault();
+    this.next(target, true);
+  }
+
+  /** Opcion elegida en un combobox (clic o Enter): pasa al siguiente campo. */
+  @HostListener('flow-next', ['$event'])
+  onOptionChosen(event: Event): void {
+    this.next(event.target as HTMLElement, false);
+  }
+
+  /** Lista nativa: al cambiar la opcion pasa al siguiente campo. */
+  @HostListener('change', ['$event'])
+  onChange(event: Event): void {
+    if ((event.target as HTMLElement).tagName === 'SELECT') {
+      this.next(event.target as HTMLElement, false);
+    }
+  }
+
+  /** Siguiente campo; despues del ultimo, Enter guarda y elegir una opcion solo deja el foco en el boton. */
+  private next(target: HTMLElement, submit: boolean): void {
     const fields = this.fields();
     const index = fields.findIndex((f) => f === target || (isRadio(f) && isRadio(target) && f.name === (target as HTMLInputElement).name));
     if (index < 0) {
@@ -56,7 +74,12 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     if (next) {
       flash(next);
     } else {
-      this.host.querySelector<HTMLElement>('[data-flow-submit]:not([disabled])')?.click();
+      const button = this.host.querySelector<HTMLElement>('[data-flow-submit]:not([disabled])');
+      if (submit) {
+        button?.click();
+      } else {
+        button?.focus();
+      }
     }
   }
 
