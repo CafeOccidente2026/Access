@@ -168,3 +168,13 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     expect(component.saving()).toBe(false);
   });
 });
+
+describe('supplies-entry.json: valores con puntos de miles al escribir (prueba del 9-nov)', () => {
+  it('todo campo de valor de Caja, Suministros, Caja Menor y Ajustes los muestra', () => {
+    const currency = JSON.stringify(content).match(/\{[^{}]*"type":"currency"[^{}]*\}/g) ?? [];
+    expect(currency.length).toBeGreaterThan(0);
+    for (const field of currency) {
+      expect(field).toContain('"liveThousands":true');
+    }
+  });
+});
