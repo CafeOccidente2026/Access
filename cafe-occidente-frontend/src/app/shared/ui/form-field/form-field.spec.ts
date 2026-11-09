@@ -186,3 +186,12 @@ describe('FormFieldComponent fast typing', () => {
     expect(component.inputValue).toBe('');
   });
 });
+
+describe('FormFieldComponent liveThousands con un valor guardado', () => {
+  it('a saved value with decimals (Registro de Control: 8379840,00) shows its whole pesos with thousands', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'baseWithholding', label: 'Base Rete Fuente', type: 'currency', liveThousands: true, value: '8379840,00' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.inputValue).toBe('8.379.840');
+  });
+});
