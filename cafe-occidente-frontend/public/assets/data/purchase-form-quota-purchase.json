@@ -9,12 +9,6 @@
       "key": "special",
       "label": "Especial",
       "type": "select",
-      "options": [
-        "RN", "NESPRESSO - FTUSA", "REGIONAL NARIÑO 4C", "NESPRESSO LATE HARVEST - FTUSA",
-        "NESPRESSO CON TAZA - FTUSA", "RAINFOREST", "ESTANDAR", "CORR", "ILLY",
-        "REGIONAL NARIÑO DIFERENCIADO 85 - 85.9", "REGIONAL NARIÑO DIFERENCIADO 84 - 84.9",
-        "COLOMBIA TIERRA DE DIVERSIDAD", "MICROLOTES 88+", "MICROLOTES 86 - 87.9"
-      ],
       "inputWidthClass": "min-w-[332px] max-w-[332px]"
     },
     { "key": "date", "label": "Fecha", "type": "date", "highlighted": true, "inputWidthClass": "max-w-[128px]" },
