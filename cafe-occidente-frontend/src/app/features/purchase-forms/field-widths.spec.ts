@@ -6,6 +6,7 @@ import green from '../../../../public/assets/data/purchase-form-green.json';
 import husk from '../../../../public/assets/data/purchase-form-husk.json';
 import billing from '../../../../public/assets/data/purchase-form-quota-billing.json';
 import quota from '../../../../public/assets/data/purchase-form-quota-purchase.json';
+import query from '../../../../public/assets/data/purchase-query.json';
 import { FormFieldDefinition } from '../../core/models';
 
 type Field = FormFieldDefinition & { rowWidthClass?: string };
@@ -59,6 +60,15 @@ describe.each([
     }
     for (const f of byKey('address')) {
       expect(f.rowWidthClass, f.key).toContain('flex-1');
+    }
+  });
+});
+
+describe('Consultar Compras: fechas y Cod Prod completos', () => {
+  it('Fecha de Compra, Fecha de Anuncio y Cod Prod de al menos 125 px', () => {
+    for (const key of ['purchaseDate', 'announcementDate', 'productCode']) {
+      const field = fields(query).find((f) => f.key === key)!;
+      expect(px(field.inputWidthClass, 'min-w'), key).toBeGreaterThanOrEqual(125);
     }
   });
 });
