@@ -1,6 +1,6 @@
 <div class="h-screen bg-white p-3" *ngIf="page() as p">
   <app-access-window [title]="p.windowTitle" bodyClass="bg-white">
-    <div class="flex flex-col gap-4 p-6">
+    <div class="flex flex-col gap-4 p-6" appFormFlow>
       <h1 class="text-2xl font-semibold text-slate-700">{{ p.heading }}</h1>
 
       <label class="flex items-center gap-2 text-sm">
@@ -58,6 +58,7 @@
           *ngIf="agencyId()"
           class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50"
           data-testid="save"
+          data-flow-submit
           [disabled]="saving()"
           (click)="save()"
         >

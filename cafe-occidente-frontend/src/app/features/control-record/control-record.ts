@@ -11,7 +11,7 @@ import { AgencyService } from '../../core/services/agency.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { ControlRecordService } from '../../core/services/control-record.service';
-import { AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
 import { ControlRecordContent } from './control-record.model';
 
@@ -21,7 +21,7 @@ import { ControlRecordContent } from './control-record.model';
 @Component({
   selector: 'app-control-record',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './control-record.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
