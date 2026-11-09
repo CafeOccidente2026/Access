@@ -64,8 +64,12 @@ export class AnnouncementUpdateComponent {
     });
   }
 
+  /** Prueba del 9-nov (segunda): al elegir el Fondo el foco pasa solo al precio. */
   onFundChange(): void {
     this.rows.set(null);
+    if (this.fundId != null) {
+      this.focusField('basePriceLoad');
+    }
   }
 
   onPriceInput(value: string): void {
