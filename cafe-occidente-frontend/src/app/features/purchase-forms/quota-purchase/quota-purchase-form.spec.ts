@@ -29,13 +29,15 @@ describe('QuotaPurchaseFormComponent', () => {
   const content = {
     windowTitle: 'COMPRAS CUPOS',
     theme: 'green',
-    topFields: [],
+    topFields: [{ key: 'special', label: 'Especial', type: 'select', options: [] }],
     identificationFields: [{ key: 'deliveryKg', label: 'Kilos Entregados', type: 'number' }],
     qualityFields: [{ key: 'healthyStoredWeight', label: 'Peso Alm Sana', type: 'currency' }],
     settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages,
     quotaPicker: {},
   } as unknown as PurchaseFormContent;
+
+  const drySpecials = { qualityFields: [{ key: 'special', options: ['RN', 'COLOMBIA TIERRA DE DIVERSIDAD RN'] }] };
 
   const quotaRow: QuotaBalance = {
     announcement: {
@@ -84,7 +86,11 @@ describe('QuotaPurchaseFormComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+        {
+          provide: ContentService,
+          // Especial sale de la lista de Compras Cafe Seco (prueba del 9-nov, punto 3).
+          useValue: { loadJson: (name: string) => of(name === 'purchase-form-dry' ? drySpecials : content) },
+        },
         {
           provide: DryCoffeePurchaseService,
           useValue: {
@@ -248,6 +254,12 @@ describe('QuotaPurchaseFormComponent', () => {
 
     expect(withholding().readonly).toBe(true);
     expect(withholding().value).toBe(6000);
+  });
+
+  it('Especial offers the same list as Compras Café Seco (COLOMBIA TIERRA DE DIVERSIDAD RN included)', () => {
+    setup();
+    const special = component.viewContent()!.topFields.find((f) => f.key === 'special')!;
+    expect(special.options).toEqual(['RN', 'COLOMBIA TIERRA DE DIVERSIDAD RN']);
   });
 
   it('Escape clears the chosen announcement too', () => {

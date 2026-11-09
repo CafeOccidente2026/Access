@@ -20,3 +20,10 @@ describe.each([
     expect(field.inputValue).toBe('1');
   });
 });
+
+describe('Facturar Anuncios con Cupos: lista de Especial', () => {
+  it('no tiene lista propia: usa la de Compras Café Seco (purchase-form-dry.json)', () => {
+    const special = quota.topFields.find((f) => f.key === 'special') as { options?: string[] };
+    expect(special.options).toBeUndefined();
+  });
+});
