@@ -109,6 +109,17 @@ export class UserManagementComponent {
     this.focusField(FOCUS_ORDER[idx + 1]);
   }
 
+  /** Prueba del 9-nov (segunda): al elegir en una lista pasa al siguiente campo; despues de Agencia, a Crear Usuario
+   *  (sin crear: eso lo hace Enter). */
+  onChosen(field: string): void {
+    const next = FOCUS_ORDER[FOCUS_ORDER.indexOf(field) + 1];
+    if (next) {
+      this.focusField(next);
+      return;
+    }
+    setTimeout(() => this.elementRef.nativeElement.querySelector('[data-create-user] button')?.focus());
+  }
+
   private focusField(key: string): void {
     setTimeout(() => {
       const el = this.elementRef.nativeElement.querySelector(`[data-field-key="${key}"]`) as HTMLElement | null;
