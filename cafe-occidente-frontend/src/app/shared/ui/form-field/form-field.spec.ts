@@ -165,3 +165,24 @@ describe('FormFieldComponent liveThousands', () => {
     expect(fixture.componentInstance.inputValue).toBe('1.400.000');
   });
 });
+
+describe('FormFieldComponent fast typing', () => {
+  it('a late echo of what was typed does not overwrite the following digits (Asignar Cupo, prueba del 9-nov)', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '' };
+    component.ngOnChanges();
+    component.onFocus();
+
+    component.onInput('4');
+    component.onInput('40');
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '4' };
+    component.ngOnChanges();
+
+    expect(component.inputValue).toBe('40');
+
+    // Un valor distinto que manda la pantalla (p. ej. al limpiar) si se aplica.
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '' };
+    component.ngOnChanges();
+    expect(component.inputValue).toBe('');
+  });
+});
