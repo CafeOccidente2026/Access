@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AppButtonComponent } from '../app-button/app-button';
 import { FormFlowDirective } from './form-flow';
 
 @Component({
@@ -68,6 +69,31 @@ describe('appFormFlow con listas (prueba del 9-nov, segunda)', () => {
     el('s').focus();
     el('s').dispatchEvent(new Event('change', { bubbles: true }));
     expect(document.activeElement).toBe(el('d'));
+    fixture.nativeElement.remove();
+  });
+});
+
+@Component({
+  standalone: true,
+  imports: [FormFlowDirective, AppButtonComponent],
+  template: `
+    <div appFormFlow>
+      <input id="x" />
+      <app-button data-flow-submit label="Generar" (pressed)="pressed = pressed + 1"></app-button>
+    </div>
+  `,
+})
+class HostWithAppButton {
+  pressed = 0;
+}
+
+describe('appFormFlow con app-button', () => {
+  it('Enter on the last field presses the app-button marked data-flow-submit', () => {
+    const fixture = TestBed.createComponent(HostWithAppButton);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    enter(fixture.nativeElement.querySelector('#x'));
+    expect(fixture.componentInstance.pressed).toBe(1);
     fixture.nativeElement.remove();
   });
 });
