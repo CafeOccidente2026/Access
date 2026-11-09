@@ -109,32 +109,32 @@ class SuppliesEntryIntegrationTest {
 
     @Test
     void eachScreenGeneratesItsIdWithTheAgencyPrefix() {
-        assertThat(entries.createCashSupply(ledger("LF", REGISTERED, "EFECTIVO", null)).transactionId()).isEqualTo("SDBU1001");
-        assertThat(entries.createCashSupply(ledger("RP", REGISTERED, "EFECTIVO", null)).transactionId()).isEqualTo("SDBU2001");
-        assertThat(entries.createCashAdjustment(ledger("RP", REGISTERED, null, null)).transactionId()).isEqualTo("SDBU2AJU001");
-        assertThat(entries.createSupply(ledger("RP", REGISTERED, null, null)).transactionId()).isEqualTo("SDBU3SUM001");
-        assertThat(entries.createSupply(ledger("LF", REGISTERED, null, null)).transactionId()).isEqualTo("SDBU4SUM001");
-        assertThat(entries.createIssuedCheck(ledger("RP", REGISTERED, null, "0548")).transactionId()).isEqualTo("SDBU3CHQ001");
-        assertThat(entries.createIssuedCheck(ledger("LF", REGISTERED, null, "0549")).transactionId()).isEqualTo("SDBU4CHQ001");
-        assertThat(entries.createPackagingEntry(packaging("USADO", REGISTERED)).transactionId()).isEqualTo("SDBU5SUM001");
-        assertThat(entries.createPackagingEntry(packaging("NUEVO", REGISTERED)).transactionId()).isEqualTo("SDBU6SUM001");
-        assertThat(entries.createPackagingLoan(packaging("USADO", REGISTERED)).transactionId()).isEqualTo("SDBU5PRE001");
-        assertThat(entries.createPackagingLoan(packaging("NUEVO", REGISTERED)).transactionId()).isEqualTo("SDBU6PRE001");
-        assertThat(entries.createPettyCashSupply(ledger(null, null, null, null)).transactionId()).isEqualTo("SDBU7ING001");
+        assertThat(entries.createCashSupply(ledger("LF", REGISTERED, "EFECTIVO", null)).transactionId()).isEqualTo("SDBU-1-001");
+        assertThat(entries.createCashSupply(ledger("RP", REGISTERED, "EFECTIVO", null)).transactionId()).isEqualTo("SDBU-2-001");
+        assertThat(entries.createCashAdjustment(ledger("RP", REGISTERED, null, null)).transactionId()).isEqualTo("SDBU-2AJU-001");
+        assertThat(entries.createSupply(ledger("RP", REGISTERED, null, null)).transactionId()).isEqualTo("SDBU-3SUM-001");
+        assertThat(entries.createSupply(ledger("LF", REGISTERED, null, null)).transactionId()).isEqualTo("SDBU-4SUM-001");
+        assertThat(entries.createIssuedCheck(ledger("RP", REGISTERED, null, "0548")).transactionId()).isEqualTo("SDBU-3CHQ-001");
+        assertThat(entries.createIssuedCheck(ledger("LF", REGISTERED, null, "0549")).transactionId()).isEqualTo("SDBU-4CHQ-001");
+        assertThat(entries.createPackagingEntry(packaging("USADO", REGISTERED)).transactionId()).isEqualTo("SDBU-5SUM-001");
+        assertThat(entries.createPackagingEntry(packaging("NUEVO", REGISTERED)).transactionId()).isEqualTo("SDBU-6SUM-001");
+        assertThat(entries.createPackagingLoan(packaging("USADO", REGISTERED)).transactionId()).isEqualTo("SDBU-5PRE-001");
+        assertThat(entries.createPackagingLoan(packaging("NUEVO", REGISTERED)).transactionId()).isEqualTo("SDBU-6PRE-001");
+        assertThat(entries.createPettyCashSupply(ledger(null, null, null, null)).transactionId()).isEqualTo("SDBU-7ING-001");
         assertThat(entries.createPettyCashExpense(ledger(null, REGISTERED, null, null)).transactionId())
-                .isEqualTo("SDBU7GAS001");
+                .isEqualTo("SDBU-7GAS-001");
     }
 
     @Test
     void theSecondOfTheSameScreenTakesTheNextNumberAndThePeekShowsIt() {
-        assertThat(entries.nextTransactionId("packaging", "USADO")).isEqualTo("SDBU5SUM001");
+        assertThat(entries.nextTransactionId("packaging", "USADO")).isEqualTo("SDBU-5SUM-001");
         entries.createPackagingEntry(packaging("USADO", REGISTERED));
 
-        assertThat(entries.nextTransactionId("packaging", "USADO")).isEqualTo("SDBU5SUM002");
-        assertThat(entries.createPackagingEntry(packaging("USADO", REGISTERED)).transactionId()).isEqualTo("SDBU5SUM002");
+        assertThat(entries.nextTransactionId("packaging", "USADO")).isEqualTo("SDBU-5SUM-002");
+        assertThat(entries.createPackagingEntry(packaging("USADO", REGISTERED)).transactionId()).isEqualTo("SDBU-5SUM-002");
         // RN-27.6.2: el prestamo del mismo tipo lleva su propio consecutivo.
-        assertThat(entries.nextTransactionId("packagingLoan", "USADO")).isEqualTo("SDBU5PRE001");
-        assertThat(entries.nextTransactionId("cash", "RP")).isEqualTo("SDBU2001");
+        assertThat(entries.nextTransactionId("packagingLoan", "USADO")).isEqualTo("SDBU-5PRE-001");
+        assertThat(entries.nextTransactionId("cash", "RP")).isEqualTo("SDBU-2-001");
     }
 
     @Test
@@ -204,7 +204,7 @@ class SuppliesEntryIntegrationTest {
         entries.createPettyCashExpense(ledger(null, REGISTERED, null, null));
 
         assertThat(reports.pettyCashMovement(AGENCY, COLOMBIAN_DAY))
-                .filteredOn(row -> "SDBU7GAS001".equals(row.transactionId()))
+                .filteredOn(row -> "SDBU-7GAS-001".equals(row.transactionId()))
                 .singleElement().satisfies(row -> assertThat(row.outflow()).isEqualByComparingTo(AMOUNT));
     }
 
@@ -215,8 +215,8 @@ class SuppliesEntryIntegrationTest {
         entries.createCashSupply(ledger("RP", REGISTERED, "EFECTIVO", null));
 
         assertThat(reports.supplies(AGENCY, "RP", COLOMBIAN_DAY))
-                .filteredOn(row -> row.transactionId().startsWith("SDBU2"))
-                .extracting(row -> row.transactionId()).containsExactly("SDBU2001");
+                .filteredOn(row -> row.transactionId().startsWith("SDBU-2-"))
+                .extracting(row -> row.transactionId()).containsExactly("SDBU-2-001");
     }
 
     private void assertRejected(Supplier<EntryResponse> save) {

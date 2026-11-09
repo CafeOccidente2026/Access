@@ -22,6 +22,7 @@ import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { advanceFocus, focusField } from '../form-focus';
 import { UnsavedCloseForm } from '../unsaved-close';
+import { clearSample, isOverThreshold } from '../sample-quality';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -114,6 +115,8 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     healthyPercentage: null,
   });
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** El aviso abierto es el del umbral de especiales: al Aceptar se vacia la muestra. */
+  private sampleRetry = false;
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
   readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -219,6 +222,9 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       case 'penalty':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
+      // Dirección y Celular tambien son obligatorios: si se llenan al final, ahi se calcula (prueba del 9-nov).
+      case 'address':
+      case 'cellphone':
         this.recalculate();
         break;
     }
@@ -395,21 +401,17 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   /**
-   * Q15: en los NESPRESSO el Factor supero el umbral de especiales. Se avisa con el mensaje del
-   * servidor, se limpian y desbloquean los pesos de la muestra y se vuelve a Peso Tot Alm.
+   * Q15: en los NESPRESSO el Factor supero el umbral de especiales. Se avisa con el mensaje del servidor; al
+   * Aceptar (dismissError) se vacia la muestra y se vuelve a Peso Tot Alm. No se guarda nada.
    */
   private clearSampleOverThreshold(err: { error?: { code?: string; message?: string } } | undefined): boolean {
-    if (err?.error?.code !== 'UMBRAL_ESPECIALES') {
+    if (!isOverThreshold(err)) {
       return false;
     }
-    for (const key of ['totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight']) {
-      this.model[key] = '';
-      this.locked.delete(key);
-    }
-    this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
-    this.errorMessage.set(err.error.message ?? null);
+    this.sampleRetry = true;
+    this.calc.set(null);
+    this.errorMessage.set(err?.error?.message ?? null);
     this.tick.update((n) => n + 1);
-    this.focusField('totalStoredWeight');
     return true;
   }
 
@@ -476,6 +478,13 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.blockedByDeceased.set(false);
     if (wasBlocked) {
       this.reset();
+    }
+    if (this.sampleRetry) {
+      this.sampleRetry = false;
+      clearSample(this.model, this.locked);
+      this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
+      this.tick.update((n) => n + 1);
+      this.focusField('totalStoredWeight');
     }
   }
 

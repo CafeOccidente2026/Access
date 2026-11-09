@@ -68,6 +68,40 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     expect(component.values()['transactionId']).toBe('SDTA1001');
   });
 
+  it.each(['cash', 'adjustment', 'pettyCashExpense', 'supply', 'issuedCheck', 'packaging'])(
+    '%s: typing the cédula shows the third party name beside it (prueba del 9-nov, punto 2)',
+    async (screen) => {
+      const { fixture, component } = await render(screen);
+      const box = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('[data-field-key="idNumber"]')!;
+      box.value = '1082656111';
+      box.dispatchEvent(new Event('input'));
+      box.dispatchEvent(new Event('blur'));
+      http.expectOne(`${API_BASE_URL}/growers/1082656111`).flush({
+        idNumber: '1082656111', firstName: 'ANA', secondName: 'MARIA', lastName: 'ERAZO', secondLastName: 'PAZ',
+      });
+      await settle();
+
+      expect(component.growerNames()).toEqual({ first: 'ANA MARIA', last: 'ERAZO PAZ' });
+    },
+  );
+
+  it('after saving, the name beside the cédula is cleared with the rest of the form', async () => {
+    const { component } = await render('supply');
+    component.set('idNumber', '1835221');
+    component.lookupGrower();
+    http.expectOne(`${API_BASE_URL}/growers/1835221`).flush({ idNumber: '1835221', firstName: 'PEREGRINO', lastName: 'ORDOÑEZ' });
+    component.set('fundCode', 'RP');
+    await settle();
+    await answerNextId('supply', 'RP', 'SDTA-3SUM-001');
+    component.set('amount', '140000');
+
+    component.save();
+    http.expectOne(`${URL}/supplies`).flush({ transactionId: 'SDTA-3SUM-001' });
+    await settle();
+
+    expect(component.growerNames()).toBeNull();
+  });
+
   it('Caja Menor asks its Id without a fund and does not ask for a cédula', async () => {
     const { component } = await render('pettyCash');
     await answerNextId('pettyCash', null, 'SDTA7ING001');
@@ -166,5 +200,15 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     expect(component.error()).toBe(true);
     expect(component.message()).toBe('La cédula 990005999 no está registrada en TERCEROS');
     expect(component.saving()).toBe(false);
+  });
+});
+
+describe('supplies-entry.json: valores con puntos de miles al escribir (prueba del 9-nov)', () => {
+  it('todo campo de valor de Caja, Suministros, Caja Menor y Ajustes los muestra', () => {
+    const currency = JSON.stringify(content).match(/\{[^{}]*"type":"currency"[^{}]*\}/g) ?? [];
+    expect(currency.length).toBeGreaterThan(0);
+    for (const field of currency) {
+      expect(field).toContain('"liveThousands":true');
+    }
   });
 });

@@ -100,6 +100,9 @@ def check_consecutives():
     assert transaction_collisions(["43000", "che1234", "sumlf60-29-05", "TA0012"], "SDTA") == []
     assert transaction_collisions(["SDTA3SUM001", "SDTA2002", "sdta7GAS010"], "SDTA") == [
         "SDTA3SUM001", "SDTA2002", "sdta7GAS010"]
+    # Formato con guiones (prueba del 9-nov): SDTA-3SUM-001 tambien choca; un Id de Access con guiones libres no.
+    assert transaction_collisions(["SDTA-3SUM-001", "SDTA-2-002", "SDTA-ALMACEN-12"], "SDTA") == [
+        "SDTA-3SUM-001", "SDTA-2-002"]
 
 
 def main():

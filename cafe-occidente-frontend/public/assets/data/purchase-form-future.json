@@ -4,8 +4,8 @@
   "compactFields": true,
   "topFields": [
     { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true },
-    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true },
-    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true },
+    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true, "inputWidthClass": "min-w-[200px] max-w-[200px]" },
+    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true, "inputWidthClass": "min-w-[220px] max-w-[220px]" },
     { "key": "idType", "label": "Tipo", "type": "text", "readonly": true }
   ],
   "federationHeading": "Información Federación:",
@@ -15,7 +15,7 @@
     { "key": "program", "label": "Programa", "type": "text", "readonly": true, "rowWidthClass": "w-[150px]", "inputWidthClass": "min-w-0" }
   ],
   "identificationFields": [
-    { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
+    { "key": "address", "label": "Direccion", "type": "text", "readonly": true, "rowWidthClass": "flex-1", "inputWidthClass": "max-w-none" },
     { "key": "agency", "label": "Agencia", "type": "text", "readonly": true }
   ],
   "contactFields": [
@@ -29,10 +29,11 @@
         "NESPRESSO CON TAZA - FTUSA",
         "NESPRESSO LATE HARVEST CON TAZA - FTUSA",
         "REGIONAL NARIÑO 4C"
-      ]
+      ],
+      "inputWidthClass": "min-w-[332px] max-w-[332px]"
     },
     { "key": "announcement", "label": "Anuncio", "type": "select", "options": [] },
-    { "key": "announcementDate", "label": "Fecha_Anuncio", "type": "date", "readonly": true },
+    { "key": "announcementDate", "label": "Fecha_Anuncio", "type": "date", "readonly": true, "inputWidthClass": "max-w-[128px]" },
     { "key": "basePriceLoad", "label": "Pr carga perg s", "type": "currency", "readonly": true }
   ],
   "qualityFields": [
@@ -46,7 +47,7 @@
     { "key": "finca", "label": "Finca", "type": "text" },
     { "key": "municipality", "label": "Mpio", "type": "text" },
     { "key": "vereda", "label": "Vereda", "type": "text" },
-    { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date" },
+    { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date", "inputWidthClass": "max-w-[128px]" },
     { "key": "kilos", "label": "Kilos", "type": "number" },
     { "key": "balance", "label": "Saldo", "type": "number", "readonly": true }
   ],

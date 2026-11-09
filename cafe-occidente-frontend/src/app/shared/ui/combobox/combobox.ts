@@ -218,7 +218,10 @@ export class ComboboxComponent implements OnChanges, OnDestroy {
     if (match !== this.inputText) {
       this.inputText = match;
     }
-    this.valueChange.emit(match);
+    // Al salir con el mismo valor no se reenvia: ese eco tardio limpiaba Cupo en Asignar Cupo (prueba del 9-nov).
+    if (match !== this.value) {
+      this.valueChange.emit(match);
+    }
     this.committed.emit();
   }
 

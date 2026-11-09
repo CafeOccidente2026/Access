@@ -29,13 +29,15 @@ describe('QuotaPurchaseFormComponent', () => {
   const content = {
     windowTitle: 'COMPRAS CUPOS',
     theme: 'green',
-    topFields: [],
+    topFields: [{ key: 'special', label: 'Especial', type: 'select', options: [] }],
     identificationFields: [{ key: 'deliveryKg', label: 'Kilos Entregados', type: 'number' }],
     qualityFields: [{ key: 'healthyStoredWeight', label: 'Peso Alm Sana', type: 'currency' }],
     settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages,
     quotaPicker: {},
   } as unknown as PurchaseFormContent;
+
+  const drySpecials = { qualityFields: [{ key: 'special', options: ['RN', 'COLOMBIA TIERRA DE DIVERSIDAD RN'] }] };
 
   const quotaRow: QuotaBalance = {
     announcement: {
@@ -84,7 +86,11 @@ describe('QuotaPurchaseFormComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+        {
+          provide: ContentService,
+          // Especial sale de la lista de Compras Cafe Seco (prueba del 9-nov, punto 3).
+          useValue: { loadJson: (name: string) => of(name === 'purchase-form-dry' ? drySpecials : content) },
+        },
         {
           provide: DryCoffeePurchaseService,
           useValue: {
@@ -248,6 +254,34 @@ describe('QuotaPurchaseFormComponent', () => {
 
     expect(withholding().readonly).toBe(true);
     expect(withholding().value).toBe(6000);
+  });
+
+  it('Especial offers the same list as Compras Café Seco (COLOMBIA TIERRA DE DIVERSIDAD RN included)', () => {
+    setup();
+    const special = component.viewContent()!.topFields.find((f) => f.key === 'special')!;
+    expect(special.options).toEqual(['RN', 'COLOMBIA TIERRA DE DIVERSIDAD RN']);
+  });
+
+  it('Q15 (prueba del 9-nov, punto 9): over the threshold it warns; Aceptar clears the sample and goes back to Peso Tot Alm', () => {
+    setup();
+    const focusSpy = vi.fn();
+    (component as any).focusField = focusSpy;
+    const message = 'El Factor (94,59) supera el umbral de cafés especiales (93,33). Digite de nuevo los pesos de la muestra.';
+    previewSpy.mockReturnValue(throwError(() => ({ error: { code: 'UMBRAL_ESPECIALES', message } })));
+    fillPurchase();
+
+    expect(component.errorMessage()).toBe(message);
+    // El foco no vuelve a la muestra detras del aviso: eso pasa al Aceptar.
+    expect(focusSpy.mock.lastCall?.[0]).not.toBe('totalStoredWeight');
+
+    component.dismissError();
+
+    for (const key of ['totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight', 'wastePercentage', 'huskPercentage', 'factor']) {
+      expect(component.model[key] ?? '', key).toBe('');
+      expect((component as any).locked.has(key), key).toBe(false);
+    }
+    expect(component.calc()).toBeNull();
+    expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
   });
 
   it('Escape clears the chosen announcement too', () => {

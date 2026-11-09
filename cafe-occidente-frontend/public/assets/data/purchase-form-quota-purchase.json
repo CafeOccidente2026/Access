@@ -4,21 +4,16 @@
   "compactFields": true,
   "topFields": [
     { "key": "agency", "label": "Agencia", "type": "text", "readonly": true },
-    { "key": "fund", "label": "Fondo", "type": "select", "options": [] },
+    { "key": "fund", "label": "Fondo", "type": "select", "options": [], "inputWidthClass": "max-w-[70px]" },
     {
       "key": "special",
       "label": "Especial",
       "type": "select",
-      "options": [
-        "RN", "NESPRESSO - FTUSA", "REGIONAL NARIÑO 4C", "NESPRESSO LATE HARVEST - FTUSA",
-        "NESPRESSO CON TAZA - FTUSA", "RAINFOREST", "ESTANDAR", "CORR", "ILLY",
-        "REGIONAL NARIÑO DIFERENCIADO 85 - 85.9", "REGIONAL NARIÑO DIFERENCIADO 84 - 84.9",
-        "COLOMBIA TIERRA DE DIVERSIDAD", "MICROLOTES 88+", "MICROLOTES 86 - 87.9"
-      ]
+      "inputWidthClass": "min-w-[332px] max-w-[332px]"
     },
-    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true },
-    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true }
+    { "key": "date", "label": "Fecha", "type": "date", "highlighted": true, "inputWidthClass": "max-w-[128px]" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true, "inputWidthClass": "max-w-[70px]" },
+    { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true, "inputWidthClass": "max-w-[128px]" }
   ],
   "identificationFields": [
     { "key": "invoice", "label": "Factura", "type": "text", "readonly": true },
@@ -34,12 +29,12 @@
     { "key": "program", "label": "Programa", "type": "text", "readonly": true, "rowWidthClass": "w-[150px]", "inputWidthClass": "min-w-0" }
   ],
   "contactFields": [
-    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true },
-    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true },
-    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true },
-    { "key": "idType", "label": "Tipo", "type": "text", "readonly": true },
-    { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
-    { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true }
+    { "key": "idPart1", "label": "Cedula", "type": "text", "digitsOnly": true, "inputWidthClass": "max-w-[110px]" },
+    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true, "inputWidthClass": "min-w-[200px] max-w-[200px]" },
+    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true, "inputWidthClass": "min-w-[220px] max-w-[220px]" },
+    { "key": "idType", "label": "Tipo", "type": "text", "readonly": true, "inputWidthClass": "max-w-[50px]" },
+    { "key": "address", "label": "Direccion", "type": "text", "readonly": true, "rowWidthClass": "flex-1", "inputWidthClass": "max-w-none" },
+    { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true, "inputWidthClass": "max-w-[110px]" }
   ],
   "qualityFields": [
     { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true },

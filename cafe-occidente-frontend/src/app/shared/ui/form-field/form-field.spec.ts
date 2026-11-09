@@ -133,3 +133,56 @@ describe('FormFieldComponent accessible name', () => {
     expect(unnamed).toEqual([]);
   });
 });
+
+describe('FormFieldComponent full value', () => {
+  it('shows the whole value on hover, for an address longer than its box', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    const address = 'VEREDA LA PALMA KILOMETRO 12 VIA AL MAR FRENTE A LA ESCUELA RURAL';
+    fixture.componentRef.setInput('field', { key: 'address', label: 'Dirección', type: 'text', readonly: true, value: address });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('input')!.title).toBe(address);
+  });
+});
+
+describe('FormFieldComponent liveThousands', () => {
+  it('shows thousand separators while typing a value and passes on only the digits', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'amount', label: 'Vr. Suministro', type: 'currency', liveThousands: true });
+    fixture.detectChanges();
+    const emitted: (string | number)[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitted.push(v));
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+
+    input.value = '140000';
+    input.dispatchEvent(new Event('input'));
+
+    expect(input.value).toBe('140.000');
+    expect(emitted.at(-1)).toBe('140000');
+
+    // El valor que vuelve del padre (solo digitos) se sigue viendo con puntos mientras es editable.
+    fixture.componentRef.setInput('field', { key: 'amount', label: 'Vr. Suministro', type: 'currency', liveThousands: true, value: '1400000' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.inputValue).toBe('1.400.000');
+  });
+});
+
+describe('FormFieldComponent fast typing', () => {
+  it('a late echo of what was typed does not overwrite the following digits (Asignar Cupo, prueba del 9-nov)', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '' };
+    component.ngOnChanges();
+    component.onFocus();
+
+    component.onInput('4');
+    component.onInput('40');
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '4' };
+    component.ngOnChanges();
+
+    expect(component.inputValue).toBe('40');
+
+    // Un valor distinto que manda la pantalla (p. ej. al limpiar) si se aplica.
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '' };
+    component.ngOnChanges();
+    expect(component.inputValue).toBe('');
+  });
+});

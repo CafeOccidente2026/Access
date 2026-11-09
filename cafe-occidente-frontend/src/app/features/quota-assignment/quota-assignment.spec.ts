@@ -111,6 +111,29 @@ describe('QuotaAssignmentComponent', () => {
     expect(component.savedMessage()).toBe('Cupo guardado correctamente.');
   });
 
+  it('typing in Cupo keeps the same box and its focus, digit after digit (prueba del 9-nov)', () => {
+    setup();
+    const fixture = TestBed.createComponent(QuotaAssignmentComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    fixture.componentInstance.onAnnouncementChange(label);
+    fixture.detectChanges();
+    const box = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('[data-field-key=quota]')!;
+    const first = box();
+    first.focus();
+
+    for (const typed of ['4', '40', '400', '4000']) {
+      box().value = typed;
+      box().dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    expect(box()).toBe(first);
+    expect(document.activeElement).toBe(first);
+    expect(first.value).toBe('4000');
+    fixture.nativeElement.remove();
+  });
+
   it('two clicks on Guardar send a single request', () => {
     setup();
     const pending = new Subject<typeof saved>();

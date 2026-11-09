@@ -84,6 +84,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   let createSpy: ReturnType<typeof vi.fn>;
   let qualitySpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
+  let focusSpy: ReturnType<typeof vi.fn>;
 
   function setup(grower: Grower) {
     previewSpy = vi.fn(() => of(calculation));
@@ -125,6 +126,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       ],
     });
     component = TestBed.createComponent(DryCoffeeFormComponent).componentInstance;
+    focusSpy = vi.fn();
+    (component as any).focusField = focusSpy;
   }
 
   function fillCommon(): void {
@@ -185,6 +188,22 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.onFieldCommitted('cellphone');
     expect((component as any).locked.has('cellphone')).toBe(true);
     expect(component.model['cellphone']).toBe('3001112233');
+  });
+
+  it('calculates when Celular is filled in last, after the discounts (prueba del 9-nov)', () => {
+    setup(growerWithoutPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    expect(previewSpy).not.toHaveBeenCalled();
+
+    component.model['cellphone'] = '3001234567';
+    component.onFieldCommitted('cellphone');
+
+    expect(previewSpy).toHaveBeenCalledTimes(1);
   });
 
   it('locks address/cellphone/idType normally when the migrated grower data is complete', () => {
@@ -278,10 +297,18 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
     expect(component.errorMessage()).toBe(message);
+    // Prueba del 9-nov (punto 9): el foco no se mueve detras del aviso; se vacia y se vuelve al Aceptar.
+    expect(focusSpy).not.toHaveBeenCalledWith('totalStoredWeight');
+
+    component.dismissError();
+
     expect(component.model['totalStoredWeight']).toBe('');
     expect(component.model['totalHuskWeight']).toBe('');
+    expect(component.model['healthyStoredWeight']).toBe('');
+    expect(component.qualityCalc()).toEqual({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
     expect((component as any).locked.has('totalStoredWeight')).toBe(false);
     expect((component as any).locked.has('totalHuskWeight')).toBe(false);
+    expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
   });
 
   it('Q15: if the save is rejected over the threshold, the sample weights are cleared too', () => {
@@ -299,7 +326,11 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.print();
 
     expect(component.errorMessage()).toBe(message);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    component.dismissError();
     expect(component.model['totalStoredWeight']).toBe('');
+    expect(component.calc()).toBeNull();
+    expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
   });
 
   it('a failed weight that is not the threshold keeps the generic message', () => {
