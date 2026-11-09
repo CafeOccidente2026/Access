@@ -85,3 +85,31 @@ describe('PaymentPanelComponent', () => {
   });
 });
 
+
+describe('PaymentPanelComponent completed (prueba del 9-nov, punto 8)', () => {
+  function render(net: number) {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('definition', definition);
+    fixture.componentRef.setInput('netToPay', net);
+    fixture.detectChanges();
+    const completed: number[] = [];
+    fixture.componentInstance.completed.subscribe(() => completed.push(1));
+    const cash = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('[data-field-key="payCash"]')!;
+    return { fixture, completed, cash };
+  }
+
+  it('Enter on Efectivo with the whole net says the payment is complete, as Access sent the focus to Imprimir', () => {
+    const { completed, cash } = render(1000);
+    cash.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(completed).toHaveLength(1);
+  });
+
+  it('Enter on Efectivo with less than the net goes on to Cheque and is not complete yet', () => {
+    const { fixture, completed, cash } = render(1000);
+    cash.value = '600';
+    cash.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    cash.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(completed).toHaveLength(0);
+  });
+});
