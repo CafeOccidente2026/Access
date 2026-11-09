@@ -24,7 +24,7 @@
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
-        { "key": "amount", "label": "Vr. Suministro", "type": "currency", "required": true },
+        { "key": "amount", "label": "Vr. Suministro", "type": "currency", "liveThousands": true, "required": true },
         { "key": "paymentMethod", "label": "Forma de Pago", "type": "select", "options": ["EFECTIVO", "CHEQUE"], "required": true },
         { "key": "checkNumber", "label": "Cheque", "type": "text", "digitsOnly": true }
       ]
@@ -42,7 +42,7 @@
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
-        { "key": "amount", "label": "Valor", "type": "currency", "required": true }
+        { "key": "amount", "label": "Valor", "type": "currency", "liveThousands": true, "required": true }
       ]
     },
     "pettyCash": {
@@ -57,7 +57,7 @@
         { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
-        { "key": "amount", "label": "Vr. Suministro", "type": "currency", "required": true },
+        { "key": "amount", "label": "Vr. Suministro", "type": "currency", "liveThousands": true, "required": true },
         { "key": "paymentMethod", "label": "Forma de Pago", "type": "text", "readonly": true, "value": "EFECTIVO" }
       ]
     },
@@ -73,7 +73,7 @@
         { "key": "fundCode", "label": "Fondo", "type": "text", "readonly": true, "value": "RP" },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
-        { "key": "amount", "label": "Valor", "type": "currency", "required": true }
+        { "key": "amount", "label": "Valor", "type": "currency", "liveThousands": true, "required": true }
       ]
     },
     "supply": {
@@ -89,7 +89,7 @@
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "defaultToday": true },
-        { "key": "amount", "label": "Valor Suministro", "type": "currency", "required": true }
+        { "key": "amount", "label": "Valor Suministro", "type": "currency", "liveThousands": true, "required": true }
       ]
     },
     "issuedCheck": {
@@ -105,7 +105,7 @@
         { "key": "fundCode", "label": "Fondo", "type": "select", "options": ["LF", "RP"], "required": true },
         { "key": "detail", "label": "Detalle", "type": "text" },
         { "key": "entryDate", "label": "Fecha", "type": "date", "readonly": true, "defaultToday": true },
-        { "key": "amount", "label": "Valor Cheque", "type": "currency", "required": true },
+        { "key": "amount", "label": "Valor Cheque", "type": "currency", "liveThousands": true, "required": true },
         { "key": "checkNumber", "label": "Cheque", "type": "text", "digitsOnly": true, "required": true }
       ]
     },
