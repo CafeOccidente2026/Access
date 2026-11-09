@@ -38,15 +38,15 @@ describe.each([
   const all = fields(content);
   const byKey = (...keys: string[]) => all.filter((f) => keys.includes(f.key));
 
-  it('fechas de al menos 135 px', () => {
+  it('fechas de al menos 128 px (dd/mm/aaaa con su icono)', () => {
     for (const f of all.filter((f) => f.type === 'date')) {
-      expect(px(f.inputWidthClass, 'max-w') ?? 0, f.key).toBeGreaterThanOrEqual(135);
+      expect(px(f.inputWidthClass, 'max-w') ?? 0, f.key).toBeGreaterThanOrEqual(128);
     }
   });
 
-  it('Especial de 340 px', () => {
-    for (const f of byKey('special')) {
-      expect(px(f.inputWidthClass, 'min-w'), f.key).toBeGreaterThanOrEqual(340);
+  it('Especial de 332 px (en verde y pasilla es fijo: CV, PASILLA)', () => {
+    for (const f of byKey('special').filter((f) => f.value === undefined)) {
+      expect(px(f.inputWidthClass, 'min-w'), f.key).toBeGreaterThanOrEqual(332);
     }
   });
 

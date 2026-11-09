@@ -133,3 +133,13 @@ describe('FormFieldComponent accessible name', () => {
     expect(unnamed).toEqual([]);
   });
 });
+
+describe('FormFieldComponent full value', () => {
+  it('shows the whole value on hover, for an address longer than its box', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    const address = 'VEREDA LA PALMA KILOMETRO 12 VIA AL MAR FRENTE A LA ESCUELA RURAL';
+    fixture.componentRef.setInput('field', { key: 'address', label: 'Dirección', type: 'text', readonly: true, value: address });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('input')!.title).toBe(address);
+  });
+});
