@@ -190,6 +190,22 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     expect(component.model['cellphone']).toBe('3001112233');
   });
 
+  it('calculates when Celular is filled in last, after the discounts (prueba del 9-nov)', () => {
+    setup(growerWithoutPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    expect(previewSpy).not.toHaveBeenCalled();
+
+    component.model['cellphone'] = '3001234567';
+    component.onFieldCommitted('cellphone');
+
+    expect(previewSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('locks address/cellphone/idType normally when the migrated grower data is complete', () => {
     setup(growerWithPhone);
     component.model['fund'] = 'RP';
