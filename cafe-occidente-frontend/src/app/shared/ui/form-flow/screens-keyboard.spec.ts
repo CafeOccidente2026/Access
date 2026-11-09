@@ -14,7 +14,6 @@ const SCREENS: [string, number][] = [
   ['future-report/future-report.html', 1],
   ['date-range-dialog/date-range-dialog.html', 1],
   ['history/history.html', 1],
-  ['permissions/permissions.html', 1],
   ['inventory-report/inventory-report.html', 1],
   ['future-restore/future-restore.html', 1],
   ['remission-reprint/remission-reprint.html', 1],
@@ -32,7 +31,8 @@ describe('pantallas con teclado de formulario', () => {
     expect(count(html, 'data-flow-submit'), 'data-flow-submit').toBeGreaterThanOrEqual(blocks);
   });
 
-  it('inventory-consulta: filtro sin boton, abre con el foco en el filtro', () => {
-    expect(readFileSync('src/app/features/inventory-consulta/inventory-consulta.html', 'utf-8')).toContain('appFormFlow');
+  // Sin boton de Enter: Inventario filtra al escribir; en Permisos despues del usuario vienen casillas.
+  it.each(['inventory-consulta/inventory-consulta.html', 'permissions/permissions.html'])('%s: abre con el foco en el primer campo', (path) => {
+    expect(readFileSync(`src/app/features/${path}`, 'utf-8')).toContain('appFormFlow');
   });
 });
