@@ -468,6 +468,12 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       editable.additionalDiscountFields = original;
     }
   });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Fondo', () => {
+    setup(growerWithPhone);
+    component.reset();
+    expect(focusSpy).toHaveBeenLastCalledWith('fund');
+  });
 });
 
 describe('purchase-form-dry.json', () => {

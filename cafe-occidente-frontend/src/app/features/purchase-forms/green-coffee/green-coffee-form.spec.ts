@@ -276,4 +276,12 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     component.onFieldCommitted('cellphone');
     expect(preview).toHaveBeenCalledTimes(1);
   });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Cédula', () => {
+    setup();
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.reset();
+    expect(focus).toHaveBeenLastCalledWith('idPart1');
+  });
 });

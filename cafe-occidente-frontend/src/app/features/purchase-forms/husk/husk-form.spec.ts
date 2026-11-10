@@ -306,4 +306,12 @@ describe('HuskFormComponent - gates de captura', () => {
     fillEverythingAfterGrower();
     expect(component.errorMessage()).toBe('Digite el celular del vendedor.');
   });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Cédula', () => {
+    setup(growerWithPhone);
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.reset();
+    expect(focus).toHaveBeenLastCalledWith('idPart1');
+  });
 });
