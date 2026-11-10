@@ -124,6 +124,44 @@ docker compose down -v
 
 ---
 
+## 4. Despliegue (producción)
+
+Todo está en `deploy/`. Corre en cualquier Linux con Docker y Docker Compose. Solo Caddy queda
+expuesto (80 y 443): sirve la web, manda `/api` al backend y hace el HTTPS. La base y el backend
+no publican puertos.
+
+**Requisitos:** Docker, el repositorio clonado y, con dominio público, los puertos 80 y 443
+abiertos y el DNS apuntando al servidor.
+
+**Primer arranque:**
+```bash
+cd deploy
+cp .env.example .env      # llenar DOMINIO, TLS_MODO, claves y JWT_SECRET (no se sube a git)
+docker compose -f docker-compose.prod.yml up -d --build
+```
+Flyway crea el esquema al arrancar el backend. Con `TLS_MODO=auto` Caddy pide el certificado a
+Let's Encrypt; con `TLS_MODO=interno` (intranet sin dominio) usa uno propio y el navegador pide
+aceptarlo la primera vez.
+
+**Actualizar:**
+```bash
+git pull && cd deploy && docker compose -f docker-compose.prod.yml up -d --build
+```
+
+**Respaldos:** el servicio `backup` hace un `pg_dump -Fc` todos los días a las 23:00 (hora de
+Colombia) en `CARPETA_RESPALDOS` (por defecto `deploy/respaldos/`) y borra los de más de
+`RESPALDO_DIAS` días. Esa carpeta se debe copiar fuera del servidor. Respaldo manual:
+```bash
+docker compose -f docker-compose.prod.yml exec backup sh /respaldo.sh ahora
+```
+
+**Restaurar** (borra la base actual; pide escribir `SI`):
+```bash
+./restaurar.sh respaldos/cafeoccidente_AAAAMMDD_HHMM.dump
+```
+
+---
+
 ## Estado actual del proyecto
 
 ### Frontend
