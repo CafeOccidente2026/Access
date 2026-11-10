@@ -111,7 +111,7 @@ class PurchasePaymentsIntegrationTest {
     }
 
     private static PurchasePaymentRequest mixed(BigDecimal net) {
-        return new PurchasePaymentRequest(net.subtract(CHECK).subtract(TRANSFER).subtract(CARD), CHECK, TRANSFER, CARD, "4321");
+        return new PurchasePaymentRequest(net.subtract(CHECK).subtract(TRANSFER).subtract(CARD), CHECK, TRANSFER, CARD, "0548");
     }
 
     private DryCoffeePurchaseRequest dryRequest(PurchasePaymentRequest payment) {
@@ -163,6 +163,11 @@ class PurchasePaymentsIntegrationTest {
         assertThat(card).isEqualByComparingTo(CARD);
         // Sin doble conteo: Caja + Suministros + cuenta por cobrar = neto a pagar.
         assertThat(cashBalance.add(supplyOut).add(card)).isEqualByComparingTo(saved.netToPay());
+        // El cheque son 4 digitos con sus ceros (V25): 0548, nunca 548, en la tabla y en el informe.
+        assertThat(jdbc.queryForObject("SELECT numero_cheque FROM formas_pago_compras WHERE origen = 'DRY'"
+                + " AND origen_id = ?", String.class, saved.id())).isEqualTo("0548");
+        assertThat(supply).filteredOn(l -> l.paymentMethod().equals("CHEQUE"))
+                .singleElement().satisfies(l -> assertThat(l.checkNumber()).isEqualTo("0548"));
     }
 
     @Test
