@@ -65,7 +65,7 @@ class SuppliesReportServiceImplTest {
         return e;
     }
 
-    private static PurchasePayment purchase(long id, LocalDate date, String net, String method, Integer check) {
+    private static PurchasePayment purchase(long id, LocalDate date, String net, String method, String check) {
         return new PurchasePayment("DRY", id, 43000 + (int) id, 4L, "EL TAMBO", "RP", date, "87304051",
                 new BigDecimal(net), method, check, Instant.ofEpochSecond(id));
     }
@@ -83,7 +83,7 @@ class SuppliesReportServiceImplTest {
         // Compra en efectivo (200) y con cheque (400, cheque 5377)
         when(reads.purchasePayments(any(), any(), any())).thenReturn(List.of(
                 purchase(5, DAY1, "200", "EFECTIVO", null),
-                purchase(6, DAY2, "400", "CHEQUE", 5377)));
+                purchase(6, DAY2, "400", "CHEQUE", "5377")));
         when(reads.growerNames(anyCollection())).thenReturn(List.of(new GrowerName("87304051", "WILSON TOBIAS", "LEGARDA")));
     }
 
@@ -136,7 +136,7 @@ class SuppliesReportServiceImplTest {
         when(reads.purchasePayments(any(), any(), any())).thenReturn(List.of(
                 purchase(5, DAY1, "200", "EFECTIVO", null),
                 purchase(7, DAY1, "0", "EFECTIVO", null),
-                purchase(8, DAY2, "0.00", "CHEQUE", 5378)));
+                purchase(8, DAY2, "0.00", "CHEQUE", "5378")));
 
         assertThat(service.cashMovement(null, "RP", TODAY)).extracting(SuppliesReportRow::transactionId)
                 .containsExactly("T1", "43005", "T2");
