@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { API_BASE_URL } from '../../core/config/api.config';
 import { AnnulmentCandidate } from '../../core/models/purchase-annulment.model';
@@ -166,5 +166,36 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     expect(accept.disabled).toBe(true);
     http.expectOne({ method: 'POST', url: `${URL}/DRY/1` }).flush(annulled);
     expect(component.saving()).toBe(false);
+  });
+
+  it('prueba del 10-nov: only with the keyboard, the found purchase puts the focus on Anular and then on Aceptar', () => {
+    vi.useFakeTimers();
+    const { fixture, component, el } = render();
+    document.body.appendChild(el);
+    component.search(new Event('submit'), '43388');
+    http.expectOne(`${URL}?invoiceNumber=43388`).flush([candidate]);
+    fixture.detectChanges();
+    vi.runAllTimers();
+    expect(document.activeElement?.textContent?.trim()).toBe(data.annulLabel);
+
+    askToAnnul(fixture, el);
+    vi.runAllTimers();
+    expect(document.activeElement).toBe(el.querySelector('[data-testid="accept"]'));
+    vi.useRealTimers();
+    el.remove();
+  });
+
+  it('a purchase closed in Access puts the focus on the Aceptar of its message', () => {
+    vi.useFakeTimers();
+    const { fixture, component, el } = render();
+    document.body.appendChild(el);
+    showFirst(component, { ...candidate, annulmentLocked: true });
+    fixture.detectChanges();
+    component.startAnnul();
+    fixture.detectChanges();
+    vi.runAllTimers();
+    expect(document.activeElement?.textContent?.trim()).toBe(data.acceptLabel);
+    vi.useRealTimers();
+    el.remove();
   });
 });
