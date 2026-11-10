@@ -105,6 +105,8 @@
     "invoiceError": "No se pudo generar la factura",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
     "closeConfirm": "Cerrar sin guardar",
-    "closeCancel": "Seguir en el formulario"
+    "closeCancel": "Seguir en el formulario",
+    "cellphoneMissing": "Este vendedor no tiene celular registrado. Digítelo para continuar.",
+    "cooperativeDiscountLabel": "Descuento Coop"
   }
 }
