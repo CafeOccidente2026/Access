@@ -365,6 +365,8 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     this.tick.update((n) => n + 1);
+    // Prueba del 10-nov: lista para la siguiente compra solo con teclado (tras Imprimir o Escape).
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {
