@@ -36,6 +36,8 @@ describe('HuskFormComponent - gates de captura', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
@@ -262,5 +264,46 @@ describe('HuskFormComponent - gates de captura', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  it('prueba del 10-nov: without a cellphone it warns, sends the focus to Celular and calculates once it is typed', () => {
+    setup(growerWithoutPhone);
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(focus).not.toHaveBeenCalledWith('almondWeight');
+
+    component.dismissError();
+    expect(focus).toHaveBeenLastCalledWith('cellphone');
+
+    fillEverythingAfterGrower();
+    expect(previewSpy).not.toHaveBeenCalled();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(previewSpy.mock.calls[0][0].cellphone).toBe('3001112233');
+  });
+
+  it('after the cellphone the focus goes on to the first field still to fill', () => {
+    setup(growerWithoutPhone);
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    component.dismissError();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(focus).toHaveBeenLastCalledWith('almondWeight');
+  });
+
+  it('a rejected preview shows the message of the server, not the generic one', () => {
+    setup(growerWithPhone);
+    previewSpy.mockReturnValue(throwError(() => ({ error: { message: 'Digite el celular del vendedor.' } })));
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    expect(component.errorMessage()).toBe('Digite el celular del vendedor.');
   });
 });
