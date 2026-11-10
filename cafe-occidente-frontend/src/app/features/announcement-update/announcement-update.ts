@@ -9,6 +9,7 @@ import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
+import { changedByKeyboard } from '../../shared/utils/select-keys';
 import { AnnouncementUpdateContent, TypeRow } from './announcement-update.model';
 
 type Field = 'fundId' | 'basePriceLoad';
@@ -64,10 +65,10 @@ export class AnnouncementUpdateComponent {
     });
   }
 
-  /** Prueba del 9-nov (segunda): al elegir el Fondo el foco pasa solo al precio. */
+  /** Prueba del 9-nov (segunda): al elegir el Fondo con el mouse el foco pasa al precio; con la flecha se queda. */
   onFundChange(): void {
     this.rows.set(null);
-    if (this.fundId != null) {
+    if (this.fundId != null && !changedByKeyboard(this.elementRef.nativeElement.querySelector('[data-field-key="fundId"]'))) {
       this.focusField('basePriceLoad');
     }
   }

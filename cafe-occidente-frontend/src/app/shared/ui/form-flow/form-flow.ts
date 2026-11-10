@@ -1,4 +1,5 @@
 import { AfterViewInit, Directive, ElementRef, HostListener, Input, OnDestroy, inject } from '@angular/core';
+import { changedByKeyboard } from '../../utils/select-keys';
 
 const FIELDS = 'input:not([type=hidden]):not([type=checkbox]), select, textarea';
 
@@ -65,11 +66,11 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     setTimeout(() => this.next(target, false));
   }
 
-  /** Lista nativa: al cambiar la opcion pasa al siguiente campo. */
+  /** Lista nativa: elegir con el mouse pasa al siguiente campo; con la flecha solo cambia (decision del 10-nov). */
   @HostListener('change', ['$event'])
   onChange(event: Event): void {
     const target = event.target as HTMLElement;
-    if (target.tagName === 'SELECT') {
+    if (target.tagName === 'SELECT' && !changedByKeyboard(target)) {
       setTimeout(() => this.next(target, false));
     }
   }
