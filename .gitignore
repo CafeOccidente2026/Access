@@ -57,3 +57,6 @@ docs/
 .vscode/
 requerimientos_del_sistema
 __pycache__/
+
+# Respaldos de produccion (datos reales)
+deploy/respaldos/
