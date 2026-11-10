@@ -1,0 +1,72 @@
+# Produccion: solo Caddy (web) queda expuesto. La base y el backend no publican puertos.
+# Uso, desde deploy/: docker compose -f docker-compose.prod.yml up -d --build  (con deploy/.env, ver .env.example)
+name: cafeoccidente-prod
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - datos:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ../cafeoccidente-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+  web:
+    build: ../cafe-occidente-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      DOMINIO: ${DOMINIO}
+      TLS_MODO: ${TLS_MODO:-auto}
+    ports:
+      - "${PUERTO_HTTP:-80}:80"
+      - "${PUERTO_HTTPS:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-datos:/data
+      - caddy-config:/config
+
+  backup:
+    image: postgres:18
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: America/Bogota
+      PGHOST: postgres
+      PGDATABASE: ${DB_NAME}
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+      RESPALDO_DIAS: ${RESPALDO_DIAS:-30}
+    volumes:
+      - ./respaldo.sh:/respaldo.sh:ro
+      - ${CARPETA_RESPALDOS:-./respaldos}:/respaldos
+    entrypoint: ["sh", "/respaldo.sh"]
+
+volumes:
+  datos:
+  caddy-datos:
+  caddy-config:

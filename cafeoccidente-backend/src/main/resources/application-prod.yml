@@ -1,20 +1,7 @@
-spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
-
-jwt:
-  secret: ${JWT_SECRET}
-
-app:
-  admin:
-    username: ${ADMIN_USERNAME}
-    password: ${ADMIN_PASSWORD}
-  cors:
-    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:4200}
+# Detras de Caddy: la web y /api salen del mismo origen (sin CORS).
+server:
+  # Usa X-Forwarded-Proto/Host de Caddy para saber que la peticion llego por HTTPS.
+  forward-headers-strategy: framework
+  error:
+    include-stacktrace: never
+    include-message: never
