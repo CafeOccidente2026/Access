@@ -1,0 +1,31 @@
+# TLS_MODO=auto: certificado de Let's Encrypt (dominio publico con los puertos 80 y 443 abiertos).
+# TLS_MODO=interno: certificado propio de Caddy (intranet sin dominio publico).
+(tls_auto) {
+}
+(tls_interno) {
+	tls internal
+}
+
+{$DOMINIO} {
+	import tls_{$TLS_MODO}
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# Angular maneja sus rutas: lo que no es un archivo devuelve index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
