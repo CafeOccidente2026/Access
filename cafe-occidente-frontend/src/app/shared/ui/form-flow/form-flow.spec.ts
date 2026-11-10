@@ -81,6 +81,7 @@ describe('appFormFlow con listas (prueba del 9-nov, segunda)', () => {
     const fixture = TestBed.createComponent(Host);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
+    vi.advanceTimersByTime(0); // foco inicial de la pantalla
     const select = fixture.nativeElement.querySelector('#s') as HTMLElement;
 
     select.focus();

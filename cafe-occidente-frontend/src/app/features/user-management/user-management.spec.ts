@@ -199,6 +199,7 @@ describe('UserManagementComponent', () => {
     const fixture = TestBed.createComponent(UserManagementComponent);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve)); // foco inicial en Usuario
     const select = (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>('[data-field-key="roleId"]')!;
     select.focus();
 
