@@ -195,6 +195,26 @@ describe('UserManagementComponent', () => {
     fixture.nativeElement.remove();
   });
 
+  it('decision del 10-nov: an arrow on Rol only changes it; the focus stays until Enter', async () => {
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const select = (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>('[data-field-key="roleId"]')!;
+    select.focus();
+
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    select.value = select.options[1].value;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement).toBe(select);
+
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement?.getAttribute('data-field-key')).toBe('agencyId');
+    fixture.nativeElement.remove();
+  });
+
   it('creating an agency is optional: an empty name does nothing', () => {
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
     component.createAgency();

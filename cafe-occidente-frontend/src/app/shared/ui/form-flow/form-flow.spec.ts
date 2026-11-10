@@ -75,6 +75,31 @@ describe('appFormFlow con listas (prueba del 9-nov, segunda)', () => {
     vi.useRealTimers();
     fixture.nativeElement.remove();
   });
+
+  it('decision del 10-nov: an arrow only changes the option and keeps the focus; Enter moves on', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(Host);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector('#s') as HTMLElement;
+
+    select.focus();
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement).toBe(select);
+
+    enter(select);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#d'));
+
+    select.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    select.focus();
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#d'));
+    vi.useRealTimers();
+    fixture.nativeElement.remove();
+  });
 });
 
 @Component({

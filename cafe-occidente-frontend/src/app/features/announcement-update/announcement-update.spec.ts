@@ -76,6 +76,23 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(document.activeElement).toBe(field(el, 'basePriceLoad'));
   });
 
+  it('decision del 10-nov: an arrow on Fondo only changes it; the focus stays until Enter', () => {
+    const { fixture, el } = render();
+    const select = field(el, 'fundId') as HTMLSelectElement;
+    select.focus();
+
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    select.value = select.options[1].value;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(select);
+
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    vi.runOnlyPendingTimers();
+    expect(document.activeElement).toBe(field(el, 'basePriceLoad'));
+  });
+
   it('RN-08.1: the mouse cannot skip an empty Fondo', () => {
     const { component, el } = render();
     component.onFocus('basePriceLoad');
