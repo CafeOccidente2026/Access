@@ -43,6 +43,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
@@ -424,6 +426,47 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.model['idType'] = 'S';
     component.onFieldCommitted('special');
     expect(viewField('associated').value).toBe('ASOCIADO');
+  });
+  it('prueba del 10-nov: without a cellphone it warns, sends the focus to Celular and then on to Especial', () => {
+    setup(growerWithoutPhone);
+    component.model['fund'] = 'RP';
+    component.onFieldCommitted('fund');
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(focusSpy).not.toHaveBeenCalledWith('special');
+
+    component.dismissError();
+    expect(focusSpy).toHaveBeenLastCalledWith('cellphone');
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(focusSpy).toHaveBeenLastCalledWith('special');
+  });
+
+  it('a grower with a cellphone goes straight on to Especial, without a warning', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    expect(component.errorMessage()).toBeNull();
+    component.dismissError();
+    expect(focusSpy).not.toHaveBeenCalledWith('cellphone');
+  });
+
+  it('the contribution says Descuento Coop for a type C grower (from the JSON)', () => {
+    const editable = content as { additionalDiscountFields?: PurchaseFormContent['additionalDiscountFields'] };
+    const original = editable.additionalDiscountFields;
+    editable.additionalDiscountFields = [
+      { key: 'contribution', label: 'Aporte Socio', type: 'currency' },
+      { key: 'withholding', label: 'Retefuente', type: 'currency' },
+    ];
+    try {
+      setup(growerWithPhone);
+      component.model['idPart1'] = growerWithPhone.idNumber;
+      component.onFieldCommitted('idPart1');
+      const label = component.viewContent()?.additionalDiscountFields?.find((f) => f.key === 'contribution')?.label;
+      expect(label).toBe('Descuento Coop');
+    } finally {
+      editable.additionalDiscountFields = original;
+    }
   });
 });
 
