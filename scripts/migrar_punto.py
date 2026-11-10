@@ -839,7 +839,7 @@ def load_purchase_payment_splits(cur, agency_id, desde):
         if sum(parts) != purchase[0]:
             note_discard("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[0])))
             continue
-        splits.append((purchase[2], purchase[1], *parts, parse_int(s(row, "numcheque"), None) or None))
+        splits.append((purchase[2], purchase[1], *parts, cheque_text(s(row, "numcheque"))))
     psycopg2.extras.execute_values(
         cur,
         """
