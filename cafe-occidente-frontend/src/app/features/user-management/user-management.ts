@@ -36,6 +36,7 @@ import { RoleService } from '../../core/services/role.service';
 import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { UserManagementContent } from './user-management.model';
+import { changedByKeyboard } from '../../shared/utils/select-keys';
 
 /** Pantalla ADMIN: alta de usuarios (HU-08), alta de agencias (HU-09) y edicion de usuarios (fase 3, C4). */
 @Component({
@@ -112,6 +113,9 @@ export class UserManagementComponent {
   /** Prueba del 9-nov (segunda): al elegir en una lista pasa al siguiente campo; despues de Agencia, a Crear Usuario
    *  (sin crear: eso lo hace Enter). */
   onChosen(field: string): void {
+    if (changedByKeyboard(this.elementRef.nativeElement.querySelector(`[data-field-key="${field}"]`))) {
+      return; // con la flecha solo cambia (decision del 10-nov)
+    }
     const next = FOCUS_ORDER[FOCUS_ORDER.indexOf(field) + 1];
     if (next) {
       this.focusField(next);
