@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AnnulmentCandidate, AnnulmentDirection } from '../../core/models/purchase-annulment.model';
@@ -68,6 +68,7 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
 export class PurchaseAnnulmentComponent {
   private readonly service = inject(PurchaseAnnulmentService);
   private readonly navigation = inject(NavigationService);
+  private readonly host: HTMLElement = inject(ElementRef).nativeElement;
 
   readonly content = toSignal(inject(ContentService).loadJson<PurchaseAnnulmentContent>('purchase-annulment'));
   readonly candidates = signal<AnnulmentCandidate[]>([]);
@@ -94,6 +95,7 @@ export class PurchaseAnnulmentComponent {
         if (!list.length) {
           this.fail(this.content()!.messages.notFound);
         }
+        this.focusButton('annul');
       },
       error: () => this.fail(this.content()!.messages.error),
     });
@@ -125,6 +127,7 @@ export class PurchaseAnnulmentComponent {
   startAnnul(): void {
     this.message.set(null);
     this.prompt.set(this.selected()!.annulmentLocked ? 'locked' : 'confirm');
+    this.focusButton(this.prompt() === 'confirm' ? 'accept' : 'locked-accept');
   }
 
   confirm(): void {
@@ -153,6 +156,11 @@ export class PurchaseAnnulmentComponent {
     this.selected.set(null);
     this.prompt.set(null);
     this.message.set(null);
+  }
+
+  /** Prueba del 10-nov: solo con teclado, el foco va al boton que sigue (Anular, y luego Aceptar de la pregunta). */
+  private focusButton(testId: string): void {
+    setTimeout(() => this.host.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus());
   }
 
   private fail(text: string): void {
