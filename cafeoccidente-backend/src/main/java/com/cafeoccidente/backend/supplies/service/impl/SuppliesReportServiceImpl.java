@@ -240,7 +240,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     private static Line line(PurchasePayment p, BigDecimal inflow, BigDecimal outflow) {
         return new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
                 p.purchaseDate(), p.idNumber(), null, inflow, outflow, p.paymentMethod(),
-                p.checkNumber() == null ? null : String.valueOf(p.checkNumber()), p.createdAt());
+                p.checkNumber(), p.createdAt());
     }
 
     private static SuppliesReportRow row(Line l, GrowerName g, BigDecimal balance) {

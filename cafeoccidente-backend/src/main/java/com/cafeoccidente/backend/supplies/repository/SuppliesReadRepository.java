@@ -33,9 +33,8 @@ public class SuppliesReadRepository {
         String sql = String.join(" UNION ALL ", PURCHASE_TABLES.entrySet().stream()
                 .map(e -> "SELECT '" + e.getKey() + "' AS module, p.id, p.numero_factura, p.agencia_id,"
                         + " a.nombre AS agency_name, f.codigo AS fund_code, p.fecha_compra, p.cedula,"
-                        // En compras check_number es texto; Caja.Cheque en Access era numerico.
-                        + " p.neto_a_pagar, p.forma_pago,"
-                        + " CASE WHEN p.numero_cheque ~ '^[0-9]{1,9}$' THEN CAST(p.numero_cheque AS INTEGER) END AS numero_cheque,"
+                        // El cheque es texto de 4 digitos con sus ceros (V21, V25): no se pasa a numero.
+                        + " p.neto_a_pagar, p.forma_pago, p.numero_cheque,"
                         + " p.creado_en, s.origen_id AS split_id, s.efectivo, s.cheque,"
                         + " s.transferencia, s.datafono, s.numero_cheque AS split_check_number"
                         + " FROM " + e.getValue() + " p JOIN agencias a ON a.id = p.agencia_id"
@@ -61,13 +60,13 @@ public class SuppliesReadRepository {
                     rs.getString("cedula"),
                     rs.getBigDecimal("neto_a_pagar"),
                     rs.getString("forma_pago"),
-                    (Integer) rs.getObject("numero_cheque"),
+                    rs.getString("numero_cheque"),
                     createdAt == null ? null : createdAt.toInstant());
             // Pago mixto migrado de Access: una fila por forma de pago en vez del neto bajo una sola.
             return rs.getObject("split_id") == null ? List.of(payment)
                     : payment.splitInto(rs.getBigDecimal("efectivo"), rs.getBigDecimal("cheque"),
                             rs.getBigDecimal("transferencia"), rs.getBigDecimal("datafono"),
-                            (Integer) rs.getObject("split_check_number"));
+                            rs.getString("split_check_number"));
         });
         return rows.stream().flatMap(List::stream).toList();
     }
