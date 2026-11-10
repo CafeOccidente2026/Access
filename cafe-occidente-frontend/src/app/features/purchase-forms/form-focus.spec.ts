@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { advanceFocus, focusField } from './form-focus';
+import { advanceFocus, focusField, nextPending } from './form-focus';
 
 describe('form-focus: el foco salta solo al siguiente campo', () => {
   let host: HTMLElement;
@@ -48,5 +48,20 @@ describe('form-focus: el foco salta solo al siguiente campo', () => {
     advanceFocus(host, order, 'other');
     vi.runAllTimers();
     expect(document.activeElement).toBe(field('idPart1'));
+  });
+
+  it('prueba del 10-nov (Verde): waits for a field that is painted a moment later', () => {
+    focusField(host, 'late');
+    vi.advanceTimersByTime(0);
+    const late = document.createElement('input');
+    late.dataset['fieldKey'] = 'late';
+    host.appendChild(late);
+    vi.advanceTimersByTime(100);
+    expect(document.activeElement).toBe(late);
+  });
+
+  it('the next pending field is the first of the order not confirmed yet', () => {
+    expect(nextPending(['fund', 'idPart1', 'special'], new Set(['fund', 'idPart1']))).toBe('special');
+    expect(nextPending(['fund'], new Set(['fund']))).toBeUndefined();
   });
 });
