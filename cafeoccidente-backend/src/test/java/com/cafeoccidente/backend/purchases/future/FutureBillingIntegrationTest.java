@@ -19,6 +19,7 @@ import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.math.BigDecimal;
+import java.util.function.Function;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -153,12 +154,42 @@ class FutureBillingIntegrationTest {
     }
 
     @Test
-    void ca2DeliveryAboveTheBalanceOrNetKgAboveTheDeliveryAreRejected() {
+    void ca2DeliveryAboveTheBalanceIsRejected() {
         assertThatThrownBy(() -> bill(SELLER, "RN", future, new BigDecimal("2500.01")))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("supera el saldo");
-        assertThatThrownBy(() -> bill(SELLER, "RN", future, new BigDecimal("999")))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("superan Esta Entrega");
         assertThat(balance()).isEqualByComparingTo("2500");
+    }
+
+    /**
+     * Prueba del 11-nov (punto 9): Kilos Netos no se digita. Con Esta Entrega y Kilos Brutos el servidor pone el
+     * Destare (lo que sobra) y los Netos (la entrega); si los brutos no alcanzan, es una entrega parcial: Netos =
+     * Brutos y Destare 0, y el saldo baja solo en lo entregado. Lo que mande el cliente en Destare se ignora.
+     */
+    @Test
+    void estaEntregaDecidesTheTareAndTheNetKg() {
+        DryCoffeePurchaseResponse over = billGross("305", "300", "50");
+        assertThat(over.tareKg()).isEqualByComparingTo("5");
+        assertThat(over.netKg()).isEqualByComparingTo("300");
+        assertThat(balance()).isEqualByComparingTo("2200");
+
+        DryCoffeePurchaseResponse exact = billGross("300", "300", "0");
+        assertThat(exact.tareKg()).isZero();
+        assertThat(exact.netKg()).isEqualByComparingTo("300");
+        assertThat(balance()).isEqualByComparingTo("1900");
+
+        DryCoffeePurchaseResponse partial = billGross("250", "300", "0");
+        assertThat(partial.tareKg()).isZero();
+        assertThat(partial.netKg()).isEqualByComparingTo("250");
+        assertThat(balance()).isEqualByComparingTo("1650");
+    }
+
+    private DryCoffeePurchaseResponse billGross(String gross, String delivery, String typedTare) {
+        Function<PurchasePaymentRequest, DryCoffeePurchaseRequest> request = payment -> new DryCoffeePurchaseRequest(rp, "RN",
+                SELLER, null, null, 5, new BigDecimal(gross), new BigDecimal(typedTare), new BigDecimal("200"),
+                new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, payment, null,
+                new BigDecimal(delivery), future);
+        BigDecimal net = dry.preview(request.apply(null)).netToPay();
+        return dry.create(request.apply(new PurchasePaymentRequest(net, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null)));
     }
 
     @Test
