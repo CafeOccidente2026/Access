@@ -16,6 +16,7 @@ import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-inv
 import { advanceFocus, focusField } from '../form-focus';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { UnsavedCloseForm } from '../unsaved-close';
+import { serverError } from '../../../shared/utils/server-error';
 
 type FormModel = Record<string, string>;
 
@@ -213,9 +214,9 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
         }
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.unlockSpecial();
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
@@ -242,8 +243,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   /** Extrae el mensaje real del backend (fallecido, no pertenece a programa) en vez de taparlo con
    *  un mensaje generico - esas validaciones viven solo en el backend. */
   private backendErrorMessage(err: unknown): string | null {
-    const message = (err as { error?: { message?: string } })?.error?.message;
-    return message ?? this.messages()?.saveError ?? null;
+    return serverError(err, this.messages()?.saveError);
   }
 
   private buildRequest(): FuturePurchaseRequest | null {

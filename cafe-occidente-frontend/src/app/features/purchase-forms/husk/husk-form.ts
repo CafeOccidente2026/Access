@@ -21,6 +21,7 @@ import { hasRequired, saveAndPrint } from '../purchase-print';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
+import { serverError } from '../../../shared/utils/server-error';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -196,8 +197,8 @@ export class HuskFormComponent extends UnsavedCloseForm {
         }
         this.tick.update((n) => n + 1);
       },
-      error: () => {
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+      error: (err) => {
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -210,9 +211,9 @@ export class HuskFormComponent extends UnsavedCloseForm {
         this.announcementInfo.set(info);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.announcementInfo.set(null);
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
@@ -270,7 +271,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       },
       error: (err) => {
         this.calc.set(null);
-        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });

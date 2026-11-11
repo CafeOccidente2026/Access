@@ -15,24 +15,40 @@ describe('saveAndPrint', () => {
     };
   }
 
-  it('by default a failed save logs the detail, shows the screen saveError and repaints, without resetting', () => {
+  it('by default a failed save shows the reason of the server (prueba del 11-nov), logs it and repaints, without resetting', () => {
     const f = form();
     const refresh = vi.fn();
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     saveAndPrint(f, {
       name: 'Pasilla',
-      save: () => throwError(() => ({ error: { message: '400' } })),
+      save: () => throwError(() => ({ error: { message: 'Falta o está mal: Kilos Brutos' } })),
       invoice: () => ({ content: [] }),
-      messages: () => ({ saveError: 'No se pudo registrar la compra. Verifique los datos.' }),
+      messages: () => ({ saveError: 'No se pudo registrar la compra.' }),
       refresh,
     });
 
-    expect(log).toHaveBeenCalledWith('Error al registrar compra Pasilla:', { message: '400' });
-    expect(f.errorMessage()).toBe('No se pudo registrar la compra. Verifique los datos.');
+    expect(log).toHaveBeenCalledWith('Error al registrar compra Pasilla:', { message: 'Falta o está mal: Kilos Brutos' });
+    expect(f.errorMessage()).toBe('Falta o está mal: Kilos Brutos');
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(f.reset).not.toHaveBeenCalled();
     expect(f.saving()).toBe(false);
+    log.mockRestore();
+  });
+
+  it('without a reason from the server it shows the text of the screen', () => {
+    const f = form();
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    saveAndPrint(f, {
+      name: 'Pasilla',
+      save: () => throwError(() => new Error('sin respuesta')),
+      invoice: () => ({ content: [] }),
+      messages: () => ({ saveError: 'No se pudo registrar la compra.' }),
+      refresh: vi.fn(),
+    });
+
+    expect(f.errorMessage()).toBe('No se pudo registrar la compra.');
     log.mockRestore();
   });
 
