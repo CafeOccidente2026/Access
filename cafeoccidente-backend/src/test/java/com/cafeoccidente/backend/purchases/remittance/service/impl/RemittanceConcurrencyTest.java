@@ -192,6 +192,37 @@ class RemittanceConcurrencyTest {
                 Integer.class, AGENCY, principal.getUserId())).isEqualTo(1);
     }
 
+    /** HU-05 (6D1): una correccion que llega mientras la remesa marca la factura espera y despues se rechaza. */
+    @Test
+    void aCorrectionWaitsForTheRemittanceAndThenIsRejected() throws Exception {
+        Long purchase = dryPurchase();
+        CountDownLatch marked = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+
+        CompletableFuture<String> remittance = async(() -> transaction.execute(status -> {
+            String number = remittances.create(request(purchase)).number();
+            marked.countDown();
+            await(release);
+            return number;
+        }));
+        assertThat(marked.await(10, TimeUnit.SECONDS)).isTrue();
+        BigDecimal net = jdbc.queryForObject("SELECT neto_a_pagar FROM compras_cafe_seco WHERE id = ?", BigDecimal.class,
+                purchase);
+        CompletableFuture<Integer> correction = async(() -> dry.correct(purchase, new DryCoffeePurchaseRequest(rp, "RN",
+                SELLER, null, null, 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                new PurchasePaymentRequest(net, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null))).invoiceNumber());
+        Thread.sleep(300);
+        assertThat(correction).isNotDone();
+        release.countDown();
+
+        String number = remittance.get(10, TimeUnit.SECONDS);
+        assertThat(correction).failsWithin(10, TimeUnit.SECONDS).withThrowableOfType(ExecutionException.class)
+                .withCauseInstanceOf(BusinessRuleException.class).withMessageContaining(number);
+        assertThat(jdbc.queryForObject("SELECT corregida FROM compras_cafe_seco WHERE id = ?", Boolean.class, purchase))
+                .isFalse();
+    }
+
     private static void await(CountDownLatch latch) {
         try {
             latch.await(10, TimeUnit.SECONDS);

@@ -18,4 +18,11 @@ public interface PurchaseAnnulmentService {
      * cuenta por cobrar ya no esta PENDIENTE (Q35).
      */
     AnnulmentCandidate annul(Long agencyId, AnnulmentModule module, Long id);
+
+    /**
+     * Bloquea la compra de la agencia hasta el fin de la transaccion y aplica los mismos rechazos que la anulacion
+     * (ademas, si esta en una remesa vigente). Lo usa tambien la correccion (HU-05). {@code lockedMessage}: el aviso
+     * de una compra cerrada en Access.
+     */
+    AnnulmentCandidate lockChangeable(Long agencyId, AnnulmentModule module, Long id, String lockedMessage);
 }

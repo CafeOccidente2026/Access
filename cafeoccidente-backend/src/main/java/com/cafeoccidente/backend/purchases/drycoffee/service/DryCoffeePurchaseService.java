@@ -10,6 +10,12 @@ import java.math.BigDecimal;
 public interface DryCoffeePurchaseService {
     DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request);
 
+    /** HU-05: corrige la compra de la agencia de trabajo sin anularla y con el mismo numero de factura. */
+    DryCoffeePurchaseResponse correct(Long id, DryCoffeePurchaseRequest request);
+
+    /** Vista previa de la correccion: el calculo con el anuncio original, sin guardar. */
+    DryCoffeePurchaseCalculation previewCorrection(Long id, DryCoffeePurchaseRequest request);
+
     DryCoffeePurchaseResponse findById(Long id);
 
 
