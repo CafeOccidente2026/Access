@@ -155,6 +155,39 @@ describe('ControlRecordComponent', () => {
     expect(component.agencyId()).toBe(1);
   });
 
+  it('respuesta del area (11-nov): with the screen granted, the business and green coffee values are read only', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    localStorage.setItem('cafeoccidente.role', 'USUARIO');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco 1', active: true }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    const all = [...component.leftFields(), ...component.rightFields(), ...component.greenFields()];
+    const readonly = (key: string) => all.find((f) => f.key === key)?.readonly;
+    for (const key of ['avgHuskPercentage', 'associatePercentage', 'nonAssociateDiscount', 'greenTotalStoredWeight',
+      'greenTotalHuskWeight', 'greenHealthyStoredWeight', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']) {
+      expect(readonly(key), key).toBe(true);
+    }
+    expect(readonly('trustedId')).toBe(false);
+  });
+
+  it('the Administrator edits them, and the green coffee values go under the "Café Verde" heading', () => {
+    localStorage.setItem('cafeoccidente.role', 'ADMINISTRADOR');
+    const component = setup(() => of({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true }));
+    TestBed.inject(ContentService);
+    expect(content.greenHeading).toBe('Café Verde');
+    expect(content.greenColumn.map((f) => f.key)).toEqual(['greenTotalStoredWeight', 'greenTotalHuskWeight',
+      'greenHealthyStoredWeight', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']);
+    expect(component.isAdmin).toBe(true);
+  });
+
   it('shows the empty create form when the session agency has no record yet', () => {
     const component = setup(() => throwError(() => new HttpErrorResponse({ status: 404 })));
     expect(component.agencyId()).toBe(3);
