@@ -36,6 +36,8 @@ describe('GreenCoffeeFormComponent - guardado', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
@@ -228,5 +230,57 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  it('prueba del 10-nov: without a cellphone it warns, waits for Celular and calculates once it is typed', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    (TestBed.inject(GrowerService).findByIdNumber as ReturnType<typeof vi.fn>).mockReturnValue(of({ ...grower, phone: '' }));
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    component.model['idPart1'] = grower.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
+
+    component.dismissError();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
+
+    for (const [key, value] of [['bags', '10'], ['grossKg', '1250'], ['tare', '50'], ['compKgPrice', '12000']]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+    expect(preview.mock.calls.at(-1)![0].cellphone).toBe('3001112233');
+  });
+
+  it('a rejected preview shows the message of the server, not the generic one', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    preview.mockReturnValue(throwError(() => ({ error: { message: 'Digite el celular del vendedor.' } })));
+    for (const [key, value] of [['idPart1', grower.idNumber], ['bags', '10'], ['grossKg', '1250'], ['tare', '50'], ['compKgPrice', '12000']]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+    expect(component.errorMessage()).toBe('Digite el celular del vendedor.');
+  });
+
+  it('a cellphone typed at the end also recalculates', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    fillEverything();
+    preview.mockClear();
+    component.model['cellphone'] = '3001112244';
+    component.onFieldCommitted('cellphone');
+    expect(preview).toHaveBeenCalledTimes(1);
+  });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Cédula', () => {
+    setup();
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.reset();
+    expect(focus).toHaveBeenLastCalledWith('idPart1');
   });
 });

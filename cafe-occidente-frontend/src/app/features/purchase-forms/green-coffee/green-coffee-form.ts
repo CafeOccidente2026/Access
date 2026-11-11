@@ -19,6 +19,7 @@ import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate'
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { advanceFocus, focusField } from '../form-focus';
+import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
@@ -52,7 +53,8 @@ const EDITABLE: string[] = [
 ];
 
 /** Requeridos para habilitar "Imprimir" (penalty/descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idPart1', 'fullName', 'bags', 'grossKg', 'tare', 'compKgPrice'];
+// El servidor no calcula sin el celular del vendedor (prueba del 10-nov): sin el no se pide el calculo.
+const REQUIRED: string[] = ['idPart1', 'fullName', 'cellphone', 'bags', 'grossKg', 'tare', 'compKgPrice'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
@@ -176,6 +178,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       case 'idPart1':
         this.lookupGrower();
         break;
+      case 'cellphone':
       case 'grossKg':
       case 'tare':
       case 'compKgPrice':
@@ -258,7 +261,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
           }
         });
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
+        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -279,9 +282,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.calc.set(null);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
     });
@@ -350,6 +353,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     this.tick.update((n) => n + 1);
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {

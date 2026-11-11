@@ -71,6 +71,7 @@
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario",
+    "cooperativeDiscountLabel": "Descuento Coop",
     "noQuota": "Esta cédula no tiene compras anunciadas con saldo."
   },
   "quotaPicker": {

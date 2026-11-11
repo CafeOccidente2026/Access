@@ -19,6 +19,7 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { advanceFocus, focusField } from '../form-focus';
+import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
@@ -51,7 +52,8 @@ const EDITABLE: string[] = [
 ];
 
 /** Requeridos para habilitar "Imprimir" (descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idPart1', 'firstName', 'lastName', 'almondWeight', 'bags', 'grossKg', 'tare'];
+// El servidor no calcula sin el celular del vendedor (prueba del 10-nov): sin el no se pide el calculo.
+const REQUIRED: string[] = ['idPart1', 'firstName', 'lastName', 'cellphone', 'almondWeight', 'bags', 'grossKg', 'tare'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). Husk no tiene
  *  Castigo (penalty) - ver docs/informe-formulas-compras-vs-vba.md. */
@@ -173,6 +175,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       case 'idPart1':
         this.lookupGrower();
         break;
+      case 'cellphone':
       case 'almondWeight':
       case 'grossKg':
       case 'tare':
@@ -244,7 +247,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
           }
         });
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
+        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -265,9 +268,9 @@ export class HuskFormComponent extends UnsavedCloseForm {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.calc.set(null);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
         this.tick.update((n) => n + 1);
       },
     });
@@ -336,6 +339,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     this.tick.update((n) => n + 1);
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {

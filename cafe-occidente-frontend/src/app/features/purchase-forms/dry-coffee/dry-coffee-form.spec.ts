@@ -43,6 +43,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
@@ -424,6 +426,55 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.model['idType'] = 'S';
     component.onFieldCommitted('special');
     expect(viewField('associated').value).toBe('ASOCIADO');
+  });
+  it('prueba del 10-nov: without a cellphone it warns and waits for Celular; then it goes on from Celular', () => {
+    setup(growerWithoutPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    component.model['fund'] = 'RP';
+    component.onFieldCommitted('fund');
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
+
+    component.dismissError();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
+  });
+
+  it('a grower with a cellphone goes straight on to Especial, without a warning', () => {
+    setup(growerWithPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    fillCommon();
+    expect(component.errorMessage()).toBeNull();
+    expect(advance).toHaveBeenCalledWith('idPart1');
+  });
+
+  it('the contribution says Descuento Coop for a type C grower (from the JSON)', () => {
+    const editable = content as { additionalDiscountFields?: PurchaseFormContent['additionalDiscountFields'] };
+    const original = editable.additionalDiscountFields;
+    editable.additionalDiscountFields = [
+      { key: 'contribution', label: 'Aporte Socio', type: 'currency' },
+      { key: 'withholding', label: 'Retefuente', type: 'currency' },
+    ];
+    try {
+      setup(growerWithPhone);
+      component.model['idPart1'] = growerWithPhone.idNumber;
+      component.onFieldCommitted('idPart1');
+      const label = component.viewContent()?.additionalDiscountFields?.find((f) => f.key === 'contribution')?.label;
+      expect(label).toBe('Descuento Coop');
+    } finally {
+      editable.additionalDiscountFields = original;
+    }
+  });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Fondo', () => {
+    setup(growerWithPhone);
+    component.reset();
+    expect(focusSpy).toHaveBeenLastCalledWith('fund');
   });
 });
 

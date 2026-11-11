@@ -37,6 +37,10 @@ type FuturePurchaseContent = PurchaseFormContent & { readonly messages: FuturePu
 const EDITABLE: string[] = ['idPart1', 'special', 'announcement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
 const REQUIRED: string[] = ['idPart1', 'special', 'announcement', 'kilos', 'deliveryDate'];
 const FOCUS_ORDER: string[] = ['idPart1', 'special', 'announcement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
+/** Q5: Finca, Mpio y Vereda son opcionales. Enter pasa por ellos, pero no se bloquean al confirmarlos (prueba del
+ *  10-nov: lo que se escribia ahi por error ya no se podia corregir) ni hacen esperar a la fecha de entrega. */
+const OPTIONAL: string[] = ['finca', 'municipality', 'vereda'];
+const GATE_ORDER = FOCUS_ORDER.filter((key) => !OPTIONAL.includes(key));
 
 /** Texto de cada anuncio en la lista: número y Pr carga perg s (RN-21.4.4). */
 function announcementLabel(a: Announcement): string {
@@ -120,7 +124,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     }
     // idPart1 se bloquea (locked) recien cuando lookupGrower confirma que la cedula existe - hasta
     // entonces sigue editable para poder corregirla (ver mensaje "no existe" en lookupGrower).
-    if (key !== 'idPart1') {
+    if (key !== 'idPart1' && !OPTIONAL.includes(key)) {
       this.locked.add(key);
     }
     this.runSideEffects(key);
@@ -345,7 +349,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
       } else if (b.readonly || this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
-      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+      } else if (!isSequentialFieldEnabled(key, GATE_ORDER, this.locked)) {
         patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };

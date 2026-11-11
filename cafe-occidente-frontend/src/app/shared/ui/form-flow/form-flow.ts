@@ -34,6 +34,9 @@ export class FormFlowDirective implements AfterViewInit, OnDestroy {
     // backend): se espera al primero.
     setTimeout(() => {
       if (!this.focusFirst()) {
+        // Prueba del 10-nov: sin nada que digitar (Informe Suministros RP) el foco queda en el boton marcado, para que
+        // Enter acepte. Se sigue esperando: si luego llega un campo, el foco pasa a el.
+        this.submitButton()?.focus();
         this.observer = new MutationObserver(() => this.focusFirst() && this.observer?.disconnect());
         this.observer.observe(this.host, { childList: true, subtree: true });
       }

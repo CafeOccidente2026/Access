@@ -114,4 +114,16 @@ class CheckNumberIntegrationTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("El cheque son los últimos 4 dígitos");
     }
+
+    /** V25: el cheque de las compras tambien es texto de 4 digitos (antes integer: 0548 quedaba 548). */
+    @ParameterizedTest
+    @CsvSource({"548", "12345", "abcd"})
+    void purchasePaymentsKeepTheFourDigitsToo(String wrong) {
+        String insert = "INSERT INTO formas_pago_compras (origen, origen_id, efectivo, cheque, transferencia, datafono,"
+                + " numero_cheque) VALUES ('DRY', ?, 0, 0, 0, 0, ?)";
+        assertThat(jdbc.update(insert, -1L, "0548")).isOne();
+        assertThat(jdbc.queryForObject("SELECT numero_cheque FROM formas_pago_compras WHERE origen = 'DRY' AND origen_id = -1",
+                String.class)).isEqualTo("0548");
+        assertThatThrownBy(() -> jdbc.update(insert, -2L, wrong)).isInstanceOf(DataIntegrityViolationException.class);
+    }
 }

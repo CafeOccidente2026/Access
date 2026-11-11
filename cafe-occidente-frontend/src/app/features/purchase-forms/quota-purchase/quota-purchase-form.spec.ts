@@ -25,6 +25,7 @@ describe('QuotaPurchaseFormComponent', () => {
     closeWarning: 'Hay datos sin guardar.',
     closeConfirm: 'Cerrar',
     closeCancel: 'Cancelar',
+    cooperativeDiscountLabel: 'Descuento Coop',
   };
   const content = {
     windowTitle: 'COMPRAS CUPOS',
@@ -33,6 +34,7 @@ describe('QuotaPurchaseFormComponent', () => {
     identificationFields: [{ key: 'deliveryKg', label: 'Kilos Entregados', type: 'number' }],
     qualityFields: [{ key: 'healthyStoredWeight', label: 'Peso Alm Sana', type: 'currency' }],
     settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
+    additionalDiscountFields: [{ key: 'contribution', label: 'Aporte Socio', type: 'currency' }],
     messages,
     quotaPicker: {},
   } as unknown as PurchaseFormContent;
@@ -360,5 +362,17 @@ describe('QuotaPurchaseFormComponent', () => {
       expect(component.model['idPart1']).toBe('');
       expect(createSpy).not.toHaveBeenCalled();
     });
+  });
+
+  it('prueba del 10-nov: with a type C grower the contribution says Descuento Coop (cupos and anunciadas)', () => {
+    for (const mode of ['quota', 'future'] as const) {
+      TestBed.resetTestingModule();
+      setup(mode);
+      const contribution = () => component.viewContent()?.additionalDiscountFields?.find((f) => f.key === 'contribution');
+      expect(contribution()?.label).toBe('Aporte Socio');
+      commit('fund', 'RP');
+      commit('idPart1', '210514');
+      expect(contribution()?.label).toBe('Descuento Coop');
+    }
   });
 });

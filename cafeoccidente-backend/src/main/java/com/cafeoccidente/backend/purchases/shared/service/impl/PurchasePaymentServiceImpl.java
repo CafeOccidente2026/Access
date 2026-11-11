@@ -15,6 +15,7 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
 
     static final String UNBALANCED = "FORMA DE PAGO DESCUADRADA, REVISE";
     static final String CHECK_NUMBER_REQUIRED = "Digite el numero de cheque";
+    static final String CHECK_NUMBER_FORMAT = "El cheque son los últimos 4 dígitos";
 
     private final JdbcTemplate jdbc;
 
@@ -40,10 +41,13 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
         String checkNumber = null;
         if (payment.checkAmount().signum() > 0) {
             // Access no lo exige, pero las 322 compras reales con cheque de El Tambo lo tienen (decision
-            // del usuario 2026-10-02). Numerico como Compras.NumCheque y Caja.Cheque.
+            // del usuario 2026-10-02). Los ultimos 4 digitos con sus ceros, como Caja y Suministros (V21, V25).
             checkNumber = payment.checkNumber() == null ? "" : payment.checkNumber().trim();
-            if (!checkNumber.matches("[0-9]{1,9}") || Integer.parseInt(checkNumber) == 0) {
+            if (checkNumber.isEmpty()) {
                 throw new BusinessRuleException(CHECK_NUMBER_REQUIRED);
+            }
+            if (!checkNumber.matches("[0-9]{4}") || "0000".equals(checkNumber)) {
+                throw new BusinessRuleException(CHECK_NUMBER_FORMAT);
             }
         }
         long used = amounts.values().stream().filter(a -> a.signum() > 0).count();
@@ -60,7 +64,7 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
         jdbc.update("INSERT INTO formas_pago_compras (origen, origen_id, efectivo, cheque,"
                         + " transferencia, datafono, numero_cheque) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 source, purchaseId, payment.cashAmount(), payment.checkAmount(), payment.transferAmount(),
-                payment.cardAmount(), checkNumber == null ? null : Integer.valueOf(checkNumber));
+                payment.cardAmount(), checkNumber);
         if (payment.cardAmount().signum() > 0) {
             // Q33: el datafono no sale de Caja ni de Suministros; queda por cobrar a favor del fiel.
             jdbc.update("INSERT INTO cuentas_por_cobrar (agencia_id, modulo_compra, compra_id, numero_factura,"

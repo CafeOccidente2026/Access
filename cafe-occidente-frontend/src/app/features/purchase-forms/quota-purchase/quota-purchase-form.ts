@@ -32,6 +32,7 @@ import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-pic
 type FormModel = Record<string, string>;
 
 interface QuotaPurchaseMessages {
+  readonly cooperativeDiscountLabel?: string;
   readonly acceptLabel: string;
   readonly noQuota: string;
   readonly idNumberNotFound: string;
@@ -601,7 +602,11 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
 
     const field = (key: string): FormFieldDefinition => {
       const b = bmap.get(key)!;
-      const patch: { options?: string[]; readonly?: boolean; value?: string | number } = {};
+      const patch: { options?: string[]; readonly?: boolean; value?: string | number; label?: string } = {};
+      // Prueba del 10-nov: como Café Seco, el no asociado (tipo C) paga Descuento Coop.
+      if (key === 'contribution' && growerType === 'C') {
+        patch.label = this.messages()?.cooperativeDiscountLabel ?? b.label;
+      }
       if (key === 'fund') {
         patch.options = this.fundOptions;
       }
@@ -619,7 +624,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
-      if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.options === next.options) {
+      if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.options === next.options && prev.label === next.label) {
         return prev;
       }
       this.fieldCache.set(key, next);

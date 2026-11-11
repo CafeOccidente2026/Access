@@ -21,6 +21,7 @@ import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate'
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { advanceFocus, focusField } from '../form-focus';
+import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { clearSample, isOverThreshold } from '../sample-quality';
 
@@ -28,6 +29,7 @@ import { clearSample, isOverThreshold } from '../sample-quality';
 type FormModel = Record<string, string>;
 
 interface DryCoffeeMessages {
+  readonly cooperativeDiscountLabel?: string;
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
@@ -282,7 +284,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         });
         this.lookupProgram();
         this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
+        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -505,6 +507,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.tick.update((n) => n + 1);
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {
@@ -588,7 +591,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         patch.options = this.fundOptions;
       }
       if (key === 'contribution') {
-        patch.label = growerType === 'C' ? 'Descuento Coop' : 'Aporte Socio';
+        patch.label = growerType === 'C' ? (this.messages()?.cooperativeDiscountLabel ?? b.label) : b.label;
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;

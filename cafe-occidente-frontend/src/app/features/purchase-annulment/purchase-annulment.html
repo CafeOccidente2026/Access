@@ -43,7 +43,7 @@
         </div>
 
         <div *ngIf="s.status === 'VALIDA' && !prompt()">
-          <button type="button" class="rounded border border-red-500 bg-red-600 px-4 py-1.5 font-bold text-white hover:bg-red-700" (click)="startAnnul()">{{ c.annulLabel }}</button>
+          <button type="button" data-testid="annul" class="rounded border border-red-500 bg-red-600 px-4 py-1.5 font-bold text-white hover:bg-red-700" (click)="startAnnul()">{{ c.annulLabel }}</button>
         </div>
 
         <div *ngIf="prompt() === 'confirm'" class="flex max-w-xl flex-col gap-2 rounded border border-red-300 bg-red-50 p-3">
@@ -57,7 +57,7 @@
         <div *ngIf="prompt() === 'locked'" class="flex max-w-xl flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-3">
           <p class="font-bold text-amber-900">{{ c.lockedMessage }}</p>
           <div>
-            <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="prompt.set(null)">{{ c.acceptLabel }}</button>
+            <button type="button" data-testid="locked-accept" class="rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="prompt.set(null)">{{ c.acceptLabel }}</button>
           </div>
         </div>
       </div>

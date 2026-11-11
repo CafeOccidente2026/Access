@@ -49,4 +49,23 @@ describe('form-focus: el foco salta solo al siguiente campo', () => {
     vi.runAllTimers();
     expect(document.activeElement).toBe(field('idPart1'));
   });
+
+  it('prueba del 10-nov (Verde): waits for a field that is painted a moment later', () => {
+    focusField(host, 'late');
+    vi.advanceTimersByTime(0);
+    const late = document.createElement('input');
+    late.dataset['fieldKey'] = 'late';
+    host.appendChild(late);
+    vi.advanceTimersByTime(100);
+    expect(document.activeElement).toBe(late);
+  });
+
+  it('prueba del 10-nov: after Celular (not in the order) it goes to the first field still to fill', () => {
+    host.innerHTML = ['fund', 'idPart1', 'bags', 'cellphone'].map((k) => `<input data-field-key="${k}" />`).join('');
+    (field('fund') as HTMLInputElement).readOnly = true;
+    (field('idPart1') as HTMLInputElement).readOnly = true;
+    advanceFocus(host, ['fund', 'idPart1', 'bags'], 'cellphone');
+    vi.runAllTimers();
+    expect(document.activeElement).toBe(field('bags'));
+  });
 });

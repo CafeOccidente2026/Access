@@ -150,3 +150,24 @@ describe('appFormFlow con dos grupos', () => {
     fixture.nativeElement.remove();
   });
 });
+
+@Component({
+  standalone: true,
+  imports: [FormFlowDirective],
+  template: `<div appFormFlow><input readonly aria-label="Pto Compra" /><button data-flow-submit>Aceptar</button><button>Cancelar</button></div>`,
+})
+class ReportHost {}
+
+describe('appFormFlow sin campos (prueba del 10-nov, informes de Suministros)', () => {
+  it('with nothing to type, the first focus goes to the marked button, so Enter accepts', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(ReportHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(document.activeElement?.textContent).toBe('Aceptar');
+    vi.useRealTimers();
+    fixture.nativeElement.remove();
+  });
+});
+

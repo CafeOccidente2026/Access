@@ -248,4 +248,22 @@ describe('FuturePurchaseFormComponent', () => {
     expect(component.blockedByDeceased()).toBe(true);
     expect(component.errorMessage()).toBe(content.messages['deceasedBlocked']);
   });
+
+  it('prueba del 10-nov: Finca, Mpio and Vereda are optional and stay editable after Enter', () => {
+    setup(growerWithoutId);
+    for (const [key, value] of [['idPart1', growerWithoutId.idNumber], ['special', 'NESPRESSO - FTUSA'], ['announcement', label]]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+    component.model['finca'] = '30112026';
+    component.onFieldCommitted('finca');
+    component.onFieldCommitted('municipality');
+
+    const optional = (key: string) => [...(component.viewContent()?.weightFields ?? []), ...(component.viewContent()?.qualityFields ?? []),
+      ...(component.viewContent()?.contactFields ?? [])].find((f) => f.key === key);
+    expect(optional('finca')?.readonly).toBeFalsy();
+    expect(optional('municipality')?.readonly).toBeFalsy();
+    // La fecha de entrega no espera a los opcionales.
+    expect(optional('deliveryDate')?.readonly).toBeFalsy();
+  });
 });

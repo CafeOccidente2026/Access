@@ -36,6 +36,8 @@ describe('HuskFormComponent - gates de captura', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
@@ -262,5 +264,41 @@ describe('HuskFormComponent - gates de captura', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  it('prueba del 10-nov: without a cellphone it warns, waits for Celular and calculates once it is typed', () => {
+    setup(growerWithoutPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
+
+    component.dismissError();
+    fillEverythingAfterGrower();
+    expect(previewSpy).not.toHaveBeenCalled();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
+    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(previewSpy.mock.calls[0][0].cellphone).toBe('3001112233');
+  });
+
+  it('a rejected preview shows the message of the server, not the generic one', () => {
+    setup(growerWithPhone);
+    previewSpy.mockReturnValue(throwError(() => ({ error: { message: 'Digite el celular del vendedor.' } })));
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    expect(component.errorMessage()).toBe('Digite el celular del vendedor.');
+  });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Cédula', () => {
+    setup(growerWithPhone);
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.reset();
+    expect(focus).toHaveBeenLastCalledWith('idPart1');
   });
 });
