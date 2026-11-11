@@ -1,29 +1,24 @@
 import { WritableSignal } from '@angular/core';
 
+import { focusField } from './form-focus';
+
+/** Lo que necesita de Café Seco, Verde y Pasilla: el formulario, el aviso y sus textos. */
+interface SellerForm {
+  readonly model: Record<string, string>;
+  readonly errorMessage: WritableSignal<string | null>;
+  readonly messages: () => object | undefined;
+}
+
 /**
  * Prueba del 10-nov (fallas 2 y 3): el servidor no calcula sin el celular del vendedor. Si TERCEROS no lo tiene, al
- * traer la cédula se avisa; al aceptar el aviso el foco va solo a Celular, y al confirmarlo se calcula y se sigue con
- * el primer campo pendiente. Lo usan Café Seco, Verde y Pasilla.
+ * traer la cédula se avisa y el foco va a Celular (el aviso lo devuelve ahí al cerrarse); al confirmarlo,
+ * advanceFocus sigue con el primer campo pendiente. Si lo tiene, se sigue con next.
  */
-export const CELLPHONE = 'cellphone';
-
-export class MissingCellphone {
-  private pending = false;
-
-  /** true si falta el celular: deja el aviso en pantalla (el foco va a Celular cuando se acepte). */
-  check(model: Record<string, string>, errorMessage: WritableSignal<string | null>, warning: string | undefined): boolean {
-    this.pending = (model[CELLPHONE] ?? '').trim() === '';
-    if (this.pending) {
-      errorMessage.set(warning ?? null);
-    }
-    return this.pending;
+export function askCellphoneOr(host: HTMLElement, form: SellerForm, next: () => void): void {
+  if ((form.model['cellphone'] ?? '').trim() !== '') {
+    next();
+    return;
   }
-
-  /** Al aceptar el aviso: lleva el foco a Celular una sola vez. */
-  afterNotice(focus: (key: string) => void): void {
-    if (this.pending) {
-      this.pending = false;
-      focus(CELLPHONE);
-    }
-  }
+  form.errorMessage.set((form.messages() as { cellphoneMissing?: string } | undefined)?.cellphoneMissing ?? null);
+  focusField(host, 'cellphone');
 }

@@ -22,8 +22,13 @@ export function focusField(host: HTMLElement, key: string, retries = RETRIES): v
   });
 }
 
-/** El campo que sigue a afterKey en el orden del formulario; nada si es el último o no está en el orden. */
+/** El campo que sigue a afterKey en el orden del formulario; nada si es el último o no está en el orden. Celular no está
+ *  en el orden (se pide solo si TERCEROS no lo tiene): después de él se sigue con el primer campo pendiente. */
 export function advanceFocus(host: HTMLElement, order: readonly string[], afterKey: string): void {
+  if (afterKey === 'cellphone') {
+    focusPending(host, order);
+    return;
+  }
   const idx = order.indexOf(afterKey);
   if (idx === -1 || idx === order.length - 1) {
     return;
@@ -31,7 +36,15 @@ export function advanceFocus(host: HTMLElement, order: readonly string[], afterK
   focusField(host, order[idx + 1]);
 }
 
-/** El primer campo del orden que todavía no se ha confirmado (a donde sigue el cajero después de un campo suelto). */
-export function nextPending(order: readonly string[], locked: ReadonlySet<string>): string | undefined {
-  return order.find((key) => !locked.has(key));
+/** El primer campo del orden que todavía se puede digitar (los confirmados y los que no tocan quedan de solo lectura). */
+function focusPending(host: HTMLElement, order: readonly string[]): void {
+  setTimeout(() => {
+    const pending = order.find((key) => {
+      const el = host.querySelector<HTMLInputElement>(`[data-field-key="${key}"]`);
+      return el && !el.readOnly && !el.disabled;
+    });
+    if (pending) {
+      focusField(host, pending);
+    }
+  });
 }
