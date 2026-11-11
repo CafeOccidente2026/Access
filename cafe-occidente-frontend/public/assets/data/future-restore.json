@@ -11,8 +11,8 @@
       "columns": ["Anuncio", "Fecha", "Especial", "Kilos", "Kl_Entregados", "Saldo actual", "Saldo recalculado"]
     },
     "pending": {
-      "windowTitle": "ANUNCIADAS HOY",
-      "heading": "Anunciadas Hoy",
+      "windowTitle": "ANUNCIADAS DE HOY",
+      "heading": "Anunciadas de Hoy",
       "note": "Compras a futuro que todavía tienen kilos por entregar, de cualquier fecha, agrupadas por anuncio. Solo consulta.",
       "columns": ["Anuncio", "Fecha Anuncio", "Especial", "Pr Alm Sana", "Productores", "Kilos Anunciados", "Kl_Entregados", "Saldo"]
     },

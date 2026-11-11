@@ -108,7 +108,7 @@ describe('FutureRestoreComponent', () => {
     expect(restoreSpy).not.toHaveBeenCalled();
   });
 
-  it('HU-31: Anunciadas Hoy shows each announcement with its growers, kilos, delivered and balance, read only', () => {
+  it('HU-31: Anunciadas de Hoy shows each announcement with its growers, kilos, delivered and balance, read only', () => {
     const c = setup('pending');
 
     expect(pendingSpy).toHaveBeenCalledTimes(1);
@@ -117,7 +117,7 @@ describe('FutureRestoreComponent', () => {
     expect(c.canRestore()).toBe(false);
   });
 
-  it('a failed Anunciadas Hoy says so and shows no table', () => {
+  it('a failed Anunciadas de Hoy says so and shows no table', () => {
     const c = setup('pending', true);
 
     expect(c.failed()).toBe(true);
