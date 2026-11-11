@@ -26,7 +26,7 @@ describe('ControlRecordComponent', () => {
           useValue: { loadJson: () => of({ leftColumn: [
               { key: 'prefix', label: 'Prefijo', type: 'text' },
               { key: 'withholdingPercentage', label: 'Porcentaje Rete Fuente', type: 'percentage' },
-            ], rightColumn: [] }) },
+            ], rightColumn: [], greenColumn: [] }) },
         },
       ],
     });
@@ -108,7 +108,7 @@ describe('ControlRecordComponent', () => {
     const numeric = ['Núm Registro Control', 'Factor Base', 'Base Rete Fuente', 'Base Carga', 'Porcentaje Rete Fuente',
       'Base Pasilla', '% Kg de Pasilla Promedio', 'Peso Tot Alm Café Verde', 'Peso Tot Pasilla Café Verde',
       'Peso Alm Sana Café Verde', 'Pr Alm Sana Café Verde', 'Pr_AlmDefec Café Verde'];
-    const fields = [...content.leftColumn, ...content.rightColumn] as FormFieldDefinition[];
+    const fields = [...content.leftColumn, ...content.rightColumn, ...content.greenColumn] as FormFieldDefinition[];
     for (const label of numeric) {
       expect(['number', 'count', 'currency', 'percentage'], label).toContain(fields.find((f) => f.label === label)?.type);
     }
@@ -327,7 +327,7 @@ describe('ControlRecordComponent - cafe verde en todas las agencias', () => {
   });
 
   it('control-record.json: los valores en pesos enteros llevan puntos de miles al escribir; Base Pasilla (12,5) no', () => {
-    const fields = [...content.leftColumn, ...content.rightColumn] as (FormFieldDefinition & { liveThousands?: boolean })[];
+    const fields = [...content.leftColumn, ...content.rightColumn, ...content.greenColumn] as (FormFieldDefinition & { liveThousands?: boolean })[];
     const live = fields.filter((f) => f.liveThousands).map((f) => f.key);
     expect(live).toEqual(['baseWithholding', 'costs', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']);
   });
