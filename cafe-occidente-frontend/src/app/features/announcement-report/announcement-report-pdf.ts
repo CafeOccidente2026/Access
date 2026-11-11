@@ -1,6 +1,7 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
+import { cooperativeNit } from '../../shared/utils/nit';
 import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 
 /**
@@ -128,7 +129,7 @@ function reportHeader(title: string, block: AnnouncementBlock, date: string, pag
     stack: [
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 752, y2: 0, lineWidth: 1 }] },
       { text: text.cooperative, bold: true, fontSize: 9, alignment: 'center', margin: [0, 3, 0, 0] },
-      { text: text.nit, bold: true, fontSize: 8, alignment: 'center' },
+      { text: `${text.nit} ${cooperativeNit()}`, bold: true, fontSize: 8, alignment: 'center' },
       ...(text.subtitle ? [{ text: text.subtitle, bold: true, fontSize: 9, alignment: 'center' as const }] : []),
       {
         columns: [

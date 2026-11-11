@@ -3,6 +3,7 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 import { BeneficiaryRow } from '../../core/models/vendor.model';
 import { formatThousands } from '../../shared/utils/number-format';
 import { themeColor } from '../../shared/utils/theme-color';
+import { cooperativeNit } from '../../shared/utils/nit';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 import { BeneficiaryReport, BeneficiaryReportText } from './beneficiary-report.model';
 
@@ -112,7 +113,7 @@ export function buildBeneficiaryDoc(
               ...beneficiary,
             ],
           },
-          { width: '*', stack: [{ text: text.company, bold: true }, { text: text.nit, bold: true }], alignment: 'center', margin: [0, 4, 0, 0] },
+          { width: '*', stack: [{ text: text.company, bold: true }, { text: `${text.nit} ${cooperativeNit()}`, bold: true }], alignment: 'center', margin: [0, 4, 0, 0] },
         ],
       };
   const longDate = today.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });

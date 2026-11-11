@@ -2,6 +2,7 @@ import type { Content, ContentStack, TableCell, TDocumentDefinitions } from 'pdf
 import type { SheetData } from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
+import { cooperativeNit } from '../../shared/utils/nit';
 import { formatDisplayNumber, formatThousands } from '../../shared/utils/number-format';
 import { themeColor } from '../../shared/utils/theme-color';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
@@ -113,7 +114,7 @@ function checksBody(report: SuppliesReport, text: SuppliesReportText, rows: read
   body.push(totalRow(text.grandTotal, rows, 5));
   return [
     dashed(515),
-    { text: text.company, bold: true, color: teal(), alignment: 'center', margin: [0, 2, 0, 0] },
+    { text: `${text.company}  ${text.nit} ${cooperativeNit()}`, bold: true, color: teal(), alignment: 'center', margin: [0, 2, 0, 0] },
     { text: text.checksTitle, bold: true, color: teal(), alignment: 'center', margin: [0, 0, 0, 2] },
     dashed(515),
     { table: { headerRows: 1, widths: [50, 55, '*', '*', 40, 70, 70], body }, layout: underHeader() },
