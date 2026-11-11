@@ -15,6 +15,7 @@
     "HUSK": "Pasilla"
   },
   "annulledMark": "ANULADA",
+  "correctedMark": "CORREGIDA",
   "messages": {
     "notFound": "No hay ninguna compra con esa factura",
     "noMore": "No hay más compras en esa dirección",

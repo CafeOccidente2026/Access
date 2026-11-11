@@ -16,6 +16,7 @@ import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRe
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
+import com.cafeoccidente.backend.purchases.query.service.PurchaseQueryService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.User;
@@ -60,6 +61,8 @@ class PurchaseCorrectionIntegrationTest {
     private PurchaseAnnulmentService annulment;
     @Autowired
     private AnnouncementQuotaService quotas;
+    @Autowired
+    private PurchaseQueryService query;
     @Autowired
     private UserRepository users;
     @Autowired
@@ -153,6 +156,7 @@ class PurchaseCorrectionIntegrationTest {
     void correctsKilosAndPaymentKeepingTheSameInvoice() {
         DryCoffeePurchaseResponse p = dryPurchase();
         BigDecimal card = new BigDecimal("50000");
+        assertThat(query.detail(AnnulmentModule.DRY, p.id()).corrected()).isFalse();
 
         DryCoffeePurchaseResponse fixed = correctDry(p, "800", card);
 
@@ -180,6 +184,8 @@ class PurchaseCorrectionIntegrationTest {
                 + " FROM compras_cafe_seco WHERE id = ?", p.id());
         assertThat(mark).containsEntry("corregida", true).containsEntry("corregida_por_usuario_id", userId);
         assertThat(mark.get("corregida_en")).isNotNull();
+        // 6D2: Consultar Compras la muestra como corregida.
+        assertThat(query.detail(AnnulmentModule.DRY, p.id()).corrected()).isTrue();
         Map<String, Object> history = jdbc.queryForMap("SELECT accion, agencia_id, antes::text AS antes, despues::text AS despues"
                 + " FROM historial_cambios WHERE entidad = 'COMPRA' AND entidad_id = ?", p.invoiceNumber().longValue());
         assertThat(history).containsEntry("accion", "CORREGIR").containsEntry("agencia_id", AGENCY);

@@ -80,6 +80,10 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
     ]);
   });
 
+  it('HU-05: the User with Corregir Compra gets the way back to Acceso Principal, where Menú Habilitación is', () => {
+    expect(labels(render('USUARIO', ['CORREGIR_COMPRA']))).toContain('Volver Acceso Principal');
+  });
+
   it('HU-03 CA-3: opening the menu rereads the permissions, so a revoked screen disappears', () => {
     const el = render('USUARIO', ['REGISTRO_CONTROL']);
     expect(labels(el)).toContain('Registro de Control');

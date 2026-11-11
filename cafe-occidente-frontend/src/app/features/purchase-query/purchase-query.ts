@@ -20,6 +20,8 @@ export interface PurchaseQueryContent extends PurchaseFormContent {
   readonly modules: Record<AnnulmentModule, string>;
   /** Marca de las reimpresiones de una compra anulada. */
   readonly annulledMark: string;
+  /** HU-05: va junto al ESTADO de una compra corregida. */
+  readonly correctedMark: string;
   readonly messages: Record<'notFound' | 'noMore' | 'error' | 'invoiceError', string>;
 }
 
@@ -78,7 +80,7 @@ export class PurchaseQueryComponent {
   readonly view = computed(() => {
     const detail = this.detailValue();
     const content = this.content();
-    return detail && content ? fillQueryContent(content, detail) : null;
+    return detail && content ? fillQueryContent(content, detail, content.correctedMark) : null;
   });
 
   /** La reimpresión falló; se borra al cambiar de compra. */

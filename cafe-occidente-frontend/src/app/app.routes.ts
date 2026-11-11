@@ -292,6 +292,13 @@ export const routes: Routes = [
           ),
       },
       {
+        // HU-05 (11-nov): "Menu Habilitacion" de Acceso Principal corrige la compra con la misma factura.
+        path: 'menu-habilitacion',
+        data: { roles: ADMIN, screens: ['CORREGIR_COMPRA'] },
+        loadComponent: () =>
+          import('./features/purchase-correction/purchase-correction').then((m) => m.PurchaseCorrectionComponent),
+      },
+      {
         path: 'compras/anular',
         data: { roles: ADMIN, screens: ['ANULAR_DOCUMENTO'] },
         loadComponent: () =>
