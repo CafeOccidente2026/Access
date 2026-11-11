@@ -102,9 +102,9 @@ class EndpointAuthorizationTest {
     private static final Map<String, String> BODIES = Map.of(
             "/api/vendors", "{\"legalPerson\": false}");
 
-    /** Las 5 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
-    private static final List<String> SCREENS =
-            List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS", "REGISTRO_CONTROL", "HISTORIAL");
+    /** Las 6 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
+    private static final List<String> SCREENS = List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS",
+            "REGISTRO_CONTROL", "HISTORIAL", "CORREGIR_COMPRA");
 
     private static void add(Set<String> roles, HttpMethod method, String pattern, String url) {
         MATRIX.add(new Endpoint(method, pattern, url, roles, null));
@@ -185,6 +185,13 @@ class EndpointAuthorizationTest {
         add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment/navigate",
                 "/api/purchases/annulment/navigate?direction=FIRST");
         add(ADMIN, "ANULAR_DOCUMENTO", post, "/api/purchases/annulment/{module}/{id}", "/api/purchases/annulment/DRY/1");
+        // HU-05 Corregir Compra (Habilitacion, 11-nov): el Administrador o con el permiso, como Anular Documento.
+        add(ADMIN, "CORREGIR_COMPRA", get, "/api/purchases/correction", "/api/purchases/correction?invoiceNumber=1");
+        add(ADMIN, "CORREGIR_COMPRA", get, "/api/purchases/correction/navigate",
+                "/api/purchases/correction/navigate?direction=FIRST");
+        add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/DRY/{id}", "/api/purchases/correction/DRY/1");
+        add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/GREEN/{id}", "/api/purchases/correction/GREEN/1");
+        add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/HUSK/{id}", "/api/purchases/correction/HUSK/1");
 
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
         add(ADMIN_USER, post, "/api/purchases/future");
