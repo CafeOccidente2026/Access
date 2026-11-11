@@ -18,7 +18,7 @@
     { "key": "baseLoad", "label": "Base Carga", "type": "number", "integer": true },
     { "key": "withholdingPercentage", "label": "Porcentaje Rete Fuente", "type": "percentage" },
     { "key": "baseHusk", "label": "Base Pasilla", "type": "currency" },
-    { "key": "avgHuskPercentage", "label": "% Kg de Pasilla Promedio", "type": "percentage" },
+    { "key": "avgHuskPercentage", "label": "% Kg de Pasilla Promedio", "type": "percentage", "adminOnly": true },
     { "key": "purchasePoint", "label": "Punto de Compra", "type": "text", "readonly": true },
     { "key": "prefix", "label": "Prefijo", "type": "text" },
     { "key": "costs", "label": "Costos", "type": "currency", "liveThousands": true },
@@ -26,8 +26,8 @@
     { "key": "excelsoKg", "label": "Kg de Excelso", "type": "number", "integer": true },
     { "key": "greenCoffeePercentage", "label": "Pocentaje Café Verde", "type": "percentage" },
     { "key": "specialtyThreshold", "label": "Umbral Cafés Especiales", "type": "percentage" },
-    { "key": "associatePercentage", "label": "Porc Aportes Asociados", "type": "percentage" },
-    { "key": "nonAssociateDiscount", "label": "Poc Desc Coop No Asoc", "type": "percentage" },
+    { "key": "associatePercentage", "label": "Porc Aportes Asociados", "type": "percentage", "adminOnly": true },
+    { "key": "nonAssociateDiscount", "label": "Poc Desc Coop No Asoc", "type": "percentage", "adminOnly": true },
     { "key": "trustedId", "label": "Fiel", "type": "text" }
   ],
   "rightColumn": [
@@ -35,11 +35,14 @@
     { "key": "resolutionDate", "label": "Fecha Res", "type": "date" },
     { "key": "resolutionFrom", "label": "Desde Res", "type": "number", "rawDisplay": true },
     { "key": "resolutionTo", "label": "Hasta Res", "type": "number", "rawDisplay": true },
-    { "key": "validity", "label": "Vigencia", "type": "number", "rawDisplay": true },
-    { "key": "greenTotalStoredWeight", "label": "Peso Tot Alm Café Verde", "type": "percentage" },
-    { "key": "greenTotalHuskWeight", "label": "Peso Tot Pasilla Café Verde", "type": "percentage" },
-    { "key": "greenHealthyStoredWeight", "label": "Peso Alm Sana Café Verde", "type": "percentage" },
-    { "key": "greenHealthyUnitPrice", "label": "Pr Alm Sana Café Verde", "type": "currency", "liveThousands": true },
-    { "key": "greenDefectiveUnitPrice", "label": "Pr_AlmDefec Café Verde", "type": "currency", "liveThousands": true }
+    { "key": "validity", "label": "Vigencia", "type": "number", "rawDisplay": true }
+  ],
+  "greenHeading": "Café Verde",
+  "greenColumn": [
+    { "key": "greenTotalStoredWeight", "label": "Peso Tot Alm Café Verde", "type": "percentage", "adminOnly": true },
+    { "key": "greenTotalHuskWeight", "label": "Peso Tot Pasilla Café Verde", "type": "percentage", "adminOnly": true },
+    { "key": "greenHealthyStoredWeight", "label": "Peso Alm Sana Café Verde", "type": "percentage", "adminOnly": true },
+    { "key": "greenHealthyUnitPrice", "label": "Pr Alm Sana Café Verde", "type": "currency", "liveThousands": true, "adminOnly": true },
+    { "key": "greenDefectiveUnitPrice", "label": "Pr_AlmDefec Café Verde", "type": "currency", "liveThousands": true, "adminOnly": true }
   ]
 }
