@@ -49,7 +49,7 @@ public class FuturePurchaseController {
         return restoreService.restore(idNumber);
     }
 
-    /** Anunciadas Hoy (HU-31, P2): solo lectura. */
+    /** Anunciadas de Hoy (HU-31, P2): solo lectura. */
     @GetMapping("/pending")
     public List<PendingAnnouncementRow> pending() {
         return futurePurchaseService.pending();

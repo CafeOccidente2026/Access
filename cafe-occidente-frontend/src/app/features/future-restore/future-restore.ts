@@ -14,7 +14,7 @@ import { saveOnce } from '../../shared/utils/save-once';
 
 /**
  * 'future' = Restaurar Compras Anunciadas; 'quota' = Restaurar Anuncios con Cupos (solo consulta, P5);
- * 'pending' = Anunciadas Hoy (solo consulta, HU-31 con la respuesta P2).
+ * 'pending' = Anunciadas de Hoy (solo consulta, HU-31 con la respuesta P2).
  */
 type View = 'future' | 'quota' | 'pending';
 
@@ -39,14 +39,14 @@ export function quotaCells(q: AnnouncementQuotaResponse): string[] {
     kg(q.balance)];
 }
 
-/** Anunciadas Hoy: Kl_Entregados = kilos anunciados menos el saldo. */
+/** Anunciadas de Hoy: Kl_Entregados = kilos anunciados menos el saldo. */
 export function pendingCells(p: PendingAnnouncementRow): string[] {
   return [p.announcementNumber, p.announcementDate, p.specialType, kg(p.healthyUnitPrice), String(p.growers),
     kg(p.announcedKg), kg(p.announcedKg - p.remainingKg), kg(p.remainingKg)];
 }
 
 /**
- * Tablas de Compras a Futuro: Anunciadas Hoy (Administrador y Usuario) y los dos "Restaurar" (solo el Administrador, Q5). Restaurar Compras Anunciadas recalcula desde
+ * Tablas de Compras a Futuro: Anunciadas de Hoy (Administrador y Usuario) y los dos "Restaurar" (solo el Administrador, Q5). Restaurar Compras Anunciadas recalcula desde
  * cero el saldo de los compromisos de una cédula (P6): primero muestra el saldo guardado y el recalculado, y Restaurar
  * lo aplica. Restaurar Anuncios con Cupos solo muestra el saldo de cada cupo, que ya se calcula al vuelo (P5).
  */

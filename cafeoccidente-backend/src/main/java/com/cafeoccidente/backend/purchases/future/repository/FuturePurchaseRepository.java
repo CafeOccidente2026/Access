@@ -17,7 +17,7 @@ public interface FuturePurchaseRepository extends JpaRepository<FuturePurchase, 
     List<FuturePurchase> findByAgencyIdAndIdNumberAndRemainingKgGreaterThanOrderByIdAsc(
             Long agencyId, String idNumber, BigDecimal remainingKg);
 
-    /** Anunciadas Hoy (HU-31, P2): las de la agencia con saldo, de cualquier fecha, sumadas por anuncio. */
+    /** Anunciadas de Hoy (HU-31, P2): las de la agencia con saldo, de cualquier fecha, sumadas por anuncio. */
     @Query("""
             SELECT new com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow(
                 f.announcementNumber, f.announcementDate, f.specialType, f.healthyUnitPrice,
