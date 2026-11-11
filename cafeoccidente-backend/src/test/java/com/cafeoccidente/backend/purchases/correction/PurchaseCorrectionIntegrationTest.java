@@ -21,6 +21,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,8 @@ class PurchaseCorrectionIntegrationTest {
     private AgencyRepository agencies;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private EntityManager entityManager;
 
     private Long rp;
     private Long userId;
@@ -132,7 +135,7 @@ class PurchaseCorrectionIntegrationTest {
 
     /** Corrige los kilos brutos con el mismo pago en efectivo y datafono. El neto lo calcula el servidor. */
     private DryCoffeePurchaseResponse correctDry(DryCoffeePurchaseResponse p, String grossKg, BigDecimal card) {
-        BigDecimal net = dry.preview(dryRequest(grossKg, null)).netToPay();
+        BigDecimal net = dry.previewCorrection(p.id(), dryRequest(grossKg, null)).netToPay();
         return dry.correct(p.id(), dryRequest(grossKg, cashAndCard(net, card)));
     }
 
@@ -188,8 +191,11 @@ class PurchaseCorrectionIntegrationTest {
     void recalculatesWithTheOriginalAnnouncementEvenIfThereIsANewerOne() {
         DryCoffeePurchaseResponse p = dryPurchase();
         announce("RN", 2500000);
+        // La vista previa de la correccion usa el anuncio original; la de una compra nueva, el vigente (mas caro).
+        assertThat(dry.previewCorrection(p.id(), dryRequest("1000", null)).netToPay()).isEqualByComparingTo(p.netToPay());
+        assertThat(dryNet("1000")).isGreaterThan(p.netToPay());
 
-        DryCoffeePurchaseResponse fixed = correctDry(p, "1000", CARD);
+        DryCoffeePurchaseResponse fixed = dry.correct(p.id(), dryRequest("1000", cashAndCard(p.netToPay(), CARD)));
 
         assertThat(fixed.announcementNumber()).isEqualTo(p.announcementNumber());
         assertThat(fixed.healthyUnitPrice()).isEqualByComparingTo(p.healthyUnitPrice());
@@ -249,6 +255,35 @@ class PurchaseCorrectionIntegrationTest {
     }
 
     @Test
+    void cannotCorrectAPurchaseClosedInAccess() {
+        DryCoffeePurchaseResponse p = dryPurchase();
+        jdbc.update("UPDATE compras_cafe_seco SET anulacion_bloqueada = true WHERE id = ?", p.id());
+
+        assertThatThrownBy(() -> correctDry(p, "800", CARD)).isInstanceOf(BusinessRuleException.class)
+                .hasMessage("IMPOSIBLE CORREGIR: ES UNA COMPRA CERRADA EN EL SISTEMA ANTERIOR.");
+    }
+
+    @Test
+    void correctsToACheckWithANewAddressEvenIfThePaymentRowWasMissing() {
+        DryCoffeePurchaseResponse p = dryPurchase();
+        // Compras traidas de Access sin desglose de pago: la correccion lo escribe.
+        jdbc.update("DELETE FROM formas_pago_compras WHERE origen = 'DRY' AND origen_id = ?", p.id());
+        BigDecimal check = new BigDecimal("300000");
+        DryCoffeePurchaseRequest typed = new DryCoffeePurchaseRequest(rp, "RN", SELLER, " VEREDA NUEVA ", "3105556677", 5,
+                new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"), BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, new PurchasePaymentRequest(p.netToPay().subtract(check), check,
+                        BigDecimal.ZERO, BigDecimal.ZERO, " 0548 "));
+
+        DryCoffeePurchaseResponse fixed = dry.correct(p.id(), typed);
+
+        assertThat(fixed.address()).isEqualTo("VEREDA NUEVA");
+        assertThat(fixed.cellphone()).isEqualTo("3105556677");
+        assertThat(jdbc.queryForMap("SELECT cheque, numero_cheque FROM formas_pago_compras WHERE origen = 'DRY'"
+                + " AND origen_id = ?", p.id())).containsEntry("numero_cheque", "0548");
+        assertThat(receivables("DRY", p.id())).isEmpty();
+    }
+
+    @Test
     void cannotGoOverTheQuotaOfTheAnnouncement() {
         DryCoffeePurchaseResponse p = dryPurchase();
 
@@ -265,6 +300,8 @@ class PurchaseCorrectionIntegrationTest {
                 + " VALUES (now(), ?, '1', CURRENT_DATE, ?, 'PRUEBA', 'C', 'VEREDA', 'NESPRESSO - FTUSA', ?, ?, CURRENT_DATE,"
                 + " 0, 0, 0, 0, 0, 0, ?) RETURNING id", Long.class, AGENCY, SELLER, announced, announced.subtract(p.netKg()), userId);
         jdbc.update("UPDATE compras_cafe_seco SET compra_anunciada_id = ? WHERE id = ?", future, p.id());
+        // Cada peticion carga la compra de la base; aca toda la prueba es una transaccion y JPA la tiene sin el enlace.
+        entityManager.clear();
 
         DryCoffeePurchaseResponse fixed = correctDry(p, "800", CARD);
 
@@ -279,7 +316,7 @@ class PurchaseCorrectionIntegrationTest {
         GreenCoffeePurchaseRequest preview = greenRequest("1000", null);
         var p = green.create(greenRequest("1000", cashAndCard(green.preview(preview).netToPay(), CARD)));
 
-        BigDecimal net = green.preview(greenRequest("700", null)).netToPay();
+        BigDecimal net = green.previewCorrection(p.id(), greenRequest("700", null)).netToPay();
         var fixed = green.correct(p.id(), greenRequest("700", cashAndCard(net, CARD)));
 
         assertThat(fixed.invoiceNumber()).isEqualTo(p.invoiceNumber());
@@ -293,7 +330,7 @@ class PurchaseCorrectionIntegrationTest {
     void correctsHusk() {
         var p = husk.create(huskRequest("1000", cashAndCard(husk.preview(huskRequest("1000", null)).netToPay(), CARD)));
 
-        BigDecimal net = husk.preview(huskRequest("600", null)).netToPay();
+        BigDecimal net = husk.previewCorrection(p.id(), huskRequest("600", null)).netToPay();
         var fixed = husk.correct(p.id(), huskRequest("600", cashAndCard(net, CARD)));
 
         assertThat(fixed.invoiceNumber()).isEqualTo(p.invoiceNumber());

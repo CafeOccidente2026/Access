@@ -192,6 +192,12 @@ class EndpointAuthorizationTest {
         add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/DRY/{id}", "/api/purchases/correction/DRY/1");
         add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/GREEN/{id}", "/api/purchases/correction/GREEN/1");
         add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/HUSK/{id}", "/api/purchases/correction/HUSK/1");
+        add(ADMIN, "CORREGIR_COMPRA", post, "/api/purchases/correction/DRY/{id}/preview",
+                "/api/purchases/correction/DRY/1/preview");
+        add(ADMIN, "CORREGIR_COMPRA", post, "/api/purchases/correction/GREEN/{id}/preview",
+                "/api/purchases/correction/GREEN/1/preview");
+        add(ADMIN, "CORREGIR_COMPRA", post, "/api/purchases/correction/HUSK/{id}/preview",
+                "/api/purchases/correction/HUSK/1/preview");
 
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
         add(ADMIN_USER, post, "/api/purchases/future");
