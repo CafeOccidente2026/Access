@@ -48,9 +48,9 @@ function moduleValues(detail: PurchaseQueryDetail): Record<string, Value> {
 
 /**
  * "Consultar Compras" (Cns_Compras, RF-26): la ficha de solo lectura con todos los datos de la compra
- * (RN-26.4), su ESTADO (RN-26.5) y sus formas de pago guardadas, incluida la transferencia.
+ * (RN-26.4), su ESTADO (RN-26.5, con la marca de corregida de HU-05) y sus formas de pago guardadas.
  */
-export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQueryDetail): PurchaseFormContent {
+export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQueryDetail, correctedMark = ''): PurchaseFormContent {
   const p = detail.purchase;
   const values: Record<string, Value> = {
     agency: p.agencyName,
@@ -81,7 +81,7 @@ export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQ
     coopDiscount: p.cooperativeDiscount,
     withholding: p.withholding,
     otherDiscounts: p.otherDiscounts,
-    status: detail.status,
+    status: detail.corrected ? `${detail.status} - ${correctedMark}` : detail.status,
     ...moduleValues(detail),
   };
   const fill = (f: FormFieldDefinition): FormFieldDefinition => ({ ...f, readonly: true, value: values[f.key] ?? '' });

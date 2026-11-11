@@ -15,6 +15,8 @@ interface QueryDetail<M extends AnnulmentModule, P> {
   /** La respuesta de su modulo, con todos los campos de la compra. */
   readonly purchase: P;
   readonly status: 'VALIDA' | 'ANULADA';
+  /** HU-05: se corrigio con "Menu Habilitacion" (misma factura). */
+  readonly corrected?: boolean;
   /** Formas de pago guardadas; null en compras sin desglose. */
   readonly payment: PurchasePayment | null;
   readonly remissions: readonly string[];
