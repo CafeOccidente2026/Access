@@ -113,6 +113,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
         PurchaseContext context = purchaseContextService.forSave(
                 request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+        // HU-23 CA-2 / Q23: sin los 3 pesos de verde del Registro de Control no se registra (ni se toma factura).
+        GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
         GreenCoffeePurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
