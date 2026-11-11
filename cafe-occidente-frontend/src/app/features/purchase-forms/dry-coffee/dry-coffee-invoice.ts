@@ -2,6 +2,7 @@ import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
 import { PurchasePayment } from '../../../core/models/payment-method.model';
+import { cooperativeNit } from '../../../shared/utils/nit';
 
 /** Formato colombiano con 2 decimales (Valor Bruto, Aporte Socio, Retefuente, Neto a Pagar, pesos/kilos...). */
 export function money(value: number): string {
@@ -113,7 +114,7 @@ export function buildInvoiceDoc(
                 stack: [
                   { text: 'COOPERATIVA DE CAFICULTORES', bold: true, fontSize: 10 },
                   { text: 'DE OCCIDENTE DE NARIÑO LTDA.', bold: true, fontSize: 10 },
-                  { text: 'NIT 891.200.986-8', fontSize: 9 },
+                  { text: `NIT ${cooperativeNit()}`, fontSize: 9 },
                   { text: 'Pasto, Carrera 32A No. 18-105', fontSize: 8 },
                   { text: 'Tel 6027219788', fontSize: 8 },
                 ],
