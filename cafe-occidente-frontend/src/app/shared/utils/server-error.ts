@@ -7,7 +7,7 @@ import texts from '../../../../public/assets/data/server-errors.json';
  * de negocio, campo que falta, restriccion de la base); sin conexion, que no hay conexion; si no viene motivo, el
  * texto de respaldo de la pantalla (qué se intentó) o el código HTTP.
  */
-export function serverError(err: unknown, fallback: string | null | undefined): string | null {
+export function serverError(err: unknown, fallback?: string | null): string {
   if (err instanceof HttpErrorResponse && err.status === 0) {
     return texts.offline;
   }
@@ -15,8 +15,8 @@ export function serverError(err: unknown, fallback: string | null | undefined): 
   if (typeof message === 'string' && message.trim() !== '') {
     return message;
   }
-  if (err instanceof HttpErrorResponse && fallback == null) {
-    return texts.status.replace('{status}', String(err.status));
+  if (fallback) {
+    return fallback;
   }
-  return fallback ?? null;
+  return err instanceof HttpErrorResponse ? texts.status.replace('{status}', String(err.status)) : texts.unknown;
 }

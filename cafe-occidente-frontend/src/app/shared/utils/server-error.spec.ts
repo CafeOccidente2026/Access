@@ -29,6 +29,6 @@ describe('serverError', () => {
 
   it('un error que no es HTTP usa el respaldo', () => {
     expect(serverError(new Error('x'), 'respaldo')).toBe('respaldo');
-    expect(serverError(undefined, null)).toBeNull();
+    expect(serverError(undefined, null)).toBe(texts.unknown);
   });
 });
