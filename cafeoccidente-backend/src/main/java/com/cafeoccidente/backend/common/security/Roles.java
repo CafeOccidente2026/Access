@@ -15,6 +15,7 @@ public final class Roles {
 
     // Pantallas que el Administrador puede conceder (RF-02): su rol o el permiso vigente (Screen).
     public static final String ANNUL = ADMIN + " or hasAuthority('SCREEN_ANULAR_DOCUMENTO')";
+    public static final String CORRECT = ADMIN + " or hasAuthority('SCREEN_CORREGIR_COMPRA')";
     public static final String CONTROL_RECORD = ADMIN + " or hasAuthority('SCREEN_REGISTRO_CONTROL')";
     public static final String HISTORY = ADMIN + " or hasAuthority('SCREEN_HISTORIAL')";
     public static final String TABLES = ADMIN + " or hasAuthority('SCREEN_ACCESO_TABLAS')";
