@@ -51,7 +51,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     /** Una fila de la Caja / Suministros de Access, venga de donde venga. */
     record Line(String source, Long sourceId, String agencyName, String transactionId, String fundCode,
             LocalDate date, String idNumber, String detail, BigDecimal inflow, BigDecimal outflow,
-            String paymentMethod, String checkNumber, Instant createdAt) {
+            String paymentMethod, String checkNumber, Instant createdAt, BigDecimal card) {
 
         CheckRelationMark.Key key() {
             return new CheckRelationMark.Key(source, sourceId);
@@ -88,8 +88,14 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     @Override
     public List<SuppliesReportRow> cashMovement(Long agencyId, String fundCode, LocalDate today) {
         String fund = likePrefix(fundCode);
-        return withBalance(cashBook(agencyId, yearStart(today), yearEnd(today)).stream()
-                .filter(l -> CASH.equals(l.paymentMethod()) && l.fundCode().startsWith(fund)));
+        // 6B (11-nov): el datafono va en su columna, con Entradas y Salidas en 0 (no mueve el saldo del efectivo).
+        Stream<Line> card = suppliesReadRepository.cardReceivables(agencyId, yearStart(today), yearEnd(today)).stream()
+                .map(p -> new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
+                        p.purchaseDate(), p.idNumber(), p.paymentMethod() + " " + p.idNumber(), BigDecimal.ZERO,
+                        BigDecimal.ZERO, p.paymentMethod(), null, p.createdAt(), p.netToPay()));
+        return withBalance(Stream.concat(cashBook(agencyId, yearStart(today), yearEnd(today)).stream()
+                .filter(l -> CASH.equals(l.paymentMethod())), card)
+                .filter(l -> l.fundCode().startsWith(fund)));
     }
 
     @Override
@@ -228,19 +234,20 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
 
     private static Line line(String source, LedgerEntry e, BigDecimal inflow, BigDecimal outflow, String method) {
         return new Line(source, e.getId(), e.getAgency().getName(), e.getTransactionId(), e.getFund().getCode(),
-                e.getEntryDate(), e.getIdNumber(), e.getDetail(), inflow, outflow, method, e.getCheckNumber(), e.getCreatedAt());
+                e.getEntryDate(), e.getIdNumber(), e.getDetail(), inflow, outflow, method, e.getCheckNumber(), e.getCreatedAt(),
+                null);
     }
 
     private static Line line(PackagingEntry e) {
         return new Line("PACKAGING", e.getId(), e.getAgency().getName(), e.getTransactionId(), e.getPackagingType(),
                 e.getEntryDate(), e.getIdNumber(), e.getDetail(), BigDecimal.valueOf(e.getInflow()),
-                BigDecimal.valueOf(e.getOutflow()), null, null, e.getCreatedAt());
+                BigDecimal.valueOf(e.getOutflow()), null, null, e.getCreatedAt(), null);
     }
 
     private static Line line(PurchasePayment p, BigDecimal inflow, BigDecimal outflow) {
         return new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
                 p.purchaseDate(), p.idNumber(), null, inflow, outflow, p.paymentMethod(),
-                p.checkNumber(), p.createdAt());
+                p.checkNumber(), p.createdAt(), null);
     }
 
     private static SuppliesReportRow row(Line l, GrowerName g, BigDecimal balance) {
@@ -250,7 +257,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     private static SuppliesReportRow row(Line l, GrowerName g, BigDecimal balance, String detail) {
         return new SuppliesReportRow(l.agencyName(), l.transactionId(), l.fundCode(), l.date(), l.idNumber(),
                 g == null ? null : g.firstNames(), g == null ? null : g.lastNames(), detail,
-                l.inflow(), l.outflow(), balance, l.paymentMethod(), l.checkNumber());
+                l.inflow(), l.outflow(), balance, l.paymentMethod(), l.checkNumber(), l.card());
     }
 
     /** Criterio LIKE x & "*" de los InputBox de Access; vacio = todo. */
