@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.controlrecord.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
@@ -16,8 +17,10 @@ import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
 import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,16 +31,34 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     private final AgencyRepository agencyRepository;
     private final ControlRecordMapper mapper;
     private final ChangeHistoryService history;
+    private final SecurityUtils securityUtils;
+
+    /**
+     * Respuesta del area (11-nov): estos valores solo los cambia el Administrador. El % pasilla promedio se cambiaba en
+     * Access para favorecer compras; el Usuario con el permiso temporal de la pantalla cambia el resto.
+     */
+    private static final List<Map.Entry<Function<ControlRecord, BigDecimal>, Function<ControlRecordRequest, BigDecimal>>>
+            ADMIN_ONLY = List.of(
+                    Map.entry(ControlRecord::getAvgHuskPercentage, ControlRecordRequest::avgHuskPercentage),
+                    Map.entry(ControlRecord::getAssociatePercentage, ControlRecordRequest::associatePercentage),
+                    Map.entry(ControlRecord::getNonAssociateDiscount, ControlRecordRequest::nonAssociateDiscount),
+                    Map.entry(ControlRecord::getGreenTotalStoredWeight, ControlRecordRequest::greenTotalStoredWeight),
+                    Map.entry(ControlRecord::getGreenTotalHuskWeight, ControlRecordRequest::greenTotalHuskWeight),
+                    Map.entry(ControlRecord::getGreenHealthyStoredWeight, ControlRecordRequest::greenHealthyStoredWeight),
+                    Map.entry(ControlRecord::getGreenHealthyUnitPrice, ControlRecordRequest::greenHealthyUnitPrice),
+                    Map.entry(ControlRecord::getGreenDefectiveUnitPrice, ControlRecordRequest::greenDefectiveUnitPrice));
 
     public ControlRecordServiceImpl(
             ControlRecordRepository controlRecordRepository,
             AgencyRepository agencyRepository,
             ControlRecordMapper mapper,
-            ChangeHistoryService history) {
+            ChangeHistoryService history,
+            SecurityUtils securityUtils) {
         this.controlRecordRepository = controlRecordRepository;
         this.agencyRepository = agencyRepository;
         this.mapper = mapper;
         this.history = history;
+        this.securityUtils = securityUtils;
     }
 
     @Override
@@ -81,6 +102,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     @Transactional
     public ControlRecordResponse update(Long agencyId, ControlRecordRequest request) {
         ControlRecord controlRecord = getActive(agencyId);
+        requireAdminForBusinessValues(controlRecord, request);
         Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
         applyRequest(controlRecord, request);
         ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
@@ -108,6 +130,14 @@ public class ControlRecordServiceImpl implements ControlRecordService {
                     snapshot(updated));
         }
         return new GreenCoffeeAppliedResponse(records.size());
+    }
+
+    private void requireAdminForBusinessValues(ControlRecord current, ControlRecordRequest request) {
+        boolean changed = ADMIN_ONLY.stream().anyMatch(field ->
+                field.getKey().apply(current).compareTo(field.getValue().apply(request)) != 0);
+        if (changed && !securityUtils.isAdmin()) {
+            throw new BusinessRuleException("Solo el Administrador puede cambiar este valor");
+        }
     }
 
     private static Map<String, String> snapshot(ControlRecordResponse record) {

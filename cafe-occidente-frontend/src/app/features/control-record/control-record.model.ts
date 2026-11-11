@@ -1,5 +1,8 @@
 import { FormFieldDefinition } from '../../core/models';
 
+/** adminOnly: respuesta del area (11-nov), solo el Administrador lo cambia; con el permiso temporal queda de solo lectura. */
+export type ControlRecordField = FormFieldDefinition & { readonly adminOnly?: boolean };
+
 export interface ControlRecordContent {
   readonly windowTitle: string;
   readonly heading: string;
@@ -14,6 +17,8 @@ export interface ControlRecordContent {
   readonly applyGreenAccept: string;
   readonly applyGreenCancel: string;
   readonly applyGreenDone: string;
-  readonly leftColumn: FormFieldDefinition[];
-  readonly rightColumn: FormFieldDefinition[];
+  readonly leftColumn: ControlRecordField[];
+  readonly rightColumn: ControlRecordField[];
+  readonly greenHeading: string;
+  readonly greenColumn: ControlRecordField[];
 }

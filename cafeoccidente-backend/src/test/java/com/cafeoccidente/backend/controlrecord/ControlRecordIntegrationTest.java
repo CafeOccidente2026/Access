@@ -152,6 +152,49 @@ class ControlRecordIntegrationTest {
         applyGreenCoffee(admin, GREEN_VALUES.replace("140", "-1")).andExpect(status().isBadRequest());
     }
 
+    /** Usuario de Buesaco con el permiso temporal de la pantalla Registro de Control (RF-02). */
+    private String clerkWithPermission() {
+        User clerk = new User();
+        clerk.setUsername("regcontrol_usuario");
+        clerk.setPasswordHash(passwordEncoder.encode("clave-reg1"));
+        clerk.setRole(roles.findByName(Roles.USUARIO).orElseThrow());
+        clerk.setAgency(agencies.findById(1L).orElseThrow());
+        Long clerkId = users.save(clerk).getId();
+        jdbc.update("INSERT INTO permisos (usuario_id, pantalla, concedido_por) VALUES (?, 'REGISTRO_CONTROL', ?)", clerkId, clerkId);
+        return "Bearer " + jwtService.generateToken(new SecurityUser(clerk));
+    }
+
+    private ResultActions saveAs(String token, ObjectNode body) throws Exception {
+        return mockMvc.perform(put(BUESACO).header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content(body.toString()));
+    }
+
+    /**
+     * Respuesta del area (11-nov): % pasilla promedio, % asociados, % no asociados y los 5 valores de cafe verde solo
+     * los cambia el Administrador; el Usuario con el permiso temporal cambia el resto (por ejemplo, el Fiel).
+     */
+    @Test
+    void withThePermissionTheBusinessValuesStayForTheAdministrator() throws Exception {
+        String clerk = clerkWithPermission();
+        saveAs(clerk, current().put("trustedId", "87304051")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.trustedId").value("87304051"));
+
+        for (String field : List.of("avgHuskPercentage", "associatePercentage", "nonAssociateDiscount",
+                "greenTotalStoredWeight", "greenTotalHuskWeight", "greenHealthyStoredWeight",
+                "greenHealthyUnitPrice", "greenDefectiveUnitPrice")) {
+            ObjectNode body = current();
+            body.put(field, body.get(field).decimalValue().add(BigDecimal.ONE));
+            saveAs(clerk, body).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Solo el Administrador puede cambiar este valor"));
+        }
+        assertThat(service.getActive(1L).getAvgHuskPercentage()).isEqualByComparingTo(current().get("avgHuskPercentage").decimalValue());
+
+        // El Administrador si los cambia.
+        ObjectNode body = current();
+        body.put("avgHuskPercentage", new BigDecimal("6.14"));
+        save(body).andExpect(status().isOk()).andExpect(jsonPath("$.avgHuskPercentage").value(6.14));
+    }
+
     @Test
     void aSecondControlRecordForTheSameAgencyIsRejected() throws Exception {
         mockMvc.perform(post(BUESACO).header("Authorization", admin)

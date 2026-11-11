@@ -26,7 +26,7 @@ describe('ControlRecordComponent', () => {
           useValue: { loadJson: () => of({ leftColumn: [
               { key: 'prefix', label: 'Prefijo', type: 'text' },
               { key: 'withholdingPercentage', label: 'Porcentaje Rete Fuente', type: 'percentage' },
-            ], rightColumn: [] }) },
+            ], rightColumn: [], greenColumn: [] }) },
         },
       ],
     });
@@ -108,7 +108,7 @@ describe('ControlRecordComponent', () => {
     const numeric = ['Núm Registro Control', 'Factor Base', 'Base Rete Fuente', 'Base Carga', 'Porcentaje Rete Fuente',
       'Base Pasilla', '% Kg de Pasilla Promedio', 'Peso Tot Alm Café Verde', 'Peso Tot Pasilla Café Verde',
       'Peso Alm Sana Café Verde', 'Pr Alm Sana Café Verde', 'Pr_AlmDefec Café Verde'];
-    const fields = [...content.leftColumn, ...content.rightColumn] as FormFieldDefinition[];
+    const fields = [...content.leftColumn, ...content.rightColumn, ...content.greenColumn] as FormFieldDefinition[];
     for (const label of numeric) {
       expect(['number', 'count', 'currency', 'percentage'], label).toContain(fields.find((f) => f.label === label)?.type);
     }
@@ -153,6 +153,39 @@ describe('ControlRecordComponent', () => {
     expect(list).not.toHaveBeenCalled();
     expect(component.agencies()).toEqual([{ id: 1, name: 'Buesaco 1' }]);
     expect(component.agencyId()).toBe(1);
+  });
+
+  it('respuesta del area (11-nov): with the screen granted, the business and green coffee values are read only', () => {
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
+    localStorage.setItem('cafeoccidente.role', 'USUARIO');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AgencyService, useValue: { list: () => of([]) } },
+        { provide: ControlRecordService, useValue: { getByAgency: () => of({ id: 1, agencyId: 1, agencyName: 'Buesaco 1', active: true }) } },
+        { provide: ContentService, useValue: { loadJson: () => of(content) } },
+      ],
+    });
+    const component = TestBed.createComponent(ControlRecordComponent).componentInstance;
+    const all = [...component.leftFields(), ...component.rightFields(), ...component.greenFields()];
+    const readonly = (key: string) => all.find((f) => f.key === key)?.readonly;
+    for (const key of ['avgHuskPercentage', 'associatePercentage', 'nonAssociateDiscount', 'greenTotalStoredWeight',
+      'greenTotalHuskWeight', 'greenHealthyStoredWeight', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']) {
+      expect(readonly(key), key).toBe(true);
+    }
+    expect(readonly('trustedId')).toBe(false);
+  });
+
+  it('the Administrator edits them, and the green coffee values go under the "Café Verde" heading', () => {
+    localStorage.setItem('cafeoccidente.role', 'ADMINISTRADOR');
+    const component = setup(() => of({ id: 1, agencyId: 3, agencyName: 'El Tambo', active: true }));
+    TestBed.inject(ContentService);
+    expect(content.greenHeading).toBe('Café Verde');
+    expect(content.greenColumn.map((f) => f.key)).toEqual(['greenTotalStoredWeight', 'greenTotalHuskWeight',
+      'greenHealthyStoredWeight', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']);
+    expect(component.isAdmin).toBe(true);
   });
 
   it('shows the empty create form when the session agency has no record yet', () => {
@@ -294,7 +327,7 @@ describe('ControlRecordComponent - cafe verde en todas las agencias', () => {
   });
 
   it('control-record.json: los valores en pesos enteros llevan puntos de miles al escribir; Base Pasilla (12,5) no', () => {
-    const fields = [...content.leftColumn, ...content.rightColumn] as (FormFieldDefinition & { liveThousands?: boolean })[];
+    const fields = [...content.leftColumn, ...content.rightColumn, ...content.greenColumn] as (FormFieldDefinition & { liveThousands?: boolean })[];
     const live = fields.filter((f) => f.liveThousands).map((f) => f.key);
     expect(live).toEqual(['baseWithholding', 'costs', 'greenHealthyUnitPrice', 'greenDefectiveUnitPrice']);
   });
