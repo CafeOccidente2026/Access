@@ -1,9 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { API_BASE_URL } from '../../core/config/api.config';
 import { AnnulmentCandidate } from '../../core/models/purchase-annulment.model';
@@ -75,8 +75,8 @@ describe('PurchaseCorrectionComponent (HU-05)', () => {
     expect(component.view()?.paymentLocked).toBe(true);
     expect(component.view()?.reprintButtonLabel).toBeFalsy();
     expect(keys(el)).toEqual([...correction.fields.DRY.map((f) => f.key), ...correction.paymentFields.map((f) => f.key)]);
-    expect(el.querySelector<HTMLInputElement>('[data-field-key="grossKg"]')?.value).toBe('1000');
-    expect(el.querySelector<HTMLInputElement>('[data-field-key="cardAmount"]')?.value).toBe(String(MIXED.cardAmount));
+    expect(el.querySelector<HTMLInputElement>('[data-correction] [data-field-key="grossKg"]')?.value).toBe('1000');
+    expect(el.querySelector<HTMLInputElement>('[data-correction] [data-field-key="cardAmount"]')?.value).toBe(String(MIXED.cardAmount));
   });
 
   it('recalculates on the server when a weight changes and puts the difference in cash', async () => {
@@ -151,6 +151,67 @@ describe('PurchaseCorrectionComponent (HU-05)', () => {
     http.expectNone(`${URL}/DRY/1225/preview`);
     expect(el.textContent).toContain(correction.messages.annulled);
     expect(el.querySelector('[data-correction]')).toBeNull();
+  });
+
+  it('says why the save failed and lets try again', async () => {
+    const { component, fixture, el } = await open();
+    preview().flush({ ...CALC, netKg: 1000, netToPay: DRY.netToPay });
+    await settle();
+    fixture.detectChanges();
+
+    component.save();
+    http.expectOne(`${URL}/DRY/1225`).flush({ message: 'FORMA DE PAGO DESCUADRADA, REVISE' }, { status: 400, statusText: 'Bad Request' });
+    await settle();
+    fixture.detectChanges();
+
+    expect(component.message()).toBe('FORMA DE PAGO DESCUADRADA, REVISE');
+    expect(component.saving()).toBe(false);
+    expect(el.querySelector<HTMLButtonElement>('[data-testid="save"]')?.disabled).toBe(false);
+  });
+
+  it('a purchase brought from Access without payment split starts all in cash', async () => {
+    const { component } = await open(detail({ payment: null }));
+    expect(component.payment()).toMatchObject({ cashAmount: String(DRY.netToPay), cardAmount: '0', checkNumber: '' });
+    preview().flush({ ...CALC, netKg: 1000, netToPay: DRY.netToPay });
+  });
+
+  it('searches by invoice, says so when it does not exist and goes back to Acceso Principal', async () => {
+    const fixture = TestBed.createComponent(PurchaseCorrectionComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    component.search(new Event('submit'), 'SDBU 99');
+    TestBed.tick();
+    http.expectOne(`${URL}?invoiceNumber=99`).flush([]);
+    await settle();
+    expect(component.message()).toBe(correction.messages.notFound);
+    component.search(new Event('submit'), '');
+    http.expectNone(`${URL}?invoiceNumber=0`);
+
+    component.back();
+    expect(navigate).toHaveBeenCalledWith(correction.backRoute);
+  });
+
+  it('when one invoice is in two modules, lets choose which one to correct', async () => {
+    const other = { ...FOUND, module: 'HUSK' as const, id: 24 };
+    const fixture = TestBed.createComponent(PurchaseCorrectionComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.search(new Event('submit'), '27869');
+    TestBed.tick();
+    http.expectOne(`${URL}?invoiceNumber=27869`).flush([FOUND, other]);
+    await settle();
+    http.expectOne(`${QUERY}/DRY/1225`).flush(detail());
+    await settle();
+
+    component.choose(other);
+    await settle();
+    http.expectOne(`${QUERY}/HUSK/24`).flush(detail({ module: 'HUSK', purchase: HUSK }));
+    await settle();
+    expect(component.fields().map((f) => f.key)).toContain('almondWeight');
+    http.match(() => true);
   });
 
   it('corrects husk with its own fields', async () => {
