@@ -10,6 +10,7 @@ import com.cafeoccidente.backend.purchases.annulment.repository.PurchaseAnnulmen
 import com.cafeoccidente.backend.purchases.annulment.service.PurchaseAnnulmentService;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -55,6 +56,15 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
     @Override
     @Transactional
     public AnnulmentCandidate annul(Long agencyId, AnnulmentModule module, Long id) {
+        lockChangeable(agencyId, module, id, ANNULMENT_LOCKED);
+        repository.annul(module, id, securityUtils.getCurrentUserId());
+        return repository.lock(module, id).orElseThrow();
+    }
+
+    /** Lo que no deja anular tampoco deja corregir (HU-05): la compra queda bloqueada hasta el fin de la transaccion. */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public AnnulmentCandidate lockChangeable(Long agencyId, AnnulmentModule module, Long id, String lockedMessage) {
         AnnulmentCandidate purchase = repository.lock(module, id)
                 .filter(p -> agencyId == null || p.agencyId().equals(agencyId))
                 .orElseThrow(() -> new ResourceNotFoundException("No existe esa compra en la agencia"));
@@ -62,7 +72,7 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
             throw new BusinessRuleException(ALREADY_ANNULLED);
         }
         if (purchase.annulmentLocked()) {
-            throw new BusinessRuleException(ANNULMENT_LOCKED);
+            throw new BusinessRuleException(lockedMessage);
         }
         if (repository.hasInventoryExits(module, id)) {
             throw new BusinessRuleException(HAS_INVENTORY_EXITS);
@@ -73,7 +83,6 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
         repository.remittanceNumber(module, id).ifPresent(number -> {
             throw new BusinessRuleException(IN_REMITTANCE.formatted(number));
         });
-        repository.annul(module, id, securityUtils.getCurrentUserId());
-        return repository.lock(module, id).orElseThrow();
+        return purchase;
     }
 }
