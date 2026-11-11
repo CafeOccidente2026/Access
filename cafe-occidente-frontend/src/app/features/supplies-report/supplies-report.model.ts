@@ -25,6 +25,7 @@ export interface SuppliesReport {
 
 export interface SuppliesReportText {
   readonly company: string;
+  readonly nit: string;
   readonly checksTitle: string;
   readonly agencyGroup: string;
   readonly checksGroupSummary: string;

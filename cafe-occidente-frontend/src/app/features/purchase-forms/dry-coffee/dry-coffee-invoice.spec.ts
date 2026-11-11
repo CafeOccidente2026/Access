@@ -28,6 +28,8 @@ describe('buildDryCoffeeInvoiceDocDefinition', () => {
     } as DryCoffeePurchaseResponse;
 
     const content = buildDryCoffeeInvoiceDocDefinition(purchase, null).content as unknown[];
+    // 6C: el NIT de la cooperativa se guarda sin separadores y sale igual que antes.
+    expect(findText(content, 'NIT 891.200.986-8')).toBeTruthy();
     const second = content.at(-1) as { stack: unknown[]; pageBreak: string };
 
     const first = content.slice(0, -1);

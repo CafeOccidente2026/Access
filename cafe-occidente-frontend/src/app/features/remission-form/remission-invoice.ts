@@ -1,13 +1,13 @@
 import type { Content, ContentStack, ContentTable, CustomTableLayout, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { RemissionResponse } from '../../core/models/inventory.model';
+import { cooperativeNit } from '../../shared/utils/nit';
 import { themeColor } from '../../shared/utils/theme-color';
 import { money, wholePeso } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 
 // Encabezado del papel preimpreso (capturas/remision-formato.png). Direccion y NIT como en la factura;
 // telefonos leidos de la captura (baja resolucion) - pendientes de confirmar con una remision real.
 const COMPANY = 'COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO.';
-const NIT = 'NIT. 891.200.986-8';
 const ADDRESS = 'CARRERA 32 A No. 18 - 105 - TELEFONO: 602 721 9700 - CELULAR: 311 749 8702 - PASTO (N)';
 
 const T = { fontSize: 6 };
@@ -52,7 +52,7 @@ function header(remission: RemissionResponse, logoDataUrl: string | null): Conte
             ],
           },
           { text: COMPANY, bold: true, fontSize: 6, margin: [0, 4, 0, 0] },
-          { text: NIT, fontSize: 6, margin: [0, 2, 0, 0] },
+          { text: `NIT. ${cooperativeNit()}`, fontSize: 6, margin: [0, 2, 0, 0] },
           { text: ADDRESS, bold: true, fontSize: 5.5, margin: [0, 3, 0, 0] },
         ],
       },

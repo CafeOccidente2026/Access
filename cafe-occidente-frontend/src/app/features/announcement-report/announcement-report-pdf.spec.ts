@@ -35,6 +35,10 @@ describe('announcement report', () => {
     ]);
   });
 
+  it('6C: prints the cooperative NIT stored without separators, formatted as before', () => {
+    expect(json([row({})])).toContain('NIT. 891.200.986-8');
+  });
+
   it('weights the factor by KN only over rows with a factor, and is empty when none has one', () => {
     expect(weightedFactor([row({ netKg: 100, factor: 90 }), row({ netKg: 300, factor: 94 })])).toBe(93);
     expect(weightedFactor([row({ netKg: 0 })])).toBe(0);

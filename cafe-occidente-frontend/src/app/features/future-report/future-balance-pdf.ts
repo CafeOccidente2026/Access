@@ -1,6 +1,7 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { FutureBalanceRow } from '../../core/models/purchase-report.model';
+import { cooperativeNit } from '../../shared/utils/nit';
 import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { ReportFooterText, footer, shortDate, signatures } from '../announcement-report/announcement-report-pdf';
 
@@ -60,7 +61,7 @@ export function buildFutureBalanceDoc(rows: FutureBalanceRow[], text: FutureBala
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 752, y2: 0, lineWidth: 1 }] },
       { text: text.title, bold: true, fontSize: 16, margin: [0, 3, 0, 0] },
       { text: text.cooperative, bold: true, fontSize: 9, alignment: 'center' },
-      { text: text.nit, bold: true, fontSize: 8, alignment: 'center' },
+      { text: `${text.nit} ${cooperativeNit()}`, bold: true, fontSize: 8, alignment: 'center' },
       { text: [{ text: `${text.agencyLabel}  `, bold: true }, rows[0]?.agencyName ?? ''], fontSize: 8 },
     ],
   };

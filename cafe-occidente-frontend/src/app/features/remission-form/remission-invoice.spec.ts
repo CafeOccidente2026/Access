@@ -26,6 +26,8 @@ describe('buildRemissionDocDefinition', () => {
   it('prints 4 copies in one PDF and only the first one carries the Factor', () => {
     const content = buildRemissionDocDefinition(remission, null).content as { stack: Content[]; pageBreak?: string }[];
     expect(content).toHaveLength(4);
+    // 6C: el NIT de la cooperativa se guarda sin separadores y sale igual que antes.
+    expect(findText(content, 'NIT. 891.200.986-8')).toBeTruthy();
     expect(content.filter((c) => c.pageBreak === 'before')).toHaveLength(3);
     const withFactor = content.map((c) => JSON.stringify(c.stack).includes('"93,37"'));
     expect(withFactor).toEqual([true, false, false, false]);
