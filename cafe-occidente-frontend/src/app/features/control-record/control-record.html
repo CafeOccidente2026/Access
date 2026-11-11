@@ -38,6 +38,15 @@
             labelWidthClass="w-52"
             (valueChange)="onFieldValueChange({ key: field.key, value: $event })"
           ></app-form-field>
+          <h3 class="mt-2 border-b border-slate-300 pb-1 text-sm font-semibold text-blue-900">{{ p.greenHeading }}</h3>
+          <app-form-field
+            *ngFor="let field of greenFields(); trackBy: trackByKey"
+            [formatWhenIdle]="true"
+            [field]="field"
+            labelClass="text-blue-900"
+            labelWidthClass="w-52"
+            (valueChange)="onFieldValueChange({ key: field.key, value: $event })"
+          ></app-form-field>
         </div>
       </div>
 
