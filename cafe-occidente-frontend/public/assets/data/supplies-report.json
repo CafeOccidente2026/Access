@@ -18,6 +18,7 @@
     "paymentGroupSummary": "Resumido por punto de compra {agency} ({count} registros de detalle)",
     "sum": "Suma",
     "grandTotal": "Suma total",
+    "cardTotal": "Total Datáfono",
     "page": "Página {page} de {pages}"
   },
   "reports": {
@@ -26,8 +27,9 @@
       "endpoint": "cash",
       "layout": "movement",
       "pdfTitle": "MOVIMIENTO CAJA",
+      "cardColumn": true,
       "filters": [{ "key": "fund", "label": "Fondo", "options": ["LF", "RP"], "required": true }],
-      "columns": ["Trans", "Fd", "Fecha", "Detalle", "Entradas", "Salidas", "Saldo"],
+      "columns": ["Trans", "Fd", "Fecha", "Detalle", "Entradas", "Salidas", "Datáfono", "Saldo"],
       "backRoute": "/suministros"
     },
     "pettyCash": {

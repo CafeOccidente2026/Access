@@ -14,6 +14,8 @@ export interface SuppliesReport {
   readonly post?: boolean;
   readonly layout: 'movement' | 'supplies' | 'packaging' | 'checks' | 'paymentMethods';
   readonly pdfTitle?: string;
+  /** Informe de Caja (6B): columna Datáfono antes del Saldo, con su total al final. */
+  readonly cardColumn?: boolean;
   readonly fixedParams?: Record<string, string>;
   readonly filters: SuppliesReportFilter[];
   readonly columns: string[];
@@ -31,6 +33,7 @@ export interface SuppliesReportText {
   readonly paymentGroupSummary: string;
   readonly sum: string;
   readonly grandTotal: string;
+  readonly cardTotal: string;
   readonly page: string;
 }
 
