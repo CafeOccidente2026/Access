@@ -71,6 +71,33 @@ public class SuppliesReadRepository {
         return rows.stream().flatMap(List::stream).toList();
     }
 
+    /**
+     * 6B (11-nov): lo pagado con datafono para el informe de Caja, leido de la cuenta por cobrar. Solo las
+     * PENDIENTE: al anular la compra pasa a ANULADA y sale del informe. Fondo, fecha y orden son los de la compra.
+     */
+    public List<PurchasePayment> cardReceivables(Long agencyId, LocalDate from, LocalDate to) {
+        String sql = String.join(" UNION ALL ", PURCHASE_TABLES.entrySet().stream()
+                .map(e -> "SELECT c.modulo_compra, p.id, c.numero_factura, c.agencia_id, a.nombre AS agency_name,"
+                        + " f.codigo AS fund_code, p.fecha_compra, c.cedula_vendedor, c.valor, p.creado_en"
+                        + " FROM cuentas_por_cobrar c JOIN " + e.getValue() + " p ON p.id = c.compra_id"
+                        + " JOIN agencias a ON a.id = c.agencia_id JOIN fondos f ON f.id = p.fondo_id"
+                        + " WHERE c.modulo_compra = '" + e.getKey() + "' AND c.estado = 'PENDIENTE'"
+                        + " AND (CAST(:agencyId AS BIGINT) IS NULL OR c.agencia_id = :agencyId)"
+                        + " AND p.fecha_compra BETWEEN :from AND :to")
+                .toList());
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("agencyId", agencyId)
+                .addValue("from", from)
+                .addValue("to", to);
+        return jdbc.query(sql, params, (rs, i) -> {
+            Timestamp createdAt = rs.getTimestamp("creado_en");
+            return new PurchasePayment(rs.getString("modulo_compra"), rs.getLong("id"), rs.getInt("numero_factura"),
+                    rs.getLong("agencia_id"), rs.getString("agency_name"), rs.getString("fund_code"),
+                    rs.getObject("fecha_compra", LocalDate.class), rs.getString("cedula_vendedor"),
+                    rs.getBigDecimal("valor"), "DATAFONO", null, createdAt == null ? null : createdAt.toInstant());
+        });
+    }
+
     /** Relacion cheques caja: [1er nombre] & " " & [2o nombre], [1er apellido] & " " & [2o apellido]. */
     public List<GrowerName> growerNames(Collection<String> idNumbers) {
         if (idNumbers.isEmpty()) {
