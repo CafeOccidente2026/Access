@@ -50,12 +50,21 @@ type QuotaPurchaseContent = PurchaseFormContent & {
   readonly quotaPicker: QuotaPickerContent;
 };
 
+/**
+ * Prueba del 11-nov (punto 9), como ANUNCIADAS / COMPRAS CUPOS de Access: Kilos Netos no se digita. El Destare es lo
+ * que pasa de Esta Entrega y los Netos la entrega; si los brutos no la alcanzan, es una entrega parcial (Destare 0,
+ * Netos = Brutos). El servidor hace la misma cuenta y manda sobre esta.
+ */
+export function deliveryWeights(grossKg: number, deliveryKg: number): { tare: number; net: number } {
+  return { tare: Math.max(grossKg - deliveryKg, 0), net: Math.min(grossKg, deliveryKg) };
+}
+
 /** 'quota' = Facturar Anuncios con Cupos (RF-21.2); 'future' = Facturar Compras Anunciadas (RF-21.5). */
 type Mode = 'quota' | 'future';
 
 const WEIGHTS_AND_DISCOUNTS: string[] = [
   'totalStoredWeight', 'totalHuskWeight',
-  'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
+  'bags', 'grossKg', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** En anunciadas el Especial no se elige: viene de la compra anunciada. */
@@ -65,7 +74,7 @@ const EDITABLE: Record<Mode, string[]> = {
 };
 
 const REQUIRED: string[] = [
-  'fund', 'special', 'idPart1', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
+  'fund', 'special', 'idPart1', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg',
 ];
 
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
@@ -75,6 +84,8 @@ const READONLY: string[] = [
   'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'invoice', 'productCode', 'basePriceLoad', 'huskPrice',
   'healthyUnitPrice', 'bonus', 'costs', 'deliveryKg',
+  // Prueba del 11-nov (punto 9): Destare y Kilos Netos salen de Kilos Brutos y Esta Entrega.
+  'tare',
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
   // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
   'withholding',
@@ -257,7 +268,6 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.recalculate();
         break;
       case 'grossKg':
-      case 'tare':
       case 'penalty':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
@@ -477,7 +487,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       cellphone: this.model['cellphone'],
       bagsCount: num(this.model['bags']),
       grossKg: num(this.model['grossKg']),
-      tareKg: num(this.model['tare']),
+      tareKg: deliveryWeights(num(this.model['grossKg']), choice.deliveryKg).tare,
       totalStoredWeight: num(this.model['totalStoredWeight']),
       defectiveStoredWeight: num(this.model['totalHuskWeight']),
       penalty: num(this.model['penalty']),
@@ -578,8 +588,8 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     const inv = this.invoiceReservation();
     const c = this.calc();
     const growerType = (this.model['idType'] ?? '').trim().toUpperCase();
-    const netKgLocal =
-      this.model['grossKg'] && this.model['tare'] ? num(this.model['grossKg']) - num(this.model['tare']) : '';
+    const delivery = this.quotaChoice()?.deliveryKg;
+    const weights = this.model['grossKg'] && delivery != null ? deliveryWeights(num(this.model['grossKg']), delivery) : null;
 
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
@@ -593,7 +603,8 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
       deliveryKg: this.quotaChoice()?.deliveryKg ?? '',
-      netKg: c ? c.netKg : netKgLocal,
+      netKg: c ? c.netKg : (weights?.net ?? ''),
+      tare: weights?.tare ?? '',
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',
       contribution: c ? (growerType === 'C' ? c.cooperativeDiscount : c.associateContribution) : '',
