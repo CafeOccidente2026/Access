@@ -34,7 +34,7 @@ describe('buildDryCoffeeInvoiceDocDefinition', () => {
 
     const first = content.slice(0, -1);
     expect(second.pageBreak).toBe('before');
-    expect(first[0]).toEqual(expect.objectContaining({ text: 'Copia Caficultor', alignment: 'right' }));
+    expect(first[0]).toEqual(expect.objectContaining({ text: 'Original Caficultor', alignment: 'right' }));
     expect(second.stack[0]).toEqual(expect.objectContaining({ text: 'Copia Operaciones', alignment: 'right' }));
     expect(second.stack.slice(1)).toEqual(first.slice(1));
     // NETO A PAGAR va en negrita y con el color por defecto (negro), como las demas etiquetas.

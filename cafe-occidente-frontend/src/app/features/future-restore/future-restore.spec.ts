@@ -124,8 +124,9 @@ describe('FutureRestoreComponent', () => {
     expect(c.rows()).toBeNull();
   });
 
-  it('the menu opens Anunciadas Hoy for everyone', () => {
-    expect(menu.leftStandaloneOption).toEqual({ label: 'Anunciadas Hoy', route: '/compras/futuro/anunciadas-hoy' });
+  it('the menu opens Anunciadas de Hoy for everyone (prueba del 11-nov: antes "Anunciadas Hoy")', () => {
+    expect(menu.leftStandaloneOption).toEqual({ label: 'Anunciadas de Hoy', route: '/compras/futuro/anunciadas-hoy' });
+    expect(JSON.stringify(content)).not.toContain('Anunciadas Hoy');
   });
 
   it('the menu opens both screens, only for the Administrator', () => {
