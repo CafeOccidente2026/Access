@@ -56,7 +56,9 @@ describe('PermissionsComponent (HU-03)', () => {
     choose(component, 5);
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="catalog"]')?.textContent).toContain('Anular Documento');
-    expect(component.catalog()).toEqual(['ANULAR_DOCUMENTO', 'ACCESO_TABLAS', 'ACTUALIZAR_ANUNCIOS', 'REGISTRO_CONTROL', 'HISTORIAL']);
+    expect(component.catalog()).toEqual(
+      ['ANULAR_DOCUMENTO', 'ACCESO_TABLAS', 'ACTUALIZAR_ANUNCIOS', 'REGISTRO_CONTROL', 'HISTORIAL', 'CORREGIR_COMPRA'],
+    );
   });
 
   it('Operaciones is not offered Actualizar Anuncios, which its role already has', () => {

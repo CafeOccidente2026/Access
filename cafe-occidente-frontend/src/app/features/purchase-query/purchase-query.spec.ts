@@ -114,6 +114,13 @@ describe('PurchaseQueryComponent (HU-28)', () => {
     expect(component.view()?.statusField?.value).toBe('ANULADA');
   });
 
+  it('HU-05: a corrected purchase shows CORREGIDA next to its ESTADO', async () => {
+    const { component } = render();
+    component.go('FIRST');
+    await show(`${URL}/navigate?direction=FIRST`, FIRST, detail({ corrected: true }));
+    expect(component.view()?.statusField?.value).toBe(`VALIDA - ${content.correctedMark}`);
+  });
+
   it('CA-3: Reimprimir Dcto Equiv reprints the invoice of the purchase shown, with ANULADA if it was annulled', async () => {
     const open = vi.fn();
     const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
