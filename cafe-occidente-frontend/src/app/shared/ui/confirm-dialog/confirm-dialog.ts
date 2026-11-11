@@ -14,6 +14,10 @@ import {
 
 import { AppButtonComponent } from '../app-button/app-button';
 
+/** Avisos abiertos, el último encima. Solo ese cuida el foco: con dos a la vez (Compra registrada + No se pudo
+ *  generar la factura) cada uno le quitaba el foco al otro sin fin (PR #82). */
+const openDialogs: ConfirmDialogComponent[] = [];
+
 /** Primer campo que el usuario puede llenar (a donde va el foco si el de antes ya no existe). */
 const EDITABLE_FIELD = 'input:not([readonly]):not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([readonly])';
 
@@ -39,6 +43,7 @@ export class ConfirmDialogComponent implements AfterViewInit, OnDestroy {
   /** Prueba del 9-nov: el aviso abre con el foco en Aceptar (el ultimo boton), asi Enter lo acepta y no va al
    *  campo que quedo detras. */
   ngAfterViewInit(): void {
+    openDialogs.push(this);
     this.focusAccept();
   }
 
@@ -46,7 +51,7 @@ export class ConfirmDialogComponent implements AfterViewInit, OnDestroy {
   @HostListener('document:focusin', ['$event'])
   keepFocus(event: FocusEvent): void {
     const target = event.target as HTMLElement;
-    if (!this.host.contains(target)) {
+    if (openDialogs.at(-1) === this && !this.host.contains(target)) {
       this.returnTo = target;
       this.focusAccept();
     }
@@ -54,6 +59,7 @@ export class ConfirmDialogComponent implements AfterViewInit, OnDestroy {
 
   /** Al cerrar, el foco no se pierde: vuelve al campo de antes o, si ya no está, al primer campo de la pantalla. */
   ngOnDestroy(): void {
+    openDialogs.splice(openDialogs.indexOf(this), 1);
     const target = this.returnTo;
     setTimeout(() => {
       if (document.activeElement && document.activeElement !== document.body) {
