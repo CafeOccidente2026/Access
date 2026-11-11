@@ -18,15 +18,14 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
-import { advanceFocus, focusField, nextPending } from '../form-focus';
-import { CELLPHONE, MissingCellphone } from '../seller-cellphone';
+import { advanceFocus, focusField } from '../form-focus';
+import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
 
 interface HuskMessages {
-  readonly cellphoneMissing?: string;
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
@@ -106,7 +105,6 @@ export class HuskFormComponent extends UnsavedCloseForm {
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
-  private readonly missingCellphone = new MissingCellphone();
   private readonly tick = signal(0);
 
   override model: FormModel = {};
@@ -168,12 +166,6 @@ export class HuskFormComponent extends UnsavedCloseForm {
     if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
-    if (key === CELLPHONE) {
-      const next = nextPending(FOCUS_ORDER, this.locked);
-      if (next) {
-        this.focusField(next);
-      }
-    }
   }
 
 
@@ -183,8 +175,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       case 'idPart1':
         this.lookupGrower();
         break;
-      case 'address':
-      case CELLPHONE:
+      case 'cellphone':
       case 'almondWeight':
       case 'grossKg':
       case 'tare':
@@ -256,9 +247,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
           }
         });
         this.tick.update((n) => n + 1);
-        if (!this.missingCellphone.check(this.model, this.errorMessage, this.messages()?.cellphoneMissing)) {
-          this.advanceFocus('idPart1');
-        }
+        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -333,7 +322,6 @@ export class HuskFormComponent extends UnsavedCloseForm {
     if (wasBlocked) {
       this.reset();
     }
-    this.missingCellphone.afterNotice(this.focusField);
   }
 
   @HostListener('document:keydown.escape')
@@ -351,7 +339,6 @@ export class HuskFormComponent extends UnsavedCloseForm {
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     this.tick.update((n) => n + 1);
-    // Prueba del 10-nov: lista para la siguiente compra solo con teclado (tras Imprimir o Escape).
     this.focusField(FOCUS_ORDER[0]);
   }
 

@@ -20,8 +20,8 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
-import { advanceFocus, focusField, nextPending } from '../form-focus';
-import { CELLPHONE, MissingCellphone } from '../seller-cellphone';
+import { advanceFocus, focusField } from '../form-focus';
+import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { clearSample, isOverThreshold } from '../sample-quality';
 
@@ -29,7 +29,6 @@ import { clearSample, isOverThreshold } from '../sample-quality';
 type FormModel = Record<string, string>;
 
 interface DryCoffeeMessages {
-  readonly cellphoneMissing?: string;
   readonly cooperativeDiscountLabel?: string;
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
@@ -125,7 +124,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
-  private readonly missingCellphone = new MissingCellphone();
   /** Se incrementa cuando hay que reconstruir el contenido (commit, respuesta async, guardado, reset). */
   private readonly tick = signal(0);
 
@@ -199,12 +197,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.tick.update((n) => n + 1);
     if (key !== 'idPart1') {
       this.advanceFocus(key);
-    }
-    if (key === CELLPHONE) {
-      const next = nextPending(FOCUS_ORDER, this.locked);
-      if (next) {
-        this.focusField(next);
-      }
     }
   }
 
@@ -292,9 +284,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         });
         this.lookupProgram();
         this.tick.update((n) => n + 1);
-        if (!this.missingCellphone.check(this.model, this.errorMessage, this.messages()?.cellphoneMissing)) {
-          this.advanceFocus('idPart1');
-        }
+        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
       },
       // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
       error: () => {
@@ -498,7 +488,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       this.tick.update((n) => n + 1);
       this.focusField('totalStoredWeight');
     }
-    this.missingCellphone.afterNotice(this.focusField);
   }
 
   /** Escape reinicia todo el formulario en blanco y editable (única forma de "volver atrás"). */
@@ -518,7 +507,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.tick.update((n) => n + 1);
-    // Prueba del 10-nov: lista para la siguiente compra solo con teclado (tras Imprimir o Escape).
     this.focusField(FOCUS_ORDER[0]);
   }
 
