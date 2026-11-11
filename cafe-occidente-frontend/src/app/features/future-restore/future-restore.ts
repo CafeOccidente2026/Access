@@ -110,7 +110,7 @@ export class FutureRestoreComponent {
     }
     this.futureService.restorePreview(this.idNumber()).subscribe({
       next: (rows) => this.futureRows.set(rows),
-      error: (err) => this.error.set(serverError(err, this.content()?.messages.error) ?? ''),
+      error: (err) => this.error.set(serverError(err, this.content()?.messages.error)),
     });
   }
 
@@ -125,7 +125,7 @@ export class FutureRestoreComponent {
         this.futureRows.set(rows.map((r) => ({ ...r, currentBalance: r.recalculatedBalance })));
         this.message.set(this.content()?.messages.restored.replace('{n}', String(changed)) ?? null);
       },
-      error: (err) => this.error.set(serverError(err, this.content()?.messages.error) ?? ''),
+      error: (err) => this.error.set(serverError(err, this.content()?.messages.error)),
     });
   }
 

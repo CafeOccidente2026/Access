@@ -255,7 +255,7 @@ export class PurchaseCorrectionComponent {
         this.notice.set({ text: content.messages.saved.replace('{invoice}', String(detail.purchase.invoiceNumber)), error: false });
         this.detail.reload();
       },
-      error: (err: HttpErrorResponse) => this.notice.set({ text: serverError(err, content.messages.saveError) ?? '', error: true }),
+      error: (err: HttpErrorResponse) => this.notice.set({ text: serverError(err, content.messages.saveError), error: true }),
     });
   }
 

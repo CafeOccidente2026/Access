@@ -97,7 +97,7 @@ export class ConductorFormComponent {
           this.error.set(
             message.includes('Ya existe')
               ? 'Esa cédula ya existe. Use "Actualizar uno ya existente".'
-              : (serverError(err, 'No se pudo registrar el conductor') ?? ''),
+              : (serverError(err, 'No se pudo registrar el conductor')),
           );
         },
       });

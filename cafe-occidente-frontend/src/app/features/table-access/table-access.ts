@@ -52,7 +52,7 @@ export class TableAccessComponent {
     this.error.set(null);
     this.service.page(table, pageIndex, PAGE_SIZE).subscribe({
       next: (result) => this.result.set(result),
-      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? ''),
+      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage)),
     });
   }
 

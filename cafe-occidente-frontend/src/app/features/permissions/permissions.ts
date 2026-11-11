@@ -89,7 +89,7 @@ export class PermissionsComponent {
         this.selected.set(new Set());
         this.done(this.page()?.savedMessage);
       },
-      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? ''),
+      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage)),
     });
   }
 
@@ -105,7 +105,7 @@ export class PermissionsComponent {
         this.current.set(this.current().filter((permission) => permission.screen !== screen));
         this.done(this.page()?.revokedMessage);
       },
-      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? ''),
+      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage)),
     });
   }
 

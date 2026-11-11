@@ -84,7 +84,7 @@ export class NessQuotasComponent {
 
   load(): void {
     this.error.set(null);
-    const done = { error: (err: unknown) => this.error.set(serverError(err, this.content()?.messages.error) ?? '') };
+    const done = { error: (err: unknown) => this.error.set(serverError(err, this.content()?.messages.error)) };
     if (this.viewKey === 'quotas') {
       this.vendorService.nessQuotas(this.idNumber, this.page()).subscribe({
         next: (p) => this.show(p.rows.map(quotaCells), p.total),

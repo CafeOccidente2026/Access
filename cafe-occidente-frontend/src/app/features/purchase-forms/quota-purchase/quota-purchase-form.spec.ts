@@ -165,6 +165,19 @@ describe('QuotaPurchaseFormComponent', () => {
     expect(component.model['special']).toBe('');
   });
 
+  it('prueba del 11-nov (punto 4): failed quota list or announcement shows the reason of the server', () => {
+    setup();
+    withBalanceSpy.mockReturnValue(throwError(() => ({ error: { message: 'Fondo no encontrado' } })));
+    commit('fund', 'RP');
+    commit('special', 'RN');
+    expect(component.errorMessage()).toBe('Fondo no encontrado');
+
+    withBalanceSpy.mockReturnValue(of([quotaRow]));
+    specialInfoSpy.mockReturnValue(throwError(() => ({ error: { message: 'No hay un anuncio de precio vigente para esa agencia/fondo/especial' } })));
+    pickQuota();
+    expect(component.errorMessage()).toBe('No hay un anuncio de precio vigente para esa agencia/fondo/especial');
+  });
+
   it('CA-2: the chosen announcement brings its own prices and Esta Entrega shows as Kilos Entregados', () => {
     setup();
     pickQuota();
@@ -311,6 +324,15 @@ describe('QuotaPurchaseFormComponent', () => {
       expect(row.announcement.id).toBe(55);
       expect([row.assignedQuota, row.deliveredKg, row.balance]).toEqual([2500, 1000, 1500]);
       expect(withBalanceSpy).not.toHaveBeenCalled();
+    });
+
+    it('prueba del 11-nov (punto 4): a failed search of future purchases shows the reason of the server', () => {
+      setup('future');
+      openForSpy.mockReturnValue(throwError(() => ({ error: { message: 'Tercero no encontrado' } })));
+      commit('fund', 'RP');
+      commit('idPart1', '210514');
+
+      expect(component.errorMessage()).toBe('Tercero no encontrado');
     });
 
     it('without open future purchases it warns and frees the cédula', () => {

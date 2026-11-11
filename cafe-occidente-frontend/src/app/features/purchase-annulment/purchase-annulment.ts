@@ -98,7 +98,7 @@ export class PurchaseAnnulmentComponent {
         }
         this.focusButton('annul');
       },
-      error: (err) => this.fail(serverError(err, this.content()!.messages.error) ?? ''),
+      error: (err) => this.fail(serverError(err, this.content()!.messages.error)),
     });
   }
 
@@ -115,7 +115,7 @@ export class PurchaseAnnulmentComponent {
         this.candidates.set(list);
         this.selected.set(list[0]);
       },
-      error: (err) => this.fail(serverError(err, this.content()!.messages.error) ?? ''),
+      error: (err) => this.fail(serverError(err, this.content()!.messages.error)),
     });
   }
 

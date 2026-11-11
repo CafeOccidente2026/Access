@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import menu from '../../../../public/assets/data/main-menu.json';
@@ -110,5 +110,16 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
     select.dispatchEvent(new Event('change'));
 
     expect(chooseSpy).toHaveBeenCalledWith(4);
+  });
+
+  it('prueba del 11-nov (punto 4): if the agency cannot be chosen, shows the reason of the server', () => {
+    const el = render('ADMINISTRADOR');
+    chooseSpy.mockReturnValue(throwError(() => ({ error: { message: 'La agencia no tiene Registro de Control' } })));
+    const select = el.querySelector('[data-testid="agencies"] select') as HTMLSelectElement;
+    select.value = '4';
+    select.dispatchEvent(new Event('change'));
+
+    fixtureRef?.detectChanges();
+    expect(el.textContent).toContain('La agencia no tiene Registro de Control');
   });
 });

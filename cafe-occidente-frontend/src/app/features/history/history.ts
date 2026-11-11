@@ -72,7 +72,7 @@ export class HistoryComponent {
     this.pageIndex.set(pageIndex);
     this.historyService
       .search({ entity: this.entity, agencyId: this.agencyId, userId: this.userId, from: this.from, to: this.to, page: pageIndex })
-      .subscribe({ next: (page) => this.result.set(page), error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? '') });
+      .subscribe({ next: (page) => this.result.set(page), error: (err) => this.error.set(serverError(err, this.page()?.errorMessage)) });
   }
 
   details(entry: ChangeHistoryEntry): HistoryDetail[] {
