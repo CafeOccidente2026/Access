@@ -65,7 +65,7 @@
     "noAnnouncement": "No hay un anuncio activo para la agencia y el fondo seleccionados.",
     "deceasedBlocked": "No se le puede facturar a un fallecido.",
     "idNumberNotFound": "Este número de cédula no existe.",
-    "saveError": "No se pudo registrar la compra. Verifique los datos.",
+    "saveError": "No se pudo registrar la compra.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "invoiceError": "No se pudo generar la factura",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",

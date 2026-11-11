@@ -14,7 +14,7 @@
   "newAgencyLabel": "Nombre",
   "createAgencyButton": "Crear agencia",
   "agencyCreatedNotice": "Agencia creada y seleccionada. Configure su Registro de Control antes de operar en ella.",
-  "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo.",
+  "errorMessage": "No se pudo guardar el usuario.",
   "usersSectionTitle": "Usuarios",
   "activeLabel": "Activo",
   "yes": "Sí",

@@ -21,7 +21,7 @@
   "historyEmpty": "Todavía no se ha cargado ninguna lista desde el sistema nuevo.",
   "messages": {
     "applied": "Cupos actualizados correctamente",
-    "error": "No se pudo cargar el archivo. Intente de nuevo.",
-    "previewError": "No se pudo revisar el archivo. Intente de nuevo."
+    "error": "No se pudo cargar el archivo.",
+    "previewError": "No se pudo revisar el archivo."
   }
 }

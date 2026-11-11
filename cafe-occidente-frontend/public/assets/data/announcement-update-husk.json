@@ -5,5 +5,5 @@
   "pointPriceLabel": "Pr Por Punto",
   "updateButton": "Actualizar",
   "successMessage": "Anuncio actualizado",
-  "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
+  "errorMessage": "No se pudo publicar el anuncio de pasilla."
 }

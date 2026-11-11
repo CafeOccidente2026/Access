@@ -4,7 +4,7 @@
   "announcementLabel": "Anuncio",
   "saveButton": "Guardar",
   "savedMessage": "Cupo guardado correctamente.",
-  "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo.",
+  "errorMessage": "No se pudo asignar el cupo.",
   "leftColumn": [
     { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "announcementDate", "label": "Fecha", "type": "date" },

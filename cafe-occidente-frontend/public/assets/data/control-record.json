@@ -5,7 +5,7 @@
   "saveButton": "Guardar",
   "createNotice": "Esta agencia todavía no tiene Registro de Control: complete los campos y guarde para crearlo.",
   "savedMessage": "Guardado correctamente.",
-  "errorMessage": "Ocurrio un error. Verifique los datos e intente de nuevo.",
+  "errorMessage": "No se pudo guardar el Registro de Control.",
   "applyGreenButton": "Aplicar café verde a todas las agencias",
   "applyGreenConfirm": "Se cambiarán los 5 valores de café verde en las {count} agencias con Registro de Control. ¿Desea continuar?",
   "applyGreenAccept": "Aplicar",

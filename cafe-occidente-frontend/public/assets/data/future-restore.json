@@ -25,7 +25,7 @@
   },
   "messages": {
     "empty": "No hay registros.",
-    "error": "No se pudo consultar. Intente de nuevo.",
+    "error": "No se pudo consultar las compras anunciadas.",
     "restored": "Saldo restaurado en {n} compra(s) anunciada(s).",
     "unchanged": "Los saldos ya están correctos: no hay nada que restaurar."
   }

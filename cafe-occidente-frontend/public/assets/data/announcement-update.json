@@ -15,5 +15,5 @@
   "rowSaveButton": "Guardar",
   "of": "de",
   "successMessage": "Anuncio actualizado",
-  "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo."
+  "errorMessage": "No se pudo publicar el anuncio."
 }
