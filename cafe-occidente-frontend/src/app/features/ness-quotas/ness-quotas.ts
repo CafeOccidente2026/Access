@@ -9,6 +9,7 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
 import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
+import { serverError } from '../../shared/utils/server-error';
 
 type View = 'quotas' | 'balances';
 
@@ -60,7 +61,8 @@ export class NessQuotasComponent {
   readonly total = signal(0);
   readonly page = signal(0);
   readonly loaded = signal(false);
-  readonly error = signal(false);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
   private idNumber = '';
   readonly pageSize = 50;
 
@@ -81,8 +83,8 @@ export class NessQuotasComponent {
   }
 
   load(): void {
-    this.error.set(false);
-    const done = { error: () => this.error.set(true) };
+    this.error.set(null);
+    const done = { error: (err: unknown) => this.error.set(serverError(err, this.content()?.messages.error) ?? '') };
     if (this.viewKey === 'quotas') {
       this.vendorService.nessQuotas(this.idNumber, this.page()).subscribe({
         next: (p) => this.show(p.rows.map(quotaCells), p.total),

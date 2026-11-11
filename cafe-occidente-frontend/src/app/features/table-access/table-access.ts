@@ -9,6 +9,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 import { TableAccessService } from '../../core/services/table-access.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { TableAccessContent } from './table-access.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /** Filas por pagina; el servidor acepta hasta 200. */
 export const PAGE_SIZE = 100;
@@ -40,17 +41,18 @@ export class TableAccessComponent {
   readonly table = signal<QueryableTable | null>(null);
   readonly result = signal<TablePage | null>(null);
   readonly pageIndex = signal(0);
-  readonly error = signal(false);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
   readonly headers = computed(() => (this.result()?.columns ?? []).map(columnLabel));
   readonly lastPage = computed(() => Math.max(0, Math.ceil((this.result()?.total ?? 0) / PAGE_SIZE) - 1));
 
   open(table: QueryableTable, pageIndex = 0): void {
     this.table.set(table);
     this.pageIndex.set(pageIndex);
-    this.error.set(false);
+    this.error.set(null);
     this.service.page(table, pageIndex, PAGE_SIZE).subscribe({
       next: (result) => this.result.set(result),
-      error: () => this.error.set(true),
+      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? ''),
     });
   }
 

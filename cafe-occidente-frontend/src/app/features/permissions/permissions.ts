@@ -10,6 +10,7 @@ import { PermissionService } from '../../core/services/permission.service';
 import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { PermissionsContent } from './permissions.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * Pantalla "Permisos" (Acceso Principal, solo Administrador; RF-02, formulario PermisosSA de Access):
@@ -36,7 +37,8 @@ export class PermissionsComponent {
   readonly current = signal<Permission[]>([]);
   readonly selected = signal<ReadonlySet<Screen>>(new Set());
   readonly message = signal<string | null>(null);
-  readonly error = signal(false);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
   /** Hay un guardado en curso: los botones que guardan quedan deshabilitados y Enter no vuelve a enviar. */
   readonly saving = signal(false);
 
@@ -54,7 +56,7 @@ export class PermissionsComponent {
     this.selected.set(new Set());
     this.current.set([]);
     this.message.set(null);
-    this.error.set(false);
+    this.error.set(null);
     if (id !== null) {
       this.permissionService.list(id).subscribe((permissions) => this.current.set(permissions));
     }
@@ -87,7 +89,7 @@ export class PermissionsComponent {
         this.selected.set(new Set());
         this.done(this.page()?.savedMessage);
       },
-      error: () => this.error.set(true),
+      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? ''),
     });
   }
 
@@ -103,12 +105,12 @@ export class PermissionsComponent {
         this.current.set(this.current().filter((permission) => permission.screen !== screen));
         this.done(this.page()?.revokedMessage);
       },
-      error: () => this.error.set(true),
+      error: (err) => this.error.set(serverError(err, this.page()?.errorMessage) ?? ''),
     });
   }
 
   private done(message: string | undefined): void {
-    this.error.set(false);
+    this.error.set(null);
     this.message.set(message ?? null);
   }
 }

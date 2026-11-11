@@ -22,6 +22,11 @@ describe('serverError', () => {
     expect(serverError(http(502), undefined)).toBe(texts.status.replace('{status}', '502'));
   });
 
+  it('también lee el motivo de un error con la forma { error: { message } }', () => {
+    expect(serverError({ error: { message: 'CAFICULTOR NO PERTENECE A NINGUN PROGRAMA' } }, 'respaldo'))
+      .toBe('CAFICULTOR NO PERTENECE A NINGUN PROGRAMA');
+  });
+
   it('un error que no es HTTP usa el respaldo', () => {
     expect(serverError(new Error('x'), 'respaldo')).toBe('respaldo');
     expect(serverError(undefined, null)).toBeNull();

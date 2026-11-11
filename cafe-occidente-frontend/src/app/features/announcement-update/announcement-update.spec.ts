@@ -226,7 +226,7 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(component.error()).toBe('Fondo no encontrado');
 
     component.openList();
-    expect(component.error()).toBe('Ocurrió un error. Verifique los datos e intente de nuevo.');
+    expect(component.error()).toBe('No se pudo publicar el anuncio.');
 
     component.onPriceInput('abc');
     expect(component.priceError).not.toBeNull();

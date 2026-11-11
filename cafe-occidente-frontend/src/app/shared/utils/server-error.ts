@@ -8,15 +8,15 @@ import texts from '../../../../public/assets/data/server-errors.json';
  * texto de respaldo de la pantalla (qué se intentó) o el código HTTP.
  */
 export function serverError(err: unknown, fallback: string | null | undefined): string | null {
-  if (!(err instanceof HttpErrorResponse)) {
-    return fallback ?? null;
-  }
-  if (err.status === 0) {
+  if (err instanceof HttpErrorResponse && err.status === 0) {
     return texts.offline;
   }
-  const message = (err.error as { message?: unknown } | null)?.message;
+  const message = (err as { error?: { message?: unknown } | null } | null | undefined)?.error?.message;
   if (typeof message === 'string' && message.trim() !== '') {
     return message;
   }
-  return fallback ?? texts.status.replace('{status}', String(err.status));
+  if (err instanceof HttpErrorResponse && fallback == null) {
+    return texts.status.replace('{status}', String(err.status));
+  }
+  return fallback ?? null;
 }

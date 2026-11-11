@@ -188,7 +188,7 @@ export class RemissionFormComponent {
         next: (res) => this.result.set(res),
         error: (err) => {
           const message = (err as { error?: { message?: string } })?.error?.message;
-          this.errorMessage.set(message ?? 'No se pudo registrar la remisión. Verifique los datos.');
+          this.errorMessage.set(message ?? 'No se pudo registrar la remisión.');
         },
       });
   }

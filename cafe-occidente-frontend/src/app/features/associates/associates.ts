@@ -9,6 +9,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { shortDate } from '../conductor-form/conductor-form';
+import { serverError } from '../../shared/utils/server-error';
 
 export interface AssociateField {
   readonly key: keyof Associate;
@@ -88,7 +89,7 @@ export class AssociatesComponent {
     this.message.set(null);
     request.subscribe({
       next: (page) => this.page.set(page),
-      error: () => this.message.set(searching ? (this.content()?.messages.notFound ?? null) : (this.content()?.messages.error ?? null)),
+      error: (err) => this.message.set(searching ? (this.content()?.messages.notFound ?? null) : serverError(err, this.content()?.messages.error)),
     });
   }
 }

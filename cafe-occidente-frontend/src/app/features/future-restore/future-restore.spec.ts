@@ -97,7 +97,7 @@ describe('FutureRestoreComponent', () => {
 
     previewSpy.mockReturnValue(throwError(() => new Error('500')));
     search(c, '123456');
-    expect(c.failed()).toBe(true);
+    expect(c.failed()).toBeTruthy();
   });
 
   it('Restaurar Anuncios con Cupos only shows each quota with its recalculated balance (P5)', () => {
@@ -120,7 +120,7 @@ describe('FutureRestoreComponent', () => {
   it('a failed Anunciadas de Hoy says so and shows no table', () => {
     const c = setup('pending', true);
 
-    expect(c.failed()).toBe(true);
+    expect(c.failed()).toBeTruthy();
     expect(c.rows()).toBeNull();
   });
 

@@ -11,6 +11,7 @@ import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildInventoryReportDoc } from './inventory-report-pdf';
+import { serverError } from '../../shared/utils/server-error';
 
 /** En Access la consulta INV pedia la especialidad con un InputBox (texto libre, sin lista). La
  *  lista sale de los "Especial" de los formularios de compra, mas los fijos de Verde y Pasilla. */
@@ -93,7 +94,7 @@ export class InventoryReportComponent {
         }
         renderPdfPreview(buildInventoryReportDoc(rows, this.byCode), this.sanitizer, (url) => this.pdfUrl.set(url));
       },
-      error: () => this.message.set('No se pudo generar el reporte'),
+      error: (err) => this.message.set(serverError(err, 'No se pudo generar el reporte')),
     });
   }
 }

@@ -34,6 +34,6 @@
     </ng-container>
 
     <p *ngIf="message()" class="text-slate-700">{{ message() }}</p>
-    <p *ngIf="error()" class="text-red-600">{{ p.errorMessage }}</p>
+    <p *ngIf="error() as e" class="text-red-600">{{ e }}</p>
   </div>
 </app-access-window>

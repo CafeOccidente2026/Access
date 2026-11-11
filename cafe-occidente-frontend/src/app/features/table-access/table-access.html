@@ -16,7 +16,7 @@
         <app-button [label]="p.backButton" variant="access" (pressed)="back()"></app-button>
       </div>
 
-      <p *ngIf="error()" class="text-red-600">{{ p.errorMessage }}</p>
+      <p *ngIf="error() as e" class="text-red-600">{{ e }}</p>
 
       <ng-container *ngIf="result() as r">
         <p *ngIf="r.total === 0" class="text-slate-600">{{ p.emptyMessage }}</p>

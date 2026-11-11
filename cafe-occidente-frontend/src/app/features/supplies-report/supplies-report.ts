@@ -12,6 +12,7 @@ import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFl
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildSuppliesReportDoc, paymentMethodsSheet } from './supplies-report-pdf';
 import { SuppliesReportContent } from './supplies-report.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * Informes de "MENUS SUMINISTROS": dialogo (Fondo, Tipo, fechas o Forma Pago segun el JSON) y vista
@@ -69,7 +70,7 @@ export class SuppliesReportComponent {
         const doc = buildSuppliesReportDoc(report, content.text, rows, filters['type'] ?? null);
         renderPdfPreview(doc, this.sanitizer, (url) => this.pdfUrl.set(url));
       },
-      error: () => this.message.set(content.messages.error),
+      error: (err) => this.message.set(serverError(err, content.messages.error)),
     });
   }
 

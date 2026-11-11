@@ -5,6 +5,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Conductor } from '../../core/models/grower.model';
 import { GrowerService } from '../../core/services/grower.service';
 import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
+import { serverError } from '../../shared/utils/server-error';
 
 type Mode = 'choose' | 'new' | 'update';
 
@@ -96,7 +97,7 @@ export class ConductorFormComponent {
           this.error.set(
             message.includes('Ya existe')
               ? 'Esa cédula ya existe. Use "Actualizar uno ya existente".'
-              : 'No se pudo registrar el conductor',
+              : (serverError(err, 'No se pudo registrar el conductor') ?? ''),
           );
         },
       });
@@ -132,7 +133,7 @@ export class ConductorFormComponent {
           this.open(updated);
           this.message.set('Conductor actualizado');
         },
-        error: () => this.error.set('No se pudo actualizar el conductor'),
+        error: (err) => this.error.set(serverError(err, 'No se pudo actualizar el conductor')),
       });
   }
 

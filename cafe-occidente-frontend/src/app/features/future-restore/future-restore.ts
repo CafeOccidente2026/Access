@@ -11,6 +11,7 @@ import { FuturePurchaseService } from '../../core/services/future-purchase.servi
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * 'future' = Restaurar Compras Anunciadas; 'quota' = Restaurar Anuncios con Cupos (solo consulta, P5);
@@ -70,7 +71,8 @@ export class FutureRestoreComponent {
   readonly futureRows = signal<FuturePurchaseRestoreRow[] | null>(null);
   readonly saving = signal(false);
   readonly message = signal<string | null>(null);
-  readonly error = signal(false);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
   private readonly quotas = rxResource({
     params: () => (this.viewKey === 'quota' ? true : undefined),
     stream: () => this.quotaService.list(),
@@ -89,8 +91,11 @@ export class FutureRestoreComponent {
     }
     return this.futureRows()?.map(futureCells) ?? null;
   });
-  readonly failed = computed(() =>
-    this.error() || this.quotas.status() === 'error' || this.pending.status() === 'error');
+  readonly failed = computed(() => {
+    const fallback = this.content()?.messages.error;
+    const resourceError = this.quotas.error() ?? this.pending.error();
+    return this.error() ?? (resourceError ? serverError(resourceError, fallback) : null);
+  });
   /** Hay algo que restaurar: algún saldo guardado no es el recalculado. */
   readonly canRestore = computed(() =>
     (this.futureRows() ?? []).some((r) => r.currentBalance !== r.recalculatedBalance));
@@ -99,13 +104,13 @@ export class FutureRestoreComponent {
     event.preventDefault();
     this.idNumber.set(idNumber.replace(/\D/g, ''));
     this.message.set(null);
-    this.error.set(false);
+    this.error.set(null);
     if (!this.idNumber()) {
       return;
     }
     this.futureService.restorePreview(this.idNumber()).subscribe({
       next: (rows) => this.futureRows.set(rows),
-      error: () => this.error.set(true),
+      error: (err) => this.error.set(serverError(err, this.content()?.messages.error) ?? ''),
     });
   }
 
@@ -120,7 +125,7 @@ export class FutureRestoreComponent {
         this.futureRows.set(rows.map((r) => ({ ...r, currentBalance: r.recalculatedBalance })));
         this.message.set(this.content()?.messages.restored.replace('{n}', String(changed)) ?? null);
       },
-      error: () => this.error.set(true),
+      error: (err) => this.error.set(serverError(err, this.content()?.messages.error) ?? ''),
     });
   }
 

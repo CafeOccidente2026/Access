@@ -50,7 +50,7 @@
         <button type="button" class="ml-auto rounded border border-slate-400 bg-white px-4 py-1 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
       </div>
       <p *ngIf="loaded() && total() === 0" class="text-sm text-slate-600">{{ c.messages.empty }}</p>
-      <p *ngIf="error()" class="text-sm text-red-600">{{ c.messages.error }}</p>
+      <p *ngIf="error() as e" class="text-sm text-red-600">{{ e }}</p>
     </div>
   </app-access-window>
 </div>
