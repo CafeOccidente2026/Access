@@ -65,10 +65,10 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     totalStoredWeight: 140, wastePercentage: 44, huskWeight: 12.5, huskPercentage: 5, healthyStoredWeight: 186.18, factor: 94,
   };
 
-  function setup(sampleReady = true): void {
+  function setup(sampleReady = true, announcementFails = false): void {
     const fakeGreenService = {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
-      announcementInfo: () =>
+      announcementInfo: () => announcementFails ? throwError(() => ({ error: { message: 'No hay un anuncio de precio vigente para esa agencia/fondo/especial' } })) :
         of({
           fundId: 1,
           productCode: '0110002000010',
@@ -146,6 +146,11 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     expect(preview).not.toHaveBeenCalled();
     expect(component.errorMessage()).toBeNull();
+  });
+
+  it('prueba del 11-nov (punto 4): without an announcement it shows the reason of the server', () => {
+    setup(true, true);
+    expect(component.errorMessage()).toBe('No hay un anuncio de precio vigente para esa agencia/fondo/especial');
   });
 
   it('HU-23 CA-2: shows the fixed sample of the control record as read-only', () => {

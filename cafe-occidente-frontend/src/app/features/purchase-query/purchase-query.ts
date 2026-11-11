@@ -12,6 +12,7 @@ import { themeColor } from '../../shared/utils/theme-color';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { fillQueryContent } from './purchase-query-fields';
 import { buildReprintDoc } from './purchase-reprint';
+import { serverError } from '../../shared/utils/server-error';
 
 export interface PurchaseQueryContent extends PurchaseFormContent {
   readonly invoiceLabel: string;
@@ -94,8 +95,9 @@ export class PurchaseQueryComponent {
     if (this.pdfError()) {
       return m.invoiceError;
     }
-    if (this.list.error() || this.detail.error()) {
-      return m.error;
+    const failure = this.list.error() ?? this.detail.error();
+    if (failure) {
+      return serverError(failure, m.error);
     }
     if (this.listValue()?.length === 0) {
       const request = this.request();

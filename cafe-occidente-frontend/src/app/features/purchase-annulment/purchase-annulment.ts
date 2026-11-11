@@ -10,6 +10,7 @@ import { AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, Na
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
+import { serverError } from '../../shared/utils/server-error';
 
 export interface PurchaseAnnulmentContent {
   readonly windowTitle: string;
@@ -97,7 +98,7 @@ export class PurchaseAnnulmentComponent {
         }
         this.focusButton('annul');
       },
-      error: () => this.fail(this.content()!.messages.error),
+      error: (err) => this.fail(serverError(err, this.content()!.messages.error)),
     });
   }
 
@@ -114,7 +115,7 @@ export class PurchaseAnnulmentComponent {
         this.candidates.set(list);
         this.selected.set(list[0]);
       },
-      error: () => this.fail(this.content()!.messages.error),
+      error: (err) => this.fail(serverError(err, this.content()!.messages.error)),
     });
   }
 

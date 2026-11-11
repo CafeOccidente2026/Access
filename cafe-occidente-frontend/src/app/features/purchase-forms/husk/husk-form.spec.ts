@@ -86,11 +86,11 @@ describe('HuskFormComponent - gates de captura', () => {
   let createSpy: ReturnType<typeof vi.fn>;
   let component: HuskFormComponent;
 
-  function setup(grower: Grower) {
+  function setup(grower: Grower, announcementFails = false) {
     previewSpy = vi.fn(() => of(calculation));
     const fakeHuskService = {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
-      announcementInfo: () => of(announcementInfo),
+      announcementInfo: () => (announcementFails ? throwError(() => ({ error: { message: 'No hay un anuncio de precio vigente para esa agencia/fondo/especial' } })) : of(announcementInfo)),
       preview: previewSpy,
       create: (createSpy = vi.fn(() => of({}))),
     };
@@ -125,6 +125,11 @@ describe('HuskFormComponent - gates de captura', () => {
     component.model['otherDiscounts'] = '0';
     component.onFieldCommitted('otherDiscounts');
   }
+
+  it('prueba del 11-nov (punto 4): without an announcement it shows the reason of the server', () => {
+    setup(growerWithPhone, true);
+    expect(component.errorMessage()).toBe('No hay un anuncio de precio vigente para esa agencia/fondo/especial');
+  });
 
   it('REGRESIÓN: a grower with a blank migrated phone does not get cellphone permanently locked', () => {
     setup(growerWithoutPhone);

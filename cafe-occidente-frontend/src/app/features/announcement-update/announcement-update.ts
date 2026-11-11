@@ -11,6 +11,7 @@ import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS,
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
 import { changedByKeyboard } from '../../shared/utils/select-keys';
 import { AnnouncementUpdateContent, TypeRow } from './announcement-update.model';
+import { serverError } from '../../shared/utils/server-error';
 
 type Field = 'fundId' | 'basePriceLoad';
 type RowField = 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice';
@@ -199,8 +200,7 @@ export class AnnouncementUpdateComponent {
   }
 
   private fail(err: unknown): void {
-    const message = (err as { error?: { message?: string } })?.error?.message;
-    this.error.set(message ?? this.page()?.errorMessage ?? null);
+    this.error.set(serverError(err, this.page()?.errorMessage));
   }
 
   private focusField(key: Field): void {

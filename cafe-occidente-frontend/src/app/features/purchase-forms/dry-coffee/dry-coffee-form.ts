@@ -24,6 +24,8 @@ import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { clearSample, isOverThreshold } from '../sample-quality';
+import { serverError } from '../../../shared/utils/server-error';
+import { reserveInvoice } from '../invoice-reservation';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -234,19 +236,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Paso 3: siguiente factura del rango DIAN autorizado, alone al confirmar Fondo. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        if (inv.warning) {
-          this.errorMessage.set(inv.warning);
-        }
-        this.tick.update((n) => n + 1);
-      },
-      error: () => {
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** Paso 4: busca el caficultor por cédula; bloquea el formulario si está fallecido. */
@@ -333,11 +323,11 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         this.specialInfo.set(info);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         // Limpia el anuncio anterior: si no, Costos/Bonificacion/Pr Sustentación quedan mostrando
         // (y usandose en el calculo) el valor de un Especial/Fondo distinto al que esta seleccionado.
         this.specialInfo.set(null);
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
@@ -373,7 +363,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
             ? { ...prev, wastePercentage: null }
             : { ...prev, defectivePercentage: null, healthyPercentage: null },
         );
-        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -395,7 +385,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         // (y el panel de pago usando) el resultado de un calculo anterior con otros datos de entrada.
         this.calc.set(null);
         if (!this.clearSampleOverThreshold(err)) {
-          this.errorMessage.set(this.messages()?.saveError ?? null);
+          this.errorMessage.set(serverError(err, this.messages()?.saveError));
         }
         this.tick.update((n) => n + 1);
       },
@@ -460,14 +450,12 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       messages: () => this.messages(),
       refresh: () => this.tick.update((n) => n + 1),
       saveError: (err) => {
-        // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
-        // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
-        // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
+        // Prueba del 11-nov (punto 4): el cajero ve el motivo del servidor; el detalle completo queda en consola.
         console.error('Error al registrar compra Cafe Seco:', err?.error ?? err);
         if (this.clearSampleOverThreshold(err)) {
           return;
         }
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });

@@ -6,6 +6,7 @@ import { PurchasePayment } from '../../core/models/payment-method.model';
 import { openPdf } from '../../shared/utils/pdf-preview';
 import { saveOnce } from '../../shared/utils/save-once';
 import { loadLogoDataUrl } from './dry-coffee/dry-coffee-invoice';
+import { serverError } from '../../shared/utils/server-error';
 
 const LOGO_URL = 'assets/images/cafe-occidente-logo.png';
 
@@ -59,10 +60,10 @@ export function saveAndPrint<T>(form: PrintablePurchaseForm, print: PurchasePrin
   });
 }
 
-/** Error al guardar: el detalle va a la consola y al cajero solo el mensaje de la pantalla. */
+/** Error al guardar: el cajero ve el motivo del servidor (prueba del 11-nov, punto 4); el detalle queda en la consola. */
 function defaultSaveError<T>(form: PrintablePurchaseForm, print: PurchasePrint<T>, err: { error?: unknown } | undefined): void {
   console.error(`Error al registrar compra ${print.name}:`, err?.error ?? err);
-  form.errorMessage.set(print.messages()?.saveError ?? null);
+  form.errorMessage.set(serverError(err, print.messages()?.saveError));
   print.refresh();
 }
 

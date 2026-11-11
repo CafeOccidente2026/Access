@@ -79,6 +79,14 @@ describe('FutureRestoreComponent', () => {
     expect(c.message()).toBe('Saldo restaurado en 1 compra(s) anunciada(s).');
   });
 
+  it('prueba del 11-nov (punto 4): a failed restore shows the reason of the server', () => {
+    const c = setup('future');
+    search(c, '27197019');
+    restoreSpy.mockReturnValue(throwError(() => ({ error: { message: 'Solo el Administrador puede restaurar' } })));
+    c.restore();
+    expect(c.failed()).toBe('Solo el Administrador puede restaurar');
+  });
+
   it('with the balances already right there is nothing to restore', () => {
     const c = setup('future');
     previewSpy.mockReturnValue(of([{ ...wrong, currentBalance: 500 }]));
@@ -97,7 +105,7 @@ describe('FutureRestoreComponent', () => {
 
     previewSpy.mockReturnValue(throwError(() => new Error('500')));
     search(c, '123456');
-    expect(c.failed()).toBe(true);
+    expect(c.failed()).toBeTruthy();
   });
 
   it('Restaurar Anuncios con Cupos only shows each quota with its recalculated balance (P5)', () => {
@@ -120,7 +128,7 @@ describe('FutureRestoreComponent', () => {
   it('a failed Anunciadas de Hoy says so and shows no table', () => {
     const c = setup('pending', true);
 
-    expect(c.failed()).toBe(true);
+    expect(c.failed()).toBeTruthy();
     expect(c.rows()).toBeNull();
   });
 

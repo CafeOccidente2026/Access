@@ -107,6 +107,17 @@ describe('PurchaseQueryComponent (HU-28)', () => {
     expect(component.view()).toBeNull();
   });
 
+  it('prueba del 11-nov (punto 4): a failed detail shows the reason of the server', async () => {
+    const { component } = render();
+    component.go('FIRST');
+    TestBed.tick();
+    http.expectOne(`${URL}/navigate?direction=FIRST`).flush([FIRST]);
+    await settle();
+    http.expectOne(`${URL}/DRY/1225`).flush({ message: 'No existe esa compra en la agencia' }, { status: 404, statusText: 'Not Found' });
+    await settle();
+    expect(component.message()).toBe('No existe esa compra en la agencia');
+  });
+
   it('RN-26.5: shows ESTADO ANULADA', async () => {
     const { component } = render();
     component.go('FIRST');

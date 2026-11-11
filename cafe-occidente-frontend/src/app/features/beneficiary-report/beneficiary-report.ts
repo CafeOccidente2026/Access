@@ -12,6 +12,7 @@ import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from 
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { buildBeneficiaryDoc } from './beneficiary-report-pdf';
 import { BeneficiaryReportContent } from './beneficiary-report.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * "Genera Inf Ventas Benef" (InputBox de la consulta Beneficiario) e "Inf Ventas Benef por Fechas"
@@ -74,7 +75,7 @@ export class BeneficiaryReportComponent {
         }
         renderPdfPreview(buildBeneficiaryDoc(report, content.text, rows), this.sanitizer, (url) => this.pdfUrl.set(url));
       },
-      error: () => this.message.set(content.messages.error),
+      error: (err) => this.message.set(serverError(err, content.messages.error)),
     });
   }
 

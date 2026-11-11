@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, MenuButtonGridComponent } from '../../shared/ui';
 import { MainMenuContent } from './main-menu.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * Panel "MENU PRINCIPAL": puerta de entrada a los modulos del aplicativo. Las opciones se filtran por
@@ -40,7 +41,7 @@ export class MainMenuComponent {
     }
     this.agencyError.set(null);
     this.auth.chooseWorkingAgency(agencyId).subscribe({
-      error: () => this.agencyError.set(this.data()?.agencies.errorMessage ?? null),
+      error: (err) => this.agencyError.set(serverError(err, this.data()?.agencies.errorMessage)),
     });
   }
 }

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/beneficiary-report.json';
@@ -34,6 +34,14 @@ describe('BeneficiaryReportComponent', () => {
   it('RN-28.2.1: asks "Ingrese el número de cédula del Beneficiario a consultar"', () => {
     const { fixture } = setup();
     expect(fixture.nativeElement.textContent).toContain('Ingrese el número de cédula del Beneficiario a consultar');
+  });
+
+  it('prueba del 11-nov (punto 4): if the server rejects it, shows its reason', () => {
+    const { c, beneficiary } = setup();
+    beneficiary.mockReturnValue(throwError(() => ({ error: { message: 'Falta o está mal: Desde Fecha' } })));
+    c.idNumber.set('79374104');
+    c.accept(new Event('submit'));
+    expect(c.message()).toBe('Falta o está mal: Desde Fecha');
   });
 
   it('CA-1: the typed cedula generates the report of that beneficiary', () => {

@@ -35,7 +35,7 @@
       <app-button data-flow-submit [label]="p.searchButton" variant="access" (pressed)="search()"></app-button>
     </div>
 
-    <p *ngIf="error()" class="text-sm text-red-600">{{ p.errorMessage }}</p>
+    <p *ngIf="error() as e" class="text-sm text-red-600">{{ e }}</p>
 
     <ng-container *ngIf="result() as r">
       <p *ngIf="r.total === 0" class="text-sm text-slate-600">{{ p.emptyMessage }}</p>

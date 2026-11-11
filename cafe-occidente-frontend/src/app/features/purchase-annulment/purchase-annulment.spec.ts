@@ -95,6 +95,16 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     expect(el.textContent).toContain(data.messages.noMore);
   });
 
+  it('prueba del 11-nov (punto 4): a failed search or walk shows the reason of the server', () => {
+    const { component } = render();
+    component.search(new Event('submit'), '43388');
+    http.expectOne(`${URL}?invoiceNumber=43388`).flush({ message: 'No tiene permisos para realizar esta accion' }, { status: 403, statusText: 'Forbidden' });
+    expect(component.message()).toBe('No tiene permisos para realizar esta accion');
+    component.go('FIRST');
+    http.expectOne(`${URL}/navigate?direction=FIRST`).flush(null, { status: 500, statusText: 'Error' });
+    expect(component.message()).toBe(data.messages.error);
+  });
+
   it('CA-1: finds the purchase by invoice number', () => {
     const { component } = render();
     component.search(new Event('submit'), 'SDTA 43388');

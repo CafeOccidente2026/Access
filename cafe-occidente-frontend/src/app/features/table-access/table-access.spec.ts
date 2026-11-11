@@ -90,7 +90,7 @@ describe('TableAccessComponent (HU-04)', () => {
     component.open('EMPAQUE');
     http.expectOne(`${API_BASE_URL}/tables/EMPAQUE?page=0&size=${PAGE_SIZE}`).flush(null, { status: 500, statusText: 'Error' });
     fixture.detectChanges();
-    expect(component.error()).toBe(true);
+    expect(component.error()).toBeTruthy();
   });
 
   it('Cerrar goes back to Acceso Principal; the route is for the Administrator or with the screen granted', () => {

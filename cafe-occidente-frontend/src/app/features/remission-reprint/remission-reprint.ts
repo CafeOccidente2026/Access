@@ -7,6 +7,7 @@ import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from 
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from '../remission-form/remission-invoice';
+import { serverError } from '../../shared/utils/server-error';
 
 /** "Reimprimir Remisión" (Form_MENUS INVENTARIOS.bas, Comando7 -> consulta "Remision", que pide el
  *  numero con un InputBox): mismo PDF de 4 copias que al crear la remision. */
@@ -46,7 +47,7 @@ export class RemissionReprintComponent {
           )
           .catch(() => this.message.set('No se pudo generar la remisión'));
       },
-      error: () => this.message.set('No se pudo buscar la remisión'),
+      error: (err) => this.message.set(serverError(err, 'No se pudo buscar la remisión')),
     });
   }
 }

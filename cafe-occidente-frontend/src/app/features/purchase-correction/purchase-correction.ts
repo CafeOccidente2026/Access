@@ -16,6 +16,7 @@ import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { PurchaseQueryContent } from '../purchase-query/purchase-query';
 import { fillQueryContent } from '../purchase-query/purchase-query-fields';
+import { serverError } from '../../shared/utils/server-error';
 
 /** Un campo que se corrige; {@code text}: direccion, celular y numero de cheque (no son montos). */
 export interface CorrectionField {
@@ -160,8 +161,8 @@ export class PurchaseCorrectionComponent {
   });
   readonly after = computed<PurchaseCorrectionResult | null>(() => (this.preview.hasValue() ? this.preview.value() : null));
   readonly previewError = computed(() => {
-    const error = this.preview.error() as HttpErrorResponse | undefined;
-    return error ? (error.error?.message ?? this.content()?.messages.error ?? null) : null;
+    const error = this.preview.error();
+    return error ? serverError(error, this.content()?.messages.error) : null;
   });
   /** La compra no se puede corregir: fallo la vista previa con los valores guardados. */
   readonly blocked = computed(() => !!this.previewError() && this.submitted() === this.stored());
@@ -201,8 +202,9 @@ export class PurchaseCorrectionComponent {
     if (!m) {
       return null;
     }
-    if (this.list.error() || this.detail.error()) {
-      return m.error;
+    const failure = this.list.error() ?? this.detail.error();
+    if (failure) {
+      return serverError(failure, m.error);
     }
     if (this.listValue()?.length === 0) {
       const request = this.request();
@@ -253,7 +255,7 @@ export class PurchaseCorrectionComponent {
         this.notice.set({ text: content.messages.saved.replace('{invoice}', String(detail.purchase.invoiceNumber)), error: false });
         this.detail.reload();
       },
-      error: (err: HttpErrorResponse) => this.notice.set({ text: err?.error?.message ?? content.messages.saveError, error: true }),
+      error: (err: HttpErrorResponse) => this.notice.set({ text: serverError(err, content.messages.saveError), error: true }),
     });
   }
 

@@ -9,6 +9,7 @@ import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
 import { AnnouncementUpdateHuskContent } from './announcement-update-husk.model';
+import { serverError } from '../../shared/utils/server-error';
 
 type NumericField = 'basePriceLoad' | 'pointPrice';
 
@@ -131,8 +132,7 @@ export class AnnouncementUpdateHuskComponent {
         this.successMessageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
       },
       error: (err) => {
-        const message = (err as { error?: { message?: string } })?.error?.message;
-        this.error.set(message ?? this.page()?.errorMessage ?? null);
+        this.error.set(serverError(err, this.page()?.errorMessage));
       },
     });
   }

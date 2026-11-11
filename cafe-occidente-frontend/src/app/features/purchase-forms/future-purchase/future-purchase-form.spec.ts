@@ -146,6 +146,15 @@ describe('FuturePurchaseFormComponent', () => {
     expect(field('announcement')?.options).toEqual([label]);
   });
 
+  it('prueba del 11-nov (punto 4): a failed announcement list shows the reason of the server', () => {
+    setup(growerWithoutId);
+    todaySpy.mockReturnValue(throwError(() => ({ error: { message: 'No hay un anuncio de precio vigente para esa agencia/fondo/especial' } })));
+    component.model['special'] = 'NESPRESSO - FTUSA';
+    component.onFieldCommitted('special');
+
+    expect(component.errorMessage()).toBe('No hay un anuncio de precio vigente para esa agencia/fondo/especial');
+  });
+
   it('CA-2: choosing the announcement fills its date and prices, and Pr IncCalidad is read only', () => {
     setup(growerWithoutId);
     fill();

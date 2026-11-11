@@ -33,7 +33,7 @@
         {{ c.messages.unchanged }}
       </p>
       <p *ngIf="message() as m" class="text-sm text-green-700">{{ m }}</p>
-      <p *ngIf="failed()" class="text-sm text-red-600">{{ c.messages.error }}</p>
+      <p *ngIf="failed() as e" class="text-sm text-red-600">{{ e }}</p>
 
       <div class="flex items-center gap-3 text-sm">
         <button *ngIf="viewKey === 'future'" type="button" [disabled]="!canRestore() || saving()"

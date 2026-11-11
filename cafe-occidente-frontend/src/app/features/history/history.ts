@@ -14,6 +14,7 @@ import { HistoryService } from '../../core/services/history.service';
 import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { HistoryContent } from './history.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /** Filas por pagina; el servidor acepta hasta 200. */
 export const PAGE_SIZE = 50;
@@ -52,7 +53,8 @@ export class HistoryComponent {
   readonly users = toSignal(this.isAdmin ? inject(UserService).list() : of<User[]>([]), { initialValue: [] as User[] });
   readonly result = signal<ChangeHistoryPage | null>(null);
   readonly pageIndex = signal(0);
-  readonly error = signal(false);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
   readonly lastPage = computed(() => Math.max(0, Math.ceil((this.result()?.total ?? 0) / PAGE_SIZE) - 1));
 
   entity = '';
@@ -66,11 +68,11 @@ export class HistoryComponent {
   }
 
   search(pageIndex = 0): void {
-    this.error.set(false);
+    this.error.set(null);
     this.pageIndex.set(pageIndex);
     this.historyService
       .search({ entity: this.entity, agencyId: this.agencyId, userId: this.userId, from: this.from, to: this.to, page: pageIndex })
-      .subscribe({ next: (page) => this.result.set(page), error: () => this.error.set(true) });
+      .subscribe({ next: (page) => this.result.set(page), error: (err) => this.error.set(serverError(err, this.page()?.errorMessage)) });
   }
 
   details(entry: ChangeHistoryEntry): HistoryDetail[] {

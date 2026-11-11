@@ -1,0 +1,5 @@
+{
+  "offline": "No hay conexión con el servidor. Revise la red e intente de nuevo.",
+  "status": "El servidor no pudo atender la petición (código {status}).",
+  "unknown": "No se pudo completar la operación."
+}

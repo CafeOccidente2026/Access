@@ -8,6 +8,7 @@ import { VendorService } from '../../core/services/vendor.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
+import { serverError } from '../../shared/utils/server-error';
 
 type Count = 'added' | 'changed' | 'unchanged' | 'removed' | 'rows';
 
@@ -95,7 +96,7 @@ export class NessQuotaUploadComponent {
         this.message.set(content.messages.applied);
         this.historyVersion.update((v) => v + 1);
       },
-      error: () => this.message.set(content.messages.error),
+      error: (err) => this.message.set(serverError(err, content.messages.error)),
     });
   }
 

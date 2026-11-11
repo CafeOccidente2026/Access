@@ -28,6 +28,7 @@ import { hasRequired, saveAndPrint } from '../purchase-print';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
+import { serverError } from '../../../shared/utils/server-error';
 
 type FormModel = Record<string, string>;
 
@@ -292,9 +293,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.quotaRows.set(rows);
         this.focusField('quotaDelivery');
       },
-      error: () => {
+      error: (err) => {
         this.clearSpecial();
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
       },
     });
   }
@@ -311,9 +312,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.quotaRows.set(list.map(futureRow));
         this.focusField('quotaDelivery');
       },
-      error: () => {
+      error: (err) => {
         this.clearChoice();
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
       },
     });
   }
@@ -338,9 +339,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.tick.update((n) => n + 1);
         this.advanceFocus(this.mode === 'future' ? 'idPart1' : 'special');
       },
-      error: () => {
+      error: (err) => {
         this.clearChoice();
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
       },
     });
   }
@@ -455,7 +456,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       error: (err) => {
         this.calc.set(null);
         this.sampleRetry = isOverThreshold(err);
-        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -505,7 +506,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       // El rechazo del cupo (saldo, Esta Entrega) se le muestra al cajero tal como lo explica el servidor.
       saveError: (err) => {
         this.sampleRetry = isOverThreshold(err);
-        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
