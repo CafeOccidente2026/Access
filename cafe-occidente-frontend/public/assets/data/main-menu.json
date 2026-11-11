@@ -16,7 +16,6 @@
     { "label": "Compras", "route": "/compras", "emphasis": true, "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ANULAR_DOCUMENTO"] },
     { "label": "Suministros", "route": "/suministros", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Vendedores", "route": "/vendedores", "roles": ["ADMINISTRADOR", "USUARIO"] },
-    { "label": "Contabilizado", "disabled": true, "hint": "Pendiente de levantamiento", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ACCESO_TABLAS", "HISTORIAL"] },
     { "label": "Salir de la aplicación", "route": "/login" }
   ]

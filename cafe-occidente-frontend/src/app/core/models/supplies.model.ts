@@ -45,4 +45,6 @@ export interface SuppliesReportRow {
   readonly balance: number | null;
   readonly paymentMethod: string | null;
   readonly checkNumber: string | null;
+  /** Columna Datáfono del informe de Caja (6B): solo en las filas del datáfono; no entra al saldo. */
+  readonly card?: number | null;
 }

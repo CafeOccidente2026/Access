@@ -5,6 +5,7 @@ import writeExcelFile from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
 import content from '../../../../public/assets/data/supplies-report.json';
+import { money } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildSuppliesReportDoc, groupByAgency, paymentMethodsSheet } from './supplies-report-pdf';
 import { SuppliesReportContent } from './supplies-report.model';
 
@@ -39,7 +40,7 @@ describe('supplies reports', () => {
   const supplies = ['Transacción', 'Fondo', 'Fecha', 'Detalle', 'Vr Suministro', 'Gastos o Comp', 'Saldo'];
   const checks = ['Fecha', 'Cédula', 'Nombre', 'Apellidos', 'Cheque', 'Por Sum', 'Por Comp'];
   const rfColumns: Record<string, string[]> = {
-    cash: movement,
+    cash: ['Trans', 'Fd', 'Fecha', 'Detalle', 'Entradas', 'Salidas', 'Datáfono', 'Saldo'],
     pettyCash: movement,
     suppliesRp: supplies,
     suppliesLf: supplies,
@@ -59,6 +60,17 @@ describe('supplies reports', () => {
   it.each(Object.entries(rfColumns))('prints the RF columns of %s', (key, columns) => {
     const doc = buildSuppliesReportDoc(data.reports[key], data.text, rows, 'USADO');
     expect(tableRows(doc.content)).toContainEqual(columns);
+  });
+
+  it('prints the card in its own Caja column, outside the balance, with its total at the end', () => {
+    // 6B (11-nov): el datafono va en el informe de Caja en su columna; Entradas y Salidas en 0 y el saldo sigue igual.
+    const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), detail: 'DATAFONO 87304051', balance: 100, card: 173787 };
+    const body = tableRows(buildSuppliesReportDoc(data.reports['cash'], data.text, [rows[1], card]).content);
+    expect(body[2]).toEqual(['43909', 'RP', '14/06/2026', 'DATAFONO 87304051', money(0), money(0), money(173787), money(100)]);
+    expect(body[1][6]).toBe('');
+    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', '', '', money(173787), '']);
+    // Los demas informes de movimiento no la tienen.
+    expect(tableRows(buildSuppliesReportDoc(data.reports['pettyCash'], data.text, [card]).content).flat()).not.toContain(money(173787));
   });
 
   it('puts the purchase point in the header of each payment-method group', () => {

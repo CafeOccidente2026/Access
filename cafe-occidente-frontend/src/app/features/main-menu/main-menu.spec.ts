@@ -92,11 +92,9 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
     expect(labels(el)).not.toContain('Registro de Control');
   });
 
-  it('RF-05 / Q22: Contabilizado is there, disabled and marked as pending, for Administrator and User', () => {
-    const el = render('USUARIO');
-    const button = Array.from(el.querySelectorAll('app-button')).find((b) => b.textContent?.trim() === 'Contabilizado');
-    expect(button?.querySelector('button')?.disabled).toBe(true);
-    expect(el.textContent).toContain('Pendiente de levantamiento');
+  it('RF-29 no se implementa (decision del area, 11-nov): Contabilizado ya no esta en el menu', () => {
+    expect(labels(render('ADMINISTRADOR'))).not.toContain('Contabilizado');
+    expect(JSON.stringify(menu)).not.toContain('Contabilizado');
   });
 
   it('HU-06 CA-1: choosing an agency in the Agencias button sends it to the server', () => {
