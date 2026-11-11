@@ -22,7 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * HU-31 "Anunciadas Hoy" con la respuesta del area (P2): las compras a futuro con saldo de la agencia de trabajo, de
+ * HU-31 "Anunciadas de Hoy" con la respuesta del area (P2): las compras a futuro con saldo de la agencia de trabajo, de
  * cualquier fecha, agrupadas por anuncio. Semilla (agencia 1), transaccional: no deja nada.
  */
 @SpringBootTest

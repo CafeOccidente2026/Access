@@ -70,7 +70,7 @@ describe('submenus (HU-02)', () => {
   });
 
   it('CA-2 Compras a Futuro', () => {
-    expectInRfOrder(futurePurchases, ['Asignar Cupo a Anuncios', 'Facturar Anuncios con Cupos', 'Anunciadas Hoy',
+    expectInRfOrder(futurePurchases, ['Asignar Cupo a Anuncios', 'Facturar Anuncios con Cupos', 'Anunciadas de Hoy',
       'Ingresar Compras a Futuro', 'Facturar Compras Anunciadas', 'Generar Informe Anuncios a Futuro',
       'Generar Informe Saldo Anuncios', 'Volver al Panel de Control Compras']);
   });

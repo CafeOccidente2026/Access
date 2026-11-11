@@ -17,7 +17,7 @@ public interface FuturePurchaseService {
 
     FuturePurchaseResponse findById(Long id);
 
-    /** Anunciadas Hoy (HU-31, P2): compras a futuro con saldo de la agencia de trabajo, de cualquier fecha, por anuncio. */
+    /** Anunciadas de Hoy (HU-31, P2): compras a futuro con saldo de la agencia de trabajo, de cualquier fecha, por anuncio. */
     List<PendingAnnouncementRow> pending();
 
     /** RN-21.5.2: las compras anunciadas de la cedula con saldo, de la agencia de trabajo. */

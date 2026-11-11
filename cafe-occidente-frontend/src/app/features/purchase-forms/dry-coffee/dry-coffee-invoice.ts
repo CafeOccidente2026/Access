@@ -113,7 +113,7 @@ export function buildInvoiceDoc(
               {
                 stack: [
                   { text: 'COOPERATIVA DE CAFICULTORES', bold: true, fontSize: 10 },
-                  { text: 'DE OCCIDENTE DE NARIÑO LTDA.', bold: true, fontSize: 10 },
+                  { text: 'DE OCCIDENTE DE NARIÑO', bold: true, fontSize: 10 },
                   { text: `NIT ${cooperativeNit()}`, fontSize: 9 },
                   { text: 'Pasto, Carrera 32A No. 18-105', fontSize: 8 },
                   { text: 'Tel 6027219788', fontSize: 8 },
@@ -208,7 +208,7 @@ export function buildInvoiceDoc(
   return {
     pageSize: 'LETTER',
     pageMargins: [30, 30, 30, 30],
-    content: [...labeled('Copia Caficultor'), { stack: labeled('Copia Operaciones'), pageBreak: 'before' }],
+    content: [...labeled('Original Caficultor'), { stack: labeled('Copia Operaciones'), pageBreak: 'before' }],
     defaultStyle: { font: 'Roboto' },
   };
 }

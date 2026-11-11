@@ -108,7 +108,7 @@ describe('FutureRestoreComponent', () => {
     expect(restoreSpy).not.toHaveBeenCalled();
   });
 
-  it('HU-31: Anunciadas Hoy shows each announcement with its growers, kilos, delivered and balance, read only', () => {
+  it('HU-31: Anunciadas de Hoy shows each announcement with its growers, kilos, delivered and balance, read only', () => {
     const c = setup('pending');
 
     expect(pendingSpy).toHaveBeenCalledTimes(1);
@@ -117,15 +117,16 @@ describe('FutureRestoreComponent', () => {
     expect(c.canRestore()).toBe(false);
   });
 
-  it('a failed Anunciadas Hoy says so and shows no table', () => {
+  it('a failed Anunciadas de Hoy says so and shows no table', () => {
     const c = setup('pending', true);
 
     expect(c.failed()).toBe(true);
     expect(c.rows()).toBeNull();
   });
 
-  it('the menu opens Anunciadas Hoy for everyone', () => {
-    expect(menu.leftStandaloneOption).toEqual({ label: 'Anunciadas Hoy', route: '/compras/futuro/anunciadas-hoy' });
+  it('the menu opens Anunciadas de Hoy for everyone (prueba del 11-nov: antes "Anunciadas Hoy")', () => {
+    expect(menu.leftStandaloneOption).toEqual({ label: 'Anunciadas de Hoy', route: '/compras/futuro/anunciadas-hoy' });
+    expect(JSON.stringify(content)).not.toContain('Anunciadas Hoy');
   });
 
   it('the menu opens both screens, only for the Administrator', () => {

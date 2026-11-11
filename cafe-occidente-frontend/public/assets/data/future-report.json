@@ -22,7 +22,7 @@
     "error": "No se pudo generar el informe"
   },
   "announcementPdf": {
-    "cooperative": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "cooperative": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO",
     "nit": "NIT.",
     "detailTitle": "ANUNCIO",
     "summaryTitle": "ANUNCIO",
@@ -77,7 +77,7 @@
     "announcementColumn": false
   },
   "balancePdf": {
-    "cooperative": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "cooperative": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO",
     "nit": "NIT.",
     "title": "COMPRAS A FUTURO",
     "agencyLabel": "Agencia:",

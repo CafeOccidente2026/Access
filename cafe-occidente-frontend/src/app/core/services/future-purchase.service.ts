@@ -30,7 +30,7 @@ export class FuturePurchaseService {
     );
   }
 
-  /** Anunciadas Hoy (HU-31, P2): compras a futuro con saldo, de cualquier fecha, por anuncio. */
+  /** Anunciadas de Hoy (HU-31, P2): compras a futuro con saldo, de cualquier fecha, por anuncio. */
   pending(): Observable<PendingAnnouncementRow[]> {
     return this.http.get<PendingAnnouncementRow[]>(`${API_BASE_URL}/purchases/future/pending`);
   }
