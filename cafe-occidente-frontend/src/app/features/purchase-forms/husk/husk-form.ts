@@ -22,6 +22,7 @@ import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { serverError } from '../../../shared/utils/server-error';
+import { reserveInvoice } from '../invoice-reservation';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
@@ -189,19 +190,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
   /** "Para asignar # factura pasilla": siguiente factura propia de PASILLA. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        if (inv.warning) {
-          this.errorMessage.set(inv.warning);
-        }
-        this.tick.update((n) => n + 1);
-      },
-      error: (err) => {
-        this.errorMessage.set(serverError(err, this.messages()?.saveError));
-        this.tick.update((n) => n + 1);
-      },
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** Cuadro_combinado61_AfterUpdate: Cod Prod + anuncio vigente (Especial "PASILLA" / Fondo "RP"). */

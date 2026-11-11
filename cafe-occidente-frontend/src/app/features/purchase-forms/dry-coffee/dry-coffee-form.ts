@@ -25,6 +25,7 @@ import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { clearSample, isOverThreshold } from '../sample-quality';
 import { serverError } from '../../../shared/utils/server-error';
+import { reserveInvoice } from '../invoice-reservation';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -235,19 +236,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Paso 3: siguiente factura del rango DIAN autorizado, alone al confirmar Fondo. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        if (inv.warning) {
-          this.errorMessage.set(inv.warning);
-        }
-        this.tick.update((n) => n + 1);
-      },
-      error: (err) => {
-        this.errorMessage.set(serverError(err, this.messages()?.saveError));
-        this.tick.update((n) => n + 1);
-      },
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** Paso 4: busca el caficultor por cédula; bloquea el formulario si está fallecido. */
