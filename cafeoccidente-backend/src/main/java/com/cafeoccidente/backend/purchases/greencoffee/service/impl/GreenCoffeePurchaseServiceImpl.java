@@ -10,6 +10,9 @@ import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.AnnouncementInfoResponse;
+import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
+import com.cafeoccidente.backend.purchases.correction.dto.PurchaseCorrection;
+import com.cafeoccidente.backend.purchases.correction.service.PurchaseCorrectionService;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseResponse;
@@ -65,6 +68,7 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
+    private final PurchaseCorrectionService purchaseCorrectionService;
     private final Clock clock;
 
     public GreenCoffeePurchaseServiceImpl(
@@ -82,8 +86,10 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
             PurchasePaymentService purchasePaymentService,
+            PurchaseCorrectionService purchaseCorrectionService,
             Clock clock) {
         this.clock = clock;
+        this.purchaseCorrectionService = purchaseCorrectionService;
         this.greenCoffeePurchaseRepository = greenCoffeePurchaseRepository;
         this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
@@ -107,10 +113,6 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
         PurchaseContext context = purchaseContextService.forSave(
                 request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
-        AnnouncementResponse announcement = context.announcement();
-        PurchaseSeller seller = context.seller();
-        // HU-23 CA-2 / Q23: sin los 3 pesos de verde del Registro de Control no se registra.
-        GreenCoffeeSample sample = GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
         GreenCoffeePurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
@@ -119,6 +121,64 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
         purchase.setPurchaseDate(LocalDate.now(clock));
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
         purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
+        fill(purchase, request, context, calculation);
+        purchase.setCreatedByUserId(currentUserId);
+        purchase.setCreatedAt(Instant.now());
+
+        GreenCoffeePurchase savedPurchase = greenCoffeePurchaseRepository.save(purchase);
+        purchasePaymentService.record(
+                "GREEN", savedPurchase.getId(), savedPurchase.getInvoiceNumber(), request.payment(), context);
+
+        recordInventory(savedPurchase, context);
+
+        return mapper.toResponse(savedPurchase, context.controlRecord());
+    }
+
+    /**
+     * HU-05 (11-nov): corrige pesos, castigo, descuentos, direccion, celular y pago con los precios del anuncio
+     * original. Fondo, cedula, fecha, anuncio y numero de factura no cambian.
+     */
+    @Override
+    @Transactional
+    public GreenCoffeePurchaseResponse correct(Long id, GreenCoffeePurchaseRequest request) {
+        PurchaseCorrection correction =
+                purchaseCorrectionService.start(AnnulmentModule.GREEN, id, request.address(), request.cellphone());
+        GreenCoffeePurchase purchase = greenCoffeePurchaseRepository.findById(id).orElseThrow();
+        GreenCoffeePurchaseRequest fixed = fixedRequest(purchase, request);
+        GreenCoffeePurchaseCalculation calculation = runCalculation(fixed, correction.context());
+        purchaseCorrectionService.settle(correction, calculation.netKg(), request.payment());
+        fill(purchase, fixed, correction.context(), calculation);
+        GreenCoffeePurchase saved = greenCoffeePurchaseRepository.saveAndFlush(purchase);
+        recordInventory(saved, correction.context());
+        purchaseCorrectionService.close(correction);
+        return mapper.toResponse(saved, correction.context().controlRecord());
+    }
+
+    /** Neto, retencion y demas de la correccion, sin guardar: con el anuncio original y la compra bloqueada. */
+    @Override
+    @Transactional
+    public GreenCoffeePurchaseCalculation previewCorrection(Long id, GreenCoffeePurchaseRequest request) {
+        PurchaseCorrection correction =
+                purchaseCorrectionService.start(AnnulmentModule.GREEN, id, request.address(), request.cellphone());
+        GreenCoffeePurchase purchase = greenCoffeePurchaseRepository.findById(id).orElseThrow();
+        return runCalculation(fixedRequest(purchase, request), correction.context());
+    }
+
+    /** Lo digitado, con lo que la correccion deja fijo (fondo, cedula y, segun el modulo, especial o Vr Kilo Comp). */
+    private static GreenCoffeePurchaseRequest fixedRequest(GreenCoffeePurchase purchase, GreenCoffeePurchaseRequest request) {
+        return new GreenCoffeePurchaseRequest(purchase.getFund().getId(), purchase.getIdNumber(),
+                request.address(), request.cellphone(), request.bagsCount(), request.grossKg(), request.tareKg(),
+                request.penalty(), purchase.getCompKgPrice(), request.shrinkageDiscount(), request.otherDiscounts(),
+                request.payment());
+    }
+
+    /** Lo que sale del contexto y del calculo, igual al crear y al corregir; el pago se valida contra el neto. */
+    private void fill(GreenCoffeePurchase purchase, GreenCoffeePurchaseRequest request, PurchaseContext context,
+            GreenCoffeePurchaseCalculation calculation) {
+        AnnouncementResponse announcement = context.announcement();
+        PurchaseSeller seller = context.seller();
+        // HU-23 CA-2 / Q23: sin los 3 pesos de verde del Registro de Control no se registra.
+        GreenCoffeeSample sample = GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
         purchase.setAgency(context.agency());
         purchase.setFund(context.fund());
         purchase.setSpecialType(SPECIAL_TYPE);
@@ -164,21 +224,15 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
                 purchasePaymentService.validate(request.payment(), calculation.netToPay());
         purchase.setPaymentMethod(payment.paymentMethod());
         purchase.setCheckNumber(payment.checkNumber());
-        purchase.setCreatedByUserId(currentUserId);
-        purchase.setCreatedAt(Instant.now());
+    }
 
-        GreenCoffeePurchase savedPurchase = greenCoffeePurchaseRepository.save(purchase);
-        purchasePaymentService.record(
-                "GREEN", savedPurchase.getId(), savedPurchase.getInvoiceNumber(), request.payment(), context);
-
+    private void recordInventory(GreenCoffeePurchase purchase, PurchaseContext context) {
         inventoryMovementService.recordFromPurchase(
-                InventoryMovement.PurchaseModule.GREEN_COFFEE, savedPurchase.getId(),
+                InventoryMovement.PurchaseModule.GREEN_COFFEE, purchase.getId(),
                 context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
                 purchase.getInvoiceNumber(),
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 null, purchase.getInventoryValue());
-
-        return mapper.toResponse(savedPurchase, context.controlRecord());
     }
 
     @Override

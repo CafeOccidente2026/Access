@@ -8,6 +8,12 @@ import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 public interface HuskPurchaseService {
     HuskPurchaseResponse create(HuskPurchaseRequest request);
 
+    /** HU-05: corrige la compra de la agencia de trabajo sin anularla y con el mismo numero de factura. */
+    HuskPurchaseResponse correct(Long id, HuskPurchaseRequest request);
+
+    /** Vista previa de la correccion: el calculo con el anuncio original, sin guardar. */
+    HuskPurchaseCalculation previewCorrection(Long id, HuskPurchaseRequest request);
+
     HuskPurchaseResponse findById(Long id);
 
     HuskPurchaseCalculation preview(HuskPurchaseRequest request);
