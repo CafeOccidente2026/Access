@@ -427,28 +427,30 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.onFieldCommitted('special');
     expect(viewField('associated').value).toBe('ASOCIADO');
   });
-  it('prueba del 10-nov: without a cellphone it warns, sends the focus to Celular and then on to Especial', () => {
+  it('prueba del 10-nov: without a cellphone it warns and waits for Celular; then it goes on from Celular', () => {
     setup(growerWithoutPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
     component.model['fund'] = 'RP';
     component.onFieldCommitted('fund');
     component.model['idPart1'] = growerWithoutPhone.idNumber;
     component.onFieldCommitted('idPart1');
     expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
-    expect(focusSpy).not.toHaveBeenCalledWith('special');
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
 
     component.dismissError();
-    expect(focusSpy).toHaveBeenLastCalledWith('cellphone');
     component.model['cellphone'] = '3001112233';
     component.onFieldCommitted('cellphone');
-    expect(focusSpy).toHaveBeenLastCalledWith('special');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
   });
 
   it('a grower with a cellphone goes straight on to Especial, without a warning', () => {
     setup(growerWithPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
     fillCommon();
     expect(component.errorMessage()).toBeNull();
-    component.dismissError();
-    expect(focusSpy).not.toHaveBeenCalledWith('cellphone');
+    expect(advance).toHaveBeenCalledWith('idPart1');
   });
 
   it('the contribution says Descuento Coop for a type C grower (from the JSON)', () => {

@@ -266,36 +266,23 @@ describe('HuskFormComponent - gates de captura', () => {
     createPdf.mockRestore();
   });
 
-  it('prueba del 10-nov: without a cellphone it warns, sends the focus to Celular and calculates once it is typed', () => {
+  it('prueba del 10-nov: without a cellphone it warns, waits for Celular and calculates once it is typed', () => {
     setup(growerWithoutPhone);
-    const focus = vi.fn();
-    (component as any).focusField = focus;
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
     component.model['idPart1'] = growerWithoutPhone.idNumber;
     component.onFieldCommitted('idPart1');
     expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
-    expect(focus).not.toHaveBeenCalledWith('almondWeight');
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
 
     component.dismissError();
-    expect(focus).toHaveBeenLastCalledWith('cellphone');
-
     fillEverythingAfterGrower();
     expect(previewSpy).not.toHaveBeenCalled();
     component.model['cellphone'] = '3001112233';
     component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
     expect(previewSpy).toHaveBeenCalledTimes(1);
     expect(previewSpy.mock.calls[0][0].cellphone).toBe('3001112233');
-  });
-
-  it('after the cellphone the focus goes on to the first field still to fill', () => {
-    setup(growerWithoutPhone);
-    const focus = vi.fn();
-    (component as any).focusField = focus;
-    component.model['idPart1'] = growerWithoutPhone.idNumber;
-    component.onFieldCommitted('idPart1');
-    component.dismissError();
-    component.model['cellphone'] = '3001112233';
-    component.onFieldCommitted('cellphone');
-    expect(focus).toHaveBeenLastCalledWith('almondWeight');
   });
 
   it('a rejected preview shows the message of the server, not the generic one', () => {

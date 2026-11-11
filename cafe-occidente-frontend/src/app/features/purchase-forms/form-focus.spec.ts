@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { advanceFocus, focusField, nextPending } from './form-focus';
+import { advanceFocus, focusField } from './form-focus';
 
 describe('form-focus: el foco salta solo al siguiente campo', () => {
   let host: HTMLElement;
@@ -60,8 +60,12 @@ describe('form-focus: el foco salta solo al siguiente campo', () => {
     expect(document.activeElement).toBe(late);
   });
 
-  it('the next pending field is the first of the order not confirmed yet', () => {
-    expect(nextPending(['fund', 'idPart1', 'special'], new Set(['fund', 'idPart1']))).toBe('special');
-    expect(nextPending(['fund'], new Set(['fund']))).toBeUndefined();
+  it('prueba del 10-nov: after Celular (not in the order) it goes to the first field still to fill', () => {
+    host.innerHTML = ['fund', 'idPart1', 'bags', 'cellphone'].map((k) => `<input data-field-key="${k}" />`).join('');
+    (field('fund') as HTMLInputElement).readOnly = true;
+    (field('idPart1') as HTMLInputElement).readOnly = true;
+    advanceFocus(host, ['fund', 'idPart1', 'bags'], 'cellphone');
+    vi.runAllTimers();
+    expect(document.activeElement).toBe(field('bags'));
   });
 });

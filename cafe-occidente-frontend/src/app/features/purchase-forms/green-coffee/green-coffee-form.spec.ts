@@ -232,22 +232,21 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     createPdf.mockRestore();
   });
 
-  it('prueba del 10-nov: without a cellphone it warns, sends the focus to Celular and calculates once it is typed', () => {
+  it('prueba del 10-nov: without a cellphone it warns, waits for Celular and calculates once it is typed', () => {
     setup();
     const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
     (TestBed.inject(GrowerService).findByIdNumber as ReturnType<typeof vi.fn>).mockReturnValue(of({ ...grower, phone: '' }));
-    const focus = vi.fn();
-    (component as any).focusField = focus;
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
     component.model['idPart1'] = grower.idNumber;
     component.onFieldCommitted('idPart1');
     expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
-    expect(focus).not.toHaveBeenCalledWith('bags');
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
 
     component.dismissError();
-    expect(focus).toHaveBeenLastCalledWith('cellphone');
     component.model['cellphone'] = '3001112233';
     component.onFieldCommitted('cellphone');
-    expect(focus).toHaveBeenLastCalledWith('bags');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
 
     for (const [key, value] of [['bags', '10'], ['grossKg', '1250'], ['tare', '50'], ['compKgPrice', '12000']]) {
       component.model[key] = value;
