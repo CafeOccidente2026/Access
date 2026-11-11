@@ -35,7 +35,7 @@ export function buildFuturePurchaseManifestoDocDefinition(purchase: FuturePurcha
       'Mediante la presente, yo, ',
       { text: fullName, bold: true },
       ` identificado con C.C. No. ${purchase.idNumber}, me comprometo para con la Cooperativa de `,
-      'Caficultores de Occidente de Nariño Ltda., a entregar la cantidad anunciada de ',
+      'Caficultores de Occidente de Nariño, a entregar la cantidad anunciada de ',
       { text: `${money(purchase.announcedKg)} kilos`, bold: true },
       ` para ${purchase.specialType} el día `,
       { text: deliveryDate, bold: true },
@@ -61,7 +61,7 @@ export function buildFuturePurchaseManifestoDocDefinition(purchase: FuturePurcha
   const copy: Content[] = [
     { text: `${purchase.agencyName}, ${longSpanishDate(today)}`, fontSize: 12, alignment: 'right' },
     { text: 'Señores', bold: true, fontSize: 12, margin: [0, 30, 0, 0] as [number, number, number, number] },
-    { text: 'COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.', bold: true, fontSize: 12 },
+    { text: 'COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO.', bold: true, fontSize: 12 },
     { text: `${purchase.agencyName} NARIÑO`, bold: true, fontSize: 12 },
     body,
     signature,

@@ -152,9 +152,9 @@
   },
   "loanReceipt": {
     "salutation": "Señores",
-    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO",
     "department": "NARIÑO",
-    "body": "Mediante la presente, yo, {name} identificado con C.C. No. {idNumber}, me comprometo para con la Cooperativa de Caficultores de Occidente de Nariño Ltda., a devolver la cantidad de {quantity} Empaques {type} en la próxima venta de café que haga a la Cooperativa.",
+    "body": "Mediante la presente, yo, {name} identificado con C.C. No. {idNumber}, me comprometo para con la Cooperativa de Caficultores de Occidente de Nariño, a devolver la cantidad de {quantity} Empaques {type} en la próxima venta de café que haga a la Cooperativa.",
     "idPrefix": "C.C. No. "
   }
 }

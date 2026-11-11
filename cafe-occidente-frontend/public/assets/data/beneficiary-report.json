@@ -15,7 +15,7 @@
     "dates": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)"
   },
   "text": {
-    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO LTDA.",
+    "company": "COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO",
     "nit": "NIT.",
     "cedula": "Cedula",
     "groupSummary": "Resumir por 'Cedula' =  {id} ({count} {records})",
