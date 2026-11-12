@@ -68,9 +68,13 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     public List<AnnouncementResponse> todayAnnouncements(String specialType) {
         Long fundId = rpFund().getId();
         LocalDate today = LocalDate.now(clock);
+        // C6 + RN-21.4.3: el ultimo anuncio del especial (la historia viene del mas nuevo al mas viejo), y solo
+        // si es de hoy; asi no se mezclan varios anuncios ni sale uno viejo, como el de la semilla.
         return announcementService.history().stream()
                 .filter(a -> a.fundId().equals(fundId) && a.specialType().equals(specialType))
+                .findFirst()
                 .filter(a -> today.equals(a.announcementDate()))
+                .stream()
                 .toList();
     }
 
