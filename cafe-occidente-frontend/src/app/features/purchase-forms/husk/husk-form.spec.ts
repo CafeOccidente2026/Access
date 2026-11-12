@@ -53,13 +53,13 @@ describe('HuskFormComponent - gates de captura', () => {
 
   const growerWithPhone: Grower = {
     id: 1,
-    idNumber: '210514',
-    firstName: 'PAZ',
-    secondName: 'CAROLINA',
-    lastName: 'CASTELBLANCO',
-    secondLastName: 'OSSA',
-    address: 'CLL 14 N 37-20 CASA II',
-    phone: '3117498703',
+    idNumber: '990514',
+    firstName: 'CAFICULTOR',
+    secondName: 'UNO',
+    lastName: 'PRUEBA',
+    secondLastName: 'DOS',
+    address: 'VEREDA PRUEBA',
+    phone: '3000000001',
     growerType: 'C',
     active: true,
     deceased: false,
@@ -68,7 +68,7 @@ describe('HuskFormComponent - gates de captura', () => {
     vehiclePlate: null,
   };
 
-  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '27197019', phone: '' };
+  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '99197019', phone: '' };
 
   const calculation = {
     netKg: 1200,

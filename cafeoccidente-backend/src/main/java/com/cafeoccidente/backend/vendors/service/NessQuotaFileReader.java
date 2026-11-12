@@ -148,7 +148,7 @@ public class NessQuotaFileReader {
         return text == null ? "" : text.trim();
     }
 
-    /** Solo digitos; un numero de Excel ("98376216.0" o "9.8376216E7") se vuelve entero si no tiene decimales. */
+    /** Solo digitos; un numero de Excel ("99376216.0" o "9.9376216E7") se vuelve entero si no tiene decimales. */
     private static String idNumber(String raw) {
         String candidate = raw;
         if (!DIGITS.matcher(raw).matches()) {

@@ -39,7 +39,7 @@ class AssociatesIntegrationTest {
         otherAgencyName = jdbc.queryForObject("SELECT nombre FROM agencias WHERE id = ?", String.class, otherAgency);
         jdbc.update("INSERT INTO terceros (identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,"
                 + " agencia_id, fecha_nacimiento, direccion, telefono, tipo, activo, fallecido, retirado, aceptado, habil,"
-                + " asociacion, sexo) VALUES (?, 'AURA', 'MARIA', 'TUTISTAR', 'PRUEBA53', ?, ?, 'VDA LA PALMA',"
+                + " asociacion, sexo) VALUES (?, 'ASOCIADA', 'MARIA', 'PRUEBA', 'PRUEBA53', ?, ?, 'VDA LA PALMA',"
                 + " '3001234567', 'C', true, false, true, true, false, false, 'F')",
                 FIRST, AGENCY, LocalDate.of(1970, 3, 1));
         jdbc.update("INSERT INTO terceros (identificacion, primer_nombre, primer_apellido, agencia_id, direccion, telefono,"
@@ -79,9 +79,9 @@ class AssociatesIntegrationTest {
         assertThat(found.total()).isEqualTo(total);
         assertThat(vendors.associateAt(found.position()).associate()).isEqualTo(found.associate());
         AssociateResponse a = found.associate();
-        assertThat(a.firstName()).isEqualTo("AURA");
+        assertThat(a.firstName()).isEqualTo("ASOCIADA");
         assertThat(a.secondName()).isEqualTo("MARIA");
-        assertThat(a.lastName()).isEqualTo("TUTISTAR");
+        assertThat(a.lastName()).isEqualTo("PRUEBA");
         assertThat(a.secondLastName()).isEqualTo("PRUEBA53");
         assertThat(a.birthDate()).isEqualTo(LocalDate.of(1970, 3, 1));
         assertThat(a.address()).isEqualTo("VDA LA PALMA");

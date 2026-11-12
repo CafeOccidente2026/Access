@@ -176,8 +176,8 @@ class ControlRecordIntegrationTest {
     @Test
     void withThePermissionTheBusinessValuesStayForTheAdministrator() throws Exception {
         String clerk = clerkWithPermission();
-        saveAs(clerk, current().put("trustedId", "87304051")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.trustedId").value("87304051"));
+        saveAs(clerk, current().put("trustedId", "99304051")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.trustedId").value("99304051"));
 
         for (String field : List.of("avgHuskPercentage", "associatePercentage", "nonAssociateDiscount",
                 "greenTotalStoredWeight", "greenTotalHuskWeight", "greenHealthyStoredWeight",

@@ -45,7 +45,7 @@ public class VendorReadRepository {
             + " UNION ALL " + PURCHASE_START + "0" + PURCHASE_MIDDLE + "p.porc_almendra" + PURCHASE_END
             + "compras_pasilla" + PURCHASE_JOINS;
 
-    /** Cedula de la tabla NESS: el CSV de origen la trae como numero ("210514.0"). */
+    /** Cedula de la tabla NESS: el CSV de origen la trae como numero ("990514.0"). */
     private static final String NESS_ID = "regexp_replace(n.cedula, '\\.0$', '')";
 
     private final NamedParameterJdbcTemplate jdbc;

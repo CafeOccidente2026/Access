@@ -225,14 +225,14 @@ class RemissionServiceImplTest {
         when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
         com.cafeoccidente.backend.purchases.shared.entity.Grower conductor =
                 new com.cafeoccidente.backend.purchases.shared.entity.Grower();
-        conductor.setIdNumber("900723205");
-        conductor.setFirstName("FUNDACION SUYUSAMA");
-        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(conductor));
+        conductor.setIdNumber("990723205");
+        conductor.setFirstName("FUNDACION PRUEBA");
+        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(conductor));
 
         RemissionResponse response = service.create(new RemissionRequest(
-                LocalDate.now(), "ALMACAFE", "900723205", java.util.List.of(line(10L, "10.00"))));
+                LocalDate.now(), "ALMACAFE", "990723205", java.util.List.of(line(10L, "10.00"))));
 
-        assertThat(response.conductorName()).isEqualTo("FUNDACION SUYUSAMA");
+        assertThat(response.conductorName()).isEqualTo("FUNDACION PRUEBA");
     }
 
     @Test

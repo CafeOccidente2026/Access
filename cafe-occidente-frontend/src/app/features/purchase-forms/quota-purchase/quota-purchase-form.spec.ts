@@ -60,7 +60,7 @@ describe('QuotaPurchaseFormComponent', () => {
   /** Compra anunciada de 2500 kg con 1500 por entregar. */
   const futurePurchase = {
     id: 55, agencyId: 1, agencyName: 'Buesaco 1', announcementNumber: 'SDBU-4', announcementDate: '2026-11-01',
-    idNumber: '210514', firstName: 'PAZ', lastName: 'OSSA', growerType: 'C', address: 'VEREDA',
+    idNumber: '990514', firstName: 'CAFICULTOR', lastName: 'DOS', growerType: 'C', address: 'VEREDA',
     specialType: 'NESPRESSO - FTUSA', announcedKg: 2500, remainingKg: 1500, deliveryDate: '2026-12-01', finca: null,
     municipality: null, vereda: null, healthyUnitPrice: 9100, defectiveUnitPrice: 6000, bonus: 30, costs: 692,
     qualityIncrement: 0, basePriceLoad: 1500000,
@@ -115,7 +115,7 @@ describe('QuotaPurchaseFormComponent', () => {
         {
           provide: GrowerService,
           useValue: {
-            findByIdNumber: () => of({ idNumber: '210514', firstName: 'PAZ', lastName: 'OSSA', growerType: 'C',
+            findByIdNumber: () => of({ idNumber: '990514', firstName: 'CAFICULTOR', lastName: 'DOS', growerType: 'C',
               address: 'VEREDA', phone: '3001112233' }),
             findProgram: () => of(null),
           },
@@ -138,7 +138,7 @@ describe('QuotaPurchaseFormComponent', () => {
 
   function fillPurchase(): void {
     pickQuota();
-    commit('idPart1', '210514');
+    commit('idPart1', '990514');
     for (const [key, value] of [['totalStoredWeight', '200'], ['totalHuskWeight', '10'], ['bags', '5'],
       ['grossKg', '1000'], ['tare', '0'], ['penalty', '0'], ['shrinkageDiscount', '0'], ['otherDiscounts', '0']]) {
       commit(key, value);
@@ -345,16 +345,16 @@ describe('QuotaPurchaseFormComponent', () => {
   describe('Facturar Compras Anunciadas (RF-21.5)', () => {
     function pickFuture(): void {
       commit('fund', 'RP');
-      commit('idPart1', '210514');
+      commit('idPart1', '990514');
       component.onQuotaPicked({ row: component.quotaRows()![0], deliveryKg: 1000 });
     }
 
     it('CA-1: the cédula opens the window with the open future purchases of that person', () => {
       setup('future');
       commit('fund', 'RP');
-      commit('idPart1', '210514');
+      commit('idPart1', '990514');
 
-      expect(openForSpy).toHaveBeenCalledWith('210514');
+      expect(openForSpy).toHaveBeenCalledWith('990514');
       const row = component.quotaRows()![0];
       expect(row.announcement.id).toBe(55);
       expect([row.assignedQuota, row.deliveredKg, row.balance]).toEqual([2500, 1000, 1500]);
@@ -365,7 +365,7 @@ describe('QuotaPurchaseFormComponent', () => {
       setup('future');
       openForSpy.mockReturnValue(throwError(() => ({ error: { message: 'Tercero no encontrado' } })));
       commit('fund', 'RP');
-      commit('idPart1', '210514');
+      commit('idPart1', '990514');
 
       expect(component.errorMessage()).toBe('Tercero no encontrado');
     });
@@ -374,7 +374,7 @@ describe('QuotaPurchaseFormComponent', () => {
       setup('future');
       openForSpy.mockReturnValue(of([]));
       commit('fund', 'RP');
-      commit('idPart1', '210514');
+      commit('idPart1', '990514');
 
       expect(component.errorMessage()).toBe(messages.noQuota);
       expect(component.model['idPart1']).toBe('');
@@ -405,14 +405,14 @@ describe('QuotaPurchaseFormComponent', () => {
 
       expect(createSpy).toHaveBeenCalledTimes(1);
       const request = createSpy.mock.calls[0][0];
-      expect(request).toMatchObject({ futurePurchaseId: 55, deliveryKg: 1000, specialType: 'NESPRESSO - FTUSA', idNumber: '210514' });
+      expect(request).toMatchObject({ futurePurchaseId: 55, deliveryKg: 1000, specialType: 'NESPRESSO - FTUSA', idNumber: '990514' });
       expect(request).not.toHaveProperty('quotaAnnouncementNumber');
     });
 
     it('CA-4: cancelling the window frees the cédula and nothing is saved', () => {
       setup('future');
       commit('fund', 'RP');
-      commit('idPart1', '210514');
+      commit('idPart1', '990514');
       component.onQuotaCancelled();
 
       expect(component.quotaRows()).toBeNull();
@@ -428,7 +428,7 @@ describe('QuotaPurchaseFormComponent', () => {
       const contribution = () => component.viewContent()?.additionalDiscountFields?.find((f) => f.key === 'contribution');
       expect(contribution()?.label).toBe('Aporte Socio');
       commit('fund', 'RP');
-      commit('idPart1', '210514');
+      commit('idPart1', '990514');
       expect(contribution()?.label).toBe('Descuento Coop');
     }
   });

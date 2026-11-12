@@ -35,7 +35,7 @@ describe('RemissionFormComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: InventoryService, useValue: { listMovements: () => of(movements), createRemission: createSpy } },
-        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of({ id: 1, idNumber: '210514', firstName: 'PAZ', lastName: 'CASTELBLANCO', transportCompany: 'Transportes X', vehiclePlate: 'ABC123' })) } },
+        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of({ id: 1, idNumber: '990514', firstName: 'CAFICULTOR', lastName: 'PRUEBA', transportCompany: 'Transportes X', vehiclePlate: 'ABC123' })) } },
       ],
     });
     component = TestBed.createComponent(RemissionFormComponent).componentInstance;
