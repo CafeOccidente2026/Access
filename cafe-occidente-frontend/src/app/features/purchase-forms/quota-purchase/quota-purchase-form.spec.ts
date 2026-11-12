@@ -33,6 +33,11 @@ describe('QuotaPurchaseFormComponent', () => {
     topFields: [{ key: 'special', label: 'Especial', type: 'select', options: [] }],
     identificationFields: [{ key: 'deliveryKg', label: 'Kilos Entregados', type: 'number' }],
     qualityFields: [{ key: 'healthyStoredWeight', label: 'Peso Alm Sana', type: 'currency' }],
+    weightFields: [
+      { key: 'grossKg', label: 'Kilos Brutos', type: 'number' },
+      { key: 'tare', label: 'Destare', type: 'number' },
+      { key: 'netKg', label: 'Kilos Netos', type: 'number' },
+    ],
     settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     additionalDiscountFields: [{ key: 'contribution', label: 'Aporte Socio', type: 'currency' }],
     messages,
@@ -144,6 +149,36 @@ describe('QuotaPurchaseFormComponent', () => {
   const field = (key: string) =>
     [...(component.viewContent()?.identificationFields ?? []), ...(component.viewContent()?.qualityFields ?? [])]
       .find((f) => f.key === key);
+
+  /** Busca el campo en todos los bloques de la pantalla. */
+  const anyField = (key: string): { readonly?: boolean; value?: unknown } | undefined => {
+    type Field = { key?: string; readonly?: boolean; value?: unknown };
+    const find = (node: unknown): Field | undefined => {
+      if (Array.isArray(node)) return node.map(find).find(Boolean);
+      if (node === null || typeof node !== 'object') return undefined;
+      if ((node as Field).key === key) return node as Field;
+      return Object.values(node).map(find).find(Boolean);
+    };
+    return find(component.viewContent());
+  };
+
+  it('prueba del 11-nov (punto 9): Destare y Kilos Netos salen de Kilos Brutos y Esta Entrega, no se digitan', () => {
+    setup();
+    pickQuota(); // Esta Entrega 1000
+    commit('grossKg', '1005');
+    expect(anyField('tare')).toMatchObject({ readonly: true, value: 5 });
+    expect(anyField('netKg')?.value).toBe(1000);
+
+    // Entrega parcial: los brutos no alcanzan la entrega.
+    commit('grossKg', '900');
+    expect(anyField('tare')?.value).toBe(0);
+    expect(anyField('netKg')?.value).toBe(900);
+
+    // Lo que se manda a calcular lleva ese destare (el servidor lo vuelve a calcular igual).
+    fillPurchase();
+    commit('grossKg', '1005');
+    expect(previewSpy).toHaveBeenLastCalledWith(expect.objectContaining({ grossKg: 1005, tareKg: 5, deliveryKg: 1000 }));
+  });
 
   it('CA-1: choosing the special opens the window with the quota announcements of that fund and special', () => {
     setup();
