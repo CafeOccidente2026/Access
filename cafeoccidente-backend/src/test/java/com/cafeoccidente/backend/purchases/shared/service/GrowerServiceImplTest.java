@@ -50,17 +50,17 @@ class GrowerServiceImplTest {
         return program;
     }
 
-    /** C3: la cedula de NESS viene del CSV como "210514.0"; el bloque Informacion Federacion la muestra sin ".0". */
+    /** C3: la cedula de NESS viene del CSV como "990514.0"; el bloque Informacion Federacion la muestra sin ".0". */
     @Test
     void theNessCedulaComesWithoutTheDecimalOfTheCsv() {
         LegacyNessProgram ness = program("NESPRESSO", "30000.0");
-        ReflectionTestUtils.setField(ness, "cedula", "210514.0");
-        ReflectionTestUtils.setField(ness, "nombres", "Paz Carolina Castelblanco Ossa");
-        when(legacyNessProgramRepository.findByNormalizedCedula("210514")).thenReturn(List.of(ness));
+        ReflectionTestUtils.setField(ness, "cedula", "990514.0");
+        ReflectionTestUtils.setField(ness, "nombres", "Caficultor Ness Uno Dos");
+        when(legacyNessProgramRepository.findByNormalizedCedula("990514")).thenReturn(List.of(ness));
 
-        assertThat(growerService.findProgram("210514", null)).get()
+        assertThat(growerService.findProgram("990514", null)).get()
                 .extracting("cedula", "nombres", "programa", "cupo")
-                .containsExactly("210514", "Paz Carolina Castelblanco Ossa", "NESPRESSO", "30000");
+                .containsExactly("990514", "Caficultor Ness Uno Dos", "NESPRESSO", "30000");
     }
 
     @Test

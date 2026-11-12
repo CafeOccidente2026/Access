@@ -419,10 +419,10 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   });
 
   it('C3: with NESS the Federación block shows the cédula, name, program and quota of NESS, read only', () => {
-    nessProgram = { programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ OSSA NESS' };
+    nessProgram = { programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' };
     setup(growerWithPhone);
     fillCommon();
-    for (const [key, value] of Object.entries({ idNumber: '210514', fullName: 'PAZ OSSA NESS', program: 'NESPRESSO', quota: '200' })) {
+    for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO', quota: '200' })) {
       expect(viewField(key)).toMatchObject({ value, readonly: true });
     }
   });
@@ -433,8 +433,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     for (const key of ['idNumber', 'fullName', 'program', 'quota']) {
       expect(viewField(key)).toMatchObject({ value: '', readonly: true });
     }
-    expect(component.model['firstName']).toBe('PAZ CAROLINA');
-    expect(component.model['lastName']).toBe('CASTELBLANCO OSSA');
+    expect(component.model['firstName']).toBe('CAFICULTOR UNO');
+    expect(component.model['lastName']).toBe('PRUEBA DOS');
   });
 
   it('the agency is not editable, the special brings announcement and Cod Prod, and S/C says if associated', () => {

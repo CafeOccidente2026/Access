@@ -8,11 +8,11 @@ import { lookupSeller } from './seller-lookup';
 /** Busqueda del vendedor de Seco, Verde y Pasilla (paso 4). */
 describe('lookupSeller', () => {
   const grower = {
-    idNumber: '210514', firstName: 'PAZ', secondName: null, lastName: 'OSSA', secondLastName: null,
+    idNumber: '990514', firstName: 'CAFICULTOR', secondName: null, lastName: 'DOS', secondLastName: null,
     growerType: 'C', address: 'VEREDA', phone: '', deceased: false,
   } as unknown as Grower;
 
-  function form(idPart1 = '210514', messages?: { deceasedBlocked: string; idNumberNotFound: string }) {
+  function form(idPart1 = '990514', messages?: { deceasedBlocked: string; idNumberNotFound: string }) {
     return {
       model: { idPart1 } as Record<string, string | undefined>,
       errorMessage: signal<string | null>(null),
@@ -33,14 +33,14 @@ describe('lookupSeller', () => {
   it('fills the seller, locks what came filled and goes on; a blank cellphone stays editable', () => {
     const f = form();
     const { locked, repaint, found } = run(f, () => of(grower));
-    expect(f.model).toMatchObject({ firstName: 'PAZ', lastName: 'OSSA', idType: 'C', address: 'VEREDA', cellphone: '' });
+    expect(f.model).toMatchObject({ firstName: 'CAFICULTOR', lastName: 'DOS', idType: 'C', address: 'VEREDA', cellphone: '' });
     expect([...locked]).toEqual(['idPart1', 'firstName', 'lastName', 'idType', 'address']);
     expect(repaint).toHaveBeenCalled();
     expect(found).toHaveBeenCalled();
   });
 
   it('a deceased grower blocks the form and does not go on', () => {
-    const f = form('210514', { deceasedBlocked: 'Fallecido', idNumberNotFound: 'No existe' });
+    const f = form('990514', { deceasedBlocked: 'Fallecido', idNumberNotFound: 'No existe' });
     const { found } = run(f, () => of({ ...grower, deceased: true }));
     expect(f.blockedByDeceased()).toBe(true);
     expect(f.errorMessage()).toBe('Fallecido');

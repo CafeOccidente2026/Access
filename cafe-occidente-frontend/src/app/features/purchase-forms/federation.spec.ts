@@ -16,12 +16,12 @@ describe('federationValues', () => {
   });
 
   it('loadFederation asks NESS with the cédula and the special, fills the model and repaints', () => {
-    const findProgram = vi.fn(() => of({ programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ' }));
-    const model: Record<string, string> = { idPart1: ' 210514 ' };
+    const findProgram = vi.fn(() => of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR' }));
+    const model: Record<string, string> = { idPart1: ' 990514 ' };
     const repaint = vi.fn();
     loadFederation({ findProgram } as unknown as GrowerService, model['idPart1'], 'NESPRESSO - FTUSA', model, repaint);
-    expect(findProgram).toHaveBeenCalledWith('210514', 'NESPRESSO - FTUSA');
-    expect(model).toMatchObject({ idNumber: '210514', fullName: 'PAZ', program: 'NESPRESSO', quota: '200' });
+    expect(findProgram).toHaveBeenCalledWith('990514', 'NESPRESSO - FTUSA');
+    expect(model).toMatchObject({ idNumber: '990514', fullName: 'CAFICULTOR', program: 'NESPRESSO', quota: '200' });
     expect(repaint).toHaveBeenCalled();
   });
 

@@ -225,20 +225,20 @@ describe('QuotaPurchaseFormComponent', () => {
 
   it('C3: the Federación block takes NESS only and is read only; without NESS it stays empty', () => {
     setup();
-    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ OSSA NESS' }));
-    commit('idPart1', '210514');
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
+    commit('idPart1', '990514');
     const federation = (key: string) => component.viewContent()!.federationFields!.find((f) => f.key === key)!;
-    for (const [key, value] of Object.entries({ idNumber: '210514', fullName: 'PAZ OSSA NESS', program: 'NESPRESSO' })) {
+    for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' })) {
       expect(federation(key)).toMatchObject({ value, readonly: true });
     }
 
     TestBed.resetTestingModule();
     setup();
-    commit('idPart1', '210514');
+    commit('idPart1', '990514');
     for (const key of ['idNumber', 'fullName', 'program']) {
       expect(federation(key)).toMatchObject({ value: '', readonly: true });
     }
-    expect(component.model['firstNames']).toBe('PAZ');
+    expect(component.model['firstNames']).toBe('CAFICULTOR');
   });
 
   it('cancelling the window leaves no announcement chosen', () => {

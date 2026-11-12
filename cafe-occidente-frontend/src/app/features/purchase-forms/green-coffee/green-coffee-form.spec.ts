@@ -140,11 +140,11 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
   it('C3: with NESS the Federación block shows the cédula, name and program of NESS, read only', () => {
     setup();
-    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ OSSA NESS' }));
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
     component.model['idPart1'] = grower.idNumber;
     component.onFieldCommitted('idPart1');
-    expect(TestBed.inject(GrowerService).findProgram).toHaveBeenCalledWith('210514', 'CV');
-    for (const [key, value] of Object.entries({ idNumber: '210514', fullName: 'PAZ OSSA NESS', program: 'NESPRESSO' })) {
+    expect(TestBed.inject(GrowerService).findProgram).toHaveBeenCalledWith('990514', 'CV');
+    for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' })) {
       expect(federation(key)).toMatchObject({ value, readonly: true });
     }
   });
@@ -155,7 +155,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     for (const key of ['idNumber', 'fullName', 'program']) {
       expect(federation(key)).toMatchObject({ value: '', readonly: true });
     }
-    expect(component.model['firstName']).toBe('PAZ CAROLINA');
+    expect(component.model['firstName']).toBe('CAFICULTOR UNO');
     expect(component.calc()).not.toBeNull();
   });
 

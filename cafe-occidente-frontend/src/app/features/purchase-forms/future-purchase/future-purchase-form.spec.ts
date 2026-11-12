@@ -133,9 +133,9 @@ describe('FuturePurchaseFormComponent', () => {
 
   it('C3: the Federación block takes the cédula, name and program of NESS; without NESS it stays empty', () => {
     setup(growerWithoutId);
-    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ OSSA NESS' }));
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
     fill();
-    expect(component.model).toMatchObject({ idNumber: '210514', fullName: 'PAZ OSSA NESS', program: 'NESPRESSO' });
+    expect(component.model).toMatchObject({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' });
 
     TestBed.resetTestingModule();
     setup(growerWithoutId);
