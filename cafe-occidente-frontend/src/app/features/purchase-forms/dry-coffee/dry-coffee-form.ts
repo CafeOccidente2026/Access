@@ -20,13 +20,14 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { clearSample, isOverThreshold } from '../sample-quality';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
-import { FEDERATION_KEYS, federationValues } from '../federation';
+import { FEDERATION_KEYS, loadFederation } from '../federation';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -243,42 +244,9 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Paso 4: busca el caficultor por cédula; bloquea el formulario si está fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findByIdNumber(idNumber).subscribe({
-      next: (grower) => {
-        if (grower.deceased) {
-          this.blockedByDeceased.set(true);
-          this.errorMessage.set(this.messages()?.deceasedBlocked ?? null);
-          this.tick.update((n) => n + 1);
-          return;
-        }
-        // Renglón de contacto como en Access: nombres y apellidos en dos cuadros.
-        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
-        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
-        this.model['idType'] = grower.growerType;
-        this.model['address'] = grower.address;
-        this.model['cellphone'] = grower.phone;
-        this.locked.add('idPart1');
-        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
-        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
-        // la cascada de calculo (Vr. Kilo/Vr. Bruto/Neto a Pagar) nunca llegaba a dispararse.
-        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
-        this.lookupProgram();
-        this.tick.update((n) => n + 1);
-        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
-      },
-      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
-      error: () => {
-        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
-        this.tick.update((n) => n + 1);
-      },
+    lookupSeller(this, this.growerService, this.locked, () => this.tick.update((n) => n + 1), () => {
+      this.lookupProgram();
+      askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
     });
   }
 
@@ -289,14 +257,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
    * ambiguedad entre programas) y de nuevo al confirmar el Especial (para desambiguar/confirmar).
    */
   private lookupProgram(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      Object.assign(this.model, federationValues(program));
-      this.tick.update((n) => n + 1);
-    });
+    loadFederation(this.growerService, this.model['idPart1'], this.model['special'], this.model, () => this.tick.update((n) => n + 1));
   }
 
   /** Paso 5: Cod Prod + datos del anuncio vigente para Agencia+Fondo+Especial. */

@@ -18,6 +18,7 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
@@ -210,40 +211,8 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
   /** Cedula_LostFocus: busca el caficultor; bloquea el formulario si esta fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findByIdNumber(idNumber).subscribe({
-      next: (grower) => {
-        if (grower.deceased) {
-          this.blockedByDeceased.set(true);
-          this.errorMessage.set(this.messages()?.deceasedBlocked ?? null);
-          this.tick.update((n) => n + 1);
-          return;
-        }
-        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
-        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
-        this.model['idType'] = grower.growerType;
-        this.model['address'] = grower.address;
-        this.model['cellphone'] = grower.phone;
-        this.locked.add('idPart1');
-        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
-        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
-        // la cascada de calculo nunca llegaba a dispararse.
-        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
-        this.tick.update((n) => n + 1);
-        askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
-      },
-      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
-      error: () => {
-        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
-        this.tick.update((n) => n + 1);
-      },
+    lookupSeller(this, this.growerService, this.locked, () => this.tick.update((n) => n + 1), () => {
+      askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
     });
   }
 
