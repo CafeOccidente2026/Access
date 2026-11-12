@@ -56,13 +56,13 @@ describe.each([
 
   it('with data the X asks; Cancel keeps the data and Close discards it and goes back', () => {
     const { form, back } = setup();
-    form.model['idPart1'] = '210514';
+    form.model['idPart1'] = '990514';
 
     form.onClose();
     expect(form.pendingClose()).toBe(true);
     form.cancelClose();
     expect(form.pendingClose()).toBe(false);
-    expect(form.model['idPart1']).toBe('210514');
+    expect(form.model['idPart1']).toBe('990514');
     expect(back).not.toHaveBeenCalled();
 
     form.onClose();
@@ -79,7 +79,7 @@ describe.each([
     const form = fixture.componentInstance as ClosableForm;
     fixture.autoDetectChanges();
     await fixture.whenStable();
-    form.model['idPart1'] = '210514';
+    form.model['idPart1'] = '990514';
 
     void form.canDeactivate();
     await fixture.whenStable();
@@ -89,7 +89,7 @@ describe.each([
 
   it('leaving by menu or back with data waits for the answer: Cancel stays, Close leaves without going back twice', async () => {
     const { form, back } = setup();
-    form.model['idPart1'] = '210514';
+    form.model['idPart1'] = '990514';
 
     const stay = form.canDeactivate() as Promise<boolean>;
     expect(form.pendingClose()).toBe(true);

@@ -56,7 +56,7 @@ describe('UserManagementComponent', () => {
     userService.create.mockReturnValue(pendingUser);
     const fixture = TestBed.createComponent(UserManagementComponent);
     const component = fixture.componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '1061699481', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', idNumber: '9961699481', password: 'ab12', roleId: 1, agencyId: 1 });
 
     component.createUser();
     component.createUser();
@@ -103,9 +103,9 @@ describe('UserManagementComponent', () => {
     expect(userService.create).not.toHaveBeenCalled();
     expect(component.userError()).toBe(content.idNumberRequiredMessage);
 
-    component.idNumber = '1061699481';
+    component.idNumber = '9961699481';
     component.createUser();
-    expect(userService.create).toHaveBeenCalledWith({ username: 'fiel1', idNumber: '1061699481', password: 'ab12', roleId: 1, agencyId: 1 });
+    expect(userService.create).toHaveBeenCalledWith({ username: 'fiel1', idNumber: '9961699481', password: 'ab12', roleId: 1, agencyId: 1 });
   });
 
   it('C4: editing sends agency, role, active and only a new password; the list shows the saved user', () => {

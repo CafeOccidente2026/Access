@@ -14,7 +14,7 @@ import { SuppliesEntryComponent } from './supplies-entry';
 const URL = `${API_BASE_URL}/supplies`;
 
 const saved = (transactionId: string): SuppliesEntryResponse => ({
-  id: 1, transactionId, agencyName: 'El Tambo', entryDate: '2026-11-05', idNumber: '87304051', firstNames: 'ANA',
+  id: 1, transactionId, agencyName: 'El Tambo', entryDate: '2026-11-05', idNumber: '99304051', firstNames: 'ANA',
   lastNames: 'PRUEBA',
 });
 
@@ -77,19 +77,19 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
       box.dispatchEvent(new Event('input'));
       box.dispatchEvent(new Event('blur'));
       http.expectOne(`${API_BASE_URL}/growers/1082656111`).flush({
-        idNumber: '1082656111', firstName: 'ANA', secondName: 'MARIA', lastName: 'ERAZO', secondLastName: 'PAZ',
+        idNumber: '1082656111', firstName: 'ANA', secondName: 'MARIA', lastName: 'PRUEBA', secondLastName: 'PAZ',
       });
       await settle();
 
-      expect(component.growerNames()).toEqual({ first: 'ANA MARIA', last: 'ERAZO PAZ' });
+      expect(component.growerNames()).toEqual({ first: 'ANA MARIA', last: 'PRUEBA PAZ' });
     },
   );
 
   it('after saving, the name beside the cédula is cleared with the rest of the form', async () => {
     const { component } = await render('supply');
-    component.set('idNumber', '1835221');
+    component.set('idNumber', '9935221');
     component.lookupGrower();
-    http.expectOne(`${API_BASE_URL}/growers/1835221`).flush({ idNumber: '1835221', firstName: 'PEREGRINO', lastName: 'ORDOÑEZ' });
+    http.expectOne(`${API_BASE_URL}/growers/9935221`).flush({ idNumber: '9935221', firstName: 'VENDEDOR', lastName: 'PRUEBA' });
     component.set('fundCode', 'RP');
     await settle();
     await answerNextId('supply', 'RP', 'SDTA-3SUM-001');
@@ -118,7 +118,7 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     component.set('fundCode', 'RP');
     await settle();
     await answerNextId('issuedCheck', 'RP', 'SDTA3CHQ001');
-    component.set('idNumber', '87304051');
+    component.set('idNumber', '99304051');
     component.set('amount', '250000');
     component.set('checkNumber', '0548');
 
@@ -126,7 +126,7 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     component.save();
     const requests = http.match(`${URL}/issued-checks`);
     expect(requests).toHaveLength(1);
-    expect(requests[0].request.body).toMatchObject({ checkNumber: '0548', idNumber: '87304051' });
+    expect(requests[0].request.body).toMatchObject({ checkNumber: '0548', idNumber: '99304051' });
     requests[0].flush(saved('SDTA3CHQ001'));
     await settle();
 
@@ -144,7 +144,7 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     component.set('fundCode', 'RP');
     await settle();
     await answerNextId('issuedCheck', 'RP', 'SDTA3CHQ001');
-    component.set('idNumber', '87304051');
+    component.set('idNumber', '99304051');
     component.set('amount', '250000');
     component.set('checkNumber', '548');
 
@@ -160,7 +160,7 @@ describe('SuppliesEntryComponent (5c, HU-36 a HU-48)', () => {
     component.set('packagingType', 'USADO');
     await settle();
     await answerNextId('packagingLoan', 'USADO', 'SDTA5PRE001');
-    component.set('idNumber', '87304051');
+    component.set('idNumber', '99304051');
     component.set('quantity', '12');
 
     component.save();

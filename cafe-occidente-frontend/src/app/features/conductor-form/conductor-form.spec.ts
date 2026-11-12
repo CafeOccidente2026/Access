@@ -4,9 +4,9 @@ import { conductorLabel, dateTime, shortDate } from './conductor-form';
 
 describe('conductor label', () => {
   it('skips a null last name instead of showing "null"', () => {
-    expect(conductorLabel({ idNumber: '900723205', firstName: 'FUNDACION SUYUSAMA', lastName: null }))
-      .toBe('900723205 - FUNDACION SUYUSAMA');
-    expect(conductorLabel({ idNumber: '555', firstName: 'Luis', lastName: 'Rosero' })).toBe('555 - Luis Rosero');
+    expect(conductorLabel({ idNumber: '990723205', firstName: 'FUNDACION PRUEBA', lastName: null }))
+      .toBe('990723205 - FUNDACION PRUEBA');
+    expect(conductorLabel({ idNumber: '555', firstName: 'Conductor', lastName: 'Prueba' })).toBe('555 - Conductor Prueba');
   });
 });
 

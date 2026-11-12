@@ -107,10 +107,10 @@ describe('NessQuotaUploadComponent (HU-54, RF-28.4)', () => {
   it('shows the warnings of repeated cedulas', async () => {
     const { fixture, component, text } = await render();
 
-    await choose(component, result({ warnings: ['Filas 2 y 3: la cédula 98376216 se repite en NESPRESSO'] }));
+    await choose(component, result({ warnings: ['Filas 2 y 3: la cédula 99376216 se repite en NESPRESSO'] }));
     fixture.detectChanges();
 
-    expect(text()).toContain('Filas 2 y 3: la cédula 98376216 se repite en NESPRESSO');
+    expect(text()).toContain('Filas 2 y 3: la cédula 99376216 se repite en NESPRESSO');
     expect(component.canApply()).toBe(true);
   });
 
