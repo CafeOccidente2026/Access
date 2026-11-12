@@ -1,18 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
-import { rxResource, toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { PurchaseFormContent } from '../../core/models/purchase-form-content.model';
 import { AnnulmentCandidate, AnnulmentDirection, AnnulmentModule } from '../../core/models/purchase-annulment.model';
 import { ContentService } from '../../core/services/content.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
-import { FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
+import { NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
 import { openPdf } from '../../shared/utils/pdf-preview';
 import { themeColor } from '../../shared/utils/theme-color';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { fillQueryContent } from './purchase-query-fields';
 import { buildReprintDoc } from './purchase-reprint';
-import { serverError } from '../../shared/utils/server-error';
+import { InvoiceBrowser } from './invoice-browser';
+import { InvoiceSearchComponent } from './invoice-search';
 
 export interface PurchaseQueryContent extends PurchaseFormContent {
   readonly invoiceLabel: string;
@@ -26,11 +27,6 @@ export interface PurchaseQueryContent extends PurchaseFormContent {
   readonly messages: Record<'notFound' | 'noMore' | 'error' | 'invoiceError', string>;
 }
 
-/** Busqueda por factura o paso |◄ ◄ ► ►| desde la factura que se muestra. */
-type ListRequest =
-  | { readonly invoice: number }
-  | { readonly from: number | null; readonly direction: AnnulmentDirection };
-
 /**
  * "Consultar Compras" (RF-26; macro "Consultas Compras" -> formulario Cns_Compras): las compras de la
  * agencia de trabajo una por una o por factura (RN-26.1 a RN-26.3), en solo lectura (RN-26.4), con su
@@ -39,7 +35,7 @@ type ListRequest =
 @Component({
   selector: 'app-purchase-query',
   standalone: true,
-  imports: [CommonModule, FormFlowDirective, InvoiceNavigatorComponent, PurchaseFormViewComponent],
+  imports: [CommonModule, InvoiceSearchComponent, PurchaseFormViewComponent],
   templateUrl: './purchase-query.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -49,33 +45,11 @@ export class PurchaseQueryComponent {
 
   readonly content = toSignal(inject(ContentService).loadJson<PurchaseQueryContent>('purchase-query'));
 
-  private readonly request = signal<ListRequest | undefined>(undefined);
-  private readonly list = rxResource({
-    params: () => this.request(),
-    stream: ({ params }) =>
-      'invoice' in params ? this.service.findByInvoice(params.invoice) : this.service.navigate(params.from, params.direction),
-  });
-  private readonly listValue = computed(() => (this.list.hasValue() ? this.list.value() : undefined));
-
-  /** Las compras de la factura que se muestra; si no hay mas en esa direccion, se quedan las de antes. */
-  readonly candidates = linkedSignal<AnnulmentCandidate[] | undefined, AnnulmentCandidate[]>({
-    source: this.listValue,
-    computation: (list, previous) => (list?.length ? list : (previous?.value ?? [])),
-  });
-  /** Una factura de Access puede repetirse entre modulos: se muestra la primera y se puede elegir. */
-  readonly selected = linkedSignal<AnnulmentCandidate[], AnnulmentCandidate | null>({
-    source: this.candidates,
-    computation: (list) => list[0] ?? null,
-  });
-
-  private readonly detail = rxResource({
-    params: () => {
-      const s = this.selected();
-      return s ? { module: s.module, id: s.id } : undefined;
-    },
-    stream: ({ params }) => this.service.detail(params.module, params.id),
-  });
-  private readonly detailValue = computed(() => (this.detail.hasValue() ? this.detail.value() : undefined));
+  /** Buscar, recorrer y elegir la compra (comun con Corregir Compra). */
+  readonly browser = new InvoiceBrowser(this.service, (module, id) => this.service.detail(module, id));
+  readonly candidates = this.browser.candidates;
+  readonly selected = this.browser.selected;
+  private readonly detailValue = this.browser.detailValue;
 
   /** La ficha llena; null mientras no hay compra. */
   readonly view = computed(() => {
@@ -95,31 +69,19 @@ export class PurchaseQueryComponent {
     if (this.pdfError()) {
       return m.invoiceError;
     }
-    const failure = this.list.error() ?? this.detail.error();
-    if (failure) {
-      return serverError(failure, m.error);
-    }
-    if (this.listValue()?.length === 0) {
-      const request = this.request();
-      return request && 'invoice' in request ? m.notFound : m.noMore;
-    }
-    return null;
+    return this.browser.listMessage(m);
   });
 
   search(event: Event, invoice: string): void {
-    event.preventDefault();
-    const number = Number(invoice.replace(/\D/g, ''));
-    if (number) {
-      this.request.set({ invoice: number });
-    }
+    this.browser.search(event, invoice);
   }
 
   go(direction: AnnulmentDirection): void {
-    this.request.set({ from: this.selected()?.invoiceNumber ?? null, direction });
+    this.browser.go(direction);
   }
 
   choose(candidate: AnnulmentCandidate): void {
-    this.selected.set(candidate);
+    this.browser.choose(candidate);
   }
 
   /** RN-26.6: el documento equivalente de la compra mostrada, con "ANULADA" si fue anulada. */

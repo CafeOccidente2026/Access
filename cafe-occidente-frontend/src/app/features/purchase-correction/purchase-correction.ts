@@ -4,18 +4,20 @@ import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, sig
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 
 import { PurchasePayment } from '../../core/models/payment-method.model';
-import { AnnulmentCandidate, AnnulmentDirection, AnnulmentModule } from '../../core/models/purchase-annulment.model';
+import { AnnulmentCandidate, AnnulmentModule } from '../../core/models/purchase-annulment.model';
 import { PurchaseCorrectionRequest, PurchaseCorrectionResult } from '../../core/models/purchase-correction.model';
 import { PurchaseQueryDetail } from '../../core/models/purchase-query.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseCorrectionService } from '../../core/services/purchase-correction.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
-import { AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { PurchaseQueryContent } from '../purchase-query/purchase-query';
+import { InvoiceBrowser } from '../purchase-query/invoice-browser';
 import { fillQueryContent } from '../purchase-query/purchase-query-fields';
+import { InvoiceSearchComponent } from '../purchase-query/invoice-search';
 import { serverError } from '../../shared/utils/server-error';
 
 /** Un campo que se corrige; {@code text}: direccion, celular y numero de cheque (no son montos). */
@@ -46,10 +48,6 @@ export interface PurchaseCorrectionContent {
 }
 
 type Values = Readonly<Record<string, string>>;
-type ListRequest =
-  | { readonly invoice: number }
-  | { readonly from: number | null; readonly direction: AnnulmentDirection };
-
 const AMOUNTS = ['checkAmount', 'transferAmount', 'cardAmount'] as const;
 const toText = (value: unknown): string => (value == null ? '' : String(value));
 const toNumber = (value: string | undefined): number => Number((value ?? '').replace(',', '.')) || 0;
@@ -90,7 +88,7 @@ function toPayment(values: Values): PurchasePayment {
 @Component({
   selector: 'app-purchase-correction',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, PurchaseFormViewComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceSearchComponent, PurchaseFormViewComponent],
   templateUrl: './purchase-correction.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -103,30 +101,11 @@ export class PurchaseCorrectionComponent {
   readonly content = toSignal(this.contentService.loadJson<PurchaseCorrectionContent>('purchase-correction'));
   private readonly queryContent = toSignal(this.contentService.loadJson<PurchaseQueryContent>('purchase-query'));
 
-  private readonly request = signal<ListRequest | undefined>(undefined);
-  private readonly list = rxResource({
-    params: () => this.request(),
-    stream: ({ params }) =>
-      'invoice' in params ? this.service.findByInvoice(params.invoice) : this.service.navigate(params.from, params.direction),
-  });
-  private readonly listValue = computed(() => (this.list.hasValue() ? this.list.value() : undefined));
-  readonly candidates = linkedSignal<AnnulmentCandidate[] | undefined, AnnulmentCandidate[]>({
-    source: this.listValue,
-    computation: (list, previous) => (list?.length ? list : (previous?.value ?? [])),
-  });
-  readonly selected = linkedSignal<AnnulmentCandidate[], AnnulmentCandidate | null>({
-    source: this.candidates,
-    computation: (list) => list[0] ?? null,
-  });
-
-  private readonly detail = rxResource({
-    params: () => {
-      const s = this.selected();
-      return s ? { module: s.module, id: s.id } : undefined;
-    },
-    stream: ({ params }) => this.query.detail(params.module, params.id),
-  });
-  readonly detailValue = computed(() => (this.detail.hasValue() ? this.detail.value() : undefined));
+  /** Buscar, recorrer y elegir la compra, como Consultar Compras; el detalle es el de Consultar Compras. */
+  readonly browser = new InvoiceBrowser(this.service, (module, id) => this.query.detail(module, id));
+  readonly candidates = this.browser.candidates;
+  readonly selected = this.browser.selected;
+  readonly detailValue = this.browser.detailValue;
   readonly annulled = computed(() => this.detailValue()?.status === 'ANULADA');
 
   /** La compra como esta guardada, en solo lectura y sin reimprimir (eso queda en Consultar Compras). */
@@ -199,36 +178,9 @@ export class PurchaseCorrectionComponent {
   readonly noticeError = computed(() => !!this.notice()?.error);
   private readonly listMessage = computed(() => {
     const m = this.content()?.messages;
-    if (!m) {
-      return null;
-    }
-    const failure = this.list.error() ?? this.detail.error();
-    if (failure) {
-      return serverError(failure, m.error);
-    }
-    if (this.listValue()?.length === 0) {
-      const request = this.request();
-      return request && 'invoice' in request ? m.notFound : m.noMore;
-    }
-    return null;
+    return m ? this.browser.listMessage(m) : null;
   });
   readonly message = computed(() => this.notice()?.text ?? this.listMessage());
-
-  search(event: Event, invoice: string): void {
-    event.preventDefault();
-    const number = Number(invoice.replace(/\D/g, ''));
-    if (number) {
-      this.request.set({ invoice: number });
-    }
-  }
-
-  go(direction: AnnulmentDirection): void {
-    this.request.set({ from: this.selected()?.invoiceNumber ?? null, direction });
-  }
-
-  choose(candidate: AnnulmentCandidate): void {
-    this.selected.set(candidate);
-  }
 
   setValue(key: string, value: string): void {
     this.values.update((values) => ({ ...values, [key]: value }));
@@ -253,7 +205,7 @@ export class PurchaseCorrectionComponent {
     saveOnce(this.saving, () => this.service.correct(detail.module, detail.purchase.id, request), {
       next: () => {
         this.notice.set({ text: content.messages.saved.replace('{invoice}', String(detail.purchase.invoiceNumber)), error: false });
-        this.detail.reload();
+        this.browser.detail.reload();
       },
       error: (err: HttpErrorResponse) => this.notice.set({ text: serverError(err, content.messages.saveError), error: true }),
     });
