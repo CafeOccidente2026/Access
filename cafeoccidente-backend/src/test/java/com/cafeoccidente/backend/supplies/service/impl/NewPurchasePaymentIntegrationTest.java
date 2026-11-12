@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SuppressWarnings("null")
 class NewPurchasePaymentIntegrationTest {
 
-    private static final String GROWER = "1086360394";
+    private static final String GROWER = "9986360394";
 
     @Autowired
     private DryCoffeePurchaseService purchases;
@@ -61,8 +61,9 @@ class NewPurchasePaymentIntegrationTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
         agencyId = CurrentAgencyProvider.workingAgency(user.get()).getId();
-        Assumptions.assumeTrue(jdbc.queryForObject(
-                "SELECT count(*) FROM terceros WHERE identificacion = ?", Long.class, GROWER) > 0, "FALTA el tercero " + GROWER + " (viene de asociados_migrar.csv): corra 'python scripts/migrate_eltambo.py' contra esta base.");
+        // Vendedor ficticio: la prueba es transaccional y no deja el tercero en la base.
+        jdbc.update("INSERT INTO terceros (identificacion, primer_nombre, primer_apellido, agencia_id, direccion, telefono, tipo)"
+                + " VALUES (?, 'CAFICULTOR', 'PRUEBA', ?, 'VEREDA PRUEBA', '3000000001', 'S')", GROWER, agencyId);
     }
 
     @AfterEach

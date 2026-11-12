@@ -12,7 +12,7 @@ function purchase(over: Partial<PurchaseReportRow>): PurchaseReportRow {
   return {
     module: 'DRY', invoiceNumber: 43155, purchaseDate: '2026-05-09', agencyName: 'EL TAMBO', fundCode: 'LF', prefix: 'SDTA',
     specialType: 'NESPRES', productCode: '0110001000007', productName: 'CAFÉ LFTO NESS - FTUSA', announcementNumber: 'SDTA-3443',
-    idNumber: '27286462', firstName: 'MARIA', lastName: 'ESPAÑA', greenKg: null, netKg: 100, factor: 90, unitPrice: 19115,
+    idNumber: '99286462', firstName: 'MARIA', lastName: 'PRUEBA', greenKg: null, netKg: 100, factor: 90, unitPrice: 19115,
     grossValue: 1911500, inventoryValue: 1911500, associateContribution: 0, cooperativeDiscount: 0, freightDiscount: 0,
     withholding: 0, otherDiscounts: 0, netToPay: 1911500, paymentMethod: 'EFECTIVO', status: 'VALIDA', announcementDate: '2026-05-09', ...over,
   };
@@ -68,19 +68,19 @@ describe('Informe Anuncios a Futuro (HU-34)', () => {
 describe('Informe Saldo Anuncios (HU-35)', () => {
   function person(over: Partial<FutureBalanceRow>): FutureBalanceRow {
     return {
-      agencyName: 'EL TAMBO', announcementNumber: 'SDTA-3443', announcementDate: '2026-05-09', idNumber: '27286462',
-      firstName: 'MARIA', lastName: 'ESPAÑA', announcedKg: 1000, deliveredKg: 400, remainingKg: 600, healthyUnitPrice: 19115,
+      agencyName: 'EL TAMBO', announcementNumber: 'SDTA-3443', announcementDate: '2026-05-09', idNumber: '99286462',
+      firstName: 'MARIA', lastName: 'PRUEBA', announcedKg: 1000, deliveredKg: 400, remainingKg: 600, healthyUnitPrice: 19115,
       bonus: 40, specialType: 'NESPRESSO - FTUSA', deliveryDate: '2026-06-01', ...over,
     };
   }
   const doc = buildFutureBalanceDoc(
-    [person({}), person({ idNumber: '98333120', announcedKg: 500, deliveredKg: 500, remainingKg: 0 })],
+    [person({}), person({ idNumber: '99333120', announcedKg: 500, deliveredKg: 500, remainingKg: 0 })],
     content.balancePdf);
   const [body] = tables(doc);
 
   it('RN-21.7.2: each person with K Anun, K Entr and Saldo Kg = K Anun - K Entr', () => {
     expect(texts(body[0])).toEqual(content.balancePdf.columns);
-    expect(texts(body[2])).toEqual(['9/05/2026', '27.286.462', 'MARIA', 'ESPAÑA', '1.000,00', '400,00', '600,00',
+    expect(texts(body[2])).toEqual(['9/05/2026', '99.286.462', 'MARIA', 'PRUEBA', '1.000,00', '400,00', '600,00',
       '19.115', '40', 'NESPRESSO - FTUSA', '1/06/2026']);
   });
 

@@ -6,7 +6,7 @@ import { FuturePurchaseResponse } from '../../../core/models/future-purchase.mod
 
 describe('buildFuturePurchaseManifestoDocDefinition', () => {
   const purchase = {
-    agencyName: 'Buesaco 1', firstName: 'TERESA', lastName: 'DIAZ', idNumber: '27197019', announcedKg: 500,
+    agencyName: 'Buesaco 1', firstName: 'CAFICULTORA', lastName: 'PRUEBA', idNumber: '99197019', announcedKg: 500,
     specialType: 'NESPRESSO - FTUSA', deliveryDate: '2026-12-01', healthyUnitPrice: 8908, bonus: 40,
   } as FuturePurchaseResponse;
 

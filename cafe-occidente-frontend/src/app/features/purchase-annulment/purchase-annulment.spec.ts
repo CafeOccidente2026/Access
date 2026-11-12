@@ -16,7 +16,7 @@ const data = content as PurchaseAnnulmentContent;
 const URL = `${API_BASE_URL}/purchases/annulment`;
 const candidate = {
   module: 'DRY', id: 1, agencyId: 4, agencyName: 'El Tambo', prefix: 'SDTA', invoiceNumber: 43388,
-  purchaseDate: '2026-06-03', fundCode: 'RP', idNumber: '79374104', firstName: 'JESUS', lastName: null,
+  purchaseDate: '2026-06-03', fundCode: 'RP', idNumber: '99374104', firstName: 'CAFICULTOR', lastName: null,
   specialType: 'NESPRESSO - FTUSA', netKg: 1200.5, netToPay: 9267436, paymentMethod: 'MIXTO', status: 'VALIDA',
   annulmentLocked: false, annulledAt: null,
 } as AnnulmentCandidate;
@@ -32,7 +32,7 @@ describe('purchase annulment', () => {
     const v = (key: string) => fieldValue(candidate, key, data.fields.find((f) => f.key === key)?.type, data);
     expect(v('module')).toBe('Café Seco');
     expect(v('invoice')).toBe('SDTA 43388');
-    expect(v('name')).toBe('JESUS');
+    expect(v('name')).toBe('CAFICULTOR');
     expect(v('purchaseDate')).toBe('03/06/2026');
     expect(v('netKg')).toBe('1.200,50');
     expect(v('netToPay')).toBe('9.267.436');

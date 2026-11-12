@@ -81,7 +81,7 @@ describe('FutureRestoreComponent', () => {
 
   it('prueba del 11-nov (punto 4): a failed restore shows the reason of the server', () => {
     const c = setup('future');
-    search(c, '27197019');
+    search(c, '99197019');
     restoreSpy.mockReturnValue(throwError(() => ({ error: { message: 'Solo el Administrador puede restaurar' } })));
     c.restore();
     expect(c.failed()).toBe('Solo el Administrador puede restaurar');

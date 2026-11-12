@@ -11,8 +11,8 @@ import { SuppliesReportContent } from './supplies-report.model';
 
 const data = content as SuppliesReportContent;
 const row = (agencyName: string, transactionId: string, inflow: number, outflow: number): SuppliesReportRow => ({
-  agencyName, transactionId, fundCode: 'RP', date: '2026-06-14', idNumber: '87304051', firstNames: 'WILSON TOBIAS',
-  lastNames: 'LEGARDA', detail: 'WILSON TOBIAS LEGARDA', inflow, outflow, balance: inflow - outflow,
+  agencyName, transactionId, fundCode: 'RP', date: '2026-06-14', idNumber: '99304051', firstNames: 'CAFICULTOR',
+  lastNames: 'PRUEBA', detail: 'CAFICULTOR PRUEBA', inflow, outflow, balance: inflow - outflow,
   paymentMethod: 'CHEQUE', checkNumber: '5320',
 });
 const rows = [row('EL TAMBO', '43901', 0, 6016407.5), row('EL TAMBO', '43902', 100, 0), row('SANDONA', 'T1', 0, 50)];
@@ -28,7 +28,7 @@ describe('supplies reports', () => {
       ['Id_Transaccion', 'Agencia', 'Fondo', 'Fecha', 'Cedula', 'Detalle', 'Entradas', 'Salidas', 'Forma_de_Pago', 'Cheque'],
     );
     expect(sheet[1].map((c) => (c as { value: unknown } | null)?.value ?? null)).toEqual(
-      ['43901', 'EL TAMBO', 'RP', new Date(Date.UTC(2026, 5, 14)), '87304051', 'WILSON TOBIAS LEGARDA', 0, 6016407.5, 'CHEQUE', '5320'],
+      ['43901', 'EL TAMBO', 'RP', new Date(Date.UTC(2026, 5, 14)), '99304051', 'CAFICULTOR PRUEBA', 0, 6016407.5, 'CHEQUE', '5320'],
     );
     expect(sheet).toHaveLength(4);
     const blob = await writeExcelFile(sheet).toBlob();
@@ -67,7 +67,7 @@ describe('supplies reports', () => {
     const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), card: 173787 };
     const other: SuppliesReportRow = { ...row('EL TAMBO', '43910', 0, 0), card: 26213, fundCode: 'RP' };
     const body = tableRows(buildSuppliesReportDoc(data.reports['card'], data.text, [card, other]).content);
-    expect(body[1]).toEqual(['14/06/2026', '43909', '87.304.051', 'WILSON TOBIAS LEGARDA', money(173787), 'RP']);
+    expect(body[1]).toEqual(['14/06/2026', '43909', '99.304.051', 'CAFICULTOR PRUEBA', money(173787), 'RP']);
     expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', money(200000), '']);
     // El Informe Caja ya no tiene la columna.
     expect(JSON.stringify(data.reports['cash'].columns)).not.toContain('Datáfono');

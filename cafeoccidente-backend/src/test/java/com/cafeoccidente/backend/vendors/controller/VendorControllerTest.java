@@ -23,18 +23,18 @@ class VendorControllerTest {
         when(security.isAdmin()).thenReturn(false);
         when(agency.currentAgencyId()).thenReturn(4L);
 
-        controller.beneficiary(true, "59124124", null, null);
+        controller.beneficiary(true, "99124124", null, null);
 
-        verify(reports).beneficiary(4L, "59124124", null, null);
+        verify(reports).beneficiary(4L, "99124124", null, null);
     }
 
     @Test
     void rn2824AdminAskingForAllAgenciesGetsEveryAgency() {
         when(security.isAdmin()).thenReturn(true);
 
-        controller.beneficiary(true, "59124124", null, null);
+        controller.beneficiary(true, "99124124", null, null);
 
-        verify(reports).beneficiary(null, "59124124", null, null);
+        verify(reports).beneficiary(null, "99124124", null, null);
     }
 
     @Test

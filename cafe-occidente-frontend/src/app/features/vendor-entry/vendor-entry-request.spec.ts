@@ -21,7 +21,7 @@ describe('vendor entry', () => {
   });
 
   it('requires Id and first name, an agency and a valid email', () => {
-    expect(validationError(natural, { firstName: 'AURA' }, data.messages)).toBe('Falta: Id Vendedor');
+    expect(validationError(natural, { firstName: 'ASOCIADA' }, data.messages)).toBe('Falta: Id Vendedor');
     expect(validationError(natural, { idNumber: '1' }, data.messages)).toBe('Falta: 1er Nombre');
     expect(validationError(natural, { idNumber: '1', firstName: 'A', email: 'no-es-email' }, data.messages)).toBe(data.messages.email);
     expect(validationError(natural, { idNumber: '1', firstName: 'A', email: 'a@b.co' }, data.messages)).toBeNull();
@@ -37,23 +37,23 @@ describe('vendor entry', () => {
 
   it('legal person sends Razón Social, Clasificación, Sexo and the contact data, not the names', () => {
     const request = buildVendorRequest('legal', legal, {
-      idNumber: ' 900723205 ', businessName: 'FUNDACION SUYUSAMA', classification: 'FUNDACION', address: 'CLL 20 24 64',
+      idNumber: ' 990723205 ', businessName: 'FUNDACION PRUEBA', classification: 'FUNDACION', address: 'CALLE PRUEBA 1',
       lastName: 'X', sex: 'E', phone: '300', postalCode: '520001', email: 'a@b.co',
     });
     expect(request).toEqual({
-      legalPerson: true, idNumber: '900723205', firstName: null, secondName: null, lastName: null, secondLastName: null,
-      sex: 'E', phone: '300', address: 'CLL 20 24 64', postalCode: '520001', email: 'a@b.co',
-      businessName: 'FUNDACION SUYUSAMA', classification: 'FUNDACION',
+      legalPerson: true, idNumber: '990723205', firstName: null, secondName: null, lastName: null, secondLastName: null,
+      sex: 'E', phone: '300', address: 'CALLE PRUEBA 1', postalCode: '520001', email: 'a@b.co',
+      businessName: 'FUNDACION PRUEBA', classification: 'FUNDACION',
     });
   });
 
   it('natural person sends the 11 editable fields, blanks as null', () => {
     const request = buildVendorRequest('natural', natural, {
-      idNumber: '59124124', firstName: 'AURA', secondName: '', lastName: 'TUTISTAR', sex: 'F', phone: '300',
+      idNumber: '99124124', firstName: 'ASOCIADA', secondName: '', lastName: 'PRUEBA', sex: 'F', phone: '300',
       address: 'VDA', postalCode: '522060', email: 'aura@correo.co', businessName: 'X',
     });
     expect(request).toMatchObject({
-      legalPerson: false, firstName: 'AURA', secondName: null, lastName: 'TUTISTAR', sex: 'F', postalCode: '522060',
+      legalPerson: false, firstName: 'ASOCIADA', secondName: null, lastName: 'PRUEBA', sex: 'F', postalCode: '522060',
       businessName: null, classification: null,
     });
   });
