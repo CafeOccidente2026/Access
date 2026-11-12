@@ -178,6 +178,23 @@ class FuturePurchaseServiceImplTest {
         assertThat(list).extracting(AnnouncementResponse::announcementNumber).containsExactly("SDBU-5");
     }
 
+    /** C6 (prueba del 11-nov, punto 12): un solo anuncio por especial, el ultimo publicado, y solo si es de hoy. */
+    @Test
+    void c6ListsOnlyTheLatestAnnouncementOfTheSpecialAndOnlyIfItIsFromToday() {
+        when(fundRepository.findByCode("RP")).thenReturn(Optional.of(fundRp()));
+        when(announcementService.history()).thenReturn(List.of(
+                announcement("SDBU-7", TODAY, 1L, "RN"),
+                announcement("SDBU-6", TODAY, 1L, "RN")));
+        assertThat(service.todayAnnouncements("RN")).extracting(AnnouncementResponse::announcementNumber)
+                .containsExactly("SDBU-7");
+
+        // El ultimo de RN es de ayer (por ejemplo, el de la semilla): la lista queda vacia.
+        when(announcementService.history()).thenReturn(List.of(
+                announcement("SDBU-4", TODAY.minusDays(1), 1L, "RN"),
+                announcement("SDBU-3", TODAY.minusDays(2), 1L, "RN")));
+        assertThat(service.todayAnnouncements("RN")).isEmpty();
+    }
+
     @Test
     void ca2SavesTheChosenAnnouncementAndItsPrices() {
         mockHappyPath();
