@@ -25,10 +25,12 @@ import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/uti
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 import { serverError } from '../../../shared/utils/server-error';
+import { FEDERATION_KEYS, loadFederation } from '../federation';
 
 type FormModel = Record<string, string>;
 
@@ -89,6 +91,8 @@ const READONLY: string[] = [
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
   // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
   'withholding',
+  // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
+  ...FEDERATION_KEYS,
 ];
 
 const FOCUS_ORDER: Record<Mode, string[]> = {
@@ -400,18 +404,8 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        this.model['idNumber'] = idNumber;
-        this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
         this.locked.add('idPart1');
-        this.locked.add('idNumber');
-        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
-        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
-        // la cascada de calculo nunca llegaba a dispararse.
-        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'fullName'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
+        lockFilled(this.model, this.locked, ['firstNames', 'lastNames', 'idType', 'address', 'cellphone']);
         this.tick.update((n) => n + 1);
         if (this.mode === 'future') {
           this.openFuturePicker(idNumber);
@@ -428,23 +422,10 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  /** Mismo endpoint/mapeo que Cafe Seco (GrowerServiceImpl.findProgram): solo 3 Especiales tienen
-   *  tabla de programa migrada, el resto queda vacio y editable, nunca bloquea. */
+  /** Mismo endpoint/mapeo que Cafe Seco (GrowerServiceImpl.findProgram): el bloque Informacion Federacion
+   *  sale de NESS (C3) y, sin NESS, queda vacio; nunca bloquea. */
   private lookupProgram(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      if (program) {
-        this.model['program'] = program.programa;
-        this.locked.add('program');
-      } else {
-        this.model['program'] = '';
-        this.locked.delete('program');
-      }
-      this.tick.update((n) => n + 1);
-    });
+    loadFederation(this.growerService, this.model['idPart1'], this.model['special'], this.model, () => this.tick.update((n) => n + 1));
   }
 
   /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */

@@ -20,6 +20,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     theme: 'teal',
     topFields: [],
     identificationFields: [],
+    federationFields: ['idNumber', 'fullName', 'program'].map((key) => ({ key, label: key, type: 'text' as const })),
     weightFields: [
       { key: 'totalStoredWeight', label: 'Peso Tot Alm', type: 'count' },
       { key: 'factor', label: 'Factor', type: 'number' },
@@ -95,7 +96,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
         { provide: GreenCoffeePurchaseService, useValue: fakeGreenService },
-        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)) } },
+        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: vi.fn(() => of(null)) } },
       ],
     });
     component = TestBed.createComponent(GreenCoffeeFormComponent).componentInstance;
@@ -133,6 +134,29 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     pending.error(new Error('fallo'));
     expect(component.saving()).toBe(false);
+  });
+
+  const federation = (key: string) => component.viewContent()!.federationFields!.find((f) => f.key === key)!;
+
+  it('C3: with NESS the Federación block shows the cédula, name and program of NESS, read only', () => {
+    setup();
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
+    component.model['idPart1'] = grower.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(TestBed.inject(GrowerService).findProgram).toHaveBeenCalledWith('990514', 'CV');
+    for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' })) {
+      expect(federation(key)).toMatchObject({ value, readonly: true });
+    }
+  });
+
+  it('C3: without NESS the block stays empty and the purchase is calculated and saved all the same', () => {
+    setup();
+    fillEverything();
+    for (const key of ['idNumber', 'fullName', 'program']) {
+      expect(federation(key)).toMatchObject({ value: '', readonly: true });
+    }
+    expect(component.model['firstName']).toBe('CAFICULTOR UNO');
+    expect(component.calc()).not.toBeNull();
   });
 
   it('does not ask for the preview (nor warn) while a required field is still missing, like Cafe Seco', () => {

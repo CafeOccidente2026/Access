@@ -139,8 +139,9 @@ class NessQuotaUploadIntegrationTest {
                 "archivo", FILE, "filas", 3, "agregados", 1, "cambiados", 1, "iguales", 1, "retirados", 1));
 
         // Compras lee la lista nueva: D ya puede vender NESPRESSO y C ya no esta en el programa.
+        // C3 (prueba del 11-nov, punto 3): el bloque Informacion Federacion muestra la cedula y el nombre de NESS.
         assertThat(growers.findProgram("990054004", "NESPRESSO - FTUSA")).get()
-                .extracting("programa", "cupo").containsExactly("NESPRESSO", "200");
+                .extracting("programa", "cupo", "cedula", "nombres").containsExactly("NESPRESSO", "200", "990054004", "DORA");
         assertThat(growers.findProgram("990054003", "NESPRESSO - FTUSA")).isEmpty();
     }
 
