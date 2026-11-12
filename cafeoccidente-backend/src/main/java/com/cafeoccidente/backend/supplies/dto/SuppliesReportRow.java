@@ -5,8 +5,8 @@ import java.time.LocalDate;
 
 /**
  * Fila comun de los informes de Suministros. balance = Saldo (RunningSum de Entradas - Salidas) en
- * los informes de movimiento; null en Relacion Cheques y Forma de Pago, que no lo tienen. card = columna
- * Datafono del informe de Caja (6B): solo en las filas de la cuenta por cobrar; no entra al saldo.
+ * los informes de movimiento; null en Relacion Cheques y Forma de Pago, que no lo tienen. card = Valor del
+ * Informe Datafono (C5); null en los demas informes.
  */
 public record SuppliesReportRow(
         String agencyName,

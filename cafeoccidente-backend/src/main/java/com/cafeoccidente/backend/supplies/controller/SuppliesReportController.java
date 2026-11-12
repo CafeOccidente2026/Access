@@ -41,6 +41,11 @@ public class SuppliesReportController {
         return suppliesReportService.cashMovement(agency(), fund, LocalDate.now(clock));
     }
 
+    @GetMapping("/card")
+    public List<SuppliesReportRow> cardPayments(@RequestParam(required = false) String fund) {
+        return suppliesReportService.cardPayments(agency(), fund, LocalDate.now(clock));
+    }
+
     @GetMapping("/petty-cash")
     public List<SuppliesReportRow> pettyCashMovement() {
         return suppliesReportService.pettyCashMovement(agency(), LocalDate.now(clock));
