@@ -49,7 +49,7 @@ describe('PurchaseCorrectionComponent (HU-05)', () => {
     const fixture = TestBed.createComponent(PurchaseCorrectionComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
-    component.go('FIRST');
+    component.browser.go('FIRST');
     TestBed.tick();
     http.expectOne(`${URL}/navigate?direction=FIRST`).flush([found]);
     await settle();
@@ -182,12 +182,12 @@ describe('PurchaseCorrectionComponent (HU-05)', () => {
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 
-    component.search(new Event('submit'), 'SDBU 99');
+    component.browser.search(new Event('submit'), 'SDBU 99');
     TestBed.tick();
     http.expectOne(`${URL}?invoiceNumber=99`).flush([]);
     await settle();
     expect(component.message()).toBe(correction.messages.notFound);
-    component.search(new Event('submit'), '');
+    component.browser.search(new Event('submit'), '');
     http.expectNone(`${URL}?invoiceNumber=0`);
 
     component.back();
@@ -199,14 +199,14 @@ describe('PurchaseCorrectionComponent (HU-05)', () => {
     const fixture = TestBed.createComponent(PurchaseCorrectionComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
-    component.search(new Event('submit'), '27869');
+    component.browser.search(new Event('submit'), '27869');
     TestBed.tick();
     http.expectOne(`${URL}?invoiceNumber=27869`).flush([FOUND, other]);
     await settle();
     http.expectOne(`${QUERY}/DRY/1225`).flush(detail());
     await settle();
 
-    component.choose(other);
+    component.browser.choose(other);
     await settle();
     http.expectOne(`${QUERY}/HUSK/24`).flush(detail({ module: 'HUSK', purchase: HUSK }));
     await settle();

@@ -8,8 +8,8 @@ import { quotaCells } from './ness-quotas';
 
 describe('ness quotas', () => {
   it('formats CuposNess like Access: CEDULA General Number, CUPO Standard', () => {
-    expect(quotaCells({ idNumber: '210514', names: 'Paz', program: 'NESPRESSO', quota: 30000 })).toEqual(
-      ['210514', 'Paz', 'NESPRESSO', '30.000,00'],
+    expect(quotaCells({ idNumber: '990514', names: 'Caficultor', program: 'NESPRESSO', quota: 30000 })).toEqual(
+      ['990514', 'Caficultor', 'NESPRESSO', '30.000,00'],
     );
   });
 

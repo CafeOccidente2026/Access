@@ -105,9 +105,10 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
 
     @Override
     @Transactional
-    public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest request) {
+    public DryCoffeePurchaseResponse create(DryCoffeePurchaseRequest typed) {
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
-        requireDelivery(request);
+        requireDelivery(typed);
+        DryCoffeePurchaseRequest request = withDeliveryTare(typed);
         // RF-21.5: la compra anunciada queda bloqueada hasta que termine esta transaccion.
         FuturePurchase future = request.futurePurchaseId() == null
                 ? null
@@ -252,8 +253,9 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     }
 
     @Override
-    public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest request) {
-        requireDelivery(request);
+    public DryCoffeePurchaseCalculation preview(DryCoffeePurchaseRequest typed) {
+        requireDelivery(typed);
+        DryCoffeePurchaseRequest request = withDeliveryTare(typed);
         FuturePurchase future = request.futurePurchaseId() == null
                 ? null
                 : futurePurchaseService.forBilling(request.futurePurchaseId(), request.idNumber(), false);
@@ -264,11 +266,23 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         if (future != null) {
             DeliveryRule.check(future.getRemainingKg(), request.deliveryKg(), calculation.netKg(), "de la compra anunciada");
         }
-        if (request.deliveryKg() != null && calculation.netKg().compareTo(request.deliveryKg()) > 0) {
-            throw new BusinessRuleException("Los kilos netos (" + calculation.netKg().toPlainString()
-                    + ") superan Esta Entrega (" + request.deliveryKg().toPlainString() + ")");
-        }
         return calculation;
+    }
+
+    /**
+     * Prueba del 11-nov (punto 9): con Esta Entrega (cupo o compra anunciada) Kilos Netos no se digita. El Destare
+     * es lo que pasa de la entrega (305 brutos, entrega 300: destare 5, netos 300); si los brutos no la alcanzan
+     * es una entrega parcial (destare 0, netos = brutos). Lo que mande el cliente en Destare se ignora.
+     */
+    private static DryCoffeePurchaseRequest withDeliveryTare(DryCoffeePurchaseRequest r) {
+        if (r.deliveryKg() == null) {
+            return r;
+        }
+        BigDecimal tare = r.grossKg().subtract(r.deliveryKg()).max(BigDecimal.ZERO);
+        return new DryCoffeePurchaseRequest(r.fundId(), r.specialType(), r.idNumber(), r.address(), r.cellphone(),
+                r.bagsCount(), r.grossKg(), tare, r.totalStoredWeight(), r.defectiveStoredWeight(), r.penalty(),
+                r.freightDiscount(), r.otherDiscounts(), r.payment(), r.quotaAnnouncementNumber(), r.deliveryKg(),
+                r.futurePurchaseId());
     }
 
     /** RN-21.2.5 y RN-21.5.3: con anuncio con cupo o compra anunciada, Esta Entrega es obligatoria. */

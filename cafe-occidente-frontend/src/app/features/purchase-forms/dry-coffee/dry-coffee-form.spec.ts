@@ -51,13 +51,13 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
   const growerWithPhone: Grower = {
     id: 1,
-    idNumber: '210514',
-    firstName: 'PAZ',
-    secondName: 'CAROLINA',
-    lastName: 'CASTELBLANCO',
-    secondLastName: 'OSSA',
-    address: 'CLL 14 N 37-20 CASA II',
-    phone: '3117498703',
+    idNumber: '990514',
+    firstName: 'CAFICULTOR',
+    secondName: 'UNO',
+    lastName: 'PRUEBA',
+    secondLastName: 'DOS',
+    address: 'VEREDA PRUEBA',
+    phone: '3000000001',
     growerType: 'C',
     active: true,
     deceased: false,
@@ -66,7 +66,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     vehiclePlate: null,
   };
 
-  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '27197019', address: 'EL CIDRAL', phone: '' };
+  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '99197019', address: 'VEREDA PRUEBA DOS', phone: '' };
 
   const calculation = {
     basePriceLoad: 1113500,

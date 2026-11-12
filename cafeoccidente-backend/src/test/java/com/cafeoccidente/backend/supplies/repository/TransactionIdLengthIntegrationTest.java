@@ -10,7 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * V24: en Access el Id de transaccion se digitaba libre y hay de mas de 30 caracteres (Caja Menor de Buesaco 1:
- * "12820258-5216272-1084221672-18/07/2026", 38). Las 4 tablas lo aceptan hasta 60 para migrarlo sin recortarlo.
+ * "99820258-9916272-9984221672-18/07/2026", 38). Las 4 tablas lo aceptan hasta 60 para migrarlo sin recortarlo.
  */
 @SpringBootTest
 class TransactionIdLengthIntegrationTest {

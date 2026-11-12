@@ -149,18 +149,18 @@ class QuotaPurchaseIntegrationTest {
         assertThat(balance()).isEqualByComparingTo("2500");
     }
 
+    /** Prueba del 11-nov (punto 9): con cupo tambien manda Esta Entrega; 1000 brutos y 999 de entrega dejan 1 de destare. */
     @Test
-    void netKgAboveTheDeliveryIsRejected() {
-        assertThatThrownBy(() -> buy(quotaAnnouncement, new BigDecimal("999")))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("superan Esta Entrega");
-    }
+    void estaEntregaDecidesTheTareAndTheNetKg() {
+        DryCoffeePurchaseResponse over = buy(quotaAnnouncement, new BigDecimal("999"));
+        assertThat(over.tareKg()).isEqualByComparingTo("1");
+        assertThat(over.netKg()).isEqualByComparingTo("999");
+        assertThat(balance()).isEqualByComparingTo("1501");
 
-    @Test
-    void thePreviewAlreadyWarnsWhenTheNetKgPassTheDelivery() {
-        DryCoffeePurchaseRequest request = request(quotaAnnouncement, new BigDecimal("999"), null);
-
-        assertThatThrownBy(() -> dry.preview(request))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("superan Esta Entrega");
+        DryCoffeePurchaseResponse partial = buy(quotaAnnouncement, new BigDecimal("1200"));
+        assertThat(partial.tareKg()).isZero();
+        assertThat(partial.netKg()).isEqualByComparingTo(KG);
+        assertThat(balance()).isEqualByComparingTo("501");
     }
 
     @Test

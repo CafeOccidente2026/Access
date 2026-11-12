@@ -148,23 +148,23 @@ class NessQuotaUploadIntegrationTest {
     @Test
     void theSameCedulaInTwoProgramsLoadsBothRows() {
         uploads.apply(FILE, NessXlsx.of(HEADER,
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO", 30000},
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO LATE HARVEST", 30000}));
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO", 30000},
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO LATE HARVEST", 30000}));
 
-        assertThat(jdbc.queryForList("SELECT programa FROM cupos_ness WHERE cedula = '98376216' ORDER BY id",
+        assertThat(jdbc.queryForList("SELECT programa FROM cupos_ness WHERE cedula = '99376216' ORDER BY id",
                 String.class)).containsExactly("NESPRESSO", "NESPRESSO LATE HARVEST");
     }
 
     @Test
     void aCedulaRepeatedInTheSameProgramWithTheSameQuotaLoadsOnceAndWarns() {
         NessQuotaUploadResult result = uploads.apply(FILE, NessXlsx.of(HEADER,
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO", 30000},
-                new Object[] {98376216, "Pedro Giraldo Ruales", "NESPRESSO", 30000}));
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO", 30000},
+                new Object[] {99376216, "Caficultor Ness Tres", "NESPRESSO", 30000}));
 
         assertThat(result.warnings()).hasSize(1);
         assertThat(result.rows()).isEqualTo(1);
-        assertThat(jdbc.queryForList("SELECT nombres FROM cupos_ness WHERE cedula = '98376216'", String.class))
-                .containsExactly("Pablo Giraldo Ruales Portillo");
+        assertThat(jdbc.queryForList("SELECT nombres FROM cupos_ness WHERE cedula = '99376216'", String.class))
+                .containsExactly("Caficultor Ness Dos");
     }
 
     @Test

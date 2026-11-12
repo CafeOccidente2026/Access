@@ -1,29 +1,10 @@
 <div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
   <app-access-window [title]="c.windowTitle" bodyClass="bg-white flex-1 flex flex-col overflow-auto">
     <div class="flex flex-col gap-3 p-3 text-sm">
-      <form class="flex flex-wrap items-end gap-2" appFormFlow (submit)="search($event, invoiceInput.value)">
-        <label class="flex flex-col gap-1">
-          <span class="font-bold text-blue-900">{{ c.invoiceLabel }}:</span>
-          <input #invoiceInput type="text" inputmode="numeric" data-field-key="invoice" class="w-40 rounded border border-slate-300 px-2 py-1" />
-        </label>
-        <button type="submit" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 font-bold hover:bg-slate-200">{{ c.searchLabel }}</button>
+      <app-invoice-search [browser]="browser" [texts]="c">
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
-        <app-invoice-navigator [buttons]="c.navigation" (navigate)="go($event)"></app-invoice-navigator>
-        <p *ngIf="message() as m" data-testid="message" class="pb-1.5 font-semibold" [class.text-red-600]="noticeError() || !detailValue()" [class.text-teal-700]="!noticeError() && !!detailValue()">{{ m }}</p>
-      </form>
-
-      <div *ngIf="candidates().length > 1" class="flex flex-wrap gap-2">
-        <button
-          *ngFor="let cand of candidates()"
-          type="button"
-          class="rounded border px-3 py-1"
-          [class.border-blue-500]="selected() === cand"
-          [class.border-slate-300]="selected() !== cand"
-          (click)="choose(cand)"
-        >
-          {{ c.modules[cand.module] }} · {{ cand.prefix }} {{ cand.invoiceNumber }}
-        </button>
-      </div>
+        <p message *ngIf="message() as m" data-testid="message" class="pb-1.5 font-semibold" [class.text-red-600]="noticeError() || !detailValue()" [class.text-teal-700]="!noticeError() && !!detailValue()">{{ m }}</p>
+      </app-invoice-search>
 
       <app-purchase-form-view *ngIf="view() as v" [content]="v" [readOnly]="true"></app-purchase-form-view>
 

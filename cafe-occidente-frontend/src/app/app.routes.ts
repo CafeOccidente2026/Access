@@ -21,6 +21,7 @@ function suppliesRoutes(): Routes {
   };
   const reports: Record<string, string> = {
     'informe-caja': 'cash',
+    'informe-datafono': 'card',
     'informe-rp': 'suppliesRp',
     'informe-lf': 'suppliesLf',
     'informe-empaques': 'packaging',

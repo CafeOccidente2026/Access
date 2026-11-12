@@ -11,8 +11,8 @@ import { SuppliesReportContent } from './supplies-report.model';
 
 const data = content as SuppliesReportContent;
 const row = (agencyName: string, transactionId: string, inflow: number, outflow: number): SuppliesReportRow => ({
-  agencyName, transactionId, fundCode: 'RP', date: '2026-06-14', idNumber: '87304051', firstNames: 'WILSON TOBIAS',
-  lastNames: 'LEGARDA', detail: 'WILSON TOBIAS LEGARDA', inflow, outflow, balance: inflow - outflow,
+  agencyName, transactionId, fundCode: 'RP', date: '2026-06-14', idNumber: '99304051', firstNames: 'CAFICULTOR',
+  lastNames: 'PRUEBA', detail: 'CAFICULTOR PRUEBA', inflow, outflow, balance: inflow - outflow,
   paymentMethod: 'CHEQUE', checkNumber: '5320',
 });
 const rows = [row('EL TAMBO', '43901', 0, 6016407.5), row('EL TAMBO', '43902', 100, 0), row('SANDONA', 'T1', 0, 50)];
@@ -28,7 +28,7 @@ describe('supplies reports', () => {
       ['Id_Transaccion', 'Agencia', 'Fondo', 'Fecha', 'Cedula', 'Detalle', 'Entradas', 'Salidas', 'Forma_de_Pago', 'Cheque'],
     );
     expect(sheet[1].map((c) => (c as { value: unknown } | null)?.value ?? null)).toEqual(
-      ['43901', 'EL TAMBO', 'RP', new Date(Date.UTC(2026, 5, 14)), '87304051', 'WILSON TOBIAS LEGARDA', 0, 6016407.5, 'CHEQUE', '5320'],
+      ['43901', 'EL TAMBO', 'RP', new Date(Date.UTC(2026, 5, 14)), '99304051', 'CAFICULTOR PRUEBA', 0, 6016407.5, 'CHEQUE', '5320'],
     );
     expect(sheet).toHaveLength(4);
     const blob = await writeExcelFile(sheet).toBlob();
@@ -40,7 +40,8 @@ describe('supplies reports', () => {
   const supplies = ['Transacción', 'Fondo', 'Fecha', 'Detalle', 'Vr Suministro', 'Gastos o Comp', 'Saldo'];
   const checks = ['Fecha', 'Cédula', 'Nombre', 'Apellidos', 'Cheque', 'Por Sum', 'Por Comp'];
   const rfColumns: Record<string, string[]> = {
-    cash: ['Trans', 'Fd', 'Fecha', 'Detalle', 'Entradas', 'Salidas', 'Datáfono', 'Saldo'],
+    cash: movement,
+    card: ['Fecha', 'Factura', 'Cédula', 'Nombre', 'Valor', 'Fondo'],
     pettyCash: movement,
     suppliesRp: supplies,
     suppliesLf: supplies,
@@ -62,15 +63,14 @@ describe('supplies reports', () => {
     expect(tableRows(doc.content)).toContainEqual(columns);
   });
 
-  it('prints the card in its own Caja column, outside the balance, with its total at the end', () => {
-    // 6B (11-nov): el datafono va en el informe de Caja en su columna; Entradas y Salidas en 0 y el saldo sigue igual.
-    const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), detail: 'DATAFONO 87304051', balance: 100, card: 173787 };
-    const body = tableRows(buildSuppliesReportDoc(data.reports['cash'], data.text, [rows[1], card]).content);
-    expect(body[2]).toEqual(['43909', 'RP', '14/06/2026', 'DATAFONO 87304051', money(0), money(0), money(173787), money(100)]);
-    expect(body[1][6]).toBe('');
-    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', '', '', money(173787), '']);
-    // Los demas informes de movimiento no la tienen.
-    expect(tableRows(buildSuppliesReportDoc(data.reports['pettyCash'], data.text, [card]).content).flat()).not.toContain(money(173787));
+  it('C5 (prueba del 11-nov, punto 5): Informe Datáfono lists date, invoice, cédula, name, value and fund, with its total', () => {
+    const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), card: 173787 };
+    const other: SuppliesReportRow = { ...row('EL TAMBO', '43910', 0, 0), card: 26213, fundCode: 'RP' };
+    const body = tableRows(buildSuppliesReportDoc(data.reports['card'], data.text, [card, other]).content);
+    expect(body[1]).toEqual(['14/06/2026', '43909', '99.304.051', 'CAFICULTOR PRUEBA', money(173787), 'RP']);
+    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', money(200000), '']);
+    // El Informe Caja ya no tiene la columna.
+    expect(JSON.stringify(data.reports['cash'].columns)).not.toContain('Datáfono');
   });
 
   it('puts the purchase point in the header of each payment-method group', () => {

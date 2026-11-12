@@ -137,11 +137,11 @@ class GrowerServiceImplTest {
         Grower association = new Grower();
         association.setIsAssociation(true);
         Grower legacyNull = new Grower();
-        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(association));
+        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(association));
         when(growerRepository.findByIdNumber("1")).thenReturn(Optional.of(legacyNull));
         when(growerRepository.findByIdNumber("2")).thenReturn(Optional.empty());
 
-        assertThat(growerService.isAssociation(" 900723205 ")).isTrue();
+        assertThat(growerService.isAssociation(" 990723205 ")).isTrue();
         assertThat(growerService.isAssociation("1")).isFalse();
         assertThat(growerService.isAssociation("2")).isFalse();
         assertThat(growerService.isAssociation(null)).isFalse();
@@ -199,8 +199,8 @@ class GrowerServiceImplTest {
         agency.setName("El Tambo");
         Grower grower = new Grower();
         grower.setIdNumber("555");
-        grower.setFirstName("Luis");
-        grower.setLastName("Rosero");
+        grower.setFirstName("Conductor");
+        grower.setLastName("Prueba");
         grower.setAddress("Calle 1");
         grower.setAgency(agency);
         grower.setGrowerType("S");
@@ -213,8 +213,8 @@ class GrowerServiceImplTest {
 
         assertThat(grower.getAffiliationDate()).isEqualTo(java.time.LocalDate.of(2010, 5, 1));
         assertThat(response.affiliationDate()).isEqualTo(java.time.LocalDate.of(2010, 5, 1));
-        assertThat(grower.getFirstName()).isEqualTo("Luis");
-        assertThat(grower.getLastName()).isEqualTo("Rosero");
+        assertThat(grower.getFirstName()).isEqualTo("Conductor");
+        assertThat(grower.getLastName()).isEqualTo("Prueba");
         assertThat(grower.getAddress()).isEqualTo("Calle 1");
         assertThat(grower.getGrowerType()).isEqualTo("S");
         assertThat(grower.getAgency()).isSameAs(agency);
@@ -227,15 +227,15 @@ class GrowerServiceImplTest {
     void conductorWithoutAgencyOrLastNameIsReturnedWithNullsInsteadOfFailing() {
         // Asociados de Access: asociaciones sin "1er Apellido" y filas sin Agencia (V34).
         Grower grower = new Grower();
-        grower.setIdNumber("900723205");
-        grower.setFirstName("FUNDACION SUYUSAMA");
+        grower.setIdNumber("990723205");
+        grower.setFirstName("FUNDACION PRUEBA");
         grower.setAddress("");
         grower.setTransportCompany("TRANSORIENTE");
-        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(grower));
+        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(grower));
 
-        var response = growerService.findConductor("900723205");
+        var response = growerService.findConductor("990723205");
 
-        assertThat(response.firstName()).isEqualTo("FUNDACION SUYUSAMA");
+        assertThat(response.firstName()).isEqualTo("FUNDACION PRUEBA");
         assertThat(response.lastName()).isNull();
         assertThat(response.agencyName()).isNull();
         assertThat(response.transportCompany()).isEqualTo("TRANSORIENTE");

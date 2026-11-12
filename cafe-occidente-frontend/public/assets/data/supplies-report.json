@@ -28,9 +28,17 @@
       "endpoint": "cash",
       "layout": "movement",
       "pdfTitle": "MOVIMIENTO CAJA",
-      "cardColumn": true,
       "filters": [{ "key": "fund", "label": "Fondo", "options": ["LF", "RP"], "required": true }],
-      "columns": ["Trans", "Fd", "Fecha", "Detalle", "Entradas", "Salidas", "Datáfono", "Saldo"],
+      "columns": ["Trans", "Fd", "Fecha", "Detalle", "Entradas", "Salidas", "Saldo"],
+      "backRoute": "/suministros"
+    },
+    "card": {
+      "windowTitle": "Informe Datáfono",
+      "endpoint": "card",
+      "layout": "card",
+      "pdfTitle": "INFORME DATÁFONO",
+      "filters": [{ "key": "fund", "label": "Fondo", "options": ["LF", "RP"], "required": true }],
+      "columns": ["Fecha", "Factura", "Cédula", "Nombre", "Valor", "Fondo"],
       "backRoute": "/suministros"
     },
     "pettyCash": {
