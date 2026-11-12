@@ -26,7 +26,7 @@ class GrowerNullableFieldsIntegrationTest {
     void growerWithoutAgencyOrLastNameIsSavedAsIs() {
         Grower grower = new Grower();
         grower.setIdNumber("V34-TEST-0001");
-        grower.setFirstName("FUNDACION SUYUSAMA");
+        grower.setFirstName("FUNDACION PRUEBA");
         grower.setAddress("");
         grower.setPhone("");
         grower.setGrowerType("C");
