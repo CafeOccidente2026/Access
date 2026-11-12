@@ -9,7 +9,7 @@ import { DryCoffeeFormComponent } from './dry-coffee-form';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
-import { Grower } from '../../../core/models/grower.model';
+import { Grower, GrowerProgram } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 import { DRY } from '../../purchase-query/purchase-query.testing';
 import dryContent from '../../../../../public/assets/data/purchase-form-dry.json';
@@ -31,6 +31,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       { key: 'associated', label: '', ariaLabel: 'Asociado', type: 'text' },
     ],
     identificationFields: [{ key: 'productCode', label: 'Cod Prod', type: 'text' }],
+    federationFields: ['idNumber', 'fullName', 'program', 'quota'].map((key) => ({ key, label: key, type: 'text' as const })),
     additionalDiscountFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages: {
       acceptLabel: 'Aceptar',
@@ -87,6 +88,9 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   let qualitySpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
   let focusSpy: ReturnType<typeof vi.fn>;
+  let nessProgram: GrowerProgram | null = null;
+
+  afterEach(() => (nessProgram = null));
 
   function setup(grower: Grower) {
     previewSpy = vi.fn(() => of(calculation));
@@ -112,7 +116,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     };
     const fakeGrowerService = {
       findByIdNumber: vi.fn(() => of(grower)),
-      findProgram: () => of(null),
+      findProgram: vi.fn(() => of(nessProgram)),
     };
 
     localStorage.setItem('cafeoccidente.agencyId', '1');
@@ -395,7 +399,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
   const viewField = (key: string) => {
     const v = component.viewContent()!;
-    return [...v.topFields, ...v.identificationFields, ...(v.additionalDiscountFields ?? [])].find((f) => f.key === key)!;
+    return [...v.topFields, ...v.identificationFields, ...(v.federationFields ?? []), ...(v.additionalDiscountFields ?? [])]
+      .find((f) => f.key === key)!;
   };
 
   it('RN-15.6: Retefuente is read-only and shows what the server calculated', () => {
@@ -411,6 +416,25 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     expect(viewField('withholding').readonly).toBe(true);
     expect(viewField('withholding').value).toBe(6000);
+  });
+
+  it('C3: with NESS the Federación block shows the cédula, name, program and quota of NESS, read only', () => {
+    nessProgram = { programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ OSSA NESS' };
+    setup(growerWithPhone);
+    fillCommon();
+    for (const [key, value] of Object.entries({ idNumber: '210514', fullName: 'PAZ OSSA NESS', program: 'NESPRESSO', quota: '200' })) {
+      expect(viewField(key)).toMatchObject({ value, readonly: true });
+    }
+  });
+
+  it('C3: without NESS the Federación block stays empty and the seller data below is filled as usual', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    for (const key of ['idNumber', 'fullName', 'program', 'quota']) {
+      expect(viewField(key)).toMatchObject({ value: '', readonly: true });
+    }
+    expect(component.model['firstName']).toBe('PAZ CAROLINA');
+    expect(component.model['lastName']).toBe('CASTELBLANCO OSSA');
   });
 
   it('the agency is not editable, the special brings announcement and Cod Prod, and S/C says if associated', () => {

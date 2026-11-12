@@ -32,6 +32,7 @@ describe('QuotaPurchaseFormComponent', () => {
     theme: 'green',
     topFields: [{ key: 'special', label: 'Especial', type: 'select', options: [] }],
     identificationFields: [{ key: 'deliveryKg', label: 'Kilos Entregados', type: 'number' }],
+    federationFields: ['idNumber', 'fullName', 'program'].map((key) => ({ key, label: key, type: 'text' })),
     qualityFields: [{ key: 'healthyStoredWeight', label: 'Peso Alm Sana', type: 'currency' }],
     settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     additionalDiscountFields: [{ key: 'contribution', label: 'Aporte Socio', type: 'currency' }],
@@ -112,7 +113,7 @@ describe('QuotaPurchaseFormComponent', () => {
           useValue: {
             findByIdNumber: () => of({ idNumber: '210514', firstName: 'PAZ', lastName: 'OSSA', growerType: 'C',
               address: 'VEREDA', phone: '3001112233' }),
-            findProgram: () => of(null),
+            findProgram: vi.fn(() => of(null)),
           },
         },
       ],
@@ -185,6 +186,24 @@ describe('QuotaPurchaseFormComponent', () => {
     expect(component.quotaRows()).toBeNull();
     expect(specialInfoSpy).toHaveBeenCalledWith(1, 'RN', 12);
     expect(field('deliveryKg')?.value).toBe(1000);
+  });
+
+  it('C3: the Federación block takes NESS only and is read only; without NESS it stays empty', () => {
+    setup();
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '210514', nombres: 'PAZ OSSA NESS' }));
+    commit('idPart1', '210514');
+    const federation = (key: string) => component.viewContent()!.federationFields!.find((f) => f.key === key)!;
+    for (const [key, value] of Object.entries({ idNumber: '210514', fullName: 'PAZ OSSA NESS', program: 'NESPRESSO' })) {
+      expect(federation(key)).toMatchObject({ value, readonly: true });
+    }
+
+    TestBed.resetTestingModule();
+    setup();
+    commit('idPart1', '210514');
+    for (const key of ['idNumber', 'fullName', 'program']) {
+      expect(federation(key)).toMatchObject({ value: '', readonly: true });
+    }
+    expect(component.model['firstNames']).toBe('PAZ');
   });
 
   it('cancelling the window leaves no announcement chosen', () => {
