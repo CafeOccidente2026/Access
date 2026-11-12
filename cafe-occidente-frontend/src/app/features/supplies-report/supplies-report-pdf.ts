@@ -46,39 +46,17 @@ function footer(text: SuppliesReportText, today: Date, width: number) {
   });
 }
 
-/** MovimientoCaja / Mov Caja Menor / SuministrosRP-LF / Mov Empaque: titulo, columnas y Saldo corrido. En Caja,
- *  la columna Datáfono (6B) va antes del Saldo y no entra en él; su total cierra el informe. */
-function movementBody(report: SuppliesReport, text: SuppliesReportText, rows: readonly SuppliesReportRow[], packagingType: string | null): Content[] {
-  const num = report.layout === 'packaging' ? count : money;
-  const card = (value: string): TableCell[] => (report.cardColumn ? [{ text: value, alignment: 'right' }] : []);
-  const detail = (r: SuppliesReportRow): TableCell[] => {
-    const tail: TableCell[] = [
-      { text: r.detail ?? '' },
-      { text: num(r.inflow), alignment: 'right' },
-      { text: num(r.outflow), alignment: 'right' },
-      ...card(r.card == null ? '' : money(r.card)),
-      { text: num(r.balance ?? 0), alignment: 'right' },
-    ];
-    return report.layout === 'packaging'
-      ? [r.transactionId, shortDate(r.date), ...tail]
-      : [r.transactionId, { text: r.fundCode ?? '', alignment: 'center' }, { text: shortDate(r.date), alignment: 'right' }, ...tail];
-  };
-  const widths = report.layout === 'packaging' ? [60, 55, '*', 60, 60, 60]
-    : report.cardColumn ? [50, 25, 50, '*', 65, 65, 65, 65] : [60, 30, 55, '*', 75, 75, 75];
-  const amounts = report.cardColumn ? 4 : 3;
-  const header = report.columns.map((c, i) => ({ text: c, bold: true, fontSize: 7, alignment: i >= report.columns.length - amounts ? 'right' : 'left' }) as TableCell);
-  const total: TableCell[][] = report.cardColumn
-    ? [[{ text: text.cardTotal, bold: true, colSpan: 6 }, '', '', '', '', '', { text: money(sum(rows, (r) => r.card ?? 0)), bold: true, alignment: 'right' }, '']]
-    : [];
+/** Titulo del informe (y el Tipo en Empaque) y su tabla con la linea punteada bajo los encabezados. */
+function titledTable(report: SuppliesReport, widths: (number | string)[], body: TableCell[][], subtitle: string | null = null): Content[] {
   return [
     {
       columns: [
         { text: report.pdfTitle ?? '', fontSize: 20, bold: true, color: teal(), width: 'auto' },
-        { text: packagingType ?? '', fontSize: 14, bold: true, color: teal(), width: 'auto', margin: [12, 6, 0, 0] },
+        { text: subtitle ?? '', fontSize: 14, bold: true, color: teal(), width: 'auto', margin: [12, 6, 0, 0] },
       ],
     },
     {
-      table: { headerRows: 1, widths, body: [header, ...rows.map(detail), ...total] },
+      table: { headerRows: 1, widths, body },
       layout: {
         hLineWidth: (i: number) => (i === 1 ? 1.5 : 0),
         hLineColor: () => teal() ?? null,
@@ -89,6 +67,50 @@ function movementBody(report: SuppliesReport, text: SuppliesReportText, rows: re
       },
     },
   ];
+}
+
+/** Encabezados en negrita; los de montos ({@code isAmount}) a la derecha. */
+function headerRow(report: SuppliesReport, isAmount: (index: number) => boolean): TableCell[] {
+  return report.columns.map((c, i) => ({ text: c, bold: true, fontSize: 7, alignment: isAmount(i) ? 'right' : 'left' }) as TableCell);
+}
+
+/** MovimientoCaja / Mov Caja Menor / SuministrosRP-LF / Mov Empaque: titulo, columnas y Saldo corrido. */
+function movementBody(report: SuppliesReport, rows: readonly SuppliesReportRow[], packagingType: string | null): Content[] {
+  const num = report.layout === 'packaging' ? count : money;
+  const detail = (r: SuppliesReportRow): TableCell[] => {
+    const tail: TableCell[] = [
+      { text: r.detail ?? '' },
+      { text: num(r.inflow), alignment: 'right' },
+      { text: num(r.outflow), alignment: 'right' },
+      { text: num(r.balance ?? 0), alignment: 'right' },
+    ];
+    return report.layout === 'packaging'
+      ? [r.transactionId, shortDate(r.date), ...tail]
+      : [r.transactionId, { text: r.fundCode ?? '', alignment: 'center' }, { text: shortDate(r.date), alignment: 'right' }, ...tail];
+  };
+  const widths = report.layout === 'packaging' ? [60, 55, '*', 60, 60, 60] : [60, 30, 55, '*', 75, 75, 75];
+  const header = headerRow(report, (i) => i >= report.columns.length - 3);
+  return titledTable(report, widths, [header, ...rows.map(detail)], packagingType);
+}
+
+/**
+ * C5 (prueba del 11-nov, punto 5): Informe Datáfono, lo pagado con datáfono (cuenta por cobrar pendiente): Fecha,
+ * Factura, Cédula, Nombre, Valor y Fondo, con el total al final. No toca el saldo de Caja.
+ */
+function cardBody(report: SuppliesReport, text: SuppliesReportText, rows: readonly SuppliesReportRow[]): Content[] {
+  const detail = (r: SuppliesReportRow): TableCell[] => [
+    shortDate(r.date),
+    r.transactionId,
+    { text: formatThousands(r.idNumber), alignment: 'right' },
+    [r.firstNames, r.lastNames].filter(Boolean).join(' '),
+    { text: money(r.card ?? 0), alignment: 'right' },
+    { text: r.fundCode ?? '', alignment: 'center' },
+  ];
+  const total: TableCell[] = [
+    { text: text.cardTotal, bold: true, colSpan: 4 }, '', '', '',
+    { text: money(sum(rows, (r) => r.card ?? 0)), bold: true, alignment: 'right' }, '',
+  ];
+  return titledTable(report, [55, 55, 70, '*', 80, 35], [headerRow(report, (i) => i === 4), ...rows.map(detail), total]);
 }
 
 /** "RELACION CHEQUES CAJA": grupos por agencia con resumen, Suma y Suma total. */
@@ -183,7 +205,9 @@ export function buildSuppliesReportDoc(
       ? checksBody(report, text, rows)
       : report.layout === 'paymentMethods'
         ? paymentBody(report, text, rows)
-        : movementBody(report, text, rows, packagingType);
+        : report.layout === 'card'
+          ? cardBody(report, text, rows)
+          : movementBody(report, rows, packagingType);
   return {
     pageSize: 'LETTER',
     pageOrientation: landscape ? 'landscape' : 'portrait',

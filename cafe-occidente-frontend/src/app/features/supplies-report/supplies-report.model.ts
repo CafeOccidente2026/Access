@@ -12,10 +12,8 @@ export interface SuppliesReport {
   readonly endpoint: string;
   /** Relacion Cheques: POST porque marca los cheques impresos. */
   readonly post?: boolean;
-  readonly layout: 'movement' | 'supplies' | 'packaging' | 'checks' | 'paymentMethods';
+  readonly layout: 'movement' | 'supplies' | 'packaging' | 'checks' | 'paymentMethods' | 'card';
   readonly pdfTitle?: string;
-  /** Informe de Caja (6B): columna Datáfono antes del Saldo, con su total al final. */
-  readonly cardColumn?: boolean;
   readonly fixedParams?: Record<string, string>;
   readonly filters: SuppliesReportFilter[];
   readonly columns: string[];
