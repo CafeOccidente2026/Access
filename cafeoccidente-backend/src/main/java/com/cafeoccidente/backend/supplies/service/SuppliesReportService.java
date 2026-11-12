@@ -13,6 +13,9 @@ public interface SuppliesReportService {
     /** "MovimientoCaja": Caja con Fondo LIKE fund & "*" y Forma_de_Pago = EFECTIVO. */
     List<SuppliesReportRow> cashMovement(Long agencyId, String fundCode, LocalDate today);
 
+    /** C5: Informe Datafono, lo pagado con datafono (cuenta por cobrar pendiente) del año, por fondo. */
+    List<SuppliesReportRow> cardPayments(Long agencyId, String fundCode, LocalDate today);
+
     /** "Mov Caja Menor": CajaMenor con Forma_de_Pago = EFECTIVO. */
     List<SuppliesReportRow> pettyCashMovement(Long agencyId, LocalDate today);
 

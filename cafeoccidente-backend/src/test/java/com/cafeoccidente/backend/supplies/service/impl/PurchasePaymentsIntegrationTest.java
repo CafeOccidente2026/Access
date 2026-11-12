@@ -43,8 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Efectivo: saldo de Caja.</li>
  *   <li>Cheque: listado en Caja (Relacion de cheques) sin bajar su saldo; saldo de Suministros.</li>
  *   <li>Transferencia: listada en Caja; saldo de Suministros (Q33).</li>
- *   <li>Datafono: listado en Caja; cuenta por cobrar PENDIENTE a favor del fiel (Q33, Q35); en el informe de
- *   Caja, columna Datafono sin mover el saldo (6B).</li>
+ *   <li>Datafono: listado en Caja (formas de pago); cuenta por cobrar PENDIENTE a favor del fiel (Q33, Q35); su
+ *   propio Informe Datafono (C5), fuera del informe de Caja.</li>
  * </ul>
  */
 @SpringBootTest
@@ -163,21 +163,20 @@ class PurchasePaymentsIntegrationTest {
                 .containsEntry("cedula_fiel", controlRecords.getActive(AGENCY).getTrustedId());
         BigDecimal card = (BigDecimal) receivable.get(0).get("valor");
         assertThat(card).isEqualByComparingTo(CARD);
-        // 6B (11-nov): el datafono va en el informe de Caja en su columna, sin mover el saldo del efectivo.
-        List<SuppliesReportRow> cashReport = supplies.cashMovement(AGENCY, "RP", today);
-        SuppliesReportRow cardRow = cashReport.stream()
-                .filter(r -> r.transactionId().equals(String.valueOf(saved.invoiceNumber())) && r.card() != null)
+        // C5 (prueba del 11-nov, punto 5): el datafono sale del informe de Caja y tiene su propio informe.
+        assertThat(supplies.cashMovement(AGENCY, "RP", today)).noneMatch(r -> r.card() != null);
+        List<SuppliesReportRow> cardReport = supplies.cardPayments(AGENCY, "RP", today);
+        SuppliesReportRow cardRow = cardReport.stream()
+                .filter(r -> r.transactionId().equals(String.valueOf(saved.invoiceNumber())))
                 .findFirst().orElseThrow();
         assertThat(cardRow.card()).isEqualByComparingTo(CARD);
-        assertThat(cardRow.inflow()).isZero();
-        assertThat(cardRow.outflow()).isZero();
-        assertThat(cardRow.detail()).isEqualTo("DATAFONO " + SELLER);
+        assertThat(cardRow.idNumber()).isEqualTo(SELLER);
+        assertThat(cardRow.firstNames()).isEqualTo("PRUEBA");
+        assertThat(cardRow.lastNames()).isEqualTo("PAGOS");
         assertThat(cardRow.fundCode()).isEqualTo("RP");
-        int at = cashReport.indexOf(cardRow);
-        BigDecimal before = at == 0 ? BigDecimal.ZERO : cashReport.get(at - 1).balance();
-        assertThat(cardRow.balance()).isEqualByComparingTo(before);
-        assertThat(supplies.cashMovement(AGENCY, "LF", today)).noneMatch(r -> r.card() != null
-                && r.transactionId().equals(String.valueOf(saved.invoiceNumber())));
+        assertThat(cardRow.date()).isEqualTo(today);
+        assertThat(supplies.cardPayments(AGENCY, "LF", today))
+                .noneMatch(r -> r.transactionId().equals(String.valueOf(saved.invoiceNumber())));
         // Sin doble conteo: Caja + Suministros + cuenta por cobrar = neto a pagar.
         assertThat(cashBalance.add(supplyOut).add(card)).isEqualByComparingTo(saved.netToPay());
         // El cheque son 4 digitos con sus ceros (V25): 0548, nunca 548, en la tabla y en el informe.
@@ -220,7 +219,7 @@ class PurchasePaymentsIntegrationTest {
 
         assertThat(lines(supplies.cashBook(AGENCY, today, today), saved.invoiceNumber())).isEmpty();
         assertThat(lines(supplies.supplyBook(AGENCY, today, today), saved.invoiceNumber())).isEmpty();
-        assertThat(supplies.cashMovement(AGENCY, "RP", today))
+        assertThat(supplies.cardPayments(AGENCY, "RP", today))
                 .noneMatch(r -> r.transactionId().equals(String.valueOf(saved.invoiceNumber())));
         assertThat(receivables("DRY", saved.id())).singleElement()
                 .satisfies(r -> assertThat(r).containsEntry("estado", "ANULADA"));

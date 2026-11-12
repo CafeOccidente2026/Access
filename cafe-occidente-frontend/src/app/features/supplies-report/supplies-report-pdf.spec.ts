@@ -40,7 +40,8 @@ describe('supplies reports', () => {
   const supplies = ['Transacción', 'Fondo', 'Fecha', 'Detalle', 'Vr Suministro', 'Gastos o Comp', 'Saldo'];
   const checks = ['Fecha', 'Cédula', 'Nombre', 'Apellidos', 'Cheque', 'Por Sum', 'Por Comp'];
   const rfColumns: Record<string, string[]> = {
-    cash: ['Trans', 'Fd', 'Fecha', 'Detalle', 'Entradas', 'Salidas', 'Datáfono', 'Saldo'],
+    cash: movement,
+    card: ['Fecha', 'Factura', 'Cédula', 'Nombre', 'Valor', 'Fondo'],
     pettyCash: movement,
     suppliesRp: supplies,
     suppliesLf: supplies,
@@ -62,15 +63,14 @@ describe('supplies reports', () => {
     expect(tableRows(doc.content)).toContainEqual(columns);
   });
 
-  it('prints the card in its own Caja column, outside the balance, with its total at the end', () => {
-    // 6B (11-nov): el datafono va en el informe de Caja en su columna; Entradas y Salidas en 0 y el saldo sigue igual.
-    const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), detail: 'DATAFONO 99304051', balance: 100, card: 173787 };
-    const body = tableRows(buildSuppliesReportDoc(data.reports['cash'], data.text, [rows[1], card]).content);
-    expect(body[2]).toEqual(['43909', 'RP', '14/06/2026', 'DATAFONO 99304051', money(0), money(0), money(173787), money(100)]);
-    expect(body[1][6]).toBe('');
-    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', '', '', money(173787), '']);
-    // Los demas informes de movimiento no la tienen.
-    expect(tableRows(buildSuppliesReportDoc(data.reports['pettyCash'], data.text, [card]).content).flat()).not.toContain(money(173787));
+  it('C5 (prueba del 11-nov, punto 5): Informe Datáfono lists date, invoice, cédula, name, value and fund, with its total', () => {
+    const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), card: 173787 };
+    const other: SuppliesReportRow = { ...row('EL TAMBO', '43910', 0, 0), card: 26213, fundCode: 'RP' };
+    const body = tableRows(buildSuppliesReportDoc(data.reports['card'], data.text, [card, other]).content);
+    expect(body[1]).toEqual(['14/06/2026', '43909', '99.304.051', 'CAFICULTOR PRUEBA', money(173787), 'RP']);
+    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', money(200000), '']);
+    // El Informe Caja ya no tiene la columna.
+    expect(JSON.stringify(data.reports['cash'].columns)).not.toContain('Datáfono');
   });
 
   it('puts the purchase point in the header of each payment-method group', () => {

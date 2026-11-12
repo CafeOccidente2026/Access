@@ -99,7 +99,7 @@ describe('submenus (HU-02)', () => {
   });
 
   it('CA-3 Suministros', () => {
-    expectInRfOrder(supplies, ['Registrar Suministro Efectivo', 'Informe Caja', 'Relación Cheques', 'Rel Cheques Especial',
+    expectInRfOrder(supplies, ['Registrar Suministro Efectivo', 'Informe Caja', 'Informe Datáfono', 'Relación Cheques', 'Rel Cheques Especial',
       'Rel Formas de Pago', 'Suministro Empaques', 'Préstamo Empaques', 'Informe Empaques', 'Ingresar Suministros',
       'Cheques Girados', 'Informe Suministros RP', 'Informe Suministros LF', 'Caja Menor']);
   });
