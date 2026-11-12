@@ -95,7 +95,7 @@ describe('FuturePurchaseFormComponent', () => {
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
         { provide: FuturePurchaseService, useValue: { create: createSpy, todayAnnouncements: todaySpy } },
-        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: () => of(null) } },
+        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: vi.fn(() => of(null)) } },
       ],
     });
     component = TestBed.createComponent(FuturePurchaseFormComponent).componentInstance;
@@ -129,6 +129,18 @@ describe('FuturePurchaseFormComponent', () => {
     // que el mecanismo no rompe con campos parcialmente vacios.
     expect((component as any).locked.has('idPart1')).toBe(true);
     expect(component.model['address']).toBe('VEREDA PRUEBA DOS');
+  });
+
+  it('C3: the Federación block takes the cédula, name and program of NESS; without NESS it stays empty', () => {
+    setup(growerWithoutId);
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
+    fill();
+    expect(component.model).toMatchObject({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' });
+
+    TestBed.resetTestingModule();
+    setup(growerWithoutId);
+    fill();
+    expect(component.model).toMatchObject({ idNumber: '', fullName: '', program: '' });
   });
 
   it('does not ask for announcements until an Especial is committed', () => {

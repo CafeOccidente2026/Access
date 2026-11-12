@@ -201,7 +201,8 @@ public class GrowerServiceImpl implements GrowerService {
         if (match == null) {
             return Optional.empty();
         }
-        return Optional.of(new GrowerProgramResponse(match.getPrograma(), normalizeCupo(match.getCupo())));
+        return Optional.of(new GrowerProgramResponse(match.getPrograma(), withoutCsvDecimal(match.getCupo()),
+                withoutCsvDecimal(match.getCedula()), match.getNombres()));
     }
 
     @Override
@@ -215,7 +216,7 @@ public class GrowerServiceImpl implements GrowerService {
         BigDecimal quota = new BigDecimal(match.getCupo());
         if (netKg.compareTo(quota) > 0) {
             throw new BusinessRuleException(
-                    "CAFICULTOR EXCEDE CUPO ASIGNADO, NO LE PUEDE FACTURAR (cupo: " + normalizeCupo(match.getCupo())
+                    "CAFICULTOR EXCEDE CUPO ASIGNADO, NO LE PUEDE FACTURAR (cupo: " + withoutCsvDecimal(match.getCupo())
                             + " kg, esta compra: " + netKg + " kg)");
         }
     }
@@ -258,8 +259,8 @@ public class GrowerServiceImpl implements GrowerService {
         return null;
     }
 
-    /** Quita el sufijo ".0" (artefacto del CSV origen) para mostrar el cupo como entero. */
-    private static String normalizeCupo(String cupo) {
-        return cupo.endsWith(".0") ? cupo.substring(0, cupo.length() - 2) : cupo;
+    /** Quita el sufijo ".0" (artefacto del CSV origen) para mostrar el cupo y la cedula como enteros. */
+    private static String withoutCsvDecimal(String value) {
+        return value != null && value.endsWith(".0") ? value.substring(0, value.length() - 2) : value;
     }
 }
