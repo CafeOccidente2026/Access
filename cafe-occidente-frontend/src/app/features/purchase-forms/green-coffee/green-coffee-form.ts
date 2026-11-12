@@ -23,6 +23,7 @@ import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
+import { FEDERATION_KEYS, federationValues } from '../federation';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -45,26 +46,27 @@ type GreenCoffeeContent = PurchaseFormContent & { readonly messages: GreenCoffee
 
 /**
  * Especial ("CV") y Fondo ("RP") son fijos en VERDES (sin AfterUpdate/combo real - ver
- * Form_VERDES.bas y VERDES.txt), a diferencia de Cafe Seco. "program" (Programa Federacion) se deja
- * siempre editable sin autocompletado: no hay tabla de programa migrada para VERDES (a diferencia de
- * staging_legacy_ness en Cafe Seco).
+ * Form_VERDES.bas y VERDES.txt), a diferencia de Cafe Seco. El bloque Informacion Federacion sale de
+ * NESS (C3) y es de solo lectura.
  */
 const EDITABLE: string[] = [
-  'idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'program',
+  'idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone',
   'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (penalty/descuentos pueden quedar en blanco = 0). */
 // El servidor no calcula sin el celular del vendedor (prueba del 10-nov): sin el no se pide el calculo.
-const REQUIRED: string[] = ['idPart1', 'fullName', 'cellphone', 'bags', 'grossKg', 'tare', 'compKgPrice'];
+const REQUIRED: string[] = ['idPart1', 'cellphone', 'bags', 'grossKg', 'tare', 'compKgPrice'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoicePrefix',
-  'invoiceNumber', 'basePriceLoad', 'special', 'idNumber', 'healthyStoredPrice', 'defectStoredPrice',
+  'invoiceNumber', 'basePriceLoad', 'special', 'healthyStoredPrice', 'defectStoredPrice',
   'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding',
+  // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
+  ...FEDERATION_KEYS,
   // HU-23 CA-2: muestra fija del Registro de Control.
   'totalStoredWeight', 'wastePercentage', 'totalHuskWeight', 'huskPercentage', 'healthyStoredWeight', 'factor',
 ];
@@ -232,10 +234,6 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
           this.tick.update((n) => n + 1);
           return;
         }
-        const fullName = [grower.firstName, grower.secondName, grower.lastName, grower.secondLastName]
-          .filter(Boolean)
-          .join(' ');
-        this.model['fullName'] = fullName;
         this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
         this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
         this.model['idType'] = grower.growerType;
@@ -245,11 +243,12 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
         // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
         // la cascada de calculo nunca llegaba a dispararse.
-        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
+        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
           if ((this.model[k] ?? '').trim() !== '') {
             this.locked.add(k);
           }
         });
+        this.lookupProgram(idNumber);
         this.tick.update((n) => n + 1);
         askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
       },
@@ -258,6 +257,14 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
         this.tick.update((n) => n + 1);
       },
+    });
+  }
+
+  /** C3: el bloque Informacion Federacion sale de NESS (especial CV); sin NESS queda vacio. */
+  private lookupProgram(idNumber: string): void {
+    this.growerService.findProgram(idNumber, 'CV').subscribe((program) => {
+      Object.assign(this.model, federationValues(program));
+      this.tick.update((n) => n + 1);
     });
   }
 
@@ -403,7 +410,6 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       huskPercentage: info?.sample?.huskPercentage ?? '',
       healthyStoredWeight: info?.sample?.healthyStoredWeight ?? '',
       factor: info?.sample?.factor ?? '',
-      idNumber: this.model['idPart1'] ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
       kgPrice: c?.unitPrice ?? '',
@@ -415,7 +421,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       const patch: { readonly?: boolean; value?: string | number } = {};
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';

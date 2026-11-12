@@ -17,6 +17,7 @@ import { advanceFocus, focusField } from '../form-focus';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { serverError } from '../../../shared/utils/server-error';
+import { federationValues } from '../federation';
 
 type FormModel = Record<string, string>;
 
@@ -168,12 +169,10 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
         this.model['lastNames'] = lastNames;
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
-        this.model['idNumber'] = idNumber;
-        this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
         this.locked.add('idPart1');
         // Mismo fix aplicado hoy en Seco/Verde/Pasilla/Otros/Cupos: si el dato migrado viene vacio,
         // no se bloquea, para que el cajero lo pueda completar a mano.
-        ['firstNames', 'lastNames', 'idType', 'address', 'idNumber', 'fullName'].forEach((k) => {
+        ['firstNames', 'lastNames', 'idType', 'address'].forEach((k) => {
           if ((this.model[k] ?? '').trim() !== '') {
             this.locked.add(k);
           }
@@ -192,12 +191,8 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private lookupProgram(): void {
     const idNumber = (this.model['idPart1'] ?? '').trim();
     this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      this.model['program'] = program ? program.programa : '';
-      if (program) {
-        this.locked.add('program');
-      } else {
-        this.locked.delete('program');
-      }
+      // C3: el bloque Informacion Federacion (de solo lectura en el JSON) sale de NESS.
+      Object.assign(this.model, federationValues(program));
       this.tick.update((n) => n + 1);
     });
   }

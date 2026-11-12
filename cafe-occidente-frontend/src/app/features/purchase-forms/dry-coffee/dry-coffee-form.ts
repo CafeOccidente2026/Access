@@ -26,6 +26,7 @@ import { UnsavedCloseForm } from '../unsaved-close';
 import { clearSample, isOverThreshold } from '../sample-quality';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
+import { FEDERATION_KEYS, federationValues } from '../federation';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
@@ -49,15 +50,14 @@ type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMess
 /** Campos editables en el orden de captura del formulario Access. "agency" no entra: la
  *  autocompleta la sesión y nunca la toca el usuario (paso 1). */
 const EDITABLE: string[] = [
-  'fund', 'idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'program', 'quota',
-  'special',
+  'fund', 'idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'special',
   'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (bonus/penalty/descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = [
-  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone',
+  'fund', 'idPart1', 'idType', 'address', 'cellphone',
   'special', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
 ];
 
@@ -69,7 +69,9 @@ const READONLY: string[] = [
   // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
   'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoicePrefix', 'invoiceNumber',
-  'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idNumber',
+  'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs',
+  // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
+  ...FEDERATION_KEYS,
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
   // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
   'withholding',
@@ -253,10 +255,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
           this.tick.update((n) => n + 1);
           return;
         }
-        const fullName = [grower.firstName, grower.secondName, grower.lastName, grower.secondLastName]
-          .filter(Boolean)
-          .join(' ');
-        this.model['fullName'] = fullName;
         // Renglón de contacto como en Access: nombres y apellidos en dos cuadros.
         this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
         this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
@@ -267,7 +265,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
         // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
         // la cascada de calculo (Vr. Kilo/Vr. Bruto/Neto a Pagar) nunca llegaba a dispararse.
-        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
+        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
           if ((this.model[k] ?? '').trim() !== '') {
             this.locked.add(k);
           }
@@ -296,17 +294,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       return;
     }
     this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      if (program) {
-        this.model['program'] = program.programa;
-        this.model['quota'] = program.cupo;
-        this.locked.add('program');
-        this.locked.add('quota');
-      } else {
-        this.model['program'] = '';
-        this.model['quota'] = '';
-        this.locked.delete('program');
-        this.locked.delete('quota');
-      }
+      Object.assign(this.model, federationValues(program));
       this.tick.update((n) => n + 1);
     });
   }
@@ -559,7 +547,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       sustentationPrice: info?.healthyUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
-      idNumber: this.model['idPart1'] ?? '',
       healthyStoredWeight: this.model['healthyStoredWeight'] ?? '',
       wastePercentage: q.wastePercentage ?? '',
       huskPercentage: q.defectivePercentage ?? '',
@@ -583,7 +570,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';

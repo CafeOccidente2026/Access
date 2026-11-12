@@ -29,6 +29,7 @@ import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from
 import { UnsavedCloseForm } from '../unsaved-close';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 import { serverError } from '../../../shared/utils/server-error';
+import { FEDERATION_KEYS, federationValues } from '../federation';
 
 type FormModel = Record<string, string>;
 
@@ -78,6 +79,8 @@ const READONLY: string[] = [
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
   // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
   'withholding',
+  // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
+  ...FEDERATION_KEYS,
 ];
 
 const FOCUS_ORDER: Record<Mode, string[]> = {
@@ -390,14 +393,11 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
         this.model['cellphone'] = grower.phone;
-        this.model['idNumber'] = idNumber;
-        this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
         this.locked.add('idPart1');
-        this.locked.add('idNumber');
         // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
         // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
         // la cascada de calculo nunca llegaba a dispararse.
-        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone', 'fullName'].forEach((k) => {
+        ['firstNames', 'lastNames', 'idType', 'address', 'cellphone'].forEach((k) => {
           if ((this.model[k] ?? '').trim() !== '') {
             this.locked.add(k);
           }
@@ -418,21 +418,15 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  /** Mismo endpoint/mapeo que Cafe Seco (GrowerServiceImpl.findProgram): solo 3 Especiales tienen
-   *  tabla de programa migrada, el resto queda vacio y editable, nunca bloquea. */
+  /** Mismo endpoint/mapeo que Cafe Seco (GrowerServiceImpl.findProgram): el bloque Informacion Federacion
+   *  sale de NESS (C3) y, sin NESS, queda vacio; nunca bloquea. */
   private lookupProgram(): void {
     const idNumber = (this.model['idPart1'] ?? '').trim();
     if (!idNumber) {
       return;
     }
     this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      if (program) {
-        this.model['program'] = program.programa;
-        this.locked.add('program');
-      } else {
-        this.model['program'] = '';
-        this.locked.delete('program');
-      }
+      Object.assign(this.model, federationValues(program));
       this.tick.update((n) => n + 1);
     });
   }
