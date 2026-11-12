@@ -201,7 +201,8 @@ public class GrowerServiceImpl implements GrowerService {
         if (match == null) {
             return Optional.empty();
         }
-        return Optional.of(new GrowerProgramResponse(match.getPrograma(), normalizeCupo(match.getCupo())));
+        return Optional.of(new GrowerProgramResponse(match.getPrograma(), normalizeCupo(match.getCupo()),
+                match.getCedula(), match.getNombres()));
     }
 
     @Override
