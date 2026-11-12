@@ -39,16 +39,16 @@ describe('BeneficiaryReportComponent', () => {
   it('prueba del 11-nov (punto 4): if the server rejects it, shows its reason', () => {
     const { c, beneficiary } = setup();
     beneficiary.mockReturnValue(throwError(() => ({ error: { message: 'Falta o está mal: Desde Fecha' } })));
-    c.idNumber.set('79374104');
+    c.idNumber.set('99374104');
     c.accept(new Event('submit'));
     expect(c.message()).toBe('Falta o está mal: Desde Fecha');
   });
 
   it('CA-1: the typed cedula generates the report of that beneficiary', () => {
     const { c, beneficiary } = setup();
-    c.idNumber.set('79.374.104');
+    c.idNumber.set('99.374.104');
     c.accept(new Event('submit'));
-    expect(beneficiary).toHaveBeenCalledWith(expect.objectContaining({ idNumber: '79374104', allAgencies: null }));
+    expect(beneficiary).toHaveBeenCalledWith(expect.objectContaining({ idNumber: '99374104', allAgencies: null }));
   });
 
   it('without cedula and without "Todos los beneficiarios" it asks for the cedula', () => {
@@ -61,7 +61,7 @@ describe('BeneficiaryReportComponent', () => {
   it('CA-2: "Todos los beneficiarios" sends no cedula', () => {
     const { c, beneficiary, fixture } = setup();
     expect(fixture.nativeElement.textContent).toContain('Todos los beneficiarios');
-    c.idNumber.set('79374104');
+    c.idNumber.set('99374104');
     c.allBeneficiaries.set(true);
     c.accept(new Event('submit'));
     expect(beneficiary).toHaveBeenCalledWith(expect.objectContaining({ idNumber: '' }));

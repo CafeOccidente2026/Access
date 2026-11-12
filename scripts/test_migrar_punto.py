@@ -24,7 +24,7 @@ REG = {
     "numregistro": "2", "factorbase": "94.0", "baseretefte": "8379840", "basecarga": "125", "porcretefte": "0.5",
     "basepasilla": "12.5", "porckgpasprom": "6.14", "agencia": "EL TAMBO", "prefijo": "SDTA", "costos": "698",
     "muestra": "250.0", "kgexcelso": "70", "porcverde": "50.0", "umbralespeciales": "93.33", "porcdesccoop": "0.8",
-    "porcasociados": "2.0", "fiel": "87304051", "resdian": "18764112142534", "fecharesdian": "2026-07-04 00:00:00",
+    "porcasociados": "2.0", "fiel": "99304051", "resdian": "18764112142534", "fecharesdian": "2026-07-04 00:00:00",
     "desderes": "43754", "hastares": "48753", "vigenciares": "24",
 }
 

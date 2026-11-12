@@ -35,7 +35,7 @@ class BeneficiaryReportIntegrationTest {
     void setUp() {
         otherAgency = jdbc.queryForObject("SELECT min(id) FROM agencias WHERE id <> ?", Long.class, AGENCY);
         user = jdbc.queryForObject("SELECT min(id) FROM usuarios", Long.class);
-        seller(SELLER, "AURA");
+        seller(SELLER, "ASOCIADA");
         seller(OTHER, "PEDRO");
         // Cod_Prod 0110002000002 (producto 1) y 0110002000010 (producto 4), facturas fuera del rango real.
         purchase(AGENCY, 990_001, SELLER, 1, "440");
@@ -91,6 +91,6 @@ class BeneficiaryReportIntegrationTest {
         List<BeneficiaryRow> rows = vendors.beneficiary(AGENCY, "770052", null, null);
 
         assertThat(rows).extracting(BeneficiaryRow::idNumber).containsExactly(SELLER, SELLER, SELLER, OTHER);
-        assertThat(rows).extracting(BeneficiaryRow::firstName).containsExactly("AURA", "AURA", "AURA", "PEDRO");
+        assertThat(rows).extracting(BeneficiaryRow::firstName).containsExactly("ASOCIADA", "ASOCIADA", "ASOCIADA", "PEDRO");
     }
 }

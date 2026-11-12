@@ -18,7 +18,7 @@ function page(position: number, idNumber: string, total = 3): AssociatePage {
     position,
     total,
     associate: {
-      idNumber, firstName: 'AURA', secondName: 'MARIA', lastName: 'TUTISTAR', secondLastName: null,
+      idNumber, firstName: 'ASOCIADA', secondName: 'MARIA', lastName: 'PRUEBA', secondLastName: null,
       agencyName: 'EL TAMBO', birthDate: '1970-03-01', birthPlace: null, maritalStatus: null, coffeeIdCard: null,
       address: 'VDA LA PALMA', phone: '3001234567', affiliationDate: null, actNumber: null, accepted: true,
       eligible: false, withdrawn: false, deceased: false, observation: 'SIN NOVEDAD', growerType: 'C',
@@ -46,7 +46,7 @@ describe('AssociatesComponent (HU-53)', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  function render(first = page(0, '59124124')) {
+  function render(first = page(0, '99124124')) {
     const fixture = TestBed.createComponent(AssociatesComponent);
     http.expectOne(`${URL}?position=0`).flush(first);
     fixture.detectChanges();
@@ -71,7 +71,7 @@ describe('AssociatesComponent (HU-53)', () => {
     for (const c of controls) {
       expect(c instanceof HTMLInputElement && c.type === 'checkbox' ? c.disabled : c.readOnly).toBe(true);
     }
-    expect(value(el, 'IdAsociado')).toBe('59124124');
+    expect(value(el, 'IdAsociado')).toBe('99124124');
     expect(value(el, 'Agencia')).toBe('EL TAMBO');
     expect(value(el, 'FechaNacimiento')).toBe('01/03/1970');
     expect(value(el, 'Aceptado')).toBe('Verdadero');
@@ -111,12 +111,12 @@ describe('AssociatesComponent (HU-53)', () => {
 
   it('CA-2: the search shows that third party directly, without dots', () => {
     const { el, fixture } = render();
-    (el.querySelector('#associates-search') as HTMLInputElement).value = '59.124.124';
+    (el.querySelector('#associates-search') as HTMLInputElement).value = '99.124.124';
     el.querySelector('form')!.dispatchEvent(new Event('submit'));
-    http.expectOne(`${URL}/59124124`).flush(page(1, '59124124'));
+    http.expectOne(`${URL}/99124124`).flush(page(1, '99124124'));
     fixture.detectChanges();
 
-    expect(value(el, 'IdAsociado')).toBe('59124124');
+    expect(value(el, 'IdAsociado')).toBe('99124124');
     expect(el.textContent).toContain('2 de 3');
   });
 
@@ -134,6 +134,6 @@ describe('AssociatesComponent (HU-53)', () => {
     fixture.detectChanges();
 
     expect(el.textContent).toContain(content.messages.notFound);
-    expect(value(el, 'IdAsociado')).toBe('59124124');
+    expect(value(el, 'IdAsociado')).toBe('99124124');
   });
 });

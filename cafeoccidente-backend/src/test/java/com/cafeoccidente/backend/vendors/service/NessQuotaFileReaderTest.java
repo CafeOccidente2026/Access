@@ -35,31 +35,31 @@ class NessQuotaFileReaderTest {
     @Test
     void readsAValidFileNormalizingCedulaProgramAndQuota() {
         NessQuotaFile file = read(HEADER,
-                new Object[] {210514, "Paz Carolina Castelblanco", "NESPRESSO", 30000},
-                new Object[] {"437702", " Sociedad Diaz ", " nespresso   late harvest ", "30000.00"},
-                new Object[] {98376216.0, "Pablo Ruales", "Regional Nariño 4C", 994.5});
+                new Object[] {990514, "Caficultor Ness Uno", "NESPRESSO", 30000},
+                new Object[] {"997702", " Sociedad Prueba ", " nespresso   late harvest ", "30000.00"},
+                new Object[] {99376216.0, "Caficultor Ness Dos", "Regional Nariño 4C", 994.5});
 
         assertThat(file.errors()).isEmpty();
         assertThat(file.warnings()).isEmpty();
         assertThat(file.lines()).containsExactly(
-                line("210514", "Paz Carolina Castelblanco", "NESPRESSO", "30000"),
-                line("437702", "Sociedad Diaz", "NESPRESSO LATE HARVEST", "30000"),
-                line("98376216", "Pablo Ruales", "REGIONAL NARIÑO 4C", "994.5"));
+                line("990514", "Caficultor Ness Uno", "NESPRESSO", "30000"),
+                line("997702", "Sociedad Prueba", "NESPRESSO LATE HARVEST", "30000"),
+                line("99376216", "Caficultor Ness Dos", "REGIONAL NARIÑO 4C", "994.5"));
     }
 
     @Test
     void acceptsHeadersInAnyCaseAndOrderAndIgnoresExtraColumns() {
         NessQuotaFile file = read(
                 new Object[] {"cupo", " Cedula ", "OBSERVACION", "programa", "Nombres"},
-                new Object[] {500, 210514, "x", "NESPRESSO", "Ana"});
+                new Object[] {500, 990514, "x", "NESPRESSO", "Ana"});
 
         assertThat(file.errors()).isEmpty();
-        assertThat(file.lines()).containsExactly(line("210514", "Ana", "NESPRESSO", "500"));
+        assertThat(file.lines()).containsExactly(line("990514", "Ana", "NESPRESSO", "500"));
     }
 
     @Test
     void namesEveryMissingColumnAndLoadsNothing() {
-        NessQuotaFile file = read(new Object[] {"CEDULA", "NOMBRES"}, new Object[] {210514, "Ana"});
+        NessQuotaFile file = read(new Object[] {"CEDULA", "NOMBRES"}, new Object[] {990514, "Ana"});
 
         assertThat(file.errors()).containsExactly("Falta la columna PROGRAMA", "Falta la columna CUPO");
         assertThat(file.lines()).isEmpty();
@@ -81,7 +81,7 @@ class NessQuotaFileReaderTest {
     @Test
     void skipsBlankRows() {
         NessQuotaFile file = read(HEADER, new Object[] {null, null, null, null},
-                new Object[] {210514, "Ana", "NESPRESSO", 100});
+                new Object[] {990514, "Ana", "NESPRESSO", 100});
 
         assertThat(file.errors()).isEmpty();
         assertThat(file.lines()).hasSize(1);
@@ -91,8 +91,8 @@ class NessQuotaFileReaderTest {
     void reportsEachInvalidValueWithItsRow() {
         NessQuotaFile file = read(HEADER,
                 new Object[] {"12a", "Ana", "NESPRESSO", 100},
-                new Object[] {210514, null, "NESPRESSO", 100},
-                new Object[] {210515, "Luis", "RN4C", 100},
+                new Object[] {990514, null, "NESPRESSO", 100},
+                new Object[] {210515, "Conductor", "RN4C", 100},
                 new Object[] {210516, "Eva", "NESPRESSO", "abc"},
                 new Object[] {210517, "Rosa", "NESPRESSO", -5});
 
@@ -107,45 +107,45 @@ class NessQuotaFileReaderTest {
     @Test
     void loadsOnceACedulaRepeatedInTheSameProgramWithTheSameQuota() {
         NessQuotaFile file = read(HEADER,
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO", 30000},
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO", 30000});
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO", 30000},
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO", 30000});
 
         assertThat(file.errors()).isEmpty();
         assertThat(file.lines()).containsExactly(
-                line("98376216", "Pablo Giraldo Ruales Portillo", "NESPRESSO", "30000"));
+                line("99376216", "Caficultor Ness Dos", "NESPRESSO", "30000"));
         assertThat(file.warnings()).containsExactly(
-                "Filas 2 y 3: la cédula 98376216 se repite en NESPRESSO con el mismo cupo; se carga una sola vez");
+                "Filas 2 y 3: la cédula 99376216 se repite en NESPRESSO con el mismo cupo; se carga una sola vez");
     }
 
     @Test
     void keepsTheFirstNameAndWarnsWhenTheRepeatedNamesDiffer() {
         NessQuotaFile file = read(HEADER,
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO", 30000},
-                new Object[] {98376216, "Pedro Giraldo Ruales", "NESPRESSO", 30000});
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO", 30000},
+                new Object[] {99376216, "Caficultor Ness Tres", "NESPRESSO", 30000});
 
-        assertThat(file.lines()).extracting(NessQuotaRow::names).containsExactly("Pablo Giraldo Ruales Portillo");
+        assertThat(file.lines()).extracting(NessQuotaRow::names).containsExactly("Caficultor Ness Dos");
         assertThat(file.warnings()).containsExactly(
-                "Filas 2 y 3: la cédula 98376216 se repite en NESPRESSO con el mismo cupo; se carga una sola vez"
-                        + " (nombres distintos: «Pablo Giraldo Ruales Portillo» y «Pedro Giraldo Ruales»;"
-                        + " queda «Pablo Giraldo Ruales Portillo»)");
+                "Filas 2 y 3: la cédula 99376216 se repite en NESPRESSO con el mismo cupo; se carga una sola vez"
+                        + " (nombres distintos: «Caficultor Ness Dos» y «Caficultor Ness Tres»;"
+                        + " queda «Caficultor Ness Dos»)");
     }
 
     @Test
     void rejectsACedulaRepeatedInTheSameProgramWithDifferentQuotas() {
         NessQuotaFile file = read(HEADER,
-                new Object[] {210514, "Ana", "NESPRESSO", 30000},
-                new Object[] {210515, "Luis", "NESPRESSO", 100},
-                new Object[] {210514, "Ana", "nespresso", 25000});
+                new Object[] {990514, "Ana", "NESPRESSO", 30000},
+                new Object[] {210515, "Conductor", "NESPRESSO", 100},
+                new Object[] {990514, "Ana", "nespresso", 25000});
 
         assertThat(file.errors()).containsExactly(
-                "Filas 2 y 4: la cédula 210514 tiene dos cupos distintos en NESPRESSO (30000 y 25000)");
+                "Filas 2 y 4: la cédula 990514 tiene dos cupos distintos en NESPRESSO (30000 y 25000)");
     }
 
     @Test
     void theSameCedulaInTwoProgramsIsNotRepeated() {
         NessQuotaFile file = read(HEADER,
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO", 30000},
-                new Object[] {98376216, "Pablo Giraldo Ruales Portillo", "NESPRESSO LATE HARVEST", 30000});
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO", 30000},
+                new Object[] {99376216, "Caficultor Ness Dos", "NESPRESSO LATE HARVEST", 30000});
 
         assertThat(file.errors()).isEmpty();
         assertThat(file.warnings()).isEmpty();

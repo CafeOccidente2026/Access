@@ -56,7 +56,7 @@ class SuppliesReportServiceImplTest {
         e.setFund(fund);
         e.setTransactionId("T" + id);
         e.setEntryDate(date);
-        e.setIdNumber("87304051");
+        e.setIdNumber("99304051");
         e.setInflow(new BigDecimal(inflow));
         e.setOutflow(new BigDecimal(outflow));
         e.setPaymentMethod(method);
@@ -66,7 +66,7 @@ class SuppliesReportServiceImplTest {
     }
 
     private static PurchasePayment purchase(long id, LocalDate date, String net, String method, String check) {
-        return new PurchasePayment("DRY", id, 43000 + (int) id, 4L, "EL TAMBO", "RP", date, "87304051",
+        return new PurchasePayment("DRY", id, 43000 + (int) id, 4L, "EL TAMBO", "RP", date, "99304051",
                 new BigDecimal(net), method, check, Instant.ofEpochSecond(id));
     }
 
@@ -84,7 +84,7 @@ class SuppliesReportServiceImplTest {
         when(reads.purchasePayments(any(), any(), any())).thenReturn(List.of(
                 purchase(5, DAY1, "200", "EFECTIVO", null),
                 purchase(6, DAY2, "400", "CHEQUE", "5377")));
-        when(reads.growerNames(anyCollection())).thenReturn(List.of(new GrowerName("87304051", "WILSON TOBIAS", "LEGARDA")));
+        when(reads.growerNames(anyCollection())).thenReturn(List.of(new GrowerName("99304051", "CAFICULTOR", "PRUEBA")));
     }
 
     @Test
@@ -115,7 +115,7 @@ class SuppliesReportServiceImplTest {
 
         // Cheque 5320 ya relacionado; quedan el cheque girado (Por Comp) y la compra con cheque.
         assertThat(rows).extracting(SuppliesReportRow::checkNumber).containsExactly("5400", "5377");
-        assertThat(rows.get(0).firstNames()).isEqualTo("WILSON TOBIAS");
+        assertThat(rows.get(0).firstNames()).isEqualTo("CAFICULTOR");
         ArgumentCaptor<List<CheckRelationMark>> saved = ArgumentCaptor.forClass(List.class);
         verify(marks).saveAll(saved.capture());
         assertThat(saved.getValue()).extracting(CheckRelationMark::getSourceId).containsExactly(4L, 6L);
@@ -126,7 +126,7 @@ class SuppliesReportServiceImplTest {
         List<SuppliesReportRow> rows = service.paymentMethods(null, DAY1, DAY2, "CHEQUE");
 
         assertThat(rows).extracting(SuppliesReportRow::transactionId).containsExactly("43006", "T4");
-        assertThat(rows.get(0).detail()).isEqualTo("WILSON TOBIAS LEGARDA");
+        assertThat(rows.get(0).detail()).isEqualTo("CAFICULTOR PRUEBA");
         verify(reads).purchasePayments(null, DAY1, DAY2.plusDays(1));
     }
 

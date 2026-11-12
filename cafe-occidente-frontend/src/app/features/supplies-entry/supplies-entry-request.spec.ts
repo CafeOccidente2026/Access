@@ -41,7 +41,7 @@ describe('supplies entry', () => {
 
   it('reports the first missing field and a check that is not 4 digits', () => {
     const messages = data.messages;
-    const values = { ...initialValues(screens['issuedCheck']), idNumber: '87304051', fundCode: 'RP', amount: '300' };
+    const values = { ...initialValues(screens['issuedCheck']), idNumber: '99304051', fundCode: 'RP', amount: '300' };
     expect(invalidField(screens['issuedCheck'], values, messages)).toBe('Falta: Cheque');
     expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: '548' }, messages)).toBe(messages.checkDigits);
     expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: '0548' }, messages)).toBeNull();
@@ -49,23 +49,23 @@ describe('supplies entry', () => {
 
   it('builds the requests without Id, with the check as text and the date only in Ingresar Suministros', () => {
     const cash = buildRequest(screens['cash'], {
-      transactionId: 'SDTA2001', idNumber: '87304051', fundCode: 'RP', entryDate: '2026-11-05', detail: '',
+      transactionId: 'SDTA2001', idNumber: '99304051', fundCode: 'RP', entryDate: '2026-11-05', detail: '',
       amount: '1234,5', paymentMethod: 'CHEQUE', checkNumber: '0548',
     });
     expect(cash).toEqual({
-      entryDate: null, idNumber: '87304051', detail: null, fundCode: 'RP', amount: 1234.5, paymentMethod: 'CHEQUE',
+      entryDate: null, idNumber: '99304051', detail: null, fundCode: 'RP', amount: 1234.5, paymentMethod: 'CHEQUE',
       checkNumber: '0548',
     });
 
     const supply = buildRequest(screens['supply'], {
-      idNumber: '87304051', fundCode: 'LF', entryDate: '2026-11-01', detail: 'TESORERIA', amount: '100000',
+      idNumber: '99304051', fundCode: 'LF', entryDate: '2026-11-01', detail: 'TESORERIA', amount: '100000',
     });
     expect(supply).toMatchObject({ entryDate: '2026-11-01', checkNumber: null });
 
     const loan = buildRequest(screens['packagingLoan'], {
-      transactionId: 'SDTA5PRE001', idNumber: '87304051', packagingType: 'NUEVO', entryDate: '2026-11-05', detail: 'x',
+      transactionId: 'SDTA5PRE001', idNumber: '99304051', packagingType: 'NUEVO', entryDate: '2026-11-05', detail: 'x',
       quantity: '3',
     });
-    expect(loan).toEqual({ idNumber: '87304051', detail: 'x', packagingType: 'NUEVO', quantity: 3 });
+    expect(loan).toEqual({ idNumber: '99304051', detail: 'x', packagingType: 'NUEVO', quantity: 3 });
   });
 });

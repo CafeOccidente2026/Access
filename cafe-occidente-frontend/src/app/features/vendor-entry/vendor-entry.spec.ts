@@ -53,7 +53,7 @@ describe('VendorEntryComponent', () => {
   it('a missing required field is warned and nothing is sent', () => {
     const { c, create } = setup();
     choose(c, 'legal');
-    c.set('idNumber', '900723205');
+    c.set('idNumber', '990723205');
     c.set('businessName', 'ASOPEMA');
     c.save();
     expect(c.message()).toBe('Falta: Clasificación');
@@ -63,7 +63,7 @@ describe('VendorEntryComponent', () => {
   it('two clicks on Guardar send one request, and the form is cleared after saving', () => {
     const { c, create, response } = setup();
     choose(c, 'legal');
-    c.set('idNumber', '900723205');
+    c.set('idNumber', '990723205');
     c.set('businessName', 'ASOPEMA');
     c.set('classification', 'ASOCIACION');
 
@@ -72,18 +72,18 @@ describe('VendorEntryComponent', () => {
     expect(create).toHaveBeenCalledTimes(1);
     expect(c.saving()).toBe(true);
 
-    response.next({ idNumber: '900723205' });
+    response.next({ idNumber: '990723205' });
     response.complete();
     expect(c.saving()).toBe(false);
     expect(c.values()).toEqual({});
-    expect(c.message()).toBe('Tercero 900723205 guardado. Puede ingresar el siguiente.');
+    expect(c.message()).toBe('Tercero 990723205 guardado. Puede ingresar el siguiente.');
   });
 
   it('a duplicate NIT says so', () => {
     const { c, response } = setup();
     choose(c, 'natural');
-    c.set('idNumber', '59124124');
-    c.set('firstName', 'AURA');
+    c.set('idNumber', '99124124');
+    c.set('firstName', 'ASOCIADA');
     c.save();
     response.error({ error: { message: 'Ya existe un asociado o vendedor con esa cedula' } });
     expect(c.error()).toBe(true);

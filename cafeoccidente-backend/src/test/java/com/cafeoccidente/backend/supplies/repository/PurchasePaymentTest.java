@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class PurchasePaymentTest {
 
     private final PurchasePayment purchase = new PurchasePayment("DRY", 7L, 43261, 4L, "El Tambo", "LF",
-            LocalDate.of(2026, 5, 22), "87304051", new BigDecimal("4497837"), "CHEQUE", "5253", null);
+            LocalDate.of(2026, 5, 22), "99304051", new BigDecimal("4497837"), "CHEQUE", "5253", null);
 
     @Test
     void mixedPaymentBecomesOneRowPerMethodWithAmountLikeActualizaCajaAndCh() {

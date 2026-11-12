@@ -49,12 +49,12 @@ describe('FuturePurchaseFormComponent', () => {
 
   const growerWithoutId: Grower = {
     id: 1,
-    idNumber: '27197019',
-    firstName: 'TERESA',
+    idNumber: '99197019',
+    firstName: 'CAFICULTORA',
     secondName: null,
-    lastName: 'DIAZ',
-    secondLastName: 'CORDOBA',
-    address: 'EL CIDRAL',
+    lastName: 'PRUEBA',
+    secondLastName: 'TRES',
+    address: 'VEREDA PRUEBA DOS',
     phone: '',
     growerType: 'C',
     active: true,
@@ -125,10 +125,10 @@ describe('FuturePurchaseFormComponent', () => {
     component.onFieldCommitted('idPart1');
 
     // El telefono no aplica a este formulario (no lo captura), pero secondName es null -> firstNames
-    // solo trae "TERESA" (no vacio); verificamos en cambio que 'address' (con valor) SÍ se bloquea y
+    // solo trae "CAFICULTORA" (no vacio); verificamos en cambio que 'address' (con valor) SÍ se bloquea y
     // que el mecanismo no rompe con campos parcialmente vacios.
     expect((component as any).locked.has('idPart1')).toBe(true);
-    expect(component.model['address']).toBe('EL CIDRAL');
+    expect(component.model['address']).toBe('VEREDA PRUEBA DOS');
   });
 
   it('does not ask for announcements until an Especial is committed', () => {
