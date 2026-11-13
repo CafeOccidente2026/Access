@@ -1,7 +1,15 @@
 # Detras de Caddy: la web y /api salen del mismo origen (sin CORS).
 server:
-  # Usa X-Forwarded-Proto/Host de Caddy para saber que la peticion llego por HTTPS.
-  forward-headers-strategy: framework
+  # Tomcat toma X-Forwarded-For/Proto de Caddy solo si la conexion viene de una IP interna (la red de Docker); desde
+  # afuera se ignoran. Igual que en application.yml, que es lo que se probo en S4 (limite de login por IP).
+  forward-headers-strategy: native
   error:
     include-stacktrace: never
     include-message: never
+
+# Sin documentacion de la API en produccion (S8): /v3/api-docs y /swagger-ui responden 404.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
