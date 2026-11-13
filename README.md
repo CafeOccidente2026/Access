@@ -153,6 +153,9 @@ aceptarlo la primera vez.
 ```bash
 git pull && cd deploy && docker compose -f docker-compose.prod.yml up -d --build
 ```
+Los navegadores toman la versión nueva solos: `index.html` y los textos se revalidan en cada visita y los archivos
+del build llevan un hash en el nombre (Caddy, R2). Solo la **primera vez** que se despliega esta configuración, un
+equipo que ya tenía la aplicación abierta puede necesitar **Ctrl+F5** una vez (guardó la versión anterior sin esa regla).
 
 **Respaldos:** el servicio `backup` hace un `pg_dump -Fc` todos los días a las 23:00 (hora de
 Colombia) en `CARPETA_RESPALDOS` (por defecto `deploy/respaldos/`) y borra los de más de

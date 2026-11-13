@@ -8,7 +8,8 @@
 
 {$DOMINIO} {
 	import tls_{$TLS_MODO}
-	encode gzip
+	# R2: zstd para los navegadores que lo aceptan (Chrome y Edge); gzip para los demas.
+	encode zstd gzip
 
 	# S5: solo se carga lo de este mismo sitio. Los PDF van en iframes con blob: (vista previa e impresion) y pdfmake
 	# usa data: para fuentes e imagenes. style-src 'unsafe-inline' por los estilos que Angular agrega en tiempo de
@@ -31,9 +32,21 @@
 		reverse_proxy backend:8080
 	}
 
+	# R2: los archivos del build con hash en el nombre no cambian nunca: el navegador los guarda un año sin preguntar.
+	# Si uno no existe (version vieja) da 404; no se devuelve index.html, que quedaria guardado un año con ese nombre.
+	@hashed path_regexp ^/(main|chunk|polyfills|styles|worker)-[A-Za-z0-9_-]+\.(js|css)$
+	handle @hashed {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
 	# Angular maneja sus rutas: lo que no es un archivo devuelve index.html.
+	# R2: index.html, los JSON de textos y las imagenes se revalidan en cada visita (no-cache): despues de una
+	# actualizacion el navegador toma la version nueva en vez de seguir con la que guardo.
 	handle {
 		root * /srv
+		header Cache-Control "no-cache"
 		try_files {path} /index.html
 		file_server
 	}
