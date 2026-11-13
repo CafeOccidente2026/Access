@@ -35,7 +35,7 @@ public class FlywayMigrationListener implements ApplicationListener<ApplicationE
         Flyway.configure().dataSource(url, user, password).placeholders(Map.of("appUser", appUser)).load().migrate();
     }
 
-    private static String blankToDefault(String value, String fallback) {
+    static String blankToDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 }
