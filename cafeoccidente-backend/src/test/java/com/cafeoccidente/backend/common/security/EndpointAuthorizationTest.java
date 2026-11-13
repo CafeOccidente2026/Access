@@ -144,6 +144,7 @@ class EndpointAuthorizationTest {
         add(ADMIN, post, "/api/users");
         // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
         add(ADMIN, put, "/api/users/{id}", "/api/users/1");
+        add(ADMIN, post, "/api/users/{id}/unlock", "/api/users/1/unlock");
         add(ADMIN, get, "/api/roles");
 
         // Actualizar Anuncios: RF-08 y RF-09 (Administrador y Operaciones).
