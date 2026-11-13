@@ -6,10 +6,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
-import { AppButtonComponent, FormFlowDirective } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
+import { AppButtonComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
+import { renderReportPdf } from '../report-pdf/report-pdf';
 import { DateRangeDialogContent } from './date-range-dialog.model';
-import { buildPurchasesByDateDoc } from './purchases-by-date-pdf';
 
 /**
  * "Consulta compras por fecha" (RF-25): el "Diálogo Compras" de Access con Desde y Hasta en calendario
@@ -19,7 +18,7 @@ import { buildPurchasesByDateDoc } from './purchases-by-date-pdf';
 @Component({
   selector: 'app-date-range-dialog',
   standalone: true,
-  imports: [CommonModule, AppButtonComponent, FormFlowDirective],
+  imports: [CommonModule, AppButtonComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './date-range-dialog.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -47,7 +46,8 @@ export class DateRangeDialogComponent {
     const rows = this.rows();
     const range = this.requested();
     const data = this.data();
-    return rows?.length && range && data ? buildPurchasesByDateDoc(rows, range.from, range.to, data.pdf) : null;
+    return rows?.length && range && data ? { kind: 'purchasesByDate' as const, args: [rows, range.from, range.to, data.pdf] as [typeof rows, string, string, typeof data.pdf] }
+      : null;
   });
 
   readonly message = computed(() => {
@@ -65,13 +65,15 @@ export class DateRangeDialogComponent {
   });
 
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
 
   constructor() {
     effect(() => {
       const doc = this.doc();
       this.pdfUrl.set(null);
       if (doc) {
-        renderPdfPreview(doc, this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf(doc, this.sanitizer, (url) => this.pdfUrl.set(url), this.generatingPdf);
       }
     });
   }

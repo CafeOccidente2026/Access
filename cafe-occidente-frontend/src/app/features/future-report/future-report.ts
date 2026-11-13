@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Observable, map } from 'rxjs';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
@@ -11,10 +10,11 @@ import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
-import { AppButtonComponent, FormFlowDirective } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
-import { AnnouncementReportText, buildAnnouncementReportDoc, shortDate } from '../announcement-report/announcement-report-pdf';
-import { FutureBalanceText, buildFutureBalanceDoc } from './future-balance-pdf';
+import { AppButtonComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
+import { renderReportPdf } from '../report-pdf/report-pdf';
+import type { ReportPdfJob } from '../report-pdf/report-pdf';
+import { AnnouncementReportText, shortDate } from '../announcement-report/announcement-report-pdf';
+import { FutureBalanceText } from './future-balance-pdf';
 
 /** 'announcement' = Generar Informe Anuncios a Futuro (HU-34); 'balance' = Generar Informe Saldo Anuncios (HU-35). */
 type View = 'announcement' | 'balance';
@@ -50,7 +50,7 @@ interface Request {
 @Component({
   selector: 'app-future-report',
   standalone: true,
-  imports: [CommonModule, AppButtonComponent, FormFlowDirective],
+  imports: [CommonModule, AppButtonComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './future-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -96,26 +96,29 @@ export class FutureReportComponent {
   });
 
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
 
   constructor() {
     effect(() => {
       const doc = this.report.hasValue() ? this.report.value() : null;
       this.pdfUrl.set(null);
       if (doc) {
-        renderPdfPreview(doc, this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf(doc, this.sanitizer, (url) => this.pdfUrl.set(url), this.generatingPdf);
       }
     });
   }
 
   /** El PDF del informe, o null si no hay nada que mostrar. */
-  private load(request: Request): Observable<TDocumentDefinitions | null> {
+  private load(request: Request): Observable<ReportPdfJob | null> {
     const data = this.data()!;
     if (this.viewKey === 'balance') {
       return this.service.futureBalance(request.announcement).pipe(
-        map((rows) => (rows.length ? buildFutureBalanceDoc(rows, data.balancePdf) : null)));
+        map((rows): ReportPdfJob | null => (rows.length ? { kind: 'futureBalance', args: [rows, data.balancePdf] } : null)));
     }
     return this.service.futureAnnouncement(request.announcement, request.from, request.to).pipe(
-      map((rows) => (rows.length ? buildAnnouncementReportDoc(rows, announcementHeaderDate(rows), data.announcementPdf) : null)));
+      map((rows): ReportPdfJob | null =>
+        (rows.length ? { kind: 'announcement', args: [rows, announcementHeaderDate(rows), data.announcementPdf] } : null)));
   }
 
   onAccept(): void {

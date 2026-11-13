@@ -33,6 +33,7 @@
         {{ c.allAgenciesLabel }}
       </label>
       <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>
+      <app-pdf-generating [active]="generatingPdf()"></app-pdf-generating>
       <iframe *ngIf="pdfUrl() as url" [title]="r.pdfTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>
   </app-access-window>

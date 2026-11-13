@@ -8,9 +8,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
-import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
-import { buildBeneficiaryDoc } from './beneficiary-report-pdf';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
+import { renderReportPdf } from '../report-pdf/report-pdf';
 import { BeneficiaryReportContent } from './beneficiary-report.model';
 import { serverError } from '../../shared/utils/server-error';
 
@@ -22,7 +21,7 @@ import { serverError } from '../../shared/utils/server-error';
 @Component({
   selector: 'app-beneficiary-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './beneficiary-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -45,6 +44,8 @@ export class BeneficiaryReportComponent {
   readonly to = signal('');
   readonly message = signal<string | null>(null);
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
 
   accept(event: Event): void {
     event.preventDefault();
@@ -73,7 +74,8 @@ export class BeneficiaryReportComponent {
           this.message.set(content.messages.empty);
           return;
         }
-        renderPdfPreview(buildBeneficiaryDoc(report, content.text, rows), this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf({ kind: 'beneficiary', args: [report, content.text, rows] }, this.sanitizer,
+          (url) => this.pdfUrl.set(url), this.generatingPdf);
       },
       error: (err) => this.message.set(serverError(err, content.messages.error)),
     });

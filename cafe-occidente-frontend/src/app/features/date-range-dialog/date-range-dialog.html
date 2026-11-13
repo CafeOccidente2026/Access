@@ -43,5 +43,6 @@
     </div>
   </div>
 
+  <app-pdf-generating [active]="generatingPdf()"></app-pdf-generating>
   <iframe *ngIf="pdfUrl() as url" [title]="d.pdfTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
 </div>

@@ -5,9 +5,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 import { ContentService } from '../../core/services/content.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
-import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
-import { AnnouncementReportText, buildAnnouncementReportDoc, shortDate } from './announcement-report-pdf';
+import { AccessWindowComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
+import { renderReportPdf } from '../report-pdf/report-pdf';
+import { AnnouncementReportText, shortDate } from './announcement-report-pdf';
 
 export interface AnnouncementReportContent {
   readonly windowTitle: string;
@@ -28,7 +28,7 @@ export interface AnnouncementReportContent {
 @Component({
   selector: 'app-announcement-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './announcement-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -57,7 +57,8 @@ export class AnnouncementReportComponent {
     const rows = this.rows();
     const content = this.content();
     const date = this.requested();
-    return rows?.length && content && date ? buildAnnouncementReportDoc(rows, shortDate(date), content.pdf) : null;
+    return rows?.length && content && date ? { kind: 'announcement' as const, args: [rows, shortDate(date), content.pdf] as [typeof rows, string, typeof content.pdf] }
+      : null;
   });
 
   readonly message = computed(() => {
@@ -75,6 +76,8 @@ export class AnnouncementReportComponent {
   });
 
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
   private readonly frame = viewChild<ElementRef<HTMLIFrameElement>>('frame');
 
   constructor() {
@@ -82,7 +85,7 @@ export class AnnouncementReportComponent {
       const doc = this.doc();
       this.pdfUrl.set(null);
       if (doc) {
-        renderPdfPreview(doc, this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf(doc, this.sanitizer, (url) => this.pdfUrl.set(url), this.generatingPdf);
       }
     });
   }

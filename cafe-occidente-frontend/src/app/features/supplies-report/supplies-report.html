@@ -29,6 +29,7 @@
         <button *ngIf="r.excel && rows().length" type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700" (click)="downloadExcel()">{{ c.downloadLabel }}</button>
       </div>
       <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>
+      <app-pdf-generating [active]="generatingPdf()"></app-pdf-generating>
       <iframe *ngIf="pdfUrl() as url" [title]="r.windowTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>
   </app-access-window>

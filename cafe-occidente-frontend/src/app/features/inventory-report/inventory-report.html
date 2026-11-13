@@ -19,6 +19,7 @@
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="cancel()">Cancelar</button>
       </div>
       <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>
+      <app-pdf-generating [active]="generatingPdf()"></app-pdf-generating>
       <iframe *ngIf="pdfUrl() as url" title="INVENTARIO" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>
   </app-access-window>
