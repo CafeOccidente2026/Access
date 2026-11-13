@@ -171,8 +171,9 @@ class TableAccessIntegrationTest {
     @Test
     void anUnknownTableIsNotFound() throws Exception {
         mockMvc.perform(get("/api/tables/flyway_schema_history").header("Authorization", admin)).andExpect(status().isNotFound());
+        // Con ";" lo rechaza antes el firewall de Spring Security (400); en ningun caso llega al SQL.
         mockMvc.perform(get("/api/tables/empaques; DROP TABLE empaques").header("Authorization", admin))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
