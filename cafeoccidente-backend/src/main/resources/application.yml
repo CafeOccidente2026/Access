@@ -26,6 +26,9 @@ jwt:
   secret: ${JWT_SECRET}
 
 app:
+  # S4: intentos fallidos de login desde una misma IP (toda una agencia sale por una) antes de la espera de 15 min.
+  login:
+    max-failures-per-ip: 30
   admin:
     username: ${ADMIN_USERNAME}
     password: ${ADMIN_PASSWORD}

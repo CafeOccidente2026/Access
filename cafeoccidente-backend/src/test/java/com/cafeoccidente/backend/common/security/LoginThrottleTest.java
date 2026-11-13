@@ -13,7 +13,7 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
-/** S4: 5 fallos en 15 min, por usuario y por IP, dejan esperando 15 min (respuesta del 13-nov). */
+/** S4: 5 fallos del usuario o 30 desde una IP, en 15 min, dejan esperando 15 min (ajuste del 13-nov). */
 class LoginThrottleTest {
 
     /** Reloj que el test adelanta a mano. */
@@ -41,7 +41,7 @@ class LoginThrottleTest {
     }
 
     private final TestClock clock = new TestClock();
-    private final LoginThrottle throttle = new LoginThrottle(clock);
+    private final LoginThrottle throttle = new LoginThrottle(clock, 30);
 
     private void fail(String user, String ip, int times) {
         for (int i = 0; i < times; i++) {
@@ -80,10 +80,19 @@ class LoginThrottleTest {
     }
 
     @Test
-    void fiveFailuresFromOneIpWithDifferentUsersLockTheIp() {
-        for (String user : new String[] {"a", "b", "c", "d", "e"}) {
-            throttle.failed(user, "10.0.0.9");
+    void oneUserLockedDoesNotLockTheOthersOfItsAgencyIp() {
+        fail("ana", "10.0.0.9", 5);
+        locked("ana", "10.0.0.9", "15 minutos");
+        open("beto", "10.0.0.9");
+    }
+
+    @Test
+    void thirtyFailuresFromOneIpLockTheIp() {
+        for (int i = 0; i < 29; i++) {
+            throttle.failed("u" + i, "10.0.0.9");
         }
+        open("f", "10.0.0.9");
+        throttle.failed("u29", "10.0.0.9");
         locked("f", "10.0.0.9", "15 minutos");
         open("f", "10.0.0.8");
     }
@@ -107,9 +116,14 @@ class LoginThrottleTest {
     @Test
     void theAdministratorUnlocksTheUserAndItsIps() {
         fail("ana", "10.0.0.1", 5);
+        for (int i = 0; i < 25; i++) {
+            throttle.failed("u" + i, "10.0.0.1");
+        }
         fail("beto", "10.0.0.7", 5);
+        locked("carla", "10.0.0.1", "15 minutos");
         throttle.unlock("Ana");
         open("ana", "10.0.0.1");
+        open("carla", "10.0.0.1");
         locked("beto", "10.0.0.7", "15 minutos");
     }
 
