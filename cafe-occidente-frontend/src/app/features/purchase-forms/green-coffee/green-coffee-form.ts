@@ -25,6 +25,7 @@ import { UnsavedCloseForm } from '../unsaved-close';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
 import { FEDERATION_KEYS, loadFederation } from '../federation';
+import { localToday } from '../../../shared/utils/local-date';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
@@ -117,7 +118,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  private readonly today = new Date().toISOString().slice(0, 10);
+  private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 

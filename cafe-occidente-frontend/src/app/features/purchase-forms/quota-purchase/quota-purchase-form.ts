@@ -31,6 +31,7 @@ import { UnsavedCloseForm } from '../unsaved-close';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 import { serverError } from '../../../shared/utils/server-error';
 import { FEDERATION_KEYS, loadFederation } from '../federation';
+import { localToday } from '../../../shared/utils/local-date';
 
 type FormModel = Record<string, string>;
 
@@ -181,7 +182,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  private readonly today = new Date().toISOString().slice(0, 10);
+  private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
   private readonly fundIdByName = new Map<string, number>();

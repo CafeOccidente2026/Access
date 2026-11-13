@@ -14,6 +14,7 @@ import { serverError } from '../../shared/utils/server-error';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from './remission-invoice';
 import { openPdf } from '../../shared/utils/pdf-preview';
+import { localToday } from '../../shared/utils/local-date';
 
 /** Textos de la pantalla (public/assets/data/remission-form.json). */
 export interface RemissionFormContent {
@@ -66,7 +67,7 @@ export class RemissionFormComponent {
     return { quantity: sum('quantity'), sacos: sum('sacos'), grossKg: sum('grossKg') };
   });
 
-  readonly remissionDate = signal(new Date().toISOString().slice(0, 10));
+  readonly remissionDate = signal(localToday());
   readonly destination = signal('');
   readonly conductorIdNumber = signal('');
   readonly conductor = signal<Grower | null>(null);
@@ -225,7 +226,7 @@ export class RemissionFormComponent {
   }
 
   reset(): void {
-    this.remissionDate.set(new Date().toISOString().slice(0, 10));
+    this.remissionDate.set(localToday());
     this.destination.set('');
     this.conductorIdNumber.set('');
     this.conductor.set(null);
