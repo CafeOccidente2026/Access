@@ -9,12 +9,15 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /**
- * S4 (seguridad, respuesta del 13-nov): 5 intentos fallidos en 15 min, por usuario y por IP, dejan esperando 15 min.
- * Un acierto reinicia el contador del usuario; el Administrador puede desbloquear antes desde Usuarios.
+ * S4 (seguridad, 13-nov): 5 intentos fallidos del usuario en 15 min lo dejan esperando 15 min. La IP espera con
+ * app.login.max-failures-per-ip (30): en una agencia todos los equipos salen por la misma IP, y un solo usuario no
+ * debe dejarla por fuera. Un acierto reinicia el contador del usuario; el Administrador desbloquea antes desde Usuarios
+ * (el usuario y las IP desde donde fallo).
  *
  * ponytail: en memoria y con un solo candado; sirve para un backend. Con varios, pasarlo a la base o a Redis.
  */
@@ -28,11 +31,13 @@ public class LoginThrottle {
     private static final int PURGE_ABOVE = 10_000;
 
     private final Clock clock;
+    private final int maxFailuresPerIp;
     private final Map<String, Attempts> byUser = new HashMap<>();
     private final Map<String, Attempts> byIp = new HashMap<>();
 
-    public LoginThrottle(Clock clock) {
+    public LoginThrottle(Clock clock, @Value("${app.login.max-failures-per-ip:30}") int maxFailuresPerIp) {
         this.clock = clock;
+        this.maxFailuresPerIp = maxFailuresPerIp;
     }
 
     /** Antes de revisar la contrasena: si el usuario o la IP estan esperando, 429 con cuanto falta. */
@@ -53,9 +58,9 @@ public class LoginThrottle {
             byIp.values().removeIf(a -> a.expired(now));
         }
         String user = key(username);
-        byUser.computeIfAbsent(user, k -> new Attempts()).fail(now);
+        byUser.computeIfAbsent(user, k -> new Attempts()).fail(now, MAX_FAILURES);
         Attempts fromIp = byIp.computeIfAbsent(ip, k -> new Attempts());
-        fromIp.fail(now);
+        fromIp.fail(now, maxFailuresPerIp);
         fromIp.users.add(user);
     }
 
@@ -83,21 +88,21 @@ public class LoginThrottle {
         return a == null || (b != null && b.isAfter(a)) ? b : a;
     }
 
-    /** Fallos dentro de la ventana que empezo con el primero; al quinto queda esperando WINDOW. */
+    /** Fallos dentro de la ventana que empezo con el primero; al llegar al tope queda esperando WINDOW. */
     private static final class Attempts {
         private Instant windowStart;
         private int count;
         private Instant lockedUntil;
         private final Set<String> users = new HashSet<>();
 
-        void fail(Instant now) {
+        void fail(Instant now, int max) {
             if (windowStart == null || expired(now)) {
                 windowStart = now;
                 count = 0;
                 lockedUntil = null;
                 users.clear();
             }
-            if (++count >= MAX_FAILURES) {
+            if (++count >= max) {
                 lockedUntil = now.plus(WINDOW);
             }
         }
