@@ -7,7 +7,18 @@ spring:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+    # R1: con 50 usuarios el pool por defecto (10) se agotaba y una peticion esperaba hasta 30 s antes de fallar.
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: 5
+      connection-timeout: 10000
+  # R1: cada peticion en un hilo virtual; la espera por la base no ocupa un hilo del sistema.
+  threads:
+    virtual:
+      enabled: true
   jpa:
+    # R1: la conexion se suelta al terminar el servicio, no al terminar de escribir la respuesta.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
   flyway:
