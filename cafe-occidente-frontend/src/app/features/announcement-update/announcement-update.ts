@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 
 import { AnnouncementType, Fund } from '../../core/models/dry-coffee-purchase.model';
 import { AnnouncementService } from '../../core/services/announcement.service';
+import { NavigationService } from '../../core/services/navigation.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
@@ -34,6 +35,9 @@ function shown(value: number | null): string {
  * cafe del fondo (RN-08.3), y el listado "Actualizar" para cambiar el precio, la bonificacion o el precio de
  * pasilla de un solo tipo (RN-08.5, RN-08.6). Cada guardado muestra "Anuncio actualizado" 3 s (RN-08.7).
  */
+/** Ruta a la que vuelve la pantalla tras publicar todos los tipos (la misma del closeRoute de la ventana). */
+const CLOSE_ROUTE = '/menu-principal';
+
 @Component({
   selector: 'app-announcement-update',
   standalone: true,
@@ -44,6 +48,7 @@ function shown(value: number | null): string {
 export class AnnouncementUpdateComponent {
   private readonly announcementService = inject(AnnouncementService);
   private readonly elementRef = inject(ElementRef);
+  private readonly navigation = inject(NavigationService);
 
   readonly page = toSignal(inject(ContentService).loadJson<AnnouncementUpdateContent>('announcement-update'));
   readonly funds = toSignal(this.announcementService.funds(), { initialValue: [] as Fund[] });
@@ -117,12 +122,8 @@ export class AnnouncementUpdateComponent {
       .publishAll({ fundId: this.fundId, basePriceLoad: price })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
-      next: () => {
-        this.done();
-        if (this.rows()) {
-          this.openList();
-        }
-      },
+      // C6 (prueba del 11-nov, punto 1): con todos los tipos publicados, la pantalla se cierra tras el aviso.
+      next: () => this.done(() => this.navigation.goTo(CLOSE_ROUTE)),
       error: (err) => this.fail(err),
     });
   }
@@ -192,11 +193,14 @@ export class AnnouncementUpdateComponent {
     };
   }
 
-  /** RN-08.7: "Anuncio actualizado" durante 3 segundos. */
-  private done(): void {
+  /** RN-08.7: "Anuncio actualizado" durante 3 segundos; luego, si se pide, sigue con "then". */
+  private done(then?: () => void): void {
     clearTimeout(this.messageTimeout);
     this.message.set(this.page()?.successMessage ?? null);
-    this.messageTimeout = setTimeout(() => this.message.set(null), SUCCESS_MESSAGE_DURATION_MS);
+    this.messageTimeout = setTimeout(() => {
+      this.message.set(null);
+      then?.();
+    }, SUCCESS_MESSAGE_DURATION_MS);
   }
 
   private fail(err: unknown): void {

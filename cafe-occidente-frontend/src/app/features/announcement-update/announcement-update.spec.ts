@@ -5,6 +5,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/announcement-update.json';
+import { NavigationService } from '../../core/services/navigation.service';
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
 import { SUCCESS_MESSAGE_DURATION_MS } from '../../shared/ui';
@@ -18,8 +19,11 @@ const TYPES = [
 describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
   let service: { funds: ReturnType<typeof vi.fn>; publishAll: ReturnType<typeof vi.fn>; types: ReturnType<typeof vi.fn>; publishType: ReturnType<typeof vi.fn> };
 
+  let navigation: { goTo: ReturnType<typeof vi.fn> };
+
   beforeEach(() => {
     vi.useFakeTimers();
+    navigation = { goTo: vi.fn() };
     service = {
       funds: vi.fn(() => of([{ id: 1, code: 'RP' }, { id: 2, code: 'LF' }])),
       publishAll: vi.fn(() => of([{ announcementNumber: 'SDBU-33' }])),
@@ -32,6 +36,7 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
         { provide: AnnouncementService, useValue: service },
+        { provide: NavigationService, useValue: navigation },
       ],
     });
   });
@@ -118,6 +123,18 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(SUCCESS_MESSAGE_DURATION_MS).toBe(3000);
   });
 
+  it('C6 (prueba del 11-nov, punto 1): the Guardar on top closes the window after the 3 seconds of the notice', () => {
+    const { component } = render();
+    component.fundId = 1;
+    component.onPriceInput('1546900');
+    component.onEnter('basePriceLoad');
+
+    vi.advanceTimersByTime(SUCCESS_MESSAGE_DURATION_MS - 1);
+    expect(navigation.goTo).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(navigation.goTo).toHaveBeenCalledWith('/menu-principal');
+  });
+
   it('HU-11 CA-1: Actualizar lists each type with its price, bonus and pasilla price', () => {
     const { fixture, component, el } = render();
     component.openList();
@@ -173,6 +190,9 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     component.saveRow(changed);
     expect(service.publishType).toHaveBeenLastCalledWith(expect.objectContaining({ basePriceLoad: 1700000 }));
     expect(component.message()).toBe('Anuncio actualizado');
+    // C6: el Guardar de una fila no cierra la pantalla.
+    vi.advanceTimersByTime(SUCCESS_MESSAGE_DURATION_MS);
+    expect(navigation.goTo).not.toHaveBeenCalled();
   });
 
   it('double submit: while saving, a second click or Enter does not send again and the buttons are disabled', () => {

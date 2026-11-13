@@ -18,6 +18,7 @@ import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaServi
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.future.service.DeliveryRule;
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,13 +60,16 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
                 .toList();
     }
 
-    // ponytail: la lista crece con cada anuncio de la agencia; filtrar en la consulta si se vuelve lenta.
+    // ponytail: recorre toda la historia de la agencia; filtrar en la consulta si se vuelve lenta.
     @Override
     public List<QuotaCandidateResponse> available(Long agencyId) {
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         Set<String> withQuota = quotasByDisplayNumber(agencyId, controlRecord).keySet();
         Map<String, BigDecimal> delivered = deliveredByDisplayNumber(agencyId);
+        // C6: solo el ultimo anuncio de cada fondo y especial (la historia viene del mas nuevo al mas viejo).
+        Set<String> seenTypes = new HashSet<>();
         return announcementService.history().stream()
+                .filter(a -> seenTypes.add(a.fundId() + "|" + a.specialType()))
                 .filter(a -> !SPECIALS_WITHOUT_QUOTA.contains(a.specialType()))
                 .filter(a -> !withQuota.contains(a.announcementNumber()))
                 .map(a -> new QuotaCandidateResponse(a, delivered.getOrDefault(a.announcementNumber(), BigDecimal.ZERO)))
