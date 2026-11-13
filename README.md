@@ -160,6 +160,29 @@ docker compose -f docker-compose.prod.yml exec backup sh /respaldo.sh ahora
 ./restaurar.sh respaldos/cafeoccidente_AAAAMMDD_HHMM.dump
 ```
 
+### Usuario de la base (seguridad)
+
+La app no se conecta como superusuario. Hay tres usuarios, cada uno con su clave en `deploy/.env`:
+- `DB_ADMIN_USER`: el superusuario del contenedor; solo administra.
+- `FLYWAY_USER`: dueño del esquema; lo usan Flyway (al arrancar el backend) y los respaldos.
+- `DB_USER`: la app; lee y escribe filas, sin crear, cambiar ni borrar tablas.
+
+`deploy/roles-bd.sql` crea los dos últimos y deja los permisos. En una base **nueva** lo corre solo el
+primer arranque (`deploy/initdb/`). En una base que **ya existe** (con el superusuario de antes):
+1. Respaldo: `docker compose -f docker-compose.prod.yml exec backup sh /respaldo.sh ahora`.
+2. Crear los roles (queda igual si se corre dos veces):
+   ```bash
+   docker compose -f docker-compose.prod.yml cp roles-bd.sql postgres:/tmp/roles-bd.sql
+   docker compose -f docker-compose.prod.yml exec postgres psql -U <usuario actual> -d <base> -v ON_ERROR_STOP=1 \
+     -v migrador=cafeoccidente_migrador -v clave_migrador='<clave>' \
+     -v app=cafeoccidente_app -v clave_app='<clave>' -f /tmp/roles-bd.sql
+   ```
+3. En `deploy/.env`: `DB_ADMIN_USER`/`DB_ADMIN_PASSWORD` = el usuario y clave de antes; `FLYWAY_USER`/
+   `FLYWAY_PASSWORD` y `DB_USER`/`DB_PASSWORD` = los roles nuevos.
+4. `docker compose -f docker-compose.prod.yml up -d` y revisar en el log del backend que arranca sin errores.
+
+Sin `FLYWAY_USER` el backend migra con `DB_USER`, como antes.
+
 ### Impresión directa de facturas (en cada equipo de caja)
 
 Las facturas (Seco, Verde, Pasilla, Cupos y Anunciadas), la reimpresión de Consultar Compras y la
