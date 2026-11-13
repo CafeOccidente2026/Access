@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.tables.service.impl;
 
+import com.cafeoccidente.backend.common.exception.ApiException;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
@@ -14,12 +15,16 @@ import com.cafeoccidente.backend.tables.repository.TableAccessRepository;
 import com.cafeoccidente.backend.tables.repository.TableCatalog;
 import com.cafeoccidente.backend.tables.service.TableAccessService;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,6 +37,8 @@ public class TableAccessServiceImpl implements TableAccessService {
     /** El Usuario con el permiso no ve estas, aunque tengan agencia (respuesta del 11-nov, punto 4). */
     private static final Set<String> ADMIN_ONLY = Set.of("usuarios", "permisos", "historial_cambios");
     private static final String FILTER = "f.";
+    private static final String QUERY_CANCELED = "57014";
+    static final String TIMEOUT_MESSAGE = "La consulta tardó más de 5 s: agregue filtros o busque algo más preciso";
     private static final String FROM = ".from";
     private static final String TO = ".to";
 
@@ -71,7 +78,19 @@ public class TableAccessServiceImpl implements TableAccessService {
         TableQuery query = new TableQuery(agency(admin, params.get("agency")),
                 number(params.get("offset"), 0, Integer.MAX_VALUE, 0), number(params.get("limit"), 1, MAX_LIMIT, DEFAULT_LIMIT),
                 sort, ascending(params.get("dir")), blank(params.get("q")), filters(table, params));
-        return repository.rows(table, query);
+        try {
+            return repository.rows(table, query);
+        } catch (DataAccessException e) {
+            if (canceledByTimeout(e)) {
+                throw new ApiException(TIMEOUT_MESSAGE, HttpStatus.SERVICE_UNAVAILABLE);
+            }
+            throw e;
+        }
+    }
+
+    /** S3: el SELECT se corto por el tope de 5 s (SQLSTATE 57014 de Postgres, query_canceled). */
+    private static boolean canceledByTimeout(DataAccessException e) {
+        return NestedExceptionUtils.getMostSpecificCause(e) instanceof SQLException sql && QUERY_CANCELED.equals(sql.getSQLState());
     }
 
     /**
