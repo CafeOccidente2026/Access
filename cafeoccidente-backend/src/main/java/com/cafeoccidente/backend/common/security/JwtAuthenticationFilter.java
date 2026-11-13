@@ -35,9 +35,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             UserDetails userDetails = jwtService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null
-                    ? findEnabledUser(jwtService.extractUsername(token))
+                    ? findEnabledUser(jwtService.extractUsername(token), jwtService.extractTokenVersion(token))
                     : null;
-            // Usuario borrado o desactivado: el request sigue sin sesion (el login entra; lo demas, 401).
+            // Usuario borrado, desactivado o con la sesion cerrada (S6): el request sigue sin sesion (el login entra;
+            // lo demas, 401).
             if (userDetails != null) {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
@@ -48,11 +49,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /** El usuario del token si sigue existiendo y activo; si no, null y el token deja de valer de inmediato. */
-    private UserDetails findEnabledUser(String username) {
+    /**
+     * El usuario del token si sigue existiendo, activo y con la misma version de sesion (S6); si no, null y el token
+     * deja de valer de inmediato.
+     */
+    private UserDetails findEnabledUser(String username, Integer tokenVersion) {
         try {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            return userDetails.isEnabled() ? userDetails : null;
+            boolean sameSession = userDetails instanceof SecurityUser user && tokenVersion != null
+                    && tokenVersion == user.getUser().getTokenVersion();
+            return userDetails.isEnabled() && sameSession ? userDetails : null;
         } catch (UsernameNotFoundException ex) {
             return null;
         }
