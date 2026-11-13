@@ -19,5 +19,8 @@ public record InventoryMovementResponse(
         BigDecimal netKg,
         BigDecimal remainingKg,
         BigDecimal healthyPercentage,
-        BigDecimal inventoryValue) {
+        BigDecimal inventoryValue,
+        /** Cedula del vendedor y fondo de la compra (C7: columna Cedula y filtro por Fondo en Registrar Salidas). */
+        String idNumber,
+        String fundCode) {
 }

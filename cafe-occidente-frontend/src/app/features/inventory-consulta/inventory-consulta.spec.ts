@@ -13,12 +13,12 @@ describe('InventoryConsultaComponent', () => {
     {
       id: 1, purchaseModule: 'DRY_COFFEE', purchaseId: 1, agencyId: 1, agencyName: 'Buesaco',
       productCode: '0110002000002', specialType: 'RN', invoiceNumber: 27867, purchaseDate: '2026-09-23',
-      sacos: 10, grossKg: 1250, netKg: 1200, remainingKg: 700, healthyPercentage: 90, inventoryValue: 8661600,
+      sacos: 10, grossKg: 1250, netKg: 1200, remainingKg: 700, healthyPercentage: 90, inventoryValue: 8661600, idNumber: null, fundCode: null,
     },
     {
       id: 2, purchaseModule: 'GREEN_COFFEE', purchaseId: 1, agencyId: 1, agencyName: 'Buesaco',
       productCode: '0110002000002', specialType: 'RN', invoiceNumber: 27868, purchaseDate: '2026-09-23',
-      sacos: 5, grossKg: 520, netKg: 500, remainingKg: 0, healthyPercentage: 88, inventoryValue: 1510500,
+      sacos: 5, grossKg: 520, netKg: 500, remainingKg: 0, healthyPercentage: 88, inventoryValue: 1510500, idNumber: null, fundCode: null,
     },
   ];
 

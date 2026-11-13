@@ -1,0 +1,51 @@
+{
+  "windowTitle": "REGISTRAR SALIDAS",
+  "dateLabel": "Fecha",
+  "destinationLabel": "Destino",
+  "conductorLabel": "Cédula Conductor (opcional)",
+  "fundLabel": "Fondo",
+  "funds": ["RP", "LF"],
+  "conductor": {
+    "noCompany": "sin transportadora registrada",
+    "plateLabel": "Placa",
+    "noPlate": "N/A",
+    "notFound": "Esa cédula no corresponde a ningún caficultor registrado.",
+    "newButton": "Ingresar Conductor",
+    "newTitle": "Ingresar Conductor — Cédula",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "transportCompany": "Transportadora",
+    "vehiclePlate": "Placa",
+    "cancel": "Cancelar",
+    "save": "Guardar Conductor",
+    "saveError": "No se pudo registrar el conductor."
+  },
+  "columns": {
+    "pick": "Salida",
+    "date": "Fecha",
+    "invoice": "Factura",
+    "special": "Especial",
+    "idNumber": "Cédula",
+    "balance": "Saldo",
+    "quantity": "Kilos Netos",
+    "sacos": "Sacos",
+    "grossKg": "Kilos Brutos"
+  },
+  "pickLabel": "Sacar la factura",
+  "empty": "No hay entradas con saldo en este fondo.",
+  "totalsLabel": "Total marcado",
+  "saveLabel": "Guardar Remisión",
+  "result": {
+    "saved": "Remisión N° {number} registrada correctamente.",
+    "movement": "Movimiento",
+    "quantity": "Cantidad",
+    "unitValue": "Vr. Unitario",
+    "outputValue": "Vr. Salida",
+    "print": "Imprimir",
+    "new": "Nueva Remisión"
+  },
+  "messages": {
+    "saveError": "No se pudo registrar la remisión.",
+    "pdfError": "No se pudo generar la remisión"
+  }
+}

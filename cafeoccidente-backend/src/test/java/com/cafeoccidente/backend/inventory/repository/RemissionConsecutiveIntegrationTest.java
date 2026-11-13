@@ -7,6 +7,8 @@ import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.inventory.dto.RemissionLineRequest;
 import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
+import com.cafeoccidente.backend.inventory.dto.InventoryMovementResponse;
+import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.inventory.service.RemissionService;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
@@ -47,6 +49,8 @@ class RemissionConsecutiveIntegrationTest {
     private RemissionConsecutiveRepository consecutives;
     @Autowired
     private RemissionService remissions;
+    @Autowired
+    private InventoryMovementService movements;
     @Autowired
     private DryCoffeePurchaseService dry;
     @Autowired
@@ -122,6 +126,19 @@ class RemissionConsecutiveIntegrationTest {
 
         assertThat(exit).isEqualTo("SDBU-RP-%04d".formatted(remittance - 1));
         assertThat(last(AGENCY, rp)).isEqualTo(remittance);
+    }
+
+    /** C7 (prueba del 11-nov, punto 7): la lista de Registrar Salidas muestra la cedula y filtra por el fondo. */
+    @Test
+    void theInventoryListBringsTheSellerAndTheFundOfThePurchase() {
+        Long movement = dryPurchaseInventory();
+
+        InventoryMovementResponse row = movements.listByAgency(AGENCY).stream()
+                .filter(m -> m.id().equals(movement)).findFirst().orElseThrow();
+
+        assertThat(row.idNumber()).isEqualTo(SELLER);
+        assertThat(row.fundCode()).isEqualTo("RP");
+        assertThat(movements.findById(movement).idNumber()).isEqualTo(SELLER);
     }
 
     @Test

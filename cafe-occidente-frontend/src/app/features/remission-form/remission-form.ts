@@ -1,29 +1,48 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 
-import { InventoryMovementResponse, RemissionLineRequest, RemissionResponse } from '../../core/models/inventory.model';
+import { InventoryMovementResponse, RemissionResponse } from '../../core/models/inventory.model';
 import { Grower, GrowerCreateRequest } from '../../core/models/grower.model';
+import { ContentService } from '../../core/services/content.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
 import { formatDisplayNumber, parseDisplayNumber } from '../../shared/utils/number-format';
+import { saveOnce } from '../../shared/utils/save-once';
+import { serverError } from '../../shared/utils/server-error';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from './remission-invoice';
 import { openPdf } from '../../shared/utils/pdf-preview';
+import { localToday } from '../../shared/utils/local-date';
 
-interface DraftLine {
-  readonly inventoryMovementId: number;
-  readonly label: string;
-  readonly quantity: number;
-  readonly sacos: number;
-  readonly grossKg: number;
+/** Textos de la pantalla (public/assets/data/remission-form.json). */
+export interface RemissionFormContent {
+  readonly windowTitle: string;
+  readonly dateLabel: string;
+  readonly destinationLabel: string;
+  readonly conductorLabel: string;
+  readonly fundLabel: string;
+  readonly funds: string[];
+  readonly conductor: Record<string, string>;
+  readonly columns: Record<string, string>;
+  readonly pickLabel: string;
+  readonly empty: string;
+  readonly totalsLabel: string;
+  readonly saveLabel: string;
+  readonly result: Record<string, string>;
+  readonly messages: { readonly saveError: string; readonly pdfError: string };
 }
 
+/** Lo que sale de una entrada marcada: por defecto todo su saldo, con los sacos y kilos de la compra. */
+type PickField = 'quantity' | 'sacos' | 'grossKg';
+type Pick = Record<PickField, string>;
+
 /**
- * "Registrar Salidas" (Form_EXITS.bas): arma una Remisión con una o más entradas de inventario
- * origen + cantidad. El backend valida que cada cantidad no supere el saldo disponible de su
- * movimiento origen ("La salida no puede ser superior al saldo, vuelva a intentarlo") - esa
- * validación no se repite acá, se muestra el mensaje real si se dispara al guardar.
+ * "Registrar Salidas" (Form_EXITS.bas). C7 (prueba del 11-nov, punto 7): como Genera Remesa, una casilla por
+ * entrada de inventario con saldo del fondo elegido. Al marcarla sale todo su saldo, con los sacos y kilos
+ * brutos de la compra; los tres se pueden editar para una salida parcial. El servidor valida que no se pase
+ * del saldo y muestra su motivo.
  */
 @Component({
   selector: 'app-remission-form',
@@ -36,10 +55,19 @@ export class RemissionFormComponent {
   private readonly growerService = inject(GrowerService);
   private readonly inventoryService = inject(InventoryService);
 
-  readonly movements = signal<InventoryMovementResponse[]>([]);
-  readonly availableMovements = computed(() => this.movements().filter((m) => m.remainingKg > 0));
+  readonly content = toSignal(inject(ContentService).loadJson<RemissionFormContent>('remission-form'));
 
-  readonly remissionDate = signal(new Date().toISOString().slice(0, 10));
+  readonly movements = signal<InventoryMovementResponse[]>([]);
+  readonly fund = signal('RP');
+  /** Las entradas con saldo del fondo elegido: una remision es de un solo fondo (su consecutivo es por fondo). */
+  readonly rows = computed(() => this.movements().filter((m) => m.remainingKg > 0 && m.fundCode === this.fund()));
+  readonly picks = signal<ReadonlyMap<number, Pick>>(new Map());
+  readonly totals = computed(() => {
+    const sum = (field: PickField) => [...this.picks().values()].reduce((total, p) => total + parseDisplayNumber(p[field]), 0);
+    return { quantity: sum('quantity'), sacos: sum('sacos'), grossKg: sum('grossKg') };
+  });
+
+  readonly remissionDate = signal(localToday());
   readonly destination = signal('');
   readonly conductorIdNumber = signal('');
   readonly conductor = signal<Grower | null>(null);
@@ -52,20 +80,62 @@ export class RemissionFormComponent {
   readonly newConductorVehiclePlate = signal('');
   readonly newConductorError = signal<string | null>(null);
 
-  readonly selectedMovementId = signal<number | null>(null);
-  readonly draftQuantity = signal('');
-  /** Sacos y Kilos Brutos de esta salida (Form_EXITS: Sacos / Kilos_Brutos), por linea. */
-  readonly draftSacos = signal('');
-  readonly draftGrossKg = signal('');
-  readonly lines = signal<DraftLine[]>([]);
-
+  readonly saving = signal(false);
   readonly result = signal<RemissionResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
   private readonly logoDataUrlPromise = loadLogoDataUrl('assets/images/cafe-occidente-logo.png');
 
   constructor() {
+    this.loadMovements();
+  }
+
+  private loadMovements(): void {
     this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
+  }
+
+  setFund(code: string): void {
+    this.fund.set(code);
+    this.picks.set(new Map());
+  }
+
+  isPicked(movement: InventoryMovementResponse): boolean {
+    return this.picks().has(movement.id);
+  }
+
+  toggle(movement: InventoryMovementResponse): void {
+    const next = new Map(this.picks());
+    if (next.has(movement.id)) {
+      next.delete(movement.id);
+    } else {
+      // Sin separador de miles: parseDisplayNumber lee el punto como decimal.
+      next.set(movement.id, { quantity: String(movement.remainingKg), sacos: String(movement.sacos), grossKg: String(movement.grossKg) });
+    }
+    this.picks.set(next);
+  }
+
+  pickValue(movement: InventoryMovementResponse, field: PickField): string {
+    return this.picks().get(movement.id)?.[field] ?? '';
+  }
+
+  setPick(movement: InventoryMovementResponse, field: PickField, value: string): void {
+    const current = this.picks().get(movement.id);
+    if (!current) {
+      return;
+    }
+    this.picks.set(new Map(this.picks()).set(movement.id, { ...current, [field]: value }));
+  }
+
+  kg(value: number): string {
+    return formatDisplayNumber(value, 'count');
+  }
+
+  date(value: string): string {
+    return value.split('-').reverse().join('/');
+  }
+
+  savedText(remission: RemissionResponse): string {
+    return (this.content()?.result['saved'] ?? '').replace('{number}', remission.displayNumber);
   }
 
   print(): void {
@@ -75,12 +145,8 @@ export class RemissionFormComponent {
     }
     openPdf(
       this.logoDataUrlPromise.then((logo) => buildRemissionDocDefinition(remission, logo)),
-      () => this.errorMessage.set('No se pudo generar la remisión'),
+      () => this.errorMessage.set(this.content()?.messages.pdfError ?? null),
     );
-  }
-
-  kg(value: number): string {
-    return formatDisplayNumber(value, 'count');
   }
 
   onConductorBlur(): void {
@@ -129,41 +195,12 @@ export class RemissionFormComponent {
         this.conductorNotFound.set(false);
         this.showNewConductorForm.set(false);
       },
-      error: (err) => {
-        const message = (err as { error?: { message?: string } })?.error?.message;
-        this.newConductorError.set(message ?? 'No se pudo registrar el conductor.');
-      },
+      error: (err) => this.newConductorError.set(serverError(err, this.content()?.conductor['saveError'])),
     });
   }
 
-  addLine(): void {
-    const movementId = this.selectedMovementId();
-    const quantity = parseDisplayNumber(this.draftQuantity());
-    const sacos = parseDisplayNumber(this.draftSacos());
-    const grossKg = parseDisplayNumber(this.draftGrossKg());
-    if (!movementId || quantity <= 0 || sacos <= 0 || grossKg <= 0) {
-      return;
-    }
-    const movement = this.movements().find((m) => m.id === movementId);
-    if (!movement) {
-      return;
-    }
-    this.lines.update((list) => [
-      ...list,
-      { inventoryMovementId: movementId, label: `Factura ${movement.invoiceNumber} - ${movement.specialType}`, quantity, sacos, grossKg },
-    ]);
-    this.selectedMovementId.set(null);
-    this.draftQuantity.set('');
-    this.draftSacos.set('');
-    this.draftGrossKg.set('');
-  }
-
-  removeLine(index: number): void {
-    this.lines.update((list) => list.filter((_, i) => i !== index));
-  }
-
   canSave(): boolean {
-    return !this.result() && this.lines().length > 0;
+    return !this.result() && this.picks().size > 0;
   }
 
   save(): void {
@@ -171,37 +208,32 @@ export class RemissionFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    const lineRequests: RemissionLineRequest[] = this.lines().map((l) => ({
-      inventoryMovementId: l.inventoryMovementId,
-      quantity: l.quantity,
-      sacos: l.sacos,
-      grossKg: l.grossKg,
+    const lines = [...this.picks()].map(([inventoryMovementId, p]) => ({
+      inventoryMovementId,
+      quantity: parseDisplayNumber(p.quantity),
+      sacos: parseDisplayNumber(p.sacos),
+      grossKg: parseDisplayNumber(p.grossKg),
     }));
-    this.inventoryService
-      .createRemission({
-        remissionDate: this.remissionDate(),
-        destination: this.destination() || null,
-        conductorIdNumber: this.conductorIdNumber() || null,
-        lines: lineRequests,
-      })
-      .subscribe({
-        next: (res) => this.result.set(res),
-        error: (err) => {
-          const message = (err as { error?: { message?: string } })?.error?.message;
-          this.errorMessage.set(message ?? 'No se pudo registrar la remisión.');
-        },
-      });
+    saveOnce(this.saving, () => this.inventoryService.createRemission({
+      remissionDate: this.remissionDate(),
+      destination: this.destination() || null,
+      conductorIdNumber: this.conductorIdNumber() || null,
+      lines,
+    }), {
+      next: (res) => this.result.set(res),
+      error: (err) => this.errorMessage.set(serverError(err, this.content()?.messages.saveError)),
+    });
   }
 
   reset(): void {
-    this.remissionDate.set(new Date().toISOString().slice(0, 10));
+    this.remissionDate.set(localToday());
     this.destination.set('');
     this.conductorIdNumber.set('');
     this.conductor.set(null);
     this.conductorNotFound.set(false);
-    this.lines.set([]);
+    this.picks.set(new Map());
     this.result.set(null);
     this.errorMessage.set(null);
-    this.inventoryService.listMovements().subscribe((list) => this.movements.set(list));
+    this.loadMovements();
   }
 }
