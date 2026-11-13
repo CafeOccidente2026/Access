@@ -8,9 +8,11 @@ import { SuppliesReportRow } from '../../core/models/supplies.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { SuppliesService } from '../../core/services/supplies.service';
-import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
-import { buildSuppliesReportDoc, paymentMethodsSheet } from './supplies-report-pdf';
+import {
+  AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective, PdfGeneratingComponent,
+} from '../../shared/ui';
+import { paymentMethodsSheet } from './supplies-report-pdf';
+import { renderReportPdf } from '../report-pdf/report-pdf';
 import { SuppliesReportContent } from './supplies-report.model';
 import { serverError } from '../../shared/utils/server-error';
 
@@ -21,7 +23,7 @@ import { serverError } from '../../shared/utils/server-error';
 @Component({
   selector: 'app-supplies-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './supplies-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -37,6 +39,8 @@ export class SuppliesReportComponent {
   readonly filters = signal<Record<string, string>>({});
   readonly message = signal<string | null>(null);
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
   readonly rows = signal<SuppliesReportRow[]>([]);
 
   setFilter(key: string, value: string): void {
@@ -67,8 +71,8 @@ export class SuppliesReportComponent {
           return;
         }
         this.rows.set(rows);
-        const doc = buildSuppliesReportDoc(report, content.text, rows, filters['type'] ?? null);
-        renderPdfPreview(doc, this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf({ kind: 'supplies', args: [report, content.text, rows, filters['type'] ?? null] }, this.sanitizer,
+          (url) => this.pdfUrl.set(url), this.generatingPdf);
       },
       error: (err) => this.message.set(serverError(err, content.messages.error)),
     });
