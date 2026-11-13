@@ -10,11 +10,13 @@ on:
     paths:
       - "cafeoccidente-backend/**"
       - ".github/workflows/backend-ci.yml"
+      - "deploy/roles-bd.sql"
   push:
     branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
       - ".github/workflows/backend-ci.yml"
+      - "deploy/roles-bd.sql"
 
 jobs:
   build:
@@ -42,8 +44,12 @@ jobs:
     env:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://localhost:5432/cafeoccidente_ci
-      DB_USER: ci_user
-      DB_PASSWORD: ci_password
+      # S2: la app entra con un rol sin permisos de esquema; Flyway con el rol dueno (deploy/roles-bd.sql).
+      DB_USER: ci_app
+      DB_PASSWORD: ci_app_password
+      FLYWAY_USER: ci_migrador
+      FLYWAY_PASSWORD: ci_migrador_password
+      DB_ROLES_RESTRINGIDOS: "true"
       JWT_SECRET: ci-test-secret-key-minimo-32-caracteres-para-hs256
       ADMIN_USERNAME: ci_admin
       ADMIN_PASSWORD: ci_admin_password_2026
@@ -63,6 +69,15 @@ jobs:
           distribution: "temurin"
           java-version: "21"
           cache: "maven"
+
+      # Igual que en produccion: el superusuario del contenedor solo crea los roles.
+      - name: Crear los roles de la base (migrador y app)
+        env:
+          PGPASSWORD: ci_password
+        run: >-
+          psql -h localhost -U ci_user -d cafeoccidente_ci -v ON_ERROR_STOP=1
+          -v migrador=ci_migrador -v clave_migrador=ci_migrador_password
+          -v app=ci_app -v clave_app=ci_app_password -f ../deploy/roles-bd.sql
 
       - name: Compilar y correr pruebas (levanta el contexto completo de Spring)
         # verify tambien genera la cobertura de JaCoCo (target/site/jacoco/jacoco.xml).

@@ -1,2 +1,4 @@
 # Los scripts corren dentro de contenedores Linux: siempre con fin de linea LF.
 *.sh text eol=lf
+# Los SQL de deploy/ se montan en contenedores Linux.
+deploy/*.sql text eol=lf

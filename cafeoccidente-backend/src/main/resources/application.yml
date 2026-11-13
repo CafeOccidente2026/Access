@@ -12,6 +12,9 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+    # S2: el rol migrador (dueno del esquema). Vacio = el mismo usuario de la app, como antes.
+    user: ${FLYWAY_USER:}
+    password: ${FLYWAY_PASSWORD:}
 
 server:
   port: 8080
