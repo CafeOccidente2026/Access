@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.common.exception;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -7,6 +8,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.tomcat.util.http.InvalidParameterException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,6 +33,10 @@ public class GlobalExceptionHandler {
     static final String USER_DISABLED_MESSAGE = "Su usuario está desactivado. Comuníquese con el Administrador.";
     static final String UNREADABLE_MESSAGE = "Los datos enviados no se pueden leer: revise los números y las fechas";
     static final String INTEGRITY_MESSAGE = "El dato choca con otro registro de la base";
+    static final String TOO_LONG_MESSAGE = "Un dato es más largo de lo permitido";
+    static final String BAD_PARAMS_MESSAGE = "La dirección trae parámetros que no se pueden leer";
+    /** SQLSTATE de Postgres para un texto mas largo que su columna (string_data_right_truncation). */
+    private static final String TOO_LONG = "22001";
     private static final Pattern CONSTRAINT = Pattern.compile("(uq|pk|fk|ck)_[a-z0-9_]+");
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -86,6 +92,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST, "Falta el dato " + ex.getParameterName()));
     }
 
+    /** S8 (ZAP): Tomcat 11 no lee una consulta como "?=" (parametro sin nombre); es un 400, no un error del servidor. */
+    @ExceptionHandler(InvalidParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleBadParameters(InvalidParameterException ex) {
+        return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST, BAD_PARAMS_MESSAGE));
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.badRequest()
@@ -95,6 +107,10 @@ public class GlobalExceptionHandler {
     /** Una regla de la base (unico, relacion, check): dice cual, por el nombre de la restriccion. */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleIntegrity(DataIntegrityViolationException ex) {
+        // S8 (ZAP): un texto mas largo que la columna es un dato mal digitado, no un choque con otro registro.
+        if (ex.getMostSpecificCause() instanceof SQLException sql && TOO_LONG.equals(sql.getSQLState())) {
+            return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST, TOO_LONG_MESSAGE));
+        }
         Matcher constraint = CONSTRAINT.matcher(String.valueOf(ex.getMostSpecificCause().getMessage()));
         String message = INTEGRITY_MESSAGE;
         if (constraint.find()) {
