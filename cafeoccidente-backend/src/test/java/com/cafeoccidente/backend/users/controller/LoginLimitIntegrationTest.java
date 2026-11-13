@@ -25,8 +25,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * S4: 5 intentos fallidos dejan al usuario esperando 15 min (429 con cuanto falta), otro usuario sigue entrando y el
- * Administrador lo desbloquea desde Usuarios. Cada test usa sus IP para no cruzarse con otros tests del contexto.
+ * S4: 5 intentos fallidos dejan al usuario esperando 15 min (429 con cuanto falta); la IP de la agencia solo espera con
+ * 30 (app.login.max-failures-per-ip). El Administrador desbloquea al usuario y a la IP desde Usuarios. Cada test usa sus IP para no cruzarse con otros tests del contexto.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -71,8 +71,10 @@ class LoginLimitIntegrationTest {
 
     @AfterEach
     void forget() {
-        for (String name : new String[] {"s4_ana", "s4_beto", "s4_x1", "s4_x2", "s4_x3", "s4_x4", "s4_x5"}) {
-            throttle.unlock(name);
+        throttle.unlock("s4_ana");
+        throttle.unlock("s4_beto");
+        for (int i = 1; i <= 30; i++) {
+            throttle.unlock("s4_x" + i);
         }
     }
 
@@ -102,10 +104,23 @@ class LoginLimitIntegrationTest {
     }
 
     @Test
-    void fiveFailuresFromOneIpWaitForAnyUserFromThatIp() throws Exception {
-        for (int i = 1; i <= 5; i++) {
-            login("s4_x" + i, "mala", "203.0.113.20").andExpect(status().isUnauthorized());
+    void anotherUserOfTheSameAgencyIpStillLogsIn() throws Exception {
+        failFiveTimes("203.0.113.30");
+        login("s4_ana", PASSWORD, "203.0.113.30").andExpect(status().isTooManyRequests());
+        login("s4_beto", PASSWORD, "203.0.113.30").andExpect(status().isOk());
+    }
+
+    private void failFromIp(int users, String ip) throws Exception {
+        for (int i = 1; i <= users; i++) {
+            login("s4_x" + i, "mala", ip).andExpect(status().isUnauthorized());
         }
+    }
+
+    @Test
+    void thirtyFailuresFromOneIpWaitForAnyUserFromThatIp() throws Exception {
+        failFromIp(29, "203.0.113.20");
+        login("s4_beto", PASSWORD, "203.0.113.20").andExpect(status().isOk());
+        failFromIp(1, "203.0.113.20");
         login("s4_beto", PASSWORD, "203.0.113.20").andExpect(status().isTooManyRequests());
         login("s4_beto", PASSWORD, "203.0.113.21").andExpect(status().isOk());
     }
@@ -113,9 +128,12 @@ class LoginLimitIntegrationTest {
     @Test
     void theAdministratorUnlocksTheUser() throws Exception {
         failFiveTimes("203.0.113.10");
+        failFromIp(25, "203.0.113.10");
+        login("s4_beto", PASSWORD, "203.0.113.10").andExpect(status().isTooManyRequests());
         String token = "Bearer " + jwtService.generateToken(new SecurityUser(admin));
         mockMvc.perform(post("/api/users/" + ana.getId() + "/unlock").header("Authorization", token))
                 .andExpect(status().isNoContent());
         login("s4_ana", PASSWORD, "203.0.113.10").andExpect(status().isOk());
+        login("s4_beto", PASSWORD, "203.0.113.10").andExpect(status().isOk());
     }
 }
