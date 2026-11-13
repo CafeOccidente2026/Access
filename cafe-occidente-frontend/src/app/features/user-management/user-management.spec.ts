@@ -127,6 +127,33 @@ describe('UserManagementComponent', () => {
     expect(component.editNotice()).toBe(content.userSavedMessage);
   });
 
+  it('S4: Desbloquear lets the user try again before the 15 minutes, only once per click burst', () => {
+    const unlock = vi.fn(() => of(undefined));
+    (TestBed.inject(UserService) as unknown as { unlock: typeof unlock }).unlock = unlock;
+    const component = TestBed.createComponent(UserManagementComponent).componentInstance;
+    component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+
+    component.unlock();
+    expect(unlock).toHaveBeenCalledExactlyOnceWith(7);
+    expect(component.editNotice()).toBe(content.userUnlockedMessage);
+    expect(component.editing()).not.toBeNull();
+  });
+
+  it('S4: while unlocking, a second click does not send again; an error is shown as it comes', () => {
+    const pending = new Subject<void>();
+    const unlock = vi.fn(() => pending);
+    (TestBed.inject(UserService) as unknown as { unlock: typeof unlock }).unlock = unlock;
+    const component = TestBed.createComponent(UserManagementComponent).componentInstance;
+    component.unlock();
+    expect(unlock).not.toHaveBeenCalled();
+    component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    component.unlock();
+    component.unlock();
+    expect(unlock).toHaveBeenCalledTimes(1);
+    pending.error(new HttpErrorResponse({ status: 404, error: { message: 'Usuario no encontrado' } }));
+    expect(component.editError()).toBe('Usuario no encontrado');
+  });
+
   it('C4: the server rules (last Administrator, own account) are shown as they come', () => {
     const userService = TestBed.inject(UserService) as unknown as { update: ReturnType<typeof vi.fn> };
     userService.update = vi.fn(() => throwError(() => new HttpErrorResponse({
