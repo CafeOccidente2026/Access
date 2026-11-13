@@ -5,5 +5,6 @@ import com.cafeoccidente.backend.users.dto.LoginResponse;
 
 public interface AuthService {
 
-    LoginResponse login(LoginRequest request);
+    /** S4: {@code ip} es la del cliente (detras de Caddy, la de X-Forwarded-For). */
+    LoginResponse login(LoginRequest request, String ip);
 }
