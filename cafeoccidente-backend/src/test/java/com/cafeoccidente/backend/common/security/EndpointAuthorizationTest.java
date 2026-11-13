@@ -140,7 +140,7 @@ class EndpointAuthorizationTest {
         add(ADMIN, delete, "/api/permissions/{userId}/{screen}", "/api/permissions/1/HISTORIAL");
         // RF-03 Acceso a Tablas, solo lectura: el Administrador o con el permiso.
         add(ADMIN, "ACCESO_TABLAS", get, "/api/tables", "/api/tables");
-        add(ADMIN, "ACCESO_TABLAS", get, "/api/tables/{code}", "/api/tables/CAJA");
+        add(ADMIN, "ACCESO_TABLAS", get, "/api/tables/{table}", "/api/tables/empaques");
         add(ADMIN, post, "/api/users");
         // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
         add(ADMIN, put, "/api/users/{id}", "/api/users/1");

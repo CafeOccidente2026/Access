@@ -1,25 +1,35 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import content from '../../../../public/assets/data/table-access.json';
-import { routes } from '../../app.routes';
 import { API_BASE_URL } from '../../core/config/api.config';
+import { TableInfo } from '../../core/models/table-access.model';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
-import { PAGE_SIZE, TableAccessComponent, columnLabel } from './table-access';
+import { CHUNK, DEBOUNCE_MS, TableAccessComponent } from './table-access';
 
-const TABLES = ['CAJA_MENOR', 'COMPRAS_CAFE_SECO', 'COMPRAS_CAFE_VERDE', 'COMPRAS_PASILLA', 'COMPRAS_A_FUTURO',
-  'INVENTARIO', 'PRODUCTOS', 'EMPAQUE', 'SUMINISTROS', 'CAJA'];
+const EMPAQUES: TableInfo = {
+  name: 'empaques', byAgency: true, primaryKey: 'id',
+  columns: [
+    { name: 'id', kind: 'NUMBER' }, { name: 'id_transaccion', kind: 'TEXT' },
+    { name: 'fecha', kind: 'DATE' }, { name: 'entradas', kind: 'NUMBER' },
+  ],
+};
+const PRODUCTOS: TableInfo = { name: 'productos', byAgency: false, primaryKey: 'id', columns: [{ name: 'id', kind: 'NUMBER' }] };
+const NUEVA: TableInfo = { name: 'tabla_nueva', byAgency: false, primaryKey: 'id', columns: [{ name: 'id', kind: 'NUMBER' }] };
 
-describe('TableAccessComponent (HU-04)', () => {
+/** C8 (prueba del 11-nov, punto 6): Acceso a Tablas como abrir una tabla en Access (vista hoja de datos). */
+describe('TableAccessComponent (HU-04, C8)', () => {
   let http: HttpTestingController;
 
-  beforeEach(() => {
-    localStorage.setItem('cafeoccidente.agencyName', 'El Tambo');
+  function setup(role: 'ADMINISTRADOR' | 'USUARIO') {
+    localStorage.setItem('cafeoccidente.role', role);
+    localStorage.setItem('cafeoccidente.agencyId', '1');
+    localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -29,82 +39,170 @@ describe('TableAccessComponent (HU-04)', () => {
       ],
     });
     http = TestBed.inject(HttpTestingController);
-  });
-
-  function render() {
     const fixture = TestBed.createComponent(TableAccessComponent);
     fixture.detectChanges();
-    http.expectOne(`${API_BASE_URL}/tables`).flush(TABLES);
+    http.expectOne(`${API_BASE_URL}/tables`).flush([EMPAQUES, PRODUCTOS, NUEVA]);
+    if (role === 'ADMINISTRADOR') {
+      http.expectOne(`${API_BASE_URL}/agencies`).flush([{ id: 1, name: 'Buesaco 1' }, { id: 4, name: 'El Tambo' }]);
+    }
     fixture.detectChanges();
     return { fixture, component: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
   }
 
-  const buttons = (el: HTMLElement) => Array.from(el.querySelectorAll('app-button')).map((b) => b.textContent?.trim());
-
-  it('CA-1: lists the tables available for consultation, like the Tablas form of Access', () => {
-    const { el } = render();
-    expect(buttons(el)).toEqual(['Caja Menor', 'Compras Café Seco', 'Compras Café Verde', 'Compras Pasilla',
-      'Compras a Futuro', 'Inventario', 'Productos', 'Empaque', 'Suministros', 'Caja', 'Cerrar']);
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    localStorage.clear();
   });
 
-  it('CA-2: shows the rows of the working agency, read only, with readable headers', () => {
-    const { fixture, component, el } = render();
-    component.open('COMPRAS_CAFE_SECO');
-    http.expectOne(`${API_BASE_URL}/tables/COMPRAS_CAFE_SECO?page=0&size=${PAGE_SIZE}`)
-      .flush({ columns: ['id', 'numero_factura'], rows: [['2', '43388'], ['1', null]], total: 2 });
-    fixture.detectChanges();
-
-    const sheet = el.querySelector('[data-testid="sheet"]')!;
-    expect(Array.from(sheet.querySelectorAll('th')).map((th) => th.textContent?.trim())).toEqual(['Id', 'Numero factura']);
-    expect(sheet.querySelectorAll('tbody tr')).toHaveLength(2);
-    expect(sheet.querySelectorAll('input, textarea, select')).toHaveLength(0);
-    expect(el.textContent).toContain('Agencia: El Tambo');
+  const rowsRequest = () => http.expectOne((r) => r.url === `${API_BASE_URL}/tables/empaques`);
+  const params = (req: TestRequest) => Object.fromEntries(req.request.params.keys().map((k) => [k, req.request.params.get(k)]));
+  const page = (from: number, count: number, total: number) => ({
+    columns: ['id', 'id_transaccion', 'fecha', 'entradas'],
+    rows: Array.from({ length: count }, (_, i) => [String(from + i + 1), 'T' + (from + i + 1), '2026-01-01', '5']),
+    total,
   });
 
-  it('pages through a long table and goes back to the list', () => {
-    const { fixture, component, el } = render();
-    component.open('CAJA');
-    http.expectOne(`${API_BASE_URL}/tables/CAJA?page=0&size=${PAGE_SIZE}`).flush({ columns: ['id'], rows: [['1']], total: 150 });
-    fixture.detectChanges();
-    expect(buttons(el)).toContain('Siguiente');
-
-    component.open('CAJA', 1);
-    http.expectOne(`${API_BASE_URL}/tables/CAJA?page=1&size=${PAGE_SIZE}`).flush({ columns: ['id'], rows: [['1']], total: 150 });
-    fixture.detectChanges();
-    expect(buttons(el)).toContain('Anterior');
-    expect(buttons(el)).not.toContain('Siguiente');
-
-    component.back();
-    fixture.detectChanges();
-    expect(buttons(el)).toContain('Caja Menor');
+  it('lists the tables the server allows, with their name from the JSON or the real name', () => {
+    const { el } = setup('USUARIO');
+    const labels = Array.from(el.querySelectorAll('app-button')).map((b) => b.textContent?.trim());
+    expect(labels).toEqual(['Empaque', 'Productos', 'tabla_nueva', 'Cerrar']);
   });
 
-  it('Productos is common to all agencies; an empty table and an error say so', () => {
-    const { fixture, component, el } = render();
-    component.open('PRODUCTOS');
-    http.expectOne(`${API_BASE_URL}/tables/PRODUCTOS?page=0&size=${PAGE_SIZE}`).flush({ columns: ['id'], rows: [], total: 0 });
+  it('opens the sheet with every column and its real name, and counts "Registro X de N" like Access', () => {
+    const { fixture, component, el } = setup('USUARIO');
+    component.open(EMPAQUES);
+    const req = rowsRequest();
+    expect(params(req)).toEqual({ offset: '0', limit: String(CHUNK) });
+    req.flush(page(0, 3, 250));
     fixture.detectChanges();
-    expect(el.textContent).toContain('Común a todas las agencias');
-    expect(el.textContent).toContain('La tabla no tiene registros para esta agencia.');
 
-    component.open('EMPAQUE');
-    http.expectOne(`${API_BASE_URL}/tables/EMPAQUE?page=0&size=${PAGE_SIZE}`).flush(null, { status: 500, statusText: 'Error' });
-    fixture.detectChanges();
-    expect(component.error()).toBeTruthy();
+    expect(Array.from(el.querySelectorAll('[data-testid="header"]')).map((h) => h.textContent?.trim().replace(/[▲▼]/g, '').trim()))
+      .toEqual(['id', 'id_transaccion', 'fecha', 'entradas']);
+    expect(component.counter()).toBe('Registro 1 de 250');
+    // Solo lectura: en la hoja no hay donde escribir, salvo los filtros y la busqueda.
+    expect(el.querySelectorAll('[data-testid="cell"] input, [data-testid="cell"] textarea')).toHaveLength(0);
   });
 
-  it('Cerrar goes back to Acceso Principal; the route is for the Administrator or with the screen granted', () => {
-    const { component } = render();
+  it('loads the next stretch of rows when the scroll gets near the end, not pages', () => {
+    const { component } = setup('USUARIO');
+    component.open(EMPAQUES);
+    rowsRequest().flush(page(0, CHUNK, 250));
+
+    component.onScrolled(10);
+    http.expectNone((r) => r.url.endsWith('/tables/empaques'));
+    component.onScrolled(CHUNK - 20);
+    const next = rowsRequest();
+    expect(params(next)).toEqual({ offset: String(CHUNK), limit: String(CHUNK) });
+    // Mientras carga no pide otra vez.
+    component.onScrolled(CHUNK - 10);
+    next.flush(page(CHUNK, CHUNK, 250));
+    expect(component.rows()).toHaveLength(2 * CHUNK);
+
+    component.onScrolled(2 * CHUNK - 5);
+    rowsRequest().flush(page(2 * CHUNK, 50, 250));
+    component.onScrolled(249);
+    http.expectNone((r) => r.url.endsWith('/tables/empaques'));
+  });
+
+  it('sorting, filters and search run in the server; typing waits a moment and asks once', () => {
+    const { component } = setup('USUARIO');
+    component.open(EMPAQUES);
+    rowsRequest().flush(page(0, 3, 3));
+
+    component.toggleSort('entradas');
+    expect(params(rowsRequest())).toMatchObject({ sort: 'entradas', dir: 'asc', offset: '0' });
+    component.toggleSort('entradas');
+    expect(params(rowsRequest())).toMatchObject({ sort: 'entradas', dir: 'desc' });
+    component.toggleSort('entradas');
+    expect(params(rowsRequest())).not.toHaveProperty('sort');
+
+    component.setFilter('id_transaccion', 'T');
+    component.setFilter('id_transaccion', 'T1');
+    component.setFilter('entradas.from', '5');
+    component.setFilter('fecha.to', '2026-12-31');
+    component.setSearch('cafe');
+    http.expectNone((r) => r.url.endsWith('/tables/empaques'));
+    vi.advanceTimersByTime(DEBOUNCE_MS);
+    expect(params(rowsRequest())).toMatchObject({
+      'f.id_transaccion': 'T1', 'f.entradas.from': '5', 'f.fecha.to': '2026-12-31', q: 'cafe', offset: '0',
+    });
+
+    component.setFilter('id_transaccion', '');
+    vi.advanceTimersByTime(DEBOUNCE_MS);
+    expect(params(rowsRequest())).not.toHaveProperty('f.id_transaccion');
+  });
+
+  it('the Administrator sees the working agency by default and can choose another or "Todas"', () => {
+    const { fixture, component, el } = setup('ADMINISTRADOR');
+    component.open(EMPAQUES);
+    expect(params(rowsRequest())).toMatchObject({ agency: '1' });
+    fixture.detectChanges();
+    const options = Array.from(el.querySelectorAll('[data-testid="agency"] option')).map((o) => o.textContent?.trim());
+    expect(options).toEqual(['Todas', 'Buesaco 1', 'El Tambo']);
+
+    component.setAgency('ALL');
+    expect(params(rowsRequest())).toMatchObject({ agency: 'ALL' });
+    component.setAgency('4');
+    expect(params(rowsRequest())).toMatchObject({ agency: '4' });
+
+    // Una tabla sin agencia se ve completa: no hay selector.
+    component.open(PRODUCTOS);
+    http.expectOne((r) => r.url.endsWith('/tables/productos')).flush({ columns: ['id'], rows: [], total: 0 });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="agency"]')).toBeNull();
+  });
+
+  it('a User with the permission has no agency selector and never sends one', () => {
+    const { fixture, component, el } = setup('USUARIO');
+    component.open(EMPAQUES);
+    expect(params(rowsRequest())).not.toHaveProperty('agency');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="agency"]')).toBeNull();
+  });
+
+  it('moves through the records with the keyboard like Access, and Esc goes back to the tables', () => {
+    const { component } = setup('USUARIO');
+    component.open(EMPAQUES);
+    rowsRequest().flush(page(0, 30, 30));
+    const key = (k: string) => component.onKey(new KeyboardEvent('keydown', { key: k }));
+
+    key('ArrowDown');
+    key('ArrowDown');
+    expect(component.counter()).toBe('Registro 3 de 30');
+    key('ArrowUp');
+    expect(component.counter()).toBe('Registro 2 de 30');
+    key('End');
+    expect(component.counter()).toBe('Registro 30 de 30');
+    key('PageUp');
+    expect(component.counter()).toBe('Registro 10 de 30');
+    key('Home');
+    expect(component.counter()).toBe('Registro 1 de 30');
+    key('ArrowUp');
+    expect(component.counter()).toBe('Registro 1 de 30');
+
+    key('Escape');
+    expect(component.table()).toBeNull();
+  });
+
+  it('with no rows the counter says 0 and shows the empty message; an error shows the reason of the server', () => {
+    const { fixture, component, el } = setup('USUARIO');
+    component.open(EMPAQUES);
+    rowsRequest().flush(page(0, 0, 0));
+    fixture.detectChanges();
+    expect(component.counter()).toBe('Registro 0 de 0');
+    expect(el.textContent).toContain(content.emptyMessage);
+
+    component.setSearch('x');
+    vi.advanceTimersByTime(DEBOUNCE_MS);
+    rowsRequest().flush({ message: 'Valor no valido para fecha: x' }, { status: 400, statusText: 'Bad Request' });
+    expect(component.error()).toBe('Valor no valido para fecha: x');
+  });
+
+  it('Cerrar goes back to the main access menu', () => {
+    const { component } = setup('USUARIO');
     const goTo = vi.spyOn(TestBed.inject(NavigationService), 'goTo').mockImplementation(() => undefined);
     component.close();
     expect(goTo).toHaveBeenCalledWith('/acceso-principal');
-    const route = routes.find((r) => r.children?.some((c) => c.path === 'acceso-tablas'))
-      ?.children?.find((c) => c.path === 'acceso-tablas');
-    expect(route?.data).toEqual({ roles: ['ADMINISTRADOR'], screens: ['ACCESO_TABLAS'] });
-  });
-
-  it('turns column names into headers', () => {
-    expect(columnLabel('fecha_compra')).toBe('Fecha compra');
-    expect(columnLabel('id')).toBe('Id');
   });
 });
