@@ -71,3 +71,19 @@ jobs:
         if: env.SONAR_TOKEN == ''
         run: |
           echo "### :warning: Sonar no corrió: falta el secret SONAR_TOKEN" >> "$GITHUB_STEP_SUMMARY"
+
+      # Solo dependencias de produccion: las de desarrollo no llegan al navegador.
+      # Librerias con vulnerabilidades altas o criticas (con arreglo publicado) dejan el job en rojo.
+      # Excepciones solo en .trivyignore, con su motivo. La accion va fijada por commit (v0.36.0).
+      - name: Escaneo de librerias (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          version: v0.76.1
+          scan-type: fs
+          scan-ref: cafe-occidente-frontend/package-lock.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          exit-code: "1"
+          format: table
