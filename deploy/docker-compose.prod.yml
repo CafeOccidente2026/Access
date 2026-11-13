@@ -8,10 +8,17 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # S2: el superusuario solo administra la base; la app y Flyway usan sus propios roles (roles-bd.sql).
+      POSTGRES_USER: ${DB_ADMIN_USER}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      FLYWAY_USER: ${FLYWAY_USER}
+      FLYWAY_PASSWORD: ${FLYWAY_PASSWORD}
+      APP_DB_USER: ${DB_USER}
+      APP_DB_PASSWORD: ${DB_PASSWORD}
     volumes:
       - datos:/var/lib/postgresql
+      - ./roles-bd.sql:/roles-bd.sql:ro
+      - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -28,6 +35,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+      FLYWAY_USER: ${FLYWAY_USER}
+      FLYWAY_PASSWORD: ${FLYWAY_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
@@ -58,8 +67,9 @@ services:
       TZ: America/Bogota
       PGHOST: postgres
       PGDATABASE: ${DB_NAME}
-      PGUSER: ${DB_USER}
-      PGPASSWORD: ${DB_PASSWORD}
+      # El dueno del esquema: pg_dump lee todo y pg_restore puede recrear las tablas.
+      PGUSER: ${FLYWAY_USER}
+      PGPASSWORD: ${FLYWAY_PASSWORD}
       RESPALDO_DIAS: ${RESPALDO_DIAS:-30}
     volumes:
       - ./respaldo.sh:/respaldo.sh:ro
