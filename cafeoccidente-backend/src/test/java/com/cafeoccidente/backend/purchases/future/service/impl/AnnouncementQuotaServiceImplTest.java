@@ -110,7 +110,7 @@ class AnnouncementQuotaServiceImplTest {
     void ca2KilosEntregadosIsTheSumOfThePurchasesWithThatAnnouncement() {
         when(controlRecordService.getActive(1L)).thenReturn(controlRecord());
         when(announcementService.history()).thenReturn(List.of(
-                announcement("SDBU-40", "RN"), announcement("SDBU-41", "RN")));
+                announcement("SDBU-40", "RN"), announcement("SDBU-41", "REGIONAL NARIÑO 4C")));
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberAgencyId(1L)).thenReturn(List.of());
         when(dryCoffeePurchaseRepository.sumNetKgByAnnouncementNumber(1L))
                 .thenReturn(List.<Object[]>of(new Object[] {"SDBU-40", new BigDecimal("150.50")}));
@@ -119,6 +119,23 @@ class AnnouncementQuotaServiceImplTest {
 
         assertThat(candidates.get(0).deliveredKg()).isEqualByComparingTo("150.50");
         assertThat(candidates.get(1).deliveredKg()).isEqualByComparingTo("0");
+    }
+
+    /** C6 (prueba del 11-nov, punto 12): solo el ultimo anuncio de cada tipo; los viejos ya no se mezclan. */
+    @Test
+    void c6ListsOnlyTheLatestAnnouncementOfEachTypeWithoutQuota() {
+        when(controlRecordService.getActive(1L)).thenReturn(controlRecord());
+        when(announcementService.history()).thenReturn(List.of(
+                announcement("SDBU-50", "RN"),
+                announcement("SDBU-49", "NESPRESSO - FTUSA"),
+                announcement("SDBU-48", "RN"),
+                announcement("SDBU-47", "NESPRESSO - FTUSA")));
+        // El ultimo NESPRESSO ya tiene cupo: de ese tipo no sale ninguno (tampoco el viejo).
+        when(announcementQuotaRepository.findByAgencyAnnouncementNumberAgencyId(1L))
+                .thenReturn(List.of(quota(numbering(49, "NESPRESSO - FTUSA"), "500")));
+        when(dryCoffeePurchaseRepository.sumNetKgByAnnouncementNumber(1L)).thenReturn(List.of());
+
+        assertThat(service.available(1L)).extracting(c -> c.announcement().announcementNumber()).containsExactly("SDBU-50");
     }
 
     @Test
