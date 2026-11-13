@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import org.apache.tomcat.util.http.InvalidParameterException;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -54,6 +55,17 @@ class GlobalExceptionHandlerTest {
         void related() {
             throw new DataIntegrityViolationException("x",
                     new SQLException("update or delete on table \"agencias\" violates foreign key constraint \"fk_usuarios_agencia\""));
+        }
+
+        @GetMapping("/too-long")
+        void tooLong() {
+            throw new DataIntegrityViolationException("x",
+                    new SQLException("ERROR: value too long for type character varying(30)", "22001"));
+        }
+
+        @GetMapping("/bad-params")
+        void badParams() {
+            throw new InvalidParameterException("Invalid chunk starting at byte [0] and ending at byte [1] with a value of [=] ignored");
         }
 
         @GetMapping("/integrity")
@@ -116,6 +128,20 @@ class GlobalExceptionHandlerTest {
         mvc.perform(get("/integrity"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value(GlobalExceptionHandler.INTEGRITY_MESSAGE));
+    }
+
+    @Test
+    void s8AValueLongerThanTheColumnIsABadRequestThatSaysSo() throws Exception {
+        mvc.perform(get("/too-long"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(GlobalExceptionHandler.TOO_LONG_MESSAGE));
+    }
+
+    @Test
+    void s8AnUnreadableQueryStringIsABadRequestNotAServerError() throws Exception {
+        mvc.perform(get("/bad-params"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(GlobalExceptionHandler.BAD_PARAMS_MESSAGE));
     }
 
     @Test
