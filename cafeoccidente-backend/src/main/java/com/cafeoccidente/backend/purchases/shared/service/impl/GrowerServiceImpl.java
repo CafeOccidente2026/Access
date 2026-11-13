@@ -150,7 +150,8 @@ public class GrowerServiceImpl implements GrowerService {
     @Override
     public List<ConductorResponse> searchConductors(String idNumberPrefix) {
         String prefix = idNumberPrefix == null ? "" : idNumberPrefix.trim();
-        if (prefix.length() < CONDUCTOR_SEARCH_MIN_DIGITS) {
+        // S7: solo digitos; % o _ en el LIKE se saltarian el minimo y listarian a todos.
+        if (prefix.length() < CONDUCTOR_SEARCH_MIN_DIGITS || !prefix.chars().allMatch(Character::isDigit)) {
             return List.of();
         }
         return growerRepository.findConductorsByIdNumberPrefix(prefix, PageRequest.of(0, CONDUCTOR_SEARCH_LIMIT))
