@@ -3,7 +3,7 @@ import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Observable, Observer } from 'rxjs';
 
 import { PurchasePayment } from '../../core/models/payment-method.model';
-import { openPdf } from '../../shared/utils/pdf-preview';
+import { printPdf } from '../../shared/utils/pdf-preview';
 import { saveOnce } from '../../shared/utils/save-once';
 import { loadLogoDataUrl } from './dry-coffee/dry-coffee-invoice';
 import { serverError } from '../../shared/utils/server-error';
@@ -51,7 +51,7 @@ export function saveAndPrint<T>(form: PrintablePurchaseForm, print: PurchasePrin
       const payment = form.payment();
       form.reset();
       form.savedNoticeOpen.set(true);
-      openPdf(
+      printPdf(
         logo.then((l) => print.invoice({ ...purchase, payment }, l)),
         () => form.errorMessage.set(print.messages()?.invoiceError ?? null),
       );

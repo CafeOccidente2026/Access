@@ -160,6 +160,29 @@ docker compose -f docker-compose.prod.yml exec backup sh /respaldo.sh ahora
 ./restaurar.sh respaldos/cafeoccidente_AAAAMMDD_HHMM.dump
 ```
 
+### Impresión directa de facturas (en cada equipo de caja)
+
+Las facturas (Seco, Verde, Pasilla, Cupos y Anunciadas), la reimpresión de Consultar Compras y la
+remisión de Registrar Salidas se mandan a imprimir sin abrir otra pestaña. Una página web no puede
+saltarse el cuadro de impresión por su cuenta; Chrome (o Edge) sí lo hace si se abre con la bandera
+`--kiosk-printing`. Los informes siguen saliendo en la vista previa de la pantalla.
+
+En cada equipo:
+1. **Impresora predeterminada:** en Windows, Configuración → Impresoras, dejar como predeterminada la
+   impresora de facturas.
+2. **Acceso directo:** crear un acceso directo en el escritorio con este destino (ajustar la ruta de
+   Chrome y la dirección del servidor):
+   ```
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --app=https://SERVIDOR
+   ```
+   `--app` la abre como ventana propia de la aplicación; se puede quitar si se prefiere una pestaña normal.
+3. **Primera impresión:** abrir Chrome normal (sin la bandera), imprimir una factura de prueba y en el
+   cuadro dejar papel, márgenes «Ninguno» y escala 100 %. Chrome recuerda esa configuración.
+4. **Cerrar Chrome del todo** (también el icono de la bandeja) antes de usar el acceso directo: la
+   bandera solo vale si Chrome arranca con ella.
+
+Sin la bandera todo sigue funcionando: aparece el cuadro de impresión normal en la misma pestaña.
+
 ---
 
 ## Estado actual del proyecto

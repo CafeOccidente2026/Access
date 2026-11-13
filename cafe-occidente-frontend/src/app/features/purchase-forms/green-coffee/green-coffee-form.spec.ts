@@ -189,8 +189,8 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     setup();
     fillEverything();
     // El PDF no se abre de verdad: se mira el documento que se arma.
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     createSpy.mockReturnValue(of({
       id: 1, purchaseDate: '2026-10-29', invoiceNumber: 100, agencyName: 'Buesaco', fundCode: 'RP', specialType: 'CV',
       productCode: '0110002000010', announcementNumber: 'SDBU-5', announcementDate: '2026-10-29', basePriceLoad: 1113500,
@@ -203,7 +203,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     }));
 
     component.print();
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.calls[0][0]);
     expect(doc).toContain('"Kilos Verdes"');
     expect(doc).toContain('SDBU - 100');
@@ -228,8 +228,8 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     setup();
     fillEverything();
     const nextInvoice = vi.spyOn(TestBed.inject(GreenCoffeePurchaseService), 'nextInvoiceNumber');
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
     createSpy.mockReturnValue(of(GREEN));
 
@@ -239,7 +239,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     expect(component.payment()).toBeNull();
     expect(component.savedNoticeOpen()).toBe(true);
     expect(nextInvoice).toHaveBeenCalledTimes(1);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.lastCall![0]);
     expect(doc).toContain('SDBU - 27.875');
     expect(doc).toContain('7.777.777');
