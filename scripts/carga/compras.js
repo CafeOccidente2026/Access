@@ -32,9 +32,30 @@ for (const n of NAMES) {
   thresholds[`http_req_duration{name:${n}}`] = ['p(95)<60000'];
 }
 
-export const options = __ENV.ESCALONES
-  ? { scenarios: { escalones: { executor: 'ramping-vus', startVUs: 0, stages: JSON.parse(__ENV.ESCALONES) } }, thresholds }
-  : { vus: Number(__ENV.VUS || 10), duration: __ENV.DURACION || '3m', thresholds };
+// FASES="nombre:usuarios:duracion,..." corre una fase detras de otra (R5 estres por escalones, R6 pico, R7 tramos de
+// una hora). Cada fase trae en el resumen su p95, p99, errores y peticiones. Con ABORTAR=1 la prueba se corta cuando
+// una fase pasa de 5 % de errores o de 3 s de p95 (criterio de falla de R5).
+function phases(spec) {
+  const scenarios = {};
+  let start = 0;
+  const seconds = (d) => Number(d.replace(/[a-z]+$/, '')) * { s: 1, m: 60, h: 3600 }[d.match(/[a-z]+$/)[0]];
+  for (const phase of spec.split(',')) {
+    const [name, vus, duration] = phase.split(':');
+    scenarios[name] = { executor: 'constant-vus', vus: Number(vus), duration, startTime: `${start}s`, gracefulStop: '5s' };
+    const abort = __ENV.ABORTAR === '1';
+    thresholds[`http_req_duration{scenario:${name}}`] = [{ threshold: 'p(95)<3000', abortOnFail: abort, delayAbortEval: '30s' }];
+    thresholds[`http_req_failed{scenario:${name}}`] = [{ threshold: 'rate<0.05', abortOnFail: abort, delayAbortEval: '30s' }];
+    thresholds[`http_reqs{scenario:${name}}`] = ['count>=0'];
+    start += seconds(duration) + 5;
+  }
+  return scenarios;
+}
+
+export const options = __ENV.FASES
+  ? { scenarios: phases(__ENV.FASES), thresholds }
+  : __ENV.ESCALONES
+    ? { scenarios: { escalones: { executor: 'ramping-vus', startVUs: 0, stages: JSON.parse(__ENV.ESCALONES) } }, thresholds }
+    : { vus: Number(__ENV.VUS || 10), duration: __ENV.DURACION || '3m', thresholds };
 
 const day = (offset) => new Date(Date.now() - offset * 86400000).toISOString().slice(0, 10);
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
