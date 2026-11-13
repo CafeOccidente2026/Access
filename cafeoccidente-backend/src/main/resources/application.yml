@@ -18,6 +18,9 @@ spring:
 
 server:
   port: 8080
+  # S4: la IP real del cliente detras de Caddy. Tomcat solo cree X-Forwarded-For si la conexion viene de una IP
+  # interna (la red de Docker); desde afuera se ignora, asi nadie se inventa otra IP para saltarse el limite de login.
+  forward-headers-strategy: native
 
 jwt:
   secret: ${JWT_SECRET}

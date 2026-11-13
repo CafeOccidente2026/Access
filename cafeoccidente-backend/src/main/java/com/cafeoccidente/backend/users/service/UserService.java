@@ -14,4 +14,7 @@ public interface UserService {
 
     /** Fase 3, C4: el Administrador {@code currentUserId} edita al usuario {@code id}. */
     UserResponse update(Long id, UserUpdateRequest request, Long currentUserId);
+
+    /** S4: el Administrador quita la espera por intentos fallidos antes de los 15 min. */
+    void unlock(Long id);
 }

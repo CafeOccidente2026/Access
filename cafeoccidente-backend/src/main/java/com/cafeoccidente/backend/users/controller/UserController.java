@@ -47,4 +47,10 @@ public class UserController {
     public UserResponse update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
         return userService.update(id, request, securityUtils.getCurrentUserId());
     }
+
+    @PostMapping("/{id}/unlock")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlock(@PathVariable Long id) {
+        userService.unlock(id);
+    }
 }
