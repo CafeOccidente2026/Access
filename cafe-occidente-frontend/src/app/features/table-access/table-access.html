@@ -1,45 +1,87 @@
 <app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/acceso-principal">
-  <div class="flex flex-col gap-4 p-6 text-sm">
+  <div class="flex h-full flex-col gap-3 p-4 text-sm">
     <ng-container *ngIf="table() === null; else sheet">
-      <div class="grid max-w-md grid-cols-1 gap-2" data-testid="tables">
-        <app-button *ngFor="let t of tables()" [label]="p.tables[t]" variant="access" (pressed)="open(t)"></app-button>
+      <div class="grid max-w-3xl grid-cols-1 gap-2 sm:grid-cols-3" data-testid="tables">
+        <app-button *ngFor="let t of tables()" [label]="label(t)" variant="access" (pressed)="open(t)"></app-button>
         <app-button [label]="p.closeButton" variant="access" (pressed)="close()"></app-button>
       </div>
     </ng-container>
 
     <ng-template #sheet>
-      <div class="flex items-center justify-between gap-3">
-        <h1 class="text-lg font-semibold text-slate-700" data-testid="table-title">{{ p.tables[table()!] }}</h1>
-        <span class="text-slate-600">
-          {{ table() === 'PRODUCTOS' ? p.allAgenciesNote : p.agencyNote + ' ' + auth.agencyName() }}
+      <div class="flex flex-wrap items-end gap-3">
+        <h1 class="text-lg font-semibold text-slate-700" data-testid="table-title">{{ label(table()!) }}</h1>
+
+        <label *ngIf="showAgency()" class="flex flex-col" for="table-agency">
+          <span class="font-medium">{{ p.agencyLabel }}</span>
+          <select id="table-agency" data-testid="agency" class="rounded border border-slate-300 bg-white px-2 py-1"
+            [value]="agency()" (change)="setAgency($any($event.target).value)">
+            <option value="ALL">{{ p.allAgencies }}</option>
+            <option *ngFor="let a of agencies()" [value]="a.id" [selected]="agency() === '' + a.id">{{ a.name }}</option>
+          </select>
+        </label>
+        <span *ngIf="!showAgency()" class="pb-1 text-slate-600">
+          {{ table()!.byAgency ? p.agencyNote + ' ' + auth.agencyName() : p.allAgenciesNote }}
         </span>
-        <app-button [label]="p.backButton" variant="access" (pressed)="back()"></app-button>
+
+        <label class="flex flex-col" for="table-search">
+          <span class="font-medium">{{ p.searchLabel }}</span>
+          <input id="table-search" type="search" class="w-72 rounded border border-slate-300 px-2 py-1" [placeholder]="p.searchPlaceholder"
+            [value]="search()" (input)="setSearch($any($event.target).value)" />
+        </label>
+
+        <app-button class="ml-auto" [label]="p.backButton" variant="access" (pressed)="back()"></app-button>
       </div>
 
-      <p *ngIf="error() as e" class="text-red-600">{{ e }}</p>
+      <p *ngIf="error() as e" class="text-red-600" data-testid="error">{{ e }}</p>
 
-      <ng-container *ngIf="result() as r">
-        <p *ngIf="r.total === 0" class="text-slate-600">{{ p.emptyMessage }}</p>
-        <div *ngIf="r.total > 0" class="overflow-x-auto">
-          <table class="w-full whitespace-nowrap text-left text-xs" data-testid="sheet">
-            <thead class="text-slate-600">
-              <tr>
-                <th *ngFor="let h of headers()" class="border-b border-slate-300 px-2 py-1">{{ h }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of r.rows" class="border-b border-slate-200">
-                <td *ngFor="let cell of row" class="px-2 py-1">{{ cell }}</td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- Hoja de datos: encabezados y filtros fijos arriba, filas con desplazamiento virtual (solo se pintan las visibles). -->
+      <div class="min-h-0 flex-1 overflow-x-auto rounded border border-slate-400 bg-white">
+        <div [style.width.px]="width()" class="flex h-full flex-col text-xs">
+          <div class="flex bg-slate-200 font-semibold text-slate-700" role="row">
+            <button *ngFor="let c of table()!.columns" type="button" data-testid="header" role="columnheader"
+              class="shrink-0 truncate border-r border-slate-300 px-2 py-1 text-left hover:bg-slate-300" [style.width.px]="columnWidth(c)"
+              [attr.aria-sort]="sortMark(c.name) === '▲' ? 'ascending' : sortMark(c.name) === '▼' ? 'descending' : 'none'"
+              (click)="toggleSort(c.name)">
+              {{ c.name }} {{ sortMark(c.name) }}
+            </button>
+          </div>
+          <div class="flex border-b border-slate-300 bg-slate-100">
+            <div *ngFor="let c of table()!.columns" class="flex shrink-0 gap-0.5 border-r border-slate-300 p-0.5" [style.width.px]="columnWidth(c)">
+              <ng-container *ngIf="hasRange(c); else contains">
+                <input [type]="c.kind === 'DATE' ? 'date' : 'text'" class="w-1/2 min-w-0 rounded border border-slate-300 px-1"
+                  [placeholder]="p.fromPlaceholder" [attr.aria-label]="p.filterLabel + ' ' + c.name + ' ' + p.fromPlaceholder"
+                  [value]="filterValue(c.name + '.from')" (input)="setFilter(c.name + '.from', $any($event.target).value)" />
+                <input [type]="c.kind === 'DATE' ? 'date' : 'text'" class="w-1/2 min-w-0 rounded border border-slate-300 px-1"
+                  [placeholder]="p.toPlaceholder" [attr.aria-label]="p.filterLabel + ' ' + c.name + ' ' + p.toPlaceholder"
+                  [value]="filterValue(c.name + '.to')" (input)="setFilter(c.name + '.to', $any($event.target).value)" />
+              </ng-container>
+              <ng-template #contains>
+                <input type="text" class="w-full min-w-0 rounded border border-slate-300 px-1" [placeholder]="p.filterPlaceholder"
+                  [attr.aria-label]="p.filterLabel + ' ' + c.name" [value]="filterValue(c.name)"
+                  (input)="setFilter(c.name, $any($event.target).value)" />
+              </ng-template>
+            </div>
+          </div>
+
+          <cdk-virtual-scroll-viewport class="min-h-0 flex-1" style="height: 60vh" [itemSize]="rowPx" tabindex="0" role="grid"
+            data-testid="sheet" [attr.aria-label]="p.sheetLabel" [attr.aria-rowcount]="total()"
+            (scrolledIndexChange)="onScrolled($event)" (keydown)="onKey($event)">
+            <div *cdkVirtualFor="let row of rows(); let i = index" role="row" class="flex border-b border-slate-200"
+              [class.bg-sky-100]="i === current()" [style.height.px]="rowPx" (click)="current.set(i)">
+              <div *ngFor="let cell of row; let j = index" data-testid="cell" role="gridcell"
+                class="shrink-0 truncate border-r border-slate-200 px-2 leading-[26px]" [style.width.px]="columnWidth(table()!.columns[j])">
+                {{ cell }}
+              </div>
+            </div>
+          </cdk-virtual-scroll-viewport>
         </div>
-        <div *ngIf="r.total > 0" class="flex items-center justify-end gap-3">
-          <span class="text-slate-600">{{ r.total }} {{ p.totalLabel }}</span>
-          <app-button *ngIf="pageIndex() > 0" [label]="p.previousButton" variant="access" (pressed)="open(table()!, pageIndex() - 1)"></app-button>
-          <app-button *ngIf="pageIndex() < lastPage()" [label]="p.nextButton" variant="access" (pressed)="open(table()!, pageIndex() + 1)"></app-button>
-        </div>
-      </ng-container>
+      </div>
+
+      <div class="flex items-center gap-4 text-slate-700">
+        <span data-testid="counter" class="font-medium">{{ counter() }}</span>
+        <span *ngIf="loading()" class="text-slate-500">{{ p.loading }}</span>
+        <span *ngIf="!loading() && total() === 0 && !error()" class="text-slate-500">{{ p.emptyMessage }}</span>
+      </div>
     </ng-template>
   </div>
 </app-access-window>
