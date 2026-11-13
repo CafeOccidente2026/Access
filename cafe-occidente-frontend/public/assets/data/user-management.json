@@ -24,5 +24,7 @@
   "cancelButton": "Cancelar",
   "newPasswordLabel": "Nueva contraseña",
   "newPasswordHint": "Déjela vacía para no cambiarla.",
-  "userSavedMessage": "Usuario actualizado."
+  "userSavedMessage": "Usuario actualizado.",
+  "unlockButton": "Desbloquear",
+  "userUnlockedMessage": "Usuario desbloqueado: ya puede volver a intentar el ingreso."
 }

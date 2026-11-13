@@ -37,6 +37,7 @@ import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { UserManagementContent } from './user-management.model';
 import { changedByKeyboard } from '../../shared/utils/select-keys';
+import { saveOnce } from '../../shared/utils/save-once';
 
 /** Pantalla ADMIN: alta de usuarios (HU-08), alta de agencias (HU-09) y edicion de usuarios (fase 3, C4). */
 @Component({
@@ -234,5 +235,19 @@ export class UserManagementComponent {
         },
         error: (err: HttpErrorResponse) => this.editError.set(apiError(err) ?? this.page()?.errorMessage ?? null),
       });
+  }
+
+  /** S4: quita la espera por intentos fallidos de login del usuario en edicion, sin cerrar la edicion. */
+  unlock(): void {
+    const user = this.editing();
+    if (!user) {
+      return;
+    }
+    this.editError.set(null);
+    this.editNotice.set(null);
+    saveOnce(this.saving, () => this.userService.unlock(user.id), {
+      next: () => this.editNotice.set(this.page()?.userUnlockedMessage ?? null),
+      error: (err: HttpErrorResponse) => this.editError.set(apiError(err) ?? this.page()?.errorMessage ?? null),
+    });
   }
 }
