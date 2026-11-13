@@ -38,6 +38,9 @@ services:
       FLYWAY_USER: ${FLYWAY_USER}
       FLYWAY_PASSWORD: ${FLYWAY_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      # R1: conexiones a la base (ajustable segun el servidor) y heap al 75 % de la memoria del contenedor.
+      DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
 
