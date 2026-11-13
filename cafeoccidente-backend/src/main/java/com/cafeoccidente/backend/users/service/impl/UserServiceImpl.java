@@ -117,10 +117,16 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException(LAST_ADMIN);
         }
         UserResponse before = userMapper.toResponse(user);
-        user.setRole(role);
-        user.setAgency(agency(request.agencyId()));
-        user.setActive(request.active());
+        Agency agency = agency(request.agencyId());
         boolean passwordChanged = request.password() != null && !request.password().isEmpty();
+        // S6: cambiar contrasena, rol o agencia, o desactivar, cierra las sesiones abiertas del usuario.
+        if (passwordChanged || !role.getId().equals(user.getRole().getId())
+                || !agency.getId().equals(user.getAgency().getId()) || (user.isActive() && !request.active())) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+        }
+        user.setRole(role);
+        user.setAgency(agency);
+        user.setActive(request.active());
         if (passwordChanged) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
