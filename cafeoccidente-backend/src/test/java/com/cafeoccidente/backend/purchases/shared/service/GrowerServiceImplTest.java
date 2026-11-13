@@ -253,4 +253,13 @@ class GrowerServiceImplTest {
         org.mockito.Mockito.verify(growerRepository).findConductorsByIdNumberPrefix(
                 "123", org.springframework.data.domain.PageRequest.of(0, 10));
     }
+
+    @Test
+    void s7ConductorSearchOnlyTakesDigitsSoLikeWildcardsDoNotListEveryone() {
+        for (String prefix : new String[] {"%%%", "12_", "1%3", "12a"}) {
+            assertThat(growerService.searchConductors(prefix)).isEmpty();
+        }
+        org.mockito.Mockito.verify(growerRepository, org.mockito.Mockito.never())
+                .findConductorsByIdNumberPrefix(anyString(), org.mockito.ArgumentMatchers.any());
+    }
 }
