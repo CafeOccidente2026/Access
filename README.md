@@ -139,6 +139,12 @@ cd deploy
 cp .env.example .env      # llenar DOMINIO, TLS_MODO, claves y JWT_SECRET (no se sube a git)
 docker compose -f docker-compose.prod.yml up -d --build
 ```
+> **Ojo con las variables del shell:** Docker Compose les da prioridad sobre `deploy/.env`. Si en la terminal hay
+> `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`… exportadas (por ejemplo, después de `source cafeoccidente-backend/.env`),
+> el compose usa esas y no las del `.env`: el rol de la app se crearía con otro nombre y, en el siguiente arranque
+> desde otra terminal, el backend no encuentra su usuario. Corra los comandos desde una terminal limpia y, si hay
+> duda, revise con `docker compose -f docker-compose.prod.yml config | grep -E "DB_USER|APP_DB_USER"`.
+
 Flyway crea el esquema al arrancar el backend. Con `TLS_MODO=auto` Caddy pide el certificado a
 Let's Encrypt; con `TLS_MODO=interno` (intranet sin dominio) usa uno propio y el navegador pide
 aceptarlo la primera vez.
