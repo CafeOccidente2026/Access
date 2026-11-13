@@ -25,8 +25,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * El perfil de produccion arranca con las mismas variables que dev (base, JWT y admin), confia en los encabezados
- * X-Forwarded-* de Caddy y no manda la traza de un error interno. Los mensajes de negocio (ApiException y los del
+ * El perfil de produccion arranca con las mismas variables que dev (base, JWT y admin), toma los encabezados
+ * X-Forwarded-* de Caddy solo si la conexion viene de la red interna (native, como en S4), no publica la documentacion
+ * de la API y no manda la traza de un error interno. Los mensajes de negocio (ApiException y los del
  * GlobalExceptionHandler) siguen llegando a la pantalla: include-message solo toca la respuesta de error por defecto.
  */
 @SpringBootTest
@@ -52,11 +53,17 @@ class ProdProfileIntegrationTest {
 
     @Test
     void prodProfileStartsBehindTheProxyWithoutLeakingErrors() {
-        assertThat(environment.getProperty("server.forward-headers-strategy")).isEqualTo("framework");
+        assertThat(environment.getProperty("server.forward-headers-strategy")).isEqualTo("native");
         assertThat(environment.getProperty("server.error.include-stacktrace")).isEqualTo("never");
         assertThat(environment.getProperty("server.error.include-message")).isEqualTo("never");
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
         assertThat(environment.getProperty("jwt.secret")).isNotBlank();
+    }
+
+    @Test
+    void theApiDocumentationIsNotPublished() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/swagger-ui/index.html")).andExpect(status().isNotFound());
     }
 
     @Test
