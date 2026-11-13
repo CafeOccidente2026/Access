@@ -141,6 +141,16 @@
           </annotationProcessorPaths>
         </configuration>
       </plugin>
+      <!-- Las pruebas corren en hora de Colombia, como la app (ClockConfig). El driver de Postgres toma la zona de la
+           JVM para la sesion: en UTC (el CI), despues de las 7 p. m. el "hoy" de los tests y de CURRENT_DATE era el dia
+           siguiente y fallaban. @{argLine} conserva el agente de JaCoCo. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>@{argLine} -Duser.timezone=America/Bogota</argLine>
+        </configuration>
+      </plugin>
       <!-- Cobertura para SonarCloud: target/site/jacoco/jacoco.xml en la fase verify. -->
       <plugin>
         <groupId>org.jacoco</groupId>
