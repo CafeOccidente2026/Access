@@ -31,16 +31,21 @@ describe('RemissionFormComponent', () => {
 
   let createSpy: ReturnType<typeof vi.fn>;
   let component: RemissionFormComponent;
+  let growers: { findByIdNumber: ReturnType<typeof vi.fn>; createConductor: ReturnType<typeof vi.fn> };
 
   function setup() {
     createSpy = vi.fn(() => of(saved));
+    growers = {
+      findByIdNumber: vi.fn(() => of({ id: 1, idNumber: '9935221', firstName: 'CONDUCTOR', lastName: 'PRUEBA' })),
+      createConductor: vi.fn(() => of({ id: 2, idNumber: '9935221', firstName: 'CONDUCTOR', lastName: 'NUEVO' })),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
         { provide: InventoryService, useValue: { listMovements: () => of(movements), createRemission: createSpy } },
-        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of({ id: 1, idNumber: '9935221', firstName: 'CONDUCTOR', lastName: 'PRUEBA' })) } },
+        { provide: GrowerService, useValue: growers },
       ],
     });
     component = TestBed.createComponent(RemissionFormComponent).componentInstance;
@@ -65,7 +70,7 @@ describe('RemissionFormComponent', () => {
 
     expect(component.pickValue(row(10), 'quantity')).toBe('700');
     expect(component.pickValue(row(10), 'sacos')).toBe('10');
-    expect(component.pickValue(row(10), 'grossKg')).toBe('1.250');
+    expect(component.pickValue(row(10), 'grossKg')).toBe('1250');
     expect(component.totals()).toEqual({ quantity: 700, sacos: 10, grossKg: 1250 });
 
     component.toggle(row(10));
@@ -146,5 +151,44 @@ describe('RemissionFormComponent', () => {
 
     expect(component.result()).toBeNull();
     expect(component.isPicked(row(10))).toBe(false);
+  });
+
+  it('the conductor is looked up by cédula; an unknown one can be added from here', () => {
+    setup();
+    component.conductorIdNumber.set('9935221');
+    component.onConductorBlur();
+    expect(component.conductor()?.firstName).toBe('CONDUCTOR');
+
+    growers.findByIdNumber.mockReturnValue(throwError(() => ({ status: 404 })));
+    component.onConductorBlur();
+    expect(component.conductorNotFound()).toBe(true);
+
+    component.openNewConductorForm();
+    component.saveNewConductor();
+    expect(growers.createConductor).not.toHaveBeenCalled();
+    component.newConductorFirstName.set('CONDUCTOR');
+    component.newConductorLastName.set('NUEVO');
+    component.saveNewConductor();
+    expect(component.conductor()?.lastName).toBe('NUEVO');
+    expect(component.showNewConductorForm()).toBe(false);
+
+    growers.createConductor.mockReturnValue(throwError(() => ({ error: { message: 'Ya existe' } })));
+    component.openNewConductorForm();
+    component.newConductorFirstName.set('X');
+    component.newConductorLastName.set('Y');
+    component.saveNewConductor();
+    expect(component.newConductorError()).toBe('Ya existe');
+
+    component.conductorIdNumber.set(' ');
+    component.onConductorBlur();
+    expect(component.conductor()).toBeNull();
+  });
+
+  it('shows the date as day/month/year and the saved remission with its number', () => {
+    setup();
+    expect(component.date('2026-09-23')).toBe('23/09/2026');
+    expect(component.savedText(saved)).toBe('Remisión N° SDBU-RP-0001 registrada correctamente.');
+    component.print();
+    expect(component.errorMessage()).toBeNull();
   });
 });
