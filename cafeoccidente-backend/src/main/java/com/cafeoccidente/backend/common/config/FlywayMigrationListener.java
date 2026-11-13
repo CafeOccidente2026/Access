@@ -1,9 +1,6 @@
 package com.cafeoccidente.backend.common.config;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.Map;
 import org.flywaydb.core.Flyway;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.context.ApplicationListener;
@@ -34,24 +31,8 @@ public class FlywayMigrationListener implements ApplicationListener<ApplicationE
         String appUser = env.getProperty("spring.datasource.username");
         String user = blankToDefault(env.getProperty("spring.flyway.user"), appUser);
         String password = blankToDefault(env.getProperty("spring.flyway.password"), env.getProperty("spring.datasource.password"));
-        Flyway.configure().dataSource(url, user, password).load().migrate();
-        if (!user.equals(appUser)) {
-            closeHistory(url, user, password, appUser);
-        }
-    }
-
-    /**
-     * En una base nueva la tabla de historial la crea Flyway despues de roles-bd.sql y los privilegios por defecto le
-     * darian escritura a la app: solo el migrador la escribe.
-     */
-    static void closeHistory(String url, String user, String password, String appUser) {
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-                Statement statement = connection.createStatement()) {
-            statement.execute("REVOKE INSERT, UPDATE, DELETE ON flyway_schema_history FROM \""
-                    + appUser.replace("\"", "\"\"") + "\"");
-        } catch (SQLException e) {
-            throw new IllegalStateException("No se pudo cerrar el historial de Flyway para la app", e);
-        }
+        // appUser lo usa el callback afterMigrate.sql: la app no escribe el historial de Flyway.
+        Flyway.configure().dataSource(url, user, password).placeholders(Map.of("appUser", appUser)).load().migrate();
     }
 
     private static String blankToDefault(String value, String fallback) {
