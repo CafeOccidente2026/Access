@@ -13,7 +13,7 @@ import { saveOnce } from '../../shared/utils/save-once';
 import { serverError } from '../../shared/utils/server-error';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from './remission-invoice';
-import { openPdf } from '../../shared/utils/pdf-preview';
+import { printPdf } from '../../shared/utils/pdf-preview';
 import { localToday } from '../../shared/utils/local-date';
 
 /** Textos de la pantalla (public/assets/data/remission-form.json). */
@@ -143,7 +143,7 @@ export class RemissionFormComponent {
     if (!remission) {
       return;
     }
-    openPdf(
+    printPdf(
       this.logoDataUrlPromise.then((logo) => buildRemissionDocDefinition(remission, logo)),
       () => this.errorMessage.set(this.content()?.messages.pdfError ?? null),
     );

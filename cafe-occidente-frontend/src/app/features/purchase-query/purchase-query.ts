@@ -7,7 +7,7 @@ import { AnnulmentCandidate, AnnulmentDirection, AnnulmentModule } from '../../c
 import { ContentService } from '../../core/services/content.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
 import { NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
-import { openPdf } from '../../shared/utils/pdf-preview';
+import { printPdf } from '../../shared/utils/pdf-preview';
 import { themeColor } from '../../shared/utils/theme-color';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { fillQueryContent } from './purchase-query-fields';
@@ -92,7 +92,7 @@ export class PurchaseQueryComponent {
       return;
     }
     this.pdfError.set(false);
-    openPdf(
+    printPdf(
       this.logoDataUrlPromise.then((logo) => buildReprintDoc(detail, logo, content.annulledMark, themeColor('--color-annulled'))),
       () => this.pdfError.set(true),
     );
