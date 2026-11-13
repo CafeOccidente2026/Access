@@ -1,8 +1,9 @@
 # Detras de Caddy: la web y /api salen del mismo origen (sin CORS).
 server:
-  # Tomcat toma X-Forwarded-For/Proto de Caddy solo si la conexion viene de una IP interna (la red de Docker); desde
-  # afuera se ignoran. Igual que en application.yml, que es lo que se probo en S4 (limite de login por IP).
-  forward-headers-strategy: native
+  # Toma X-Forwarded-For/Proto/Host de Caddy (R0): con native, Tomcat supone el puerto 80/443 y el login desde el
+  # navegador da 403 (CORS) si Caddy se publica en otro puerto. Es seguro porque el backend solo es alcanzable desde
+  # Caddy, y Caddy reemplaza los X-Forwarded-* que mande el cliente.
+  forward-headers-strategy: framework
   error:
     include-stacktrace: never
     include-message: never
