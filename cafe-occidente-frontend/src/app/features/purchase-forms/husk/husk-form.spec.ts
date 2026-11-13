@@ -236,8 +236,8 @@ describe('HuskFormComponent - gates de captura', () => {
     component.onFieldCommitted('idPart1');
     fillEverythingAfterGrower();
     const nextInvoice = vi.spyOn(TestBed.inject(HuskPurchaseService), 'nextInvoiceNumber');
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
     createSpy.mockReturnValue(of(HUSK));
 
@@ -247,7 +247,7 @@ describe('HuskFormComponent - gates de captura', () => {
     expect(component.payment()).toBeNull();
     expect(component.savedNoticeOpen()).toBe(true);
     expect(nextInvoice).toHaveBeenCalledTimes(1);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.lastCall![0]);
     expect(doc).toContain('SDBU - 27.872');
     expect(doc).toContain('7.777.777');

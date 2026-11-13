@@ -133,8 +133,8 @@ describe('PurchaseQueryComponent (HU-28)', () => {
   });
 
   it('CA-3: Reimprimir Dcto Equiv reprints the invoice of the purchase shown, with ANULADA if it was annulled', async () => {
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     const { component } = render();
     component.go('FIRST');
     await show(`${URL}/navigate?direction=FIRST`, FIRST, detail({ status: 'ANULADA', purchase: DRY }));
@@ -142,7 +142,7 @@ describe('PurchaseQueryComponent (HU-28)', () => {
     component.reprint();
 
     // Armar el PDF tarda mas de 1 s cuando la suite corre con cobertura.
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1), { timeout: 5000 });
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1), { timeout: 5000 });
     const doc = createPdf.mock.calls[0][0];
     expect(JSON.stringify(doc.content)).toContain('SDBU - 27.869');
     expect(doc.watermark).toMatchObject({ text: content.annulledMark });
