@@ -3,6 +3,8 @@
 --   * Registro de Control activo: copia el de El Tambo (agencia 4) con su propio prefijo.
 --   * Anuncios: los que tienen asignados Buesaco 1 (ESTANDAR, CV, PASILLA) y El Tambo (especiales).
 --   * Un usuario USUARIO por agencia (carga_<id>) con el permiso de Acceso a Tablas; la clave llega como :hash (bcrypt).
+--   * Datos que no son del sistema sino de la prueba: rango DIAN amplio (cada agencia de prueba factura miles de veces) y
+--     direccion para los terceros que no la tienen (asi hay miles de caficultores para facturar, no 446).
 -- Uso: psql -v ON_ERROR_STOP=1 -v hash="'<bcrypt>'" -U <superusuario> -d cafeoccidente -f agencias-carga.sql
 
 BEGIN;
@@ -27,6 +29,12 @@ SELECT a.id, aa.anuncio_id, aa.numero_anuncio, aa.fecha_asignacion
 FROM anuncios_agencias aa CROSS JOIN agencias a
 WHERE aa.agencia_id IN (1, 4) AND a.id <> aa.agencia_id
 ON CONFLICT (agencia_id, numero_anuncio) DO NOTHING;
+
+UPDATE registros_control SET hasta_resolucion = desde_resolucion + 1000000 WHERE activo;
+
+UPDATE terceros SET direccion = 'VEREDA PRUEBA DE CARGA'
+WHERE coalesce(direccion, '') = '' AND primer_nombre IS NOT NULL AND primer_apellido IS NOT NULL
+  AND NOT coalesce(fallecido, false) AND tipo IN ('S', 'C');
 
 INSERT INTO usuarios (usuario, contrasena_hash, activo, rol_id, agencia_id)
 SELECT 'carga_' || a.id, :hash, true, (SELECT id FROM roles WHERE nombre = 'USUARIO'), a.id
