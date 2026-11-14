@@ -105,7 +105,7 @@ class UserIntegrationTest {
 
     @Test
     void ca1TheUserIsSavedInUsersAndInTerceros() throws Exception {
-        create("hu08_nuevo", NEW_ID, "ab12", roleId(Roles.OPERACIONES))
+        create("hu08_nuevo", NEW_ID, "clave1234", roleId(Roles.OPERACIONES))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idNumber").value(NEW_ID))
                 .andExpect(jsonPath("$.roleName").value(Roles.OPERACIONES));
@@ -121,7 +121,7 @@ class UserIntegrationTest {
                 + " VALUES (?, 'ASOCIADO PRUEBA', 'VEREDA X', '3001234567', 'S', 4)", NEW_ID);
         Map<String, Object> before = grower(NEW_ID);
 
-        create("hu08_asociado", NEW_ID, "ab12", roleId(Roles.USUARIO)).andExpect(status().isCreated());
+        create("hu08_asociado", NEW_ID, "clave1234", roleId(Roles.USUARIO)).andExpect(status().isCreated());
 
         assertThat(grower(NEW_ID)).isEqualTo(before);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM terceros WHERE identificacion = ?", Long.class, NEW_ID))
@@ -130,21 +130,32 @@ class UserIntegrationTest {
 
     @Test
     void ca2InsecurePasswordsAreRejected() throws Exception {
-        String[] weak = {"abc", "abcd", "1234", "ab1"};
+        // Prueba del 13-nov: minimo 8 caracteres (antes 4); siguen pidiendo letras y numeros.
+        String[] weak = {"abc", "abcd", "1234", "ab1", "abc1234", "abcdefgh", "12345678"};
         for (int i = 0; i < weak.length; i++) {
-            create("hu08_debil" + i, "99000081" + i, weak[i], roleId(Roles.USUARIO)).andExpect(status().isBadRequest());
+            create("hu08_debil" + i, "9900008" + (10 + i), weak[i], roleId(Roles.USUARIO)).andExpect(status().isBadRequest());
         }
-        create("hu08_segura", "990000819", "ab12", roleId(Roles.USUARIO)).andExpect(status().isCreated());
+        create("hu08_segura", "990000819", "clave1234", roleId(Roles.USUARIO)).andExpect(status().isCreated());
+    }
+
+    @Test
+    void aUserWithAnOldShortPasswordStillLogsIn() throws Exception {
+        User old = user("hu08_clave_corta", Roles.USUARIO, null);
+        old.setPasswordHash(passwordEncoder.encode("ab12"));
+        users.saveAndFlush(old);
+        mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\": \"hu08_clave_corta\", \"password\": \"ab12\"}"))
+                .andExpect(status().isOk());
     }
 
     @Test
     void theIdNumberIsNumericAndUniqueAndTheRoleMustExist() throws Exception {
-        create("hu08_letras", "12a45", "ab12", roleId(Roles.USUARIO)).andExpect(status().isBadRequest());
-        create("hu08_uno", NEW_ID, "ab12", roleId(Roles.USUARIO)).andExpect(status().isCreated());
-        create("hu08_dos", NEW_ID, "ab12", roleId(Roles.USUARIO))
+        create("hu08_letras", "12a45", "clave1234", roleId(Roles.USUARIO)).andExpect(status().isBadRequest());
+        create("hu08_uno", NEW_ID, "clave1234", roleId(Roles.USUARIO)).andExpect(status().isCreated());
+        create("hu08_dos", NEW_ID, "clave1234", roleId(Roles.USUARIO))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Ya existe un usuario con esa cedula"));
-        create("hu08_sinrol", "990000802", "ab12", 999).andExpect(status().isNotFound());
+        create("hu08_sinrol", "990000802", "clave1234", 999).andExpect(status().isNotFound());
     }
 
     @Test
@@ -179,14 +190,15 @@ class UserIntegrationTest {
     @Test
     void c4TheAdministratorReassignsAgencyRoleActiveAndPassword() throws Exception {
         User target = user("hu08_reasignado", Roles.USUARIO, "990000803");
-        update(target.getId(), body(Roles.OPERACIONES, 4, false, "nueva1", null))
+        update(target.getId(), body(Roles.OPERACIONES, 4, false, "nueva1234", null))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.agencyName").value("El Tambo"))
                 .andExpect(jsonPath("$.roleName").value(Roles.OPERACIONES))
                 .andExpect(jsonPath("$.active").value(false));
         User saved = users.findById(target.getId()).orElseThrow();
-        assertThat(passwordEncoder.matches("nueva1", saved.getPasswordHash())).isTrue();
+        assertThat(passwordEncoder.matches("nueva1234", saved.getPasswordHash())).isTrue();
         update(target.getId(), body(Roles.USUARIO, 1, true, "debil", null)).andExpect(status().isBadRequest());
+        update(target.getId(), body(Roles.USUARIO, 1, true, "nueva12", null)).andExpect(status().isBadRequest());
     }
 
     @Test

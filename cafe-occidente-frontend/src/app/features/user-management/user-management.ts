@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
-/** Misma regla que UserRequest.password en el backend (Pattern): minimo 4 caracteres, letras y numeros. */
-const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{4,}$/;
+/** Misma regla que UserRequest.password en el backend (Pattern): minimo 8 caracteres, letras y numeros. */
+const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 /** Orden de captura y de avance de foco al presionar Enter. */
 const FOCUS_ORDER: readonly string[] = ['username', 'idNumber', 'password', 'roleId', 'agencyId'];

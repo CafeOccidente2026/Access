@@ -20,7 +20,7 @@ public record UserRequest(
         @NotNull Long roleId,
         @NotNull Long agencyId) {
 
-    /** RN-07.1: minimo 4 caracteres, combinando letras y numeros. */
-    public static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{4,}$";
-    public static final String PASSWORD_MESSAGE = "La contrasena debe tener minimo 4 caracteres y combinar letras y numeros";
+    /** RN-07.1 con el minimo subido a 8 (decision del 13-nov): letras y numeros. Las claves ya guardadas siguen sirviendo. */
+    public static final String PASSWORD_PATTERN = "^(?=.*[A-Za-z])(?=.*\\d).{8,}$";
+    public static final String PASSWORD_MESSAGE = "La contrasena debe tener minimo 8 caracteres y combinar letras y numeros";
 }

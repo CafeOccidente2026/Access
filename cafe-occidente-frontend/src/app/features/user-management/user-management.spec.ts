@@ -56,7 +56,7 @@ describe('UserManagementComponent', () => {
     userService.create.mockReturnValue(pendingUser);
     const fixture = TestBed.createComponent(UserManagementComponent);
     const component = fixture.componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '9961699481', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', idNumber: '9961699481', password: 'clave1234', roleId: 1, agencyId: 1 });
 
     component.createUser();
     component.createUser();
@@ -97,7 +97,7 @@ describe('UserManagementComponent', () => {
     const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn> };
     userService.create.mockReturnValue(of({}));
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
-    Object.assign(component, { username: 'fiel1', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', password: 'clave1234', roleId: 1, agencyId: 1 });
 
     component.createUser();
     expect(userService.create).not.toHaveBeenCalled();
@@ -105,7 +105,7 @@ describe('UserManagementComponent', () => {
 
     component.idNumber = '9961699481';
     component.createUser();
-    expect(userService.create).toHaveBeenCalledWith({ username: 'fiel1', idNumber: '9961699481', password: 'ab12', roleId: 1, agencyId: 1 });
+    expect(userService.create).toHaveBeenCalledWith({ username: 'fiel1', idNumber: '9961699481', password: 'clave1234', roleId: 1, agencyId: 1 });
   });
 
   it('C4: editing sends agency, role, active and only a new password; the list shows the saved user', () => {
@@ -170,13 +170,14 @@ describe('UserManagementComponent', () => {
     const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
     userService.update = vi.fn();
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'abcd', roleId: 1, agencyId: 1 });
+    // Minimo 8 (13-nov): 7 caracteres con letras y numeros ya no alcanza.
+    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'abc1234', roleId: 1, agencyId: 1 });
     component.createUser();
     expect(userService.create).not.toHaveBeenCalled();
     expect(component.userError()).toBe(content.passwordInvalidMessage);
 
     component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
-    component.editPassword = '1234';
+    component.editPassword = 'nueva12';
     component.saveEdit();
     expect(userService.update).not.toHaveBeenCalled();
     expect(component.editError()).toBe(content.passwordInvalidMessage);
@@ -190,7 +191,7 @@ describe('UserManagementComponent', () => {
     userService.create.mockReturnValue(throwError(() => new HttpErrorResponse({
       status: 400, error: { message: 'Ya existe un usuario con esa cedula' } })));
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'clave1234', roleId: 1, agencyId: 1 });
     component.onEnter('username');
     component.onEnter('desconocido');
     expect(userService.create).not.toHaveBeenCalled();
