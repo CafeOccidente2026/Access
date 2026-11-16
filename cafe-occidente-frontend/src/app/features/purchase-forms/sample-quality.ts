@@ -30,13 +30,29 @@ export function loadSampleQuality(
   locked: Set<string>,
   key: SampleWeightKey,
   done: () => void,
+  onError: (err: unknown) => void = () => undefined,
 ): void {
   const total = parseDisplayNumber(model['totalStoredWeight']);
   const args: [number?, number?] = key === 'totalStoredWeight' ? [total] : [total, parseDisplayNumber(model['totalHuskWeight'])];
-  service.qualityPercentages(...args).subscribe((q) => {
-    applyQualityPercentages(model, locked, key, q);
-    done();
+  service.qualityPercentages(...args).subscribe({
+    next: (q) => {
+      applyQualityPercentages(model, locked, key, q);
+      done();
+    },
+    // 16-nov: el servidor rechaza un peso fuera de la muestra; no quedan mostrando los calculos del peso anterior.
+    error: (err: unknown) => {
+      for (const field of fedBy(key)) {
+        model[field] = '';
+        locked.delete(field);
+      }
+      onError(err);
+    },
   });
+}
+
+/** Los campos que calcula el servidor con cada peso de la muestra. */
+function fedBy(key: SampleWeightKey): string[] {
+  return key === 'totalStoredWeight' ? ['wastePercentage'] : ['huskPercentage', 'healthyStoredWeight', 'factor'];
 }
 
 /** Escribe en el formulario (y bloquea) los campos que llena la respuesta de /quality-percentages. */
