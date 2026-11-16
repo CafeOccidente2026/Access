@@ -166,7 +166,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idPart1' && this.retryKey !== key) {
+    if (key !== 'idPart1') {
       this.advanceFocus(key);
     }
   }
