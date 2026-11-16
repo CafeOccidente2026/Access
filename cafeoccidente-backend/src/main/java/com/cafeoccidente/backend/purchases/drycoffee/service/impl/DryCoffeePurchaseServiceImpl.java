@@ -370,6 +370,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
     public QualityPercentagesResponse qualityPercentages(
             BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, Long fundId, String specialType) {
         ControlRecord controlRecord = controlRecordService.getActive(currentAgencyProvider.currentAgencyId());
+        // Prueba a mano del 16-nov: el aviso sale apenas se digita el peso, no al guardar.
+        calculator.checkSample(totalStoredWeight, defectiveStoredWeight, controlRecord);
         // Q2: con los dos pesos digitados, Peso Alm Sana y Factor salen del servidor.
         BigDecimal healthyStoredWeight = totalStoredWeight == null || defectiveStoredWeight == null
                 ? null

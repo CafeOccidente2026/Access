@@ -44,6 +44,7 @@ public class DryCoffeePurchaseCalculator {
         if ("F".equalsIgnoreCase(seller.growerType())) {
             throw new BusinessRuleException("No se le puede facturar a un caficultor fallecido");
         }
+        checkSample(request.totalStoredWeight(), request.defectiveStoredWeight(), controlRecord);
 
         // Cuadro_combinado61_AfterUpdate (linea 361): Pr_Base_PC = vrcps - (Costos * Texto176).
         // El textbox "Costos" del VBA lo fija la macro "Asignar numero anuncio * PCompras" con el
@@ -154,6 +155,38 @@ public class DryCoffeePurchaseCalculator {
                 cooperativeDiscount,
                 withholding,
                 netToPay);
+    }
+
+    /**
+     * Pesos de la muestra (prueba a mano del 16-nov, factura SDTA 43910): Peso Tot Alm mayor que 0 y no mayor que la
+     * muestra del Registro de Control; Peso Tot Pasilla entre 0 y Peso Tot Alm. Access no lo validaba (W_TotAlm_AfterUpdate
+     * solo calculaba la merma), y con 850 g en una muestra de 250 g daba merma -240 % y un Vr. Kilo inflado.
+     * Un peso en null (aun no digitado) no se valida.
+     */
+    public void checkSample(BigDecimal totalStoredWeight, BigDecimal defectiveStoredWeight, ControlRecord controlRecord) {
+        if (totalStoredWeight != null) {
+            if (totalStoredWeight.signum() <= 0) {
+                throw new BusinessRuleException("Peso Tot Alm debe ser mayor que 0");
+            }
+            BigDecimal sampleSize = sampleSize(controlRecord);
+            if (totalStoredWeight.compareTo(sampleSize) > 0) {
+                throw new BusinessRuleException("Peso Tot Alm no puede ser mayor que la muestra (" + grams(sampleSize) + ")");
+            }
+        }
+        if (defectiveStoredWeight != null) {
+            if (defectiveStoredWeight.signum() < 0) {
+                throw new BusinessRuleException("Peso Tot Pasilla no puede ser negativo");
+            }
+            if (totalStoredWeight != null && defectiveStoredWeight.compareTo(totalStoredWeight) > 0) {
+                throw new BusinessRuleException(
+                        "Peso Tot Pasilla no puede ser mayor que Peso Tot Alm (" + grams(totalStoredWeight) + ")");
+            }
+        }
+    }
+
+    /** "250 g", "198.3 g": el peso como se digito, sin ceros de mas. */
+    public static String grams(BigDecimal weight) {
+        return weight.stripTrailingZeros().toPlainString() + " g";
     }
 
     /** PorcMerma: paso "Peso Tot Alm" (independiente del resto de la cascada). */
