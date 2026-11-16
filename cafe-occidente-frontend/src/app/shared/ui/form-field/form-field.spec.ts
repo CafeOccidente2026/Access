@@ -36,6 +36,19 @@ describe('FormFieldComponent formatWhenIdle', () => {
     expect(component.inputValue).toBe('837.984,00');
   });
 
+  // Hallazgo #1 (16-nov): dinero sin decimales, kilos sin ",00" si son enteros y la muestra como se digitó.
+  it('formats money, kilos and typed values the same in every purchase screen', () => {
+    const shown = (display: 'money' | 'kilos' | 'typed', value: string) =>
+      setup({ key: 'x', label: 'X', type: 'currency', display, value }).inputValue;
+    expect(shown('money', '1546900.00')).toBe('1.546.900');
+    expect(shown('kilos', '500')).toBe('500');
+    expect(shown('kilos', '101.5')).toBe('101,50');
+    expect(shown('typed', '7,1')).toBe('7,1');
+    const keys = (data: object) => JSON.stringify(data).match(/"key":"(netToPay|netKg|wastePercentage)"[^}]*"display":"\w+"/g) ?? [];
+    expect(keys(dry)).toHaveLength(3);
+    expect(keys(quotaPurchase)).toHaveLength(3);
+  });
+
   it('leaves rawDisplay and text fields untouched', () => {
     expect(setup({ key: 'resolutionTo', label: 'Hasta', type: 'number', rawDisplay: true, value: '48753' }).inputValue).toBe('48753');
     expect(setup({ key: 'prefix', label: 'Prefijo', type: 'text', value: 'SDTA' }).inputValue).toBe('SDTA');

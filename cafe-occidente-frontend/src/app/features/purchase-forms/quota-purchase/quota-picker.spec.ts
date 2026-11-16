@@ -37,8 +37,8 @@ describe('QuotaPickerComponent', () => {
     expect(picker.columns).toHaveLength(13);
     expect(picker.cell(r, 'announcement')).toBe('SDBU-12');
     expect(picker.cell(r, 'agency')).toBe('Buesaco 1');
-    expect(picker.cell(r, 'healthyUnitPrice')).toBe('8.900,50');
-    expect(picker.cell(r, 'balance')).toBe('1.500,00');
+    expect(picker.cell(r, 'healthyUnitPrice')).toBe('8.901');
+    expect(picker.cell(r, 'balance')).toBe('1.500');
   });
 
   it('CA-2: a delivery within the balance closes the window with the chosen announcement', () => {

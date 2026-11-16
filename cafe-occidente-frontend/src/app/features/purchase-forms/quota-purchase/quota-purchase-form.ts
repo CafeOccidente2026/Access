@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { map } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -27,7 +27,8 @@ import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-inv
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages, retryField } from '../weight-check';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 import { serverError } from '../../../shared/utils/server-error';
 import { FEDERATION_KEYS, loadFederation } from '../federation';
@@ -35,17 +36,9 @@ import { localToday } from '../../../shared/utils/local-date';
 
 type FormModel = Record<string, string>;
 
-interface QuotaPurchaseMessages {
+interface QuotaPurchaseMessages extends PurchaseMessages, WeightMessages {
   readonly cooperativeDiscountLabel?: string;
-  readonly acceptLabel: string;
   readonly noQuota: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type QuotaPurchaseContent = PurchaseFormContent & {
@@ -257,6 +250,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   }
 
   private runSideEffects(key: string): void {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
+      return;
+    }
     switch (key) {
       case 'fund':
         this.reserveInvoiceNumber();
@@ -351,6 +347,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     info$.subscribe({
       next: (info) => {
         this.specialInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
         this.advanceFocus(this.mode === 'future' ? 'idPart1' : 'special');
       },
@@ -432,7 +429,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
   private loadQualityPercentage(key: SampleWeightKey): void {
     loadSampleQuality(this.service, this.model, this.locked, key, () => this.tick.update((n) => n + 1), (err) => {
-      this.errorMessage.set(serverError(err, this.messages()?.saveError));
+      this.retryKey = retryField(this, this.locked, key, serverError(err, this.messages()?.saveError));
       this.tick.update((n) => n + 1);
     });
   }
@@ -510,6 +507,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   /** Cierra el aviso. Q15 (prueba del 9-nov): si era el umbral de especiales, vacia la muestra y vuelve a
    *  Peso Tot Alm; no se guarda nada. */
   dismissError(): void {
+    this.refocusRetry((k) => this.focusField(k));
     this.errorMessage.set(null);
     if (this.sampleRetry) {
       this.sampleRetry = false;
@@ -544,6 +542,12 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     this.errorMessage.set(null);
     this.fieldCache.clear();
     this.tick.update((n) => n + 1);
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora del especial elegido (el del cupo o la anunciada no cambia). */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    return this.announcementNumber(this.specialInfo() && fundId ? this.service.specialInfo(fundId, this.model['special']) : null);
   }
 
   protected override hasUnsavedInput(): boolean {

@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
@@ -80,11 +81,27 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
 
     @Override
     @Transactional
+    public FuturePlaceResponse lastPlace(String idNumber) {
+        return futurePurchaseRepository
+                .findFirstByAgencyIdAndIdNumberOrderByIdDesc(currentAgencyProvider.currentAgencyId(), idNumber.trim())
+                .map(p -> new FuturePlaceResponse(p.getFinca(), p.getMunicipality(), p.getVereda()))
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional
     public FuturePurchaseResponse create(FuturePurchaseRequest request) {
         Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         GrowerResponse grower = growerService.findByIdNumber(request.idNumber());
 
+        // Hallazgos #10 y #16 (prueba del 16-nov): kilos en 0 y entregas con fecha pasada no se anuncian.
+        if (request.announcedKg().signum() <= 0) {
+            throw new BusinessRuleException("Los kilos anunciados deben ser mayores que 0");
+        }
+        if (request.deliveryDate().isBefore(LocalDate.now(clock))) {
+            throw new BusinessRuleException("La fecha de entrega no puede ser anterior a hoy");
+        }
         // Texto34_AfterUpdate: "NO LE PUEDE ANUNCIAR A UN FALLECIDO".
         if ("F".equalsIgnoreCase(grower.growerType())) {
             throw new BusinessRuleException("No se le puede anunciar una entrega futura a un caficultor fallecido");
@@ -145,8 +162,10 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     }
 
     @Override
-    public List<PendingAnnouncementRow> pending() {
-        return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId());
+    public List<PendingAnnouncementRow> pending(LocalDate from, LocalDate to, boolean withBalance) {
+        LocalDate today = LocalDate.now(clock);
+        return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId(), withBalance,
+                from == null ? today : from, to == null ? today : to);
     }
 
     @Override

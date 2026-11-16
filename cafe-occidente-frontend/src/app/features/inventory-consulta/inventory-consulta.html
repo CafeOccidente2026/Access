@@ -31,7 +31,7 @@
             <tr *ngFor="let m of visibleMovements()" class="border-t border-slate-200 odd:bg-slate-50">
               <td class="p-2">{{ m.purchaseModule }}</td>
               <td class="p-2">{{ m.invoiceNumber }}</td>
-              <td class="p-2">{{ m.purchaseDate }}</td>
+              <td class="p-2">{{ date(m.purchaseDate) }}</td>
               <td class="p-2">{{ m.productCode }}</td>
               <td class="p-2">{{ m.specialType }}</td>
               <td class="p-2 text-right">{{ m.sacos }}</td>

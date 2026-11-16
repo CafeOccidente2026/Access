@@ -1,11 +1,13 @@
 package com.cafeoccidente.backend.purchases.future;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.JwtService;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUser;
@@ -214,6 +216,27 @@ class AnnouncementIntegrationTest {
         // RF-08: SobrePr Carga Esp 80.000; Base Carga de Buesaco 1 = 125 -> Bonificacion 640 por kilo.
         previous("RN", "80000", "6000");
         assertThat(announcementService.findLatest(1L, rp, "RN").bonus()).isEqualByComparingTo("640");
+    }
+
+    // Hallazgo #6 (16-nov): la compra se guarda con el anuncio con que empezo, si sigue vigente o es de hoy.
+    @Test
+    void aPurchaseKeepsTheAnnouncementItStartedWithWhileItIsFromToday() throws Exception {
+        previous("RN", "80000", "6000");
+        int yesterday = maxNumber(1);
+        assertThat(announcementService.findStarted(1L, rp, "RN", yesterday).basePriceLoad()).isEqualByComparingTo("1400000");
+        assertThat(announcementService.findStarted(1L, rp, "RN", null)).isNull();
+
+        String rn = "{\"fundId\": " + rp + ", \"specialType\": \"RN\", \"specialSurcharge\": 0, \"defectiveUnitPrice\": 0,"
+                + " \"basePriceLoad\": ";
+        publishType(rn + "1500000}").andExpect(status().isCreated());
+        int started = maxNumber(1);
+        publishType(rn + "1600000}").andExpect(status().isCreated());
+
+        assertThat(announcementService.findStarted(1L, rp, "RN", started).basePriceLoad()).isEqualByComparingTo("1500000");
+        assertThat(announcementService.findStarted(1L, rp, "RN", maxNumber(1)).basePriceLoad()).isEqualByComparingTo("1600000");
+        assertThatThrownBy(() -> announcementService.findStarted(1L, rp, "RN", yesterday))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("El anuncio " + yesterday + " ya no está vigente: empiece la compra otra vez");
     }
 
     @Test

@@ -1,11 +1,13 @@
 package com.cafeoccidente.backend.purchases.future.service;
 
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface FuturePurchaseService {
@@ -17,8 +19,14 @@ public interface FuturePurchaseService {
 
     FuturePurchaseResponse findById(Long id);
 
-    /** Anunciadas de Hoy (HU-31, P2): compras a futuro con saldo de la agencia de trabajo, de cualquier fecha, por anuncio. */
-    List<PendingAnnouncementRow> pending();
+    /** Hallazgo #14: Finca, Mpio y Vereda de la ultima compra a futuro de la cedula en la agencia; null si no tiene. */
+    FuturePlaceResponse lastPlace(String idNumber);
+
+    /**
+     * Anunciadas de Hoy de la agencia de trabajo, por anuncio: las anunciadas entre {@code from} y {@code to} (hoy si
+     * vienen vacias), o con {@code withBalance} todas las que tienen saldo, de cualquier fecha (HU-31, P2).
+     */
+    List<PendingAnnouncementRow> pending(LocalDate from, LocalDate to, boolean withBalance);
 
     /** RN-21.5.2: las compras anunciadas de la cedula con saldo, de la agencia de trabajo. */
     List<FuturePurchaseResponse> openFor(String idNumber);

@@ -7,7 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { RemittanceService } from '../../core/services/remittance.service';
 import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { formatDisplayNumber, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 import { RemittanceWorkbook, remittanceWorkbooks, saveBlob, workbookBlobs } from './remittance-files';
@@ -259,11 +259,11 @@ export class RemittanceComponent {
   }
 
   kg(value: number): string {
-    return formatDisplayNumber(value, 'currency');
+    return formatKilos(value);
   }
 
   money(value: number): string {
-    return formatDisplayNumber(value, 'count');
+    return formatMoney(value);
   }
 
   date(iso: string): string {

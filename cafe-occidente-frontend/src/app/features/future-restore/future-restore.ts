@@ -9,7 +9,8 @@ import { AnnouncementQuotaService } from '../../core/services/announcement-quota
 import { ContentService } from '../../core/services/content.service';
 import { FuturePurchaseService } from '../../core/services/future-purchase.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
+import { localToday } from '../../shared/utils/local-date';
 import { saveOnce } from '../../shared/utils/save-once';
 import { serverError } from '../../shared/utils/server-error';
 
@@ -25,24 +26,27 @@ export interface FutureRestoreContent {
   readonly restoreButton: string;
   readonly backLabel: string;
   readonly views: Record<View, { windowTitle: string; heading: string; note: string; columns: string[] }>;
+  /** Hallazgo #17: filtro de Anunciadas de Hoy. */
+  readonly filters: { from: string; to: string; withBalance: string };
   readonly messages: { empty: string; error: string; restored: string; unchanged: string };
 }
 
-const kg = (v: number) => formatDisplayNumber(v, 'currency');
+/** Hallazgo #1: kilos sin ",00" si son enteros y fechas dd/mm/aaaa. */
+const kg = formatKilos;
 
 export function futureCells(r: FuturePurchaseRestoreRow): string[] {
-  return [r.announcementNumber, r.announcementDate, r.specialType, kg(r.announcedKg), kg(r.deliveredKg),
+  return [r.announcementNumber, formatDate(r.announcementDate), r.specialType, kg(r.announcedKg), kg(r.deliveredKg),
     kg(r.currentBalance), kg(r.recalculatedBalance)];
 }
 
 export function quotaCells(q: AnnouncementQuotaResponse): string[] {
-  return [String(q.announcementNumber), q.announcementDate, q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
+  return [String(q.announcementNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
     kg(q.balance)];
 }
 
 /** Anunciadas de Hoy: Kl_Entregados = kilos anunciados menos el saldo. */
 export function pendingCells(p: PendingAnnouncementRow): string[] {
-  return [p.announcementNumber, p.announcementDate, p.specialType, kg(p.healthyUnitPrice), String(p.growers),
+  return [p.announcementNumber, formatDate(p.announcementDate), p.specialType, formatMoney(p.healthyUnitPrice), String(p.growers),
     kg(p.announcedKg), kg(p.announcedKg - p.remainingKg), kg(p.remainingKg)];
 }
 
@@ -77,9 +81,17 @@ export class FutureRestoreComponent {
     params: () => (this.viewKey === 'quota' ? true : undefined),
     stream: () => this.quotaService.list(),
   });
+  /**
+   * Hallazgo #17 (16-nov): como la consulta "ANUNCIADAS HOY" de Access (Fecha_Anuncio = Date()), por defecto las de hoy;
+   * Desde/Hasta elige otro rango y la casilla muestra todas las que tienen saldo pendiente, de cualquier fecha.
+   */
+  readonly from = signal(localToday());
+  readonly to = signal(localToday());
+  readonly withBalance = signal(false);
   private readonly pending = rxResource({
-    params: () => (this.viewKey === 'pending' ? true : undefined),
-    stream: () => this.futureService.pending(),
+    params: () =>
+      this.viewKey === 'pending' ? { from: this.from(), to: this.to(), withBalance: this.withBalance() } : undefined,
+    stream: ({ params }) => this.futureService.pending(params.from, params.to, params.withBalance),
   });
 
   readonly rows = computed<string[][] | null>(() => {

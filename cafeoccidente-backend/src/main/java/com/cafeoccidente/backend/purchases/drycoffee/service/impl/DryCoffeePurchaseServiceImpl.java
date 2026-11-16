@@ -282,7 +282,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         return new DryCoffeePurchaseRequest(r.fundId(), r.specialType(), r.idNumber(), r.address(), r.cellphone(),
                 r.bagsCount(), r.grossKg(), tare, r.totalStoredWeight(), r.defectiveStoredWeight(), r.penalty(),
                 r.freightDiscount(), r.otherDiscounts(), r.payment(), r.quotaAnnouncementNumber(), r.deliveryKg(),
-                r.futurePurchaseId());
+                r.futurePurchaseId(), r.startedAnnouncementNumber());
     }
 
     /** RN-21.2.5 y RN-21.5.3: con anuncio con cupo o compra anunciada, Esta Entrega es obligatoria. */
@@ -305,7 +305,8 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
             return futurePurchaseService.billingAnnouncement(future, request.fundId());
         }
         if (request.quotaAnnouncementNumber() == null) {
-            return null;
+            return announcementService.findStarted(currentAgencyProvider.currentAgencyId(), request.fundId(),
+                    request.specialType(), request.startedAnnouncementNumber());
         }
         return announcementService.findForPurchase(currentAgencyProvider.currentAgencyId(), request.fundId(),
                 request.specialType(), request.quotaAnnouncementNumber());

@@ -45,6 +45,13 @@ class GreenCoffeePurchaseCalculatorTest {
     }
 
     @Test
+    void zeroOrNegativeGreenKilosAreRejected() {
+        assertThatThrownBy(() -> calculator.calculate(request("40", "1300"), controlRecord(new BigDecimal("692.00")),
+                announcement("700"), seller("S"), BigDecimal.ZERO, BigDecimal.ZERO))
+                .hasMessage("El destare no puede ser mayor o igual que los Kilos Brutos");
+    }
+
+    @Test
     void basePriceLoadUsesTheAnnouncementCostsNotTheControlRecordOnes() {
         // Form_VERDES.bas (Cedula_AfterUpdate) usa el "Costos" que fija la macro del anuncio CV:
         // announcement.costs() (700), no controlRecord.getCosts() (692).

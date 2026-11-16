@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -21,7 +22,8 @@ import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages } from '../weight-check';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
 import { FEDERATION_KEYS, loadFederation } from '../federation';
@@ -30,18 +32,10 @@ import { localToday } from '../../../shared/utils/local-date';
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
 
-interface GreenCoffeeMessages {
-  readonly acceptLabel: string;
+interface GreenCoffeeMessages extends PurchaseMessages, WeightMessages {
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
   readonly sampleMissing: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type GreenCoffeeContent = PurchaseFormContent & { readonly messages: GreenCoffeeMessages };
@@ -180,6 +174,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
+      return;
+    }
     switch (key) {
       case 'idPart1':
         this.lookupGrower();
@@ -208,6 +205,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         // HU-23 CA-2 / Q23: sin los pesos de verde no hay cálculo ni factura (sin info no hay preview
         // ni Imprimir); se avisa apenas abre la pantalla.
         this.announcementInfo.set(info.sampleReady ? info : null);
+        this.rememberPrice();
         this.sampleMissing.set(!info.sampleReady);
         if (!info.sampleReady) {
           this.errorMessage.set(this.messages()?.sampleMissing ?? null);
@@ -273,7 +271,13 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora de este café. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    return this.announcementNumber(this.announcementInfo() ? this.service.announcementInfo() : null);
   }
 
   print(): void {
@@ -294,6 +298,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   dismissError(): void {
+    this.refocusRetry((k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);

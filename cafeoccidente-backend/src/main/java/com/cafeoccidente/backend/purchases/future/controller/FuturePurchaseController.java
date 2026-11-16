@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.future.controller;
 
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRestoreRow;
@@ -9,9 +10,11 @@ import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,10 +52,18 @@ public class FuturePurchaseController {
         return restoreService.restore(idNumber);
     }
 
-    /** Anunciadas de Hoy (HU-31, P2): solo lectura. */
+    /** Hallazgo #14: Finca, Mpio y Vereda de la ultima compra a futuro de la cedula (204 si no tiene). */
+    @GetMapping("/last-place")
+    public ResponseEntity<FuturePlaceResponse> lastPlace(@RequestParam String idNumber) {
+        FuturePlaceResponse place = futurePurchaseService.lastPlace(idNumber);
+        return place == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(place);
+    }
+
+    /** Anunciadas de Hoy: solo lectura; por defecto las de hoy (hallazgo #17). */
     @GetMapping("/pending")
-    public List<PendingAnnouncementRow> pending() {
-        return futurePurchaseService.pending();
+    public List<PendingAnnouncementRow> pending(@RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to, @RequestParam(defaultValue = "false") boolean withBalance) {
+        return futurePurchaseService.pending(from, to, withBalance);
     }
 
     /** Ventana de Facturar Compras Anunciadas (RN-21.5.2). */

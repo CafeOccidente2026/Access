@@ -1,5 +1,6 @@
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
+import { formatKilos, formatMoney } from '../../../shared/utils/number-format';
 import { FuturePurchaseResponse } from '../../../core/models/future-purchase.model';
 
 function longSpanishDate(isoDate: string): string {
@@ -10,9 +11,6 @@ function longSpanishDate(isoDate: string): string {
   });
 }
 
-function money(value: number): string {
-  return value.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 /**
  * "Manifiesto" (docs/legacy-vba-export/eltambo/reports/Manifiesto.txt, Comando36_Click en
@@ -36,13 +34,13 @@ export function buildFuturePurchaseManifestoDocDefinition(purchase: FuturePurcha
       { text: fullName, bold: true },
       ` identificado con C.C. No. ${purchase.idNumber}, me comprometo para con la Cooperativa de `,
       'Caficultores de Occidente de Nariño, a entregar la cantidad anunciada de ',
-      { text: `${money(purchase.announcedKg)} kilos`, bold: true },
+      { text: `${formatKilos(purchase.announcedKg)} kilos`, bold: true },
       ` para ${purchase.specialType} el día `,
       { text: deliveryDate, bold: true },
       ' con precio oficial de Sustentación de hoy de $ ',
-      { text: money(purchase.healthyUnitPrice), bold: true },
+      { text: formatMoney(purchase.healthyUnitPrice), bold: true },
       ' y bonificación de $ ',
-      { text: money(purchase.bonus), bold: true },
+      { text: formatMoney(purchase.bonus), bold: true },
       '.',
     ],
     fontSize: 12,

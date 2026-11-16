@@ -1,16 +1,8 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
+import { formatKilos, formatMoney, formatTyped } from '../../../shared/utils/number-format';
 import { HuskPurchaseResponse } from '../../../core/models/husk-purchase.model';
-import {
-  CELL,
-  HEADER_CELL,
-  LABEL_CELL,
-  buildInvoiceDoc,
-  money,
-  paymentCells,
-  WithPayment,
-  wholePeso,
-} from '../dry-coffee/dry-coffee-invoice';
+import { CELL, HEADER_CELL, LABEL_CELL, buildInvoiceDoc, paymentCells, WithPayment } from '../dry-coffee/dry-coffee-invoice';
 
 /**
  * Reporte "Factura Pasilla" del export de Access (reports/Factura Pasilla.txt): mismo encabezado,
@@ -53,21 +45,21 @@ export function buildHuskInvoiceDocDefinition(
           { text: 'LIQUIDACION', ...HEADER_CELL, colSpan: 2 },
           {},
         ],
-        [...dataRow('Sacos', money(purchase.bagsCount)), ...liquidationRow('VALOR BRUTO $', money(purchase.grossValue))],
-        [...dataRow('Kilos Brutos', money(purchase.grossKg)), ...liquidationRow('Aporte Socio', money(purchase.associateContribution))],
-        [...dataRow('Destare', money(purchase.tareKg)), ...liquidationRow('Descuento Cooperativo', money(purchase.cooperativeDiscount))],
-        [...dataRow('Kilos Netos Pasilla', money(purchase.netKg)), ...liquidationRow('Retención en la Fuente', money(purchase.withholding))],
+        [...dataRow('Sacos', formatKilos(purchase.bagsCount)), ...liquidationRow('VALOR BRUTO $', formatMoney(purchase.grossValue))],
+        [...dataRow('Kilos Brutos', formatKilos(purchase.grossKg)), ...liquidationRow('Aporte Socio', formatMoney(purchase.associateContribution))],
+        [...dataRow('Destare', formatKilos(purchase.tareKg)), ...liquidationRow('Descuento Cooperativo', formatMoney(purchase.cooperativeDiscount))],
+        [...dataRow('Kilos Netos Pasilla', formatKilos(purchase.netKg)), ...liquidationRow('Retención en la Fuente', formatMoney(purchase.withholding))],
         [
           ...dataRow(
             'Precio Por Punto $:',
-            wholePeso(purchase.pointPrice),
-            money(purchase.almondWeight),
-            money(purchase.almondPercentage),
+            formatMoney(purchase.pointPrice),
+            formatTyped(purchase.almondWeight),
+            formatTyped(purchase.almondPercentage),
           ),
-          ...liquidationRow('Descuento Financiero', money(purchase.shrinkageDiscount)),
+          ...liquidationRow('Descuento Financiero', formatMoney(purchase.shrinkageDiscount)),
         ],
-        [...dataRow('VALOR KILO PASILLA $:', wholePeso(purchase.unitPrice)), ...liquidationRow('Otros Descuentos', money(purchase.otherDiscounts))],
-        [...dataRow('', ''), ...liquidationRow('NETO A PAGAR $', money(purchase.netToPay), true)],
+        [...dataRow('VALOR KILO PASILLA $:', formatMoney(purchase.unitPrice)), ...liquidationRow('Otros Descuentos', formatMoney(purchase.otherDiscounts))],
+        [...dataRow('', ''), ...liquidationRow('NETO A PAGAR $', formatMoney(purchase.netToPay), true)],
         [...blankLeft, { text: 'FORMAS\nDE\nPAGO', rowSpan: 4, ...CELL, bold: true, alignment: 'center' }, cashRow],
         [...blankLeft, {}, checkRow],
         [...blankLeft, {}, transferRow],

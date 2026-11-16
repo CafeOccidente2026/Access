@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -23,7 +24,8 @@ import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages, retryField } from '../weight-check';
 import { clearSample, isOverThreshold } from '../sample-quality';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
@@ -33,18 +35,10 @@ import { localToday } from '../../../shared/utils/local-date';
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
 
-interface DryCoffeeMessages {
+interface DryCoffeeMessages extends PurchaseMessages, WeightMessages {
   readonly cooperativeDiscountLabel?: string;
-  readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMessages };
@@ -209,6 +203,9 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
+      return;
+    }
     switch (key) {
       case 'fund':
         this.reserveInvoiceNumber();
@@ -271,6 +268,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
       },
       error: (err) => {
@@ -313,7 +311,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
             ? { ...prev, wastePercentage: null }
             : { ...prev, defectivePercentage: null, healthyPercentage: null },
         );
-        this.errorMessage.set(serverError(err, this.messages()?.saveError));
+        this.retryKey = retryField(this, this.locked, key, serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -382,7 +380,14 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: this.specialInfo() ? Number(stripAnnouncementPrefix(this.specialInfo()!.announcementNumber)) : undefined,
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora del fondo y especial en pantalla. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    return this.announcementNumber(this.specialInfo() && fundId ? this.service.specialInfo(fundId, this.model['special']) : null);
   }
 
   print(): void {
@@ -413,6 +418,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Cierra el mensaje de error; si bloqueaba por caficultor fallecido, reinicia todo el formulario. */
   dismissError(): void {
+    this.refocusRetry((k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);

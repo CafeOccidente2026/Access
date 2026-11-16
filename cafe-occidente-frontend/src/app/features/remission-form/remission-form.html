@@ -147,8 +147,8 @@
           <tr *ngFor="let line of r.lines" class="border-b border-slate-100">
             <td class="p-2">{{ line.inventoryMovementId }}</td>
             <td class="p-2 text-right">{{ kg(line.quantity) }}</td>
-            <td class="p-2 text-right">{{ kg(line.unitValue) }}</td>
-            <td class="p-2 text-right">{{ kg(line.outputValue) }}</td>
+            <td class="p-2 text-right">{{ money(line.unitValue) }}</td>
+            <td class="p-2 text-right">{{ money(line.outputValue) }}</td>
           </tr>
         </tbody>
       </table>

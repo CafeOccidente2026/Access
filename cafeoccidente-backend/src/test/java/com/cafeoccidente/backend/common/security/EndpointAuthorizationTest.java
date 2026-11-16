@@ -131,6 +131,7 @@ class EndpointAuthorizationTest {
         add(ADMIN, "REGISTRO_CONTROL", put, "/api/control-records/{agencyId}", "/api/control-records/1");
         // Cafe verde en todas las agencias a la vez (area de compras, 2026-10-26): solo el Administrador.
         add(ADMIN, put, "/api/control-records/green-coffee");
+        add(ADMIN_USER, get, "/api/control-records/stamp");
         add(ADMIN, get, "/api/users");
         // Historial de cambios (area de compras, 2026-10-22): el Administrador o con el permiso.
         add(ADMIN, "HISTORIAL", get, "/api/history", "/api/history");
@@ -205,6 +206,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
         add(ADMIN_USER, get, "/api/purchases/future/open", "/api/purchases/future/open?idNumber=1");
         add(ADMIN_USER, get, "/api/purchases/future/pending");
+        add(ADMIN_USER, get, "/api/purchases/future/last-place", "/api/purchases/future/last-place?idNumber=1");
         // Restaurar Compras Anunciadas (Q5): solo el Administrador.
         add(ADMIN, get, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
         add(ADMIN, post, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");

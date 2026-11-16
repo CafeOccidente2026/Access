@@ -10,6 +10,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,7 +78,7 @@ class PendingFuturePurchasesIntegrationTest {
         future(AGENCY, "SDBU-780", "60", "990003505", 400, 0);
         future(2L, "SDB2-801", "0", "990003506", 900, 900);
 
-        List<PendingAnnouncementRow> rows = futures.pending().stream()
+        List<PendingAnnouncementRow> rows = futures.pending(null, null, true).stream()
                 .filter(r -> r.announcementNumber().startsWith("SDBU-8") || r.announcementNumber().startsWith("SDBU-7"))
                 .toList();
 
@@ -95,5 +96,22 @@ class PendingFuturePurchasesIntegrationTest {
             assertThat(r.remainingKg()).isEqualByComparingTo("300");
             assertThat(r.growers()).isEqualTo(1);
         });
+    }
+
+    // Hallazgo #17 (16-nov): como la consulta "ANUNCIADAS HOY" de Access (Fecha_Anuncio = Date()), por defecto solo
+    // las de hoy, con saldo o sin el; Desde/Hasta elige otro rango.
+    @Test
+    void byDefaultOnlyTodaysAnnouncementsAreListedWithOrWithoutBalance() {
+        future(AGENCY, "SDBU-801", "0", "990003501", 1000, 0);
+        future(AGENCY, "SDBU-790", "40", "990003503", 800, 300);
+        LocalDate today = jdbc.queryForObject("SELECT CURRENT_DATE", LocalDate.class);
+
+        assertThat(numbers(futures.pending(null, null, false))).containsExactly("SDBU-801");
+        assertThat(numbers(futures.pending(today.minusDays(45), today.minusDays(30), false))).containsExactly("SDBU-790");
+        assertThat(numbers(futures.pending(today.minusDays(45), today, false))).containsExactly("SDBU-801", "SDBU-790");
+    }
+
+    private static List<String> numbers(List<PendingAnnouncementRow> rows) {
+        return rows.stream().map(PendingAnnouncementRow::announcementNumber).filter(n -> n.startsWith("SDBU-")).toList();
     }
 }

@@ -245,6 +245,15 @@ class DryCoffeePurchaseCalculatorTest {
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
+    // Hallazgo #5 (16-nov): Sacos 500, Brutos 2, Destare 2 dejaba Netos 0 y Neto a Pagar 0.
+    @Test
+    void zeroOrNegativeNetKilosAreRejected() {
+        assertThatThrownBy(() -> calculator.calculate(request("50"), controlRecord(), announcement(), seller("S", false),
+                BigDecimal.ZERO, BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("El destare no puede ser mayor o igual que los Kilos Brutos");
+    }
+
     @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(

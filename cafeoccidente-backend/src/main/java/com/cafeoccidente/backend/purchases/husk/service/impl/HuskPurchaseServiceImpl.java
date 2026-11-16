@@ -102,7 +102,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     public HuskPurchaseResponse create(HuskPurchaseRequest request) {
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
         PurchaseContext context = purchaseContextService.forSave(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+                request.fundId(), SPECIAL_TYPE, started(request.fundId(), request.startedAnnouncementNumber()),
+                request.idNumber(), request.address(), request.cellphone());
         HuskPurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
@@ -224,7 +225,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     @Override
     public HuskPurchaseCalculation preview(HuskPurchaseRequest request) {
         return runCalculation(request, purchaseContextService.forPreview(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone()));
+                request.fundId(), SPECIAL_TYPE, started(request.fundId(), request.startedAnnouncementNumber()),
+                request.idNumber(), request.address(), request.cellphone()));
     }
 
     private HuskPurchaseCalculation runCalculation(HuskPurchaseRequest request, PurchaseContext context) {
@@ -261,6 +263,12 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
                 announcement.announcementDate(),
                 announcement.basePriceLoad(),
                 announcement.healthyUnitPrice(),
-                announcement.costs());
+                announcement.costs(),
+                controlRecordService.getActive(agencyId).getSampleSize());
+    }
+
+    /** Hallazgo #6: el anuncio con que empezo la compra, si sigue vigente o es de hoy; null = el vigente. */
+    private AnnouncementResponse started(Long fundId, Integer startedNumber) {
+        return announcementService.findStarted(currentAgencyProvider.currentAgencyId(), fundId, SPECIAL_TYPE, startedNumber);
     }
 }

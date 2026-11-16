@@ -31,6 +31,6 @@ describe('buildHuskInvoiceDocDefinition', () => {
     }
     expect(text).toContain('Documento Soporte de compra de café pergamino seco tipo PASILLA');
     expect(text).toContain('4.108'); // Vr_Kilo DecimalPlaces=0
-    expect(text).toContain('48,00'); // PorcAlmSana DecimalPlaces=2
+    expect(text).toContain('"48"'); // PorcAlmSana DecimalPlaces=2
   });
 });

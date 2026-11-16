@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { InventoryMovementResponse } from '../../core/models/inventory.model';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
 
 /** "Reporte Inventario": de solo lectura - las filas se crean solas desde cada compra. */
 @Component({
@@ -35,10 +35,14 @@ export class InventoryConsultaComponent {
   }
 
   kg(value: number): string {
-    return formatDisplayNumber(value, 'count');
+    return formatKilos(value);
   }
 
   money(value: number): string {
-    return formatDisplayNumber(value, 'currency');
+    return formatMoney(value);
+  }
+
+  date(value: string): string {
+    return formatDate(value);
   }
 }

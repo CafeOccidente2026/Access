@@ -8,7 +8,7 @@ import { ContentService } from '../../core/services/content.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber } from '../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney, parseDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { serverError } from '../../shared/utils/server-error';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
@@ -127,11 +127,15 @@ export class RemissionFormComponent {
   }
 
   kg(value: number): string {
-    return formatDisplayNumber(value, 'count');
+    return formatKilos(value);
+  }
+
+  money(value: number): string {
+    return formatMoney(value);
   }
 
   date(value: string): string {
-    return value.split('-').reverse().join('/');
+    return formatDate(value);
   }
 
   savedText(remission: RemissionResponse): string {

@@ -14,5 +14,7 @@ public record AnnouncementInfoResponse(
         LocalDate announcementDate,
         BigDecimal basePriceDryLoad,
         BigDecimal pointPrice,
-        BigDecimal costs) {
+        BigDecimal costs,
+        /** Hallazgo #10: Tamano de la muestra del Registro de Control; la pantalla valida Peso Almendra al momento. */
+        BigDecimal sampleSize) {
 }

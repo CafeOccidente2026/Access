@@ -37,7 +37,19 @@ public record DryCoffeePurchaseRequest(
         @Valid PurchasePaymentRequest payment,
         @Positive Integer quotaAnnouncementNumber,
         @Positive BigDecimal deliveryKg,
-        @Positive Long futurePurchaseId) {
+        @Positive Long futurePurchaseId,
+        /** Hallazgo #6: el anuncio con que empezo la compra (el de la pantalla); null = el vigente. */
+        @Positive Integer startedAnnouncementNumber) {
+
+    /** Sin anuncio de inicio: el vigente (Cupos, Anunciadas y los tests). */
+    public DryCoffeePurchaseRequest(Long fundId, String specialType, String idNumber, String address, String cellphone,
+            Integer bagsCount, BigDecimal grossKg, BigDecimal tareKg, BigDecimal totalStoredWeight,
+            BigDecimal defectiveStoredWeight, BigDecimal penalty, BigDecimal freightDiscount, BigDecimal otherDiscounts,
+            PurchasePaymentRequest payment, Integer quotaAnnouncementNumber, BigDecimal deliveryKg, Long futurePurchaseId) {
+        this(fundId, specialType, idNumber, address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight,
+                defectiveStoredWeight, penalty, freightDiscount, otherDiscounts, payment, quotaAnnouncementNumber, deliveryKg,
+                futurePurchaseId, null);
+    }
 
     /** Compra de seco normal: con el anuncio vigente. */
     public DryCoffeePurchaseRequest(Long fundId, String specialType, String idNumber, String address, String cellphone,

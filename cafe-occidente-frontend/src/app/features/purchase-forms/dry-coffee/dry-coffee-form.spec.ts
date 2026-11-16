@@ -35,6 +35,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     additionalDiscountFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages: {
       acceptLabel: 'Aceptar',
+      tareNotBelowGross: 'El destare no puede ser mayor o igual que los Kilos Brutos',
       noAnnouncement: 'No hay anuncio',
       deceasedBlocked: 'No se le puede facturar a un fallecido.',
       idNumberNotFound: 'Este número de cédula no existe.',
@@ -339,7 +340,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
   });
 
-  it('a failed weight that is not the threshold keeps the generic message', () => {
+  // Hallazgo #10 (16-nov): el peso rechazado se borra y queda editable para digitarlo otra vez.
+  it('a failed weight that is not the threshold shows the server message and frees the field', () => {
     setup(growerWithPhone);
     fillCommon();
     qualitySpy.mockReturnValue(throwError(() => ({ error: { message: 'otro' } })));
@@ -347,7 +349,24 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.onFieldCommitted('totalStoredWeight');
 
     expect(component.errorMessage()).toBe('otro');
-    expect(component.model['totalStoredWeight']).toBe('220');
+    expect(component.model['totalStoredWeight']).toBe('');
+    expect((component as any).locked.has('totalStoredWeight')).toBe(false);
+    expect((component as any).retryKey).toBe('totalStoredWeight');
+    component.dismissError();
+    expect((component as any).retryKey).toBeNull();
+  });
+
+  // Hallazgo #5 (16-nov): Destare igual a Kilos Brutos se rechaza al dar Enter, sin esperar el cálculo.
+  it('a tare equal to the gross kilos is rejected at once', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    component.model['grossKg'] = '2';
+    component.onFieldCommitted('grossKg');
+    component.model['tare'] = '2';
+    component.onFieldCommitted('tare');
+
+    expect(component.errorMessage()).toBe(content.messages['tareNotBelowGross']);
+    expect(component.model['tare']).toBe('');
   });
 
   it('Imprimir saves, opens the invoice with the payment and leaves the form clean with the next invoice', async () => {

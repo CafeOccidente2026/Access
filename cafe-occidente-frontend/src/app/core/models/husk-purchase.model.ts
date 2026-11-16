@@ -9,6 +9,8 @@ export interface HuskAnnouncementInfo {
   readonly basePriceDryLoad: number;
   readonly pointPrice: number;
   readonly costs: number;
+  /** Tamaño de la muestra del Registro de Control: Peso Almendra no lo puede pasar (hallazgo #10). */
+  readonly sampleSize?: number | null;
 }
 
 /** Proxima factura del punto (Q7: consecutivo compartido con seco y verde); la asigna el servidor al guardar. */
@@ -46,6 +48,8 @@ export interface HuskPurchaseRequest {
   readonly otherDiscounts: number;
   /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
   readonly payment: PurchasePayment | null;
+  /** Hallazgo #6: el anuncio con que empezó la compra (el que se ve en pantalla). */
+  readonly startedAnnouncementNumber?: number;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

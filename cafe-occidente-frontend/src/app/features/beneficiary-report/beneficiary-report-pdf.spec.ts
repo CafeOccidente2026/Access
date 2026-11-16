@@ -37,7 +37,7 @@ describe('beneficiary reports', () => {
     expect(flat.some((l) => l.startsWith("Resumir por 'Cedula' =  9948772 (1 registro de detalle)"))).toBe(true);
     const grand = texts(body[body.length - 1] as unknown[]);
     expect(grand[0]).toBe('Suma total');
-    expect(grand[5]).toBe('160,00');
+    expect(grand[5]).toBe('160');
     expect(grand[13]).toBe('1.600');
     expect(body.every((r) => (r as unknown[]).length === 15)).toBe(true);
   });
@@ -47,9 +47,9 @@ describe('beneficiary reports', () => {
     const lines = table('beneficiary', one).table.body.map((r) => texts(r as unknown[]));
     const sums = lines.filter((l) => String(l[0]).startsWith('Suma'));
     expect(sums.map((l) => [l[0], l[5]])).toEqual([
-      ['Suma 0110002000002', '690,00'],
-      ['Suma 0110002000010', '1.000,00'],
-      ['Suma total', '1.690,00'],
+      ['Suma 0110002000002', '690'],
+      ['Suma 0110002000010', '1.000'],
+      ['Suma total', '1.690'],
     ]);
     // Un solo beneficiario: sin "Resumir por 'Cedula'" (la Suma total ya es la suya).
     expect(lines.some((l) => String(l[0]).startsWith('Resumir'))).toBe(false);

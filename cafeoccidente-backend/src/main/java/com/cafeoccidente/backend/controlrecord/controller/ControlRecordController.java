@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.controlrecord.controller;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.controlrecord.dto.ControlRecordStampResponse;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
@@ -46,6 +47,13 @@ public class ControlRecordController {
     @PreAuthorize(Roles.ADMIN)
     public List<ControlRecordResponse> list() {
         return controlRecordService.list();
+    }
+
+    /** Hallazgo #6: las pantallas de compra la comparan al salir (Usuario tambien, sin el permiso de la pantalla). */
+    @GetMapping("/stamp")
+    @PreAuthorize(Roles.ADMIN_USER)
+    public ControlRecordStampResponse stamp() {
+        return controlRecordService.stamp(currentAgencyProvider.currentAgencyId());
     }
 
     @GetMapping("/{agencyId}")

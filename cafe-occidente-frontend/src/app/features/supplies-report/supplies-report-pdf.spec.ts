@@ -1,11 +1,11 @@
 import pdfMake from 'pdfmake/build/pdfmake';
+import { formatMoney } from '../../shared/utils/number-format';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import writeExcelFile from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
 import content from '../../../../public/assets/data/supplies-report.json';
-import { money } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildSuppliesReportDoc, groupByAgency, paymentMethodsSheet } from './supplies-report-pdf';
 import { SuppliesReportContent } from './supplies-report.model';
 
@@ -67,8 +67,8 @@ describe('supplies reports', () => {
     const card: SuppliesReportRow = { ...row('EL TAMBO', '43909', 0, 0), card: 173787 };
     const other: SuppliesReportRow = { ...row('EL TAMBO', '43910', 0, 0), card: 26213, fundCode: 'RP' };
     const body = tableRows(buildSuppliesReportDoc(data.reports['card'], data.text, [card, other]).content);
-    expect(body[1]).toEqual(['14/06/2026', '43909', '99.304.051', 'CAFICULTOR PRUEBA', money(173787), 'RP']);
-    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', money(200000), '']);
+    expect(body[1]).toEqual(['14/06/2026', '43909', '99.304.051', 'CAFICULTOR PRUEBA', formatMoney(173787), 'RP']);
+    expect(body.at(-1)).toEqual([data.text.cardTotal, '', '', '', formatMoney(200000), '']);
     // El Informe Caja ya no tiene la columna.
     expect(JSON.stringify(data.reports['cash'].columns)).not.toContain('Datáfono');
   });

@@ -41,7 +41,7 @@ describe('Informe Anuncios a Futuro (HU-34)', () => {
     const annulled = buildAnnouncementReportDoc(
       [purchase({ netKg: 0, factor: 0, status: 'ANULADA', paymentMethod: 'ANULADA', netToPay: 0, grossValue: 0 })],
       '9/05/2026 - 9/05/2026', announcementText);
-    expect(texts(tables(annulled)[0][2])[3]).toBe('0,00');
+    expect(texts(tables(annulled)[0][2])[3]).toBe('0');
     expect(JSON.stringify(annulled.content)).toContain('{"text":"ANULADA","bold":true}');
   });
 
@@ -80,16 +80,16 @@ describe('Informe Saldo Anuncios (HU-35)', () => {
 
   it('RN-21.7.2: each person with K Anun, K Entr and Saldo Kg = K Anun - K Entr', () => {
     expect(texts(body[0])).toEqual(content.balancePdf.columns);
-    expect(texts(body[2])).toEqual(['9/05/2026', '99.286.462', 'MARIA', 'PRUEBA', '1.000,00', '400,00', '600,00',
-      '19.115', '40', 'NESPRESSO - FTUSA', '1/06/2026']);
+    expect(texts(body[2])).toEqual(['09/05/2026', '99.286.462', 'MARIA', 'PRUEBA', '1.000', '400', '600',
+      '19.115', '40', 'NESPRESSO - FTUSA', '01/06/2026']);
   });
 
   it('RN-21.7.4: grouped by announcement with Sum and Suma total of K Anun, K Entr and Saldo Kg', () => {
     expect(texts(body[1])[0]).toBe('Anuncio 3443');
     const sumRow = texts(body[4]);
     const totalRow = texts(body[5]);
-    expect([sumRow[0], sumRow[4], sumRow[5], sumRow[6]]).toEqual(['Sum', '1.500,00', '900,00', '600,00']);
-    expect([totalRow[0], totalRow[4], totalRow[5], totalRow[6]]).toEqual(['Suma total', '1.500,00', '900,00', '600,00']);
+    expect([sumRow[0], sumRow[4], sumRow[5], sumRow[6]]).toEqual(['Sum', '1.500', '900', '600']);
+    expect([totalRow[0], totalRow[4], totalRow[5], totalRow[6]]).toEqual(['Suma total', '1.500', '900', '600']);
   });
 
   it('RN-21.7.3 and RN-21.7.5: header COMPRAS A FUTURO with cooperative, NIT, agency and the signatures', () => {

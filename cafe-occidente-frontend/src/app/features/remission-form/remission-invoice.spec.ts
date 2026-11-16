@@ -40,9 +40,9 @@ describe('buildRemissionDocDefinition', () => {
     const two = { ...remission, lines: [remission.lines[0], { ...remission.lines[0], id: 2, quantity: 280, outputValue: 5373534 }] };
     const copies = buildRemissionDocDefinition(two, null).content as { stack: { table?: { body: { text?: string }[][] } }[] }[];
     const body = copies[0].stack[2].table!.body; // DESPACHOS; fila 0 = titulos
-    expect(body[1][4].text).toBe('500,00');
+    expect(body[1][4].text).toBe('500');
     expect([body[2][3].text, body[2][4].text]).toEqual(['$', '627.500']);
-    expect(body[3][4].text).toBe('280,00');
+    expect(body[3][4].text).toBe('280');
     expect([body[4][3].text, body[4][4].text]).toEqual(['$', '5.373.534']);
     // En todas las copias, no solo en la del Factor.
     expect(JSON.stringify(copies[3].stack)).toContain('"5.373.534"');
@@ -52,13 +52,13 @@ describe('buildRemissionDocDefinition', () => {
     const text = (exitPercentage: number | null) =>
       JSON.stringify(buildRemissionDocDefinition({ ...remission, lines: [{ ...remission.lines[0], exitPercentage }] }, null).content);
     expect(text(93.37)).toContain('"93,37"');
-    expect(text(93.37)).not.toContain('"88,00"');
-    expect(text(null)).toContain('"88,00"');
+    expect(text(93.37)).not.toContain('"88"');
+    expect(text(null)).toContain('"88"');
   });
 
   it('fills the pre-printed boxes with the remission data and marks OTROS for RP', () => {
     const text = JSON.stringify(buildRemissionDocDefinition(remission, null).content);
-    for (const value of ['Nº SDBU-RP-0007', '"9"', '507,50','"29"', '"09"', '"2026"', 'ALMACAFE', 'Buesaco', '"RN"', '500,00', 'TRANS NARIÑO', 'ABC123', 'Juan Perez', '1085']) {
+    for (const value of ['Nº SDBU-RP-0007', '"9"', '507,50','"29"', '"09"', '"2026"', 'ALMACAFE', 'Buesaco', '"RN"', '"500"', 'TRANS NARIÑO', 'ABC123', 'Juan Perez', '1085']) {
       expect(text).toContain(value);
     }
     // Casillero X: fila de LINEA FINANCIAMIENTO (0) u OTROS (2) del bloque de fecha.

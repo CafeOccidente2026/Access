@@ -1,4 +1,5 @@
 import { Location } from '@angular/common';
+import { localToday } from '../../shared/utils/local-date';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -57,7 +58,7 @@ describe('FutureRestoreComponent', () => {
     search(c, '123.456');
 
     expect(previewSpy).toHaveBeenCalledWith('123456');
-    expect(c.rows()).toEqual([['SDBU-1', '2026-11-05', 'ESTANDAR', '1.500,00', '1.000,00', '100,00', '500,00']]);
+    expect(c.rows()).toEqual([['SDBU-1', '05/11/2026', 'ESTANDAR', '1.500', '1.000', '100', '500']]);
     expect(restoreSpy).not.toHaveBeenCalled();
     expect(c.canRestore()).toBe(true);
   });
@@ -112,7 +113,7 @@ describe('FutureRestoreComponent', () => {
     const c = setup('quota');
 
     expect(listSpy).toHaveBeenCalledTimes(1);
-    expect(c.rows()).toEqual([['4', '2026-11-02', 'RN', '2.500,00', '1.000,00', '1.500,00']]);
+    expect(c.rows()).toEqual([['4', '02/11/2026', 'RN', '2.500', '1.000', '1.500']]);
     expect(restoreSpy).not.toHaveBeenCalled();
   });
 
@@ -121,8 +122,24 @@ describe('FutureRestoreComponent', () => {
 
     expect(pendingSpy).toHaveBeenCalledTimes(1);
     expect(listSpy).not.toHaveBeenCalled();
-    expect(c.rows()).toEqual([['SDBU-4', '2026-11-02', 'NESPRESSO - FTUSA', '9.100,00', '2', '1.500,00', '300,00', '1.200,00']]);
+    expect(c.rows()).toEqual([['SDBU-4', '02/11/2026', 'NESPRESSO - FTUSA', '9.100', '2', '1.500', '300', '1.200']]);
     expect(c.canRestore()).toBe(false);
+  });
+
+  // Hallazgo #17 (16-nov): por defecto las de hoy, como "ANUNCIADAS HOY" de Access; con filtro, otras fechas o todas con saldo.
+  it('Anunciadas de Hoy asks for today by default, then for the chosen dates or for every one with balance', () => {
+    const c = setup('pending');
+    const today = localToday();
+    expect(pendingSpy).toHaveBeenLastCalledWith(today, today, false);
+
+    TestBed.tick();
+    c.from.set('2026-11-01');
+    TestBed.tick();
+    expect(pendingSpy).toHaveBeenLastCalledWith('2026-11-01', today, false);
+
+    c.withBalance.set(true);
+    TestBed.tick();
+    expect(pendingSpy).toHaveBeenLastCalledWith('2026-11-01', today, true);
   });
 
   it('a failed Anunciadas de Hoy says so and shows no table', () => {

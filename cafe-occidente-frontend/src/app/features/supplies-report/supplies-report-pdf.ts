@@ -3,10 +3,9 @@ import type { SheetData } from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { formatDisplayNumber, formatThousands } from '../../shared/utils/number-format';
+import { formatDisplayNumber, formatMoney, formatThousands } from '../../shared/utils/number-format';
 import { themeColor } from '../../shared/utils/theme-color';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
-import { money } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { SuppliesReport, SuppliesReportText } from './supplies-report.model';
 
 // Colores del informe de Access, desde los tokens de styles.css (@theme).
@@ -76,7 +75,7 @@ function headerRow(report: SuppliesReport, isAmount: (index: number) => boolean)
 
 /** MovimientoCaja / Mov Caja Menor / SuministrosRP-LF / Mov Empaque: titulo, columnas y Saldo corrido. */
 function movementBody(report: SuppliesReport, rows: readonly SuppliesReportRow[], packagingType: string | null): Content[] {
-  const num = report.layout === 'packaging' ? count : money;
+  const num = report.layout === 'packaging' ? count : formatMoney;
   const detail = (r: SuppliesReportRow): TableCell[] => {
     const tail: TableCell[] = [
       { text: r.detail ?? '' },
@@ -103,12 +102,12 @@ function cardBody(report: SuppliesReport, text: SuppliesReportText, rows: readon
     r.transactionId,
     { text: formatThousands(r.idNumber), alignment: 'right' },
     [r.firstNames, r.lastNames].filter(Boolean).join(' '),
-    { text: money(r.card ?? 0), alignment: 'right' },
+    { text: formatMoney(r.card ?? 0), alignment: 'right' },
     { text: r.fundCode ?? '', alignment: 'center' },
   ];
   const total: TableCell[] = [
     { text: text.cardTotal, bold: true, colSpan: 4 }, '', '', '',
-    { text: money(sum(rows, (r) => r.card ?? 0)), bold: true, alignment: 'right' }, '',
+    { text: formatMoney(sum(rows, (r) => r.card ?? 0)), bold: true, alignment: 'right' }, '',
   ];
   return titledTable(report, [55, 55, 70, '*', 80, 35], [headerRow(report, (i) => i === 4), ...rows.map(detail), total]);
 }
@@ -126,8 +125,8 @@ function checksBody(report: SuppliesReport, text: SuppliesReportText, rows: read
         r.firstNames ?? '',
         r.lastNames ?? '',
         { text: String(r.checkNumber ?? ''), alignment: 'right' },
-        { text: money(r.inflow), alignment: 'right' },
-        { text: money(r.outflow), alignment: 'right' },
+        { text: formatMoney(r.inflow), alignment: 'right' },
+        { text: formatMoney(r.outflow), alignment: 'right' },
       ]),
     );
     body.push([{ text: fill(text.checksGroupSummary, { agency, count: group.length }), colSpan: 7, color: teal(), margin: [0, 6, 0, 0] }, '', '', '', '', '', '']);
@@ -161,8 +160,8 @@ function paymentBody(report: SuppliesReport, text: SuppliesReportText, rows: rea
         { text: shortDate(r.date), alignment: 'right' },
         { text: r.idNumber, alignment: 'right' },
         r.detail ?? '',
-        { text: money(r.inflow), alignment: 'right' },
-        { text: money(r.outflow), alignment: 'right' },
+        { text: formatMoney(r.inflow), alignment: 'right' },
+        { text: formatMoney(r.outflow), alignment: 'right' },
         r.paymentMethod ?? '',
       ]),
     );
@@ -177,8 +176,8 @@ function paymentBody(report: SuppliesReport, text: SuppliesReportText, rows: rea
 function totalRow(label: string, rows: readonly SuppliesReportRow[], at: number, columns = 7): TableCell[] {
   const cells: TableCell[] = Array.from({ length: columns }, () => '');
   cells[0] = { text: label, bold: true, colSpan: at };
-  cells[at] = { text: money(sum(rows, (r) => r.inflow)), bold: true, alignment: 'right' };
-  cells[at + 1] = { text: money(sum(rows, (r) => r.outflow)), bold: true, alignment: 'right' };
+  cells[at] = { text: formatMoney(sum(rows, (r) => r.inflow)), bold: true, alignment: 'right' };
+  cells[at + 1] = { text: formatMoney(sum(rows, (r) => r.outflow)), bold: true, alignment: 'right' };
   return cells;
 }
 

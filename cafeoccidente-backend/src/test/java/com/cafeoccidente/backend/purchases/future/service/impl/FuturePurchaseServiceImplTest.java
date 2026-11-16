@@ -13,6 +13,7 @@ import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
@@ -97,6 +98,46 @@ class FuturePurchaseServiceImplTest {
             FuturePurchase saved = inv.getArgument(0);
             return saved;
         });
+    }
+
+    private FuturePurchaseRequest request(BigDecimal kilos, LocalDate deliveryDate) {
+        return new FuturePurchaseRequest("123456", "RN", 1, kilos, deliveryDate, "Finca", "Buesaco", "Vereda");
+    }
+
+    // Hallazgo #16 (16-nov): se guardo una entrega para el 22/11/2016.
+    @Test
+    void aDeliveryDateBeforeTodayIsRejected() {
+        mockHappyPath();
+        assertThatThrownBy(() -> service.create(request(new BigDecimal("500"), TODAY.minusDays(1))))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("La fecha de entrega no puede ser anterior a hoy");
+        verify(futurePurchaseRepository, never()).save(any());
+        service.create(request(new BigDecimal("500"), TODAY));
+    }
+
+    // Hallazgo #10 (16-nov): el mensaje decia "Falta o esta mal: Kilos Anunciados".
+    @Test
+    void zeroAnnouncedKilosAreRejectedWithAClearMessage() {
+        mockHappyPath();
+        assertThatThrownBy(() -> service.create(request(BigDecimal.ZERO, TODAY.plusDays(5))))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Los kilos anunciados deben ser mayores que 0");
+    }
+
+    // Hallazgo #14 (16-nov): Finca, Mpio y Vereda de la ultima compra a futuro de la cedula.
+    @Test
+    void theLastPlaceOfTheGrowerComesFromItsLatestFuturePurchase() {
+        FuturePurchase older = new FuturePurchase();
+        older.setFinca("Vieja");
+        FuturePurchase latest = new FuturePurchase();
+        latest.setFinca("La Esperanza");
+        latest.setMunicipality("El Tambo");
+        latest.setVereda("El Placer");
+        when(futurePurchaseRepository.findFirstByAgencyIdAndIdNumberOrderByIdDesc(1L, "123456"))
+                .thenReturn(Optional.of(latest));
+        assertThat(service.lastPlace("123456")).isEqualTo(new FuturePlaceResponse("La Esperanza", "El Tambo", "El Placer"));
+        when(futurePurchaseRepository.findFirstByAgencyIdAndIdNumberOrderByIdDesc(1L, "999")).thenReturn(Optional.empty());
+        assertThat(service.lastPlace("999")).isNull();
     }
 
     @Test

@@ -97,7 +97,7 @@ describe('FutureReportComponent', () => {
 
   it('the Fecha of the header is the announcement date, like the Access capture', () => {
     const rows = [{ announcementDate: '2026-05-09', purchaseDate: '2026-09-28' } as PurchaseReportRow];
-    expect(announcementHeaderDate(rows)).toBe('9/05/2026');
+    expect(announcementHeaderDate(rows)).toBe('09/05/2026');
   });
 
   it('the menu opens both reports', () => {
