@@ -162,8 +162,10 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     }
 
     @Override
-    public List<PendingAnnouncementRow> pending() {
-        return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId());
+    public List<PendingAnnouncementRow> pending(LocalDate from, LocalDate to, boolean withBalance) {
+        LocalDate today = LocalDate.now(clock);
+        return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId(), withBalance,
+                from == null ? today : from, to == null ? today : to);
     }
 
     @Override

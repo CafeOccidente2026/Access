@@ -10,6 +10,7 @@ import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,10 +59,11 @@ public class FuturePurchaseController {
         return place == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(place);
     }
 
-    /** Anunciadas de Hoy (HU-31, P2): solo lectura. */
+    /** Anunciadas de Hoy: solo lectura; por defecto las de hoy (hallazgo #17). */
     @GetMapping("/pending")
-    public List<PendingAnnouncementRow> pending() {
-        return futurePurchaseService.pending();
+    public List<PendingAnnouncementRow> pending(@RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to, @RequestParam(defaultValue = "false") boolean withBalance) {
+        return futurePurchaseService.pending(from, to, withBalance);
     }
 
     /** Ventana de Facturar Compras Anunciadas (RN-21.5.2). */
