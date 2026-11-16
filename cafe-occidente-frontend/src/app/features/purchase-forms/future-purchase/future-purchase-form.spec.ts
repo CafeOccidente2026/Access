@@ -44,6 +44,9 @@ describe('FuturePurchaseFormComponent', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      notInProgram: 'CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE',
+      deliveryDatePast: 'La fecha de entrega no puede ser anterior a hoy',
+      kilosNotPositive: 'Los kilos anunciados deben ser mayores que 0',
     },
   };
 
@@ -79,13 +82,18 @@ describe('FuturePurchaseFormComponent', () => {
     specialType: 'NESPRESSO - FTUSA',
   };
 
+  const ness = { programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' };
   let createSpy: ReturnType<typeof vi.fn>;
+  let programSpy: ReturnType<typeof vi.fn>;
+  let lastPlaceSpy: ReturnType<typeof vi.fn>;
   let todaySpy: ReturnType<typeof vi.fn>;
   let component: FuturePurchaseFormComponent;
 
   function setup(grower: Grower) {
     createSpy = vi.fn(() => of({}));
     todaySpy = vi.fn(() => of([announcement]));
+    programSpy = vi.fn(() => of(ness));
+    lastPlaceSpy = vi.fn(() => of(null));
     localStorage.setItem('cafeoccidente.agencyId', '1');
     localStorage.setItem('cafeoccidente.agencyName', 'Buesaco');
 
@@ -94,8 +102,8 @@ describe('FuturePurchaseFormComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
-        { provide: FuturePurchaseService, useValue: { create: createSpy, todayAnnouncements: todaySpy } },
-        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: vi.fn(() => of(null)) } },
+        { provide: FuturePurchaseService, useValue: { create: createSpy, todayAnnouncements: todaySpy, lastPlace: lastPlaceSpy } },
+        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: programSpy } },
       ],
     });
     component = TestBed.createComponent(FuturePurchaseFormComponent).componentInstance;
@@ -110,7 +118,7 @@ describe('FuturePurchaseFormComponent', () => {
     component.onFieldCommitted('special');
     component.model['announcement'] = label;
     component.onFieldCommitted('announcement');
-    component.model['deliveryDate'] = '2026-12-01';
+    component.model['deliveryDate'] = '2099-12-01';
     component.onFieldCommitted('deliveryDate');
     component.model['kilos'] = '500';
     component.onFieldCommitted('kilos');
@@ -131,16 +139,66 @@ describe('FuturePurchaseFormComponent', () => {
     expect(component.model['address']).toBe('VEREDA PRUEBA DOS');
   });
 
-  it('C3: the Federación block takes the cédula, name and program of NESS; without NESS it stays empty', () => {
+  // Hallazgo #11 (16-nov): con la cédula en NESPRESSO y LATE HARVEST el bloque quedaba vacío: se buscaba sin Especial.
+  it('C3: the Federación block takes the cédula, name and program of NESS for the chosen Especial', () => {
     setup(growerWithoutId);
-    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
     fill();
+    expect(programSpy).toHaveBeenCalledWith(growerWithoutId.idNumber, 'NESPRESSO - FTUSA');
     expect(component.model).toMatchObject({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' });
+  });
 
-    TestBed.resetTestingModule();
+  // Hallazgo #10: el programa NESS se revisa apenas se elige el Especial, no al imprimir.
+  it('a grower outside the program of the Especial is warned at once and the Especial is freed', () => {
+    setup(growerWithoutId);
+    programSpy.mockReturnValue(of(null));
+    component.model['idPart1'] = growerWithoutId.idNumber;
+    component.onFieldCommitted('idPart1');
+    component.model['special'] = 'NESPRESSO - FTUSA';
+    component.onFieldCommitted('special');
+
+    expect(component.errorMessage()).toBe(content.messages['notInProgram']);
+    expect(component.model['special']).toBe('');
+    expect(todaySpy).not.toHaveBeenCalled();
+  });
+
+  // Hallazgos #10 y #16: kilos en 0 y fecha pasada se rechazan al momento y el foco vuelve a ese campo.
+  it('a delivery date before today and zero kilos are rejected on Enter', () => {
     setup(growerWithoutId);
     fill();
-    expect(component.model).toMatchObject({ idNumber: '', fullName: '', program: '' });
+    component.model['deliveryDate'] = '2016-11-22';
+    component.onFieldCommitted('deliveryDate');
+    expect(component.errorMessage()).toBe(content.messages['deliveryDatePast']);
+    expect(component.model['deliveryDate']).toBe('');
+    component.dismissError();
+
+    component.model['kilos'] = '0';
+    component.onFieldCommitted('kilos');
+    expect(component.errorMessage()).toBe(content.messages['kilosNotPositive']);
+    expect(component.model['kilos']).toBe('');
+    expect((component as any).canPrint()).toBe(false);
+  });
+
+  // Hallazgo #12: lo digitado se puede corregir hasta guardar; otro Especial pide el anuncio otra vez.
+  it('typed fields stay editable until saved and a new Especial asks again for the announcement', () => {
+    setup(growerWithoutId);
+    fill();
+    expect(field('deliveryDate')?.readonly).toBeFalsy();
+    expect(field('announcement')?.readonly).toBeFalsy();
+
+    component.model['special'] = 'NESPRESSO LATE HARVEST - FTUSA';
+    component.onFieldCommitted('special');
+    expect(component.announcementInfo()).toBeNull();
+    expect(component.model['announcement']).toBe('');
+  });
+
+  // Hallazgo #14: Finca, Mpio y Vereda de la última compra a futuro de la cédula, sin pisar lo digitado.
+  it('the place of the last future purchase of the grower is prefilled', () => {
+    setup(growerWithoutId);
+    lastPlaceSpy.mockReturnValue(of({ finca: 'La Esperanza', municipality: 'El Tambo', vereda: null }));
+    component.model['municipality'] = 'Buesaco';
+    component.model['idPart1'] = growerWithoutId.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.model).toMatchObject({ finca: 'La Esperanza', municipality: 'Buesaco', vereda: '' });
   });
 
   it('does not ask for announcements until an Especial is committed', () => {
@@ -211,7 +269,7 @@ describe('FuturePurchaseFormComponent', () => {
     component.onFieldCommitted('idPart1');
     component.model['special'] = 'NESPRESSO - FTUSA';
     component.onFieldCommitted('special');
-    component.model['deliveryDate'] = '2026-12-01';
+    component.model['deliveryDate'] = '2099-12-01';
     component.onFieldCommitted('deliveryDate');
     component.model['kilos'] = '500';
     component.onFieldCommitted('kilos');

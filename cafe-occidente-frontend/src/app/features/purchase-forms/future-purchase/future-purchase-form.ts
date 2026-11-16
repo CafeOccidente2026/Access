@@ -18,7 +18,9 @@ import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lockFilled } from '../seller-lookup';
 import { UnsavedCloseForm } from '../unsaved-close';
 import { serverError } from '../../../shared/utils/server-error';
-import { loadFederation } from '../federation';
+import { federationValues } from '../federation';
+import { localToday } from '../../../shared/utils/local-date';
+import { Observable, map } from 'rxjs';
 
 type FormModel = Record<string, string>;
 
@@ -31,8 +33,13 @@ interface FuturePurchaseMessages {
   readonly savedNotice: string;
   readonly invoiceError: string;
   readonly closeWarning: string;
+  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
+  readonly priceChangedWarning?: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
+  readonly notInProgram: string;
+  readonly deliveryDatePast: string;
+  readonly kilosNotPositive: string;
 }
 
 type FuturePurchaseContent = PurchaseFormContent & { readonly messages: FuturePurchaseMessages };
@@ -90,6 +97,8 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
+  /** El campo al que vuelve el foco al cerrar el aviso de un valor rechazado (hallazgo #10). */
+  private retryKey: string | null = null;
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 
@@ -132,7 +141,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idPart1') {
+    if (key !== 'idPart1' && this.retryKey !== key) {
       this.advanceFocus(key);
     }
   }
@@ -141,14 +150,55 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     if (key === 'idPart1') {
       this.lookupGrower();
     } else if (key === 'special') {
-      this.loadTodayAnnouncements();
+      this.changeSpecial();
     } else if (key === 'announcement') {
       this.pickAnnouncement();
+    } else if (key === 'deliveryDate' && this.model['deliveryDate'] < localToday()) {
+      this.reject('deliveryDate', this.messages()?.deliveryDatePast);
     } else if (key === 'kilos') {
+      if (!(parseDisplayNumber(this.model['kilos']) > 0)) {
+        this.reject('kilos', this.messages()?.kilosNotPositive);
+        return;
+      }
       // Kilos_LostFocus (Form_COMPRAS A FUTURO.bas): SaldoKilos = Kilos al momento de anunciar.
       this.model['balance'] = this.model['kilos'];
       this.locked.add('balance');
     }
+  }
+
+  /** Hallazgos #10 y #16: el valor rechazado se borra, se avisa al momento y el foco vuelve a ese campo. */
+  private reject(key: string, message: string | undefined): void {
+    this.model[key] = '';
+    this.locked.delete(key);
+    this.retryKey = key;
+    this.errorMessage.set(message ?? null);
+  }
+
+  /**
+   * Hallazgos #10 y #11: al elegir el Especial se revisa de una vez el programa NESS (Texto34_AfterUpdate) y se llena
+   * Información Federación con el programa de ese Especial. Si cambia el Especial, el anuncio se elige otra vez.
+   */
+  private changeSpecial(): void {
+    if (this.announcementInfo() && this.announcementInfo()!.specialType !== this.model['special']) {
+      this.model['announcement'] = '';
+      this.locked.delete('announcement');
+      this.announcementInfo.set(null);
+    }
+    const idNumber = (this.model['idPart1'] ?? '').trim();
+    if (!idNumber) {
+      this.loadTodayAnnouncements();
+      return;
+    }
+    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
+      Object.assign(this.model, federationValues(program));
+      if (program) {
+        this.loadTodayAnnouncements();
+      } else {
+        this.unlockSpecial();
+        this.errorMessage.set(this.messages()?.notInProgram ?? null);
+      }
+      this.tick.update((n) => n + 1);
+    });
   }
 
   private lookupGrower(): void {
@@ -172,7 +222,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
         this.model['address'] = grower.address;
         this.locked.add('idPart1');
         lockFilled(this.model, this.locked, ['firstNames', 'lastNames', 'idType', 'address']);
-        this.lookupProgram();
+        this.loadLastPlace(idNumber);
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
@@ -183,8 +233,16 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  private lookupProgram(): void {
-    loadFederation(this.growerService, this.model['idPart1'], this.model['special'], this.model, () => this.tick.update((n) => n + 1));
+  /** Hallazgo #14: Finca, Mpio y Vereda de la última compra a futuro de la cédula, si no se han digitado. */
+  private loadLastPlace(idNumber: string): void {
+    this.service.lastPlace(idNumber).subscribe((place) => {
+      for (const key of OPTIONAL) {
+        if (place && !(this.model[key] ?? '').trim()) {
+          this.model[key] = place[key as keyof typeof place] ?? '';
+        }
+      }
+      this.tick.update((n) => n + 1);
+    });
   }
 
   /** RN-21.4.3: el Especial llena la lista de Anuncio con los anuncios de hoy de ese especial. */
@@ -196,6 +254,8 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
         if (list.length === 0) {
           this.unlockSpecial();
           this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        } else {
+          this.rememberPrice();
         }
         this.tick.update((n) => n + 1);
       },
@@ -275,12 +335,25 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     if (wasBlocked) {
       this.reset();
     }
+    if (this.retryKey) {
+      this.focusField(this.retryKey);
+      this.retryKey = null;
+    }
+  }
+
+  /** Hallazgo #6: los anuncios de hoy del Especial elegido; si se publica otro, el precio cambió. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const special = this.model['special'];
+    return special && this.todayAnnouncements().length
+      ? this.service.todayAnnouncements(special).pipe(map((list) => list.map((a) => a.announcementNumber).join(',')))
+      : null;
   }
 
   @HostListener('document:keydown.escape')
   reset(): void {
     this.model = { agency: this.authService.agencyName() ?? '' };
     this.locked.clear();
+    this.retryKey = null;
     this.payment.set(null);
     this.announcementInfo.set(null);
     this.todayAnnouncements.set([]);
@@ -331,7 +404,8 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
       if (READONLY_COMPUTED.includes(key)) {
         patch.readonly = true;
         patch.value = computedValues[key];
-      } else if (b.readonly || this.locked.has(key)) {
+      } else if (b.readonly || (this.locked.has(key) && !EDITABLE.includes(key))) {
+        // Hallazgo #12: lo digitado (fecha incluida) se puede corregir hasta guardar; lo que trae el sistema no.
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
       } else if (!isSequentialFieldEnabled(key, GATE_ORDER, this.locked)) {

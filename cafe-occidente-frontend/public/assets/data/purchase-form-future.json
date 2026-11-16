@@ -58,9 +58,13 @@
     "invoiceError": "No se pudo generar el manifiesto",
     "deceasedBlocked": "No se le puede anunciar una entrega futura a un caficultor fallecido.",
     "idNumberNotFound": "Este número de cédula no existe.",
+    "notInProgram": "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE",
+    "deliveryDatePast": "La fecha de entrega no puede ser anterior a hoy",
+    "kilosNotPositive": "Los kilos anunciados deben ser mayores que 0",
     "saveError": "No se pudo registrar el compromiso.",
     "savedNotice": "Compromiso registrado. Manifiesto generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "priceChangedWarning": "El precio de este tipo de café se actualizó. Si sale, la próxima compra tomará el precio nuevo. ¿Está seguro?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario"
   }
