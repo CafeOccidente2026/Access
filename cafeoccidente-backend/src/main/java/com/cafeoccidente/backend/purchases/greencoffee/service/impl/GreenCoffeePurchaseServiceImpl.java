@@ -112,7 +112,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     public GreenCoffeePurchaseResponse create(GreenCoffeePurchaseRequest request) {
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
         PurchaseContext context = purchaseContextService.forSave(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+                request.fundId(), SPECIAL_TYPE, started(request.fundId(), request.startedAnnouncementNumber()),
+                request.idNumber(), request.address(), request.cellphone());
         // HU-23 CA-2 / Q23: sin los 3 pesos de verde del Registro de Control no se registra (ni se toma factura).
         GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
         GreenCoffeePurchaseCalculation calculation = runCalculation(request, context);
@@ -249,7 +250,8 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
     @Override
     public GreenCoffeePurchaseCalculation preview(GreenCoffeePurchaseRequest request) {
         PurchaseContext context = purchaseContextService.forPreview(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
+                request.fundId(), SPECIAL_TYPE, started(request.fundId(), request.startedAnnouncementNumber()),
+                request.idNumber(), request.address(), request.cellphone());
         GreenCoffeeSampleRule.require(context.controlRecord(), sampleFormulas);
         return runCalculation(request, context);
     }
@@ -307,5 +309,10 @@ public class GreenCoffeePurchaseServiceImpl implements GreenCoffeePurchaseServic
                 announcement.costs(),
                 sample,
                 sample != null);
+    }
+
+    /** Hallazgo #6: el anuncio con que empezo la compra, si sigue vigente o es de hoy; null = el vigente. */
+    private AnnouncementResponse started(Long fundId, Integer startedNumber) {
+        return announcementService.findStarted(currentAgencyProvider.currentAgencyId(), fundId, SPECIAL_TYPE, startedNumber);
     }
 }

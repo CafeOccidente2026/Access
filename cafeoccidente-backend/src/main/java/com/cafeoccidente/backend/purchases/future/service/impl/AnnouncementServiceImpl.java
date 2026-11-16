@@ -82,6 +82,23 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     }
 
     @Override
+    public AnnouncementResponse findStarted(Long agencyId, Long fundId, String specialType, Integer startedNumber) {
+        if (startedNumber == null) {
+            return null;
+        }
+        AnnouncementResponse latest = findLatest(agencyId, fundId, specialType);
+        String number = latest.announcementNumber();
+        if (number.substring(number.lastIndexOf('-') + 1).equals(startedNumber.toString())) {
+            return latest;
+        }
+        AnnouncementResponse started = findForPurchase(agencyId, fundId, specialType, startedNumber);
+        if (!LocalDate.now(clock).equals(started.announcementDate())) {
+            throw new BusinessRuleException("El anuncio " + startedNumber + " ya no está vigente: empiece la compra otra vez");
+        }
+        return started;
+    }
+
+    @Override
     public AnnouncementResponse findLatest(Long agencyId, Long fundId, String specialType) {
         AgencyAnnouncementNumber numbering = agencyAnnouncementNumberRepository
                 .findLatest(agencyId, fundId, specialType)

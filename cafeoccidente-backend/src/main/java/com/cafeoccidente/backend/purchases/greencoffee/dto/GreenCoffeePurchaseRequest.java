@@ -29,5 +29,14 @@ public record GreenCoffeePurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal shrinkageDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
         /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */
-        @Valid PurchasePaymentRequest payment) {
+        @Valid PurchasePaymentRequest payment,
+        /** Hallazgo #6: el anuncio con que empezo la compra (el de la pantalla); null = el vigente. */
+        @Positive Integer startedAnnouncementNumber) {
+
+    public GreenCoffeePurchaseRequest(Long fundId, String idNumber, String address, String cellphone, Integer bagsCount,
+            BigDecimal grossKg, BigDecimal tareKg, BigDecimal penalty, BigDecimal compKgPrice, BigDecimal shrinkageDiscount,
+            BigDecimal otherDiscounts, PurchasePaymentRequest payment) {
+        this(fundId, idNumber, address, cellphone, bagsCount, grossKg, tareKg, penalty, compKgPrice, shrinkageDiscount,
+                otherDiscounts, payment, null);
+    }
 }
