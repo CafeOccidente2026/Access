@@ -40,13 +40,15 @@
     { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true, "display": "money" },
     { "key": "defectiveUnitPrice", "label": "Pr Alm Defec", "type": "currency", "readonly": true, "display": "money" },
     { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true, "display": "money" },
-    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true, "display": "money" }
+    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency", "readonly": true, "display": "money" }
   ],
   "weightFields": [
-    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency", "readonly": true, "display": "money" },
-    { "key": "finca", "label": "Finca", "type": "text" },
-    { "key": "municipality", "label": "Mpio", "type": "text" },
-    { "key": "vereda", "label": "Vereda", "type": "text" },
+    { "key": "finca", "label": "Finca", "type": "text", "inputWidthClass": "min-w-[260px] max-w-[260px]" },
+    { "key": "municipality", "label": "Mpio", "type": "text", "inputWidthClass": "min-w-[260px] max-w-[260px]" },
+    { "key": "vereda", "label": "Vereda", "type": "text", "inputWidthClass": "min-w-[260px] max-w-[260px]" }
+  ],
+  "netWeightFields": [
     { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date", "inputWidthClass": "max-w-[128px]" },
     { "key": "kilos", "label": "Kilos", "type": "number", "display": "kilos" },
     { "key": "balance", "label": "Saldo", "type": "number", "readonly": true, "display": "kilos" }

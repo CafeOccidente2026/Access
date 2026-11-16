@@ -17,7 +17,7 @@
   ],
   "identificationFields": [
     { "key": "invoice", "label": "Factura", "type": "text", "readonly": true },
-    { "key": "productCode", "label": "Cod Prod", "type": "text", "readonly": true },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "readonly": true, "inputWidthClass": "min-w-[125px] max-w-[125px]" },
     { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency", "readonly": true, "display": "money" },
     { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency", "readonly": true, "display": "money" },
     { "key": "deliveryKg", "label": "Kilos Entregados", "type": "number", "readonly": true, "display": "kilos" }

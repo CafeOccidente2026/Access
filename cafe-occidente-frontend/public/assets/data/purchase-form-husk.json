@@ -11,7 +11,7 @@
   "identificationFields": [
     { "key": "invoicePrefix", "label": "Factura", "type": "text", "inputWidthClass": "max-w-[70px]" },
     { "key": "invoiceNumber", "label": "", "ariaLabel": "Número de factura", "type": "text", "inputWidthClass": "max-w-[70px]" },
-    { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "max-w-[110px]" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "min-w-[125px] max-w-[125px]" },
     { "key": "basePriceDryLoad", "label": "Pr base carga perg seco", "type": "currency", "display": "money" }
   ],
   "contactFields": [

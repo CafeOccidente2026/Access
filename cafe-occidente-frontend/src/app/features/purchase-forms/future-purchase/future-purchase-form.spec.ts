@@ -26,13 +26,13 @@ describe('FuturePurchaseFormComponent', () => {
       { key: 'announcement', label: 'Anuncio', type: 'select', options: [] },
       { key: 'announcementDate', label: 'Fecha_Anuncio', type: 'date', readonly: true },
     ],
+    qualityFields: [{ key: 'qualityIncrement', label: 'Pr IncCalidad', type: 'currency', readonly: true }],
     weightFields: [
-      { key: 'qualityIncrement', label: 'Pr IncCalidad', type: 'currency', readonly: true },
       { key: 'finca', label: 'Finca', type: 'text' },
       { key: 'municipality', label: 'Mpio', type: 'text' },
       { key: 'vereda', label: 'Vereda', type: 'text' },
-      { key: 'deliveryDate', label: 'Fecha Entrega', type: 'date' },
     ],
+    netWeightFields: [{ key: 'deliveryDate', label: 'Fecha Entrega', type: 'date' }],
     messages: {
       acceptLabel: 'Aceptar',
       noAnnouncement: 'No hay anuncio',
@@ -125,7 +125,8 @@ describe('FuturePurchaseFormComponent', () => {
   }
 
   const field = (key: string) =>
-    [...(component.viewContent()?.contactFields ?? []), ...(component.viewContent()?.weightFields ?? [])].find((f) => f.key === key);
+    [...(component.viewContent()?.contactFields ?? []), ...(component.viewContent()?.weightFields ?? []),
+      ...(component.viewContent()?.netWeightFields ?? [])].find((f) => f.key === key);
 
   it('REGRESIÓN: a grower with blank migrated fields is not permanently locked out', () => {
     setup(growerWithoutId);
@@ -231,8 +232,9 @@ describe('FuturePurchaseFormComponent', () => {
 
     expect(component.announcementInfo()).toEqual(announcement);
     expect(field('announcementDate')?.value).toBe('2026-09-23');
-    expect(field('qualityIncrement')?.value).toBe(50);
-    expect(field('qualityIncrement')?.readonly).toBe(true);
+    const increment = component.viewContent()?.qualityFields?.find((f) => f.key === 'qualityIncrement');
+    expect(increment?.value).toBe(50);
+    expect(increment?.readonly).toBe(true);
   });
 
   it('without announcements today it warns and frees the Especial', () => {
@@ -339,6 +341,7 @@ describe('FuturePurchaseFormComponent', () => {
     component.onFieldCommitted('municipality');
 
     const optional = (key: string) => [...(component.viewContent()?.weightFields ?? []), ...(component.viewContent()?.qualityFields ?? []),
+      ...(component.viewContent()?.netWeightFields ?? []),
       ...(component.viewContent()?.contactFields ?? [])].find((f) => f.key === key);
     expect(optional('finca')?.readonly).toBeFalsy();
     expect(optional('municipality')?.readonly).toBeFalsy();

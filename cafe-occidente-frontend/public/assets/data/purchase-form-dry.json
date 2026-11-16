@@ -12,7 +12,7 @@
   "identificationFields": [
     { "key": "invoicePrefix", "label": "Factura", "type": "text" },
     { "key": "invoiceNumber", "label": "", "ariaLabel": "Número de factura", "type": "text" },
-    { "key": "productCode", "label": "Cod Prod", "type": "text" },
+    { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "min-w-[125px] max-w-[125px]" },
     { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency", "display": "money" },
     { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency", "display": "money" }
   ],

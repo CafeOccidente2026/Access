@@ -62,6 +62,16 @@ describe.each([
       expect(f.rowWidthClass, f.key).toContain('flex-1');
     }
   });
+
+  // Hallazgos #8 y #13 (16-nov): Cod Prod (13 digitos) y Finca, Mpio y Vereda se ven completos.
+  it('Cod Prod de 125 px y Finca, Mpio y Vereda de 260 px en su propio renglon', () => {
+    for (const f of byKey('productCode')) {
+      expect(px(f.inputWidthClass, 'min-w'), f.key).toBeGreaterThanOrEqual(125);
+    }
+    for (const f of byKey('finca', 'municipality', 'vereda')) {
+      expect(px(f.inputWidthClass, 'min-w'), f.key).toBeGreaterThanOrEqual(260);
+    }
+  });
 });
 
 describe('Consultar Compras: fechas y Cod Prod completos', () => {

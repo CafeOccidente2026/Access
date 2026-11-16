@@ -382,6 +382,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.weightFields);
+    collect(base.netWeightFields);
 
     const info = this.announcementInfo();
     const computedValues: Record<string, string | number> = {
@@ -430,6 +431,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
       contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       weightFields: row(base.weightFields),
+      netWeightFields: row(base.netWeightFields),
       reprintButtonLabel: this.canPrint() ? base.reprintButtonLabel : undefined,
     };
   }
