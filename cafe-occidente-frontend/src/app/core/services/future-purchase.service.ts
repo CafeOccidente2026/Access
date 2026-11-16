@@ -31,9 +31,10 @@ export class FuturePurchaseService {
     );
   }
 
-  /** Anunciadas de Hoy (HU-31, P2): compras a futuro con saldo, de cualquier fecha, por anuncio. */
-  pending(): Observable<PendingAnnouncementRow[]> {
-    return this.http.get<PendingAnnouncementRow[]>(`${API_BASE_URL}/purchases/future/pending`);
+  /** Anunciadas de Hoy por anuncio: las anunciadas entre dos fechas o, con `withBalance`, todas las que tienen saldo. */
+  pending(from: string, to: string, withBalance: boolean): Observable<PendingAnnouncementRow[]> {
+    const params: Record<string, string | boolean> = withBalance ? { withBalance: true } : { from, to };
+    return this.http.get<PendingAnnouncementRow[]>(`${API_BASE_URL}/purchases/future/pending`, { params });
   }
 
   /** Restaurar Compras Anunciadas: saldo guardado y recalculado, sin escribir (solo el Administrador). */
