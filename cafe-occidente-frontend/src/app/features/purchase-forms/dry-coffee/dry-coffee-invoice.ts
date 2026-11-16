@@ -1,5 +1,6 @@
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
+import { formatDate, formatKilos, formatMoney, formatTyped } from '../../../shared/utils/number-format';
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
 import { PurchasePayment } from '../../../core/models/payment-method.model';
 import { cooperativeNit } from '../../../shared/utils/nit';
@@ -24,10 +25,7 @@ function longSpanishDate(isoDate: string): string {
   });
 }
 
-function shortDate(isoDate: string): string {
-  const d = new Date(isoDate + 'T00:00:00');
-  return `${d.getDate()}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-}
+const shortDate = formatDate;
 
 export const CELL = { fontSize: 8, margin: [2, 2, 2, 2] as [number, number, number, number] };
 export const LABEL_CELL = { ...CELL };
@@ -85,7 +83,7 @@ export function paymentCells(purchase: InvoiceParty & WithPayment): Content[] {
   return (
     [['EFECTIVO $', cash], ['CHEQUE $', check], ['TRANSFER $', transfer], ['DATAFONO $', cardTerminal]] as const
   ).map(([label, value]) => ({
-    table: { widths: ['*', 70], body: [paymentRow(label, money(value))] },
+    table: { widths: ['*', 70], body: [paymentRow(label, formatMoney(value))] },
     layout: 'noBorders',
   }));
 }
@@ -260,67 +258,67 @@ export function dryCoffeeMainTable(
           {},
         ],
         [
-          ...dataRow('Sacos', money(purchase.bagsCount)),
-          ...liquidationRow('VALOR BRUTO $', money(purchase.grossValue)),
+          ...dataRow('Sacos', formatKilos(purchase.bagsCount)),
+          ...liquidationRow('VALOR BRUTO $', formatMoney(purchase.grossValue)),
         ],
         [
-          ...dataRow('Kilos Brutos', money(purchase.grossKg)),
-          ...liquidationRow('Aporte Socio', money(purchase.associateContribution)),
+          ...dataRow('Kilos Brutos', formatKilos(purchase.grossKg)),
+          ...liquidationRow('Aporte Socio', formatMoney(purchase.associateContribution)),
         ],
         [
-          ...dataRow('Destare', money(purchase.tareKg)),
-          ...liquidationRow('Descuento Cooperativo', money(purchase.cooperativeDiscount)),
+          ...dataRow('Destare', formatKilos(purchase.tareKg)),
+          ...liquidationRow('Descuento Cooperativo', formatMoney(purchase.cooperativeDiscount)),
         ],
-        ...(greenKg == null ? [] : [[...dataRow('Kilos Verdes', money(greenKg)), { text: '', ...CELL }, { text: '', ...CELL }]]),
+        ...(greenKg == null ? [] : [[...dataRow('Kilos Verdes', formatKilos(greenKg)), { text: '', ...CELL }, { text: '', ...CELL }]]),
         [
-          ...dataRow('Kilos Netos Pergamino', money(purchase.netKg)),
-          ...liquidationRow('Retención en la Fuente', money(purchase.withholding)),
+          ...dataRow('Kilos Netos Pergamino', formatKilos(purchase.netKg)),
+          ...liquidationRow('Retención en la Fuente', formatMoney(purchase.withholding)),
         ],
         [
-          ...dataRow('Precio Carga Pergamino Seco $:', wholePeso(purchase.basePriceLoad)),
-          ...liquidationRow('Descuento Financiero', money(purchase.freightDiscount)),
+          ...dataRow('Precio Carga Pergamino Seco $:', formatMoney(purchase.basePriceLoad)),
+          ...liquidationRow('Descuento Financiero', formatMoney(purchase.freightDiscount)),
         ],
         [
           ...dataRow(
             'Peso Total Almendra/Porc Merma',
             '',
-            money(purchase.totalStoredWeight),
-            money(purchase.wastePercentage),
+            formatTyped(purchase.totalStoredWeight),
+            formatTyped(purchase.wastePercentage),
           ),
-          ...liquidationRow('Otros Descuentos', money(purchase.otherDiscounts)),
+          ...liquidationRow('Otros Descuentos', formatMoney(purchase.otherDiscounts)),
         ],
         [
           ...dataRow(
             'Precio de Sustentación $:',
-            wholePeso(purchase.healthyUnitPrice),
-            money(purchase.healthyStoredWeight),
+            formatMoney(purchase.healthyUnitPrice),
+            formatTyped(purchase.healthyStoredWeight),
             '',
-            money(purchase.healthyPercentage),
+            formatTyped(purchase.healthyPercentage),
           ),
-          ...liquidationRow('NETO A PAGAR  $', money(purchase.netToPay), true),
+          ...liquidationRow('NETO A PAGAR  $', formatMoney(purchase.netToPay), true),
         ],
         [
           ...dataRow(
             'Precio Pasilla $:',
-            wholePeso(purchase.defectiveUnitPrice),
-            money(purchase.defectiveStoredWeight),
-            money(purchase.defectivePercentage),
+            formatMoney(purchase.defectiveUnitPrice),
+            formatTyped(purchase.defectiveStoredWeight),
+            formatTyped(purchase.defectivePercentage),
           ),
           { text: 'FORMAS\nDE\nPAGO', rowSpan: 4, ...CELL, bold: true, alignment: 'center' },
           cashRow,
         ],
         [
-          ...dataRow('Sobrepr Cafés Esp por Kg $:', wholePeso(purchase.bonus)),
+          ...dataRow('Sobrepr Cafés Esp por Kg $:', formatMoney(purchase.bonus)),
           {},
           checkRow,
         ],
         [
-          ...dataRow('Merma por defecto en tasa $:', wholePeso(purchase.penalty)),
+          ...dataRow('Merma por defecto en tasa $:', formatMoney(purchase.penalty)),
           {},
           transferRow,
         ],
         [
-          ...dataRow('VALOR KILO PERGAMINO $:', wholePeso(purchase.unitPrice)),
+          ...dataRow('VALOR KILO PERGAMINO $:', formatMoney(purchase.unitPrice)),
           {},
           cardTerminalRow,
         ],
