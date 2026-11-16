@@ -105,7 +105,17 @@ describe('TableAccessComponent (HU-04, C8)', () => {
     http.expectNone((r) => r.url.endsWith('/tables/empaques'));
   });
 
-  it('sorting, filters and search run in the server; typing waits a moment and asks once', () => {
+  it('16-nov: the sheet has only the headers, no row of filters under them', () => {
+    const { fixture, component, el } = setup('USUARIO');
+    component.open(EMPAQUES);
+    rowsRequest().flush(page(0, 3, 3));
+    fixture.detectChanges();
+    expect(el.querySelectorAll('[data-testid="header"]').length).toBeGreaterThan(0);
+    expect(el.querySelectorAll('input[placeholder="contiene"], input[placeholder="desde"], input[placeholder="hasta"]').length).toBe(0);
+    expect(el.querySelector('#table-search')).not.toBeNull();
+  });
+
+  it('sorting and search run in the server; typing waits a moment and asks once', () => {
     const { component } = setup('USUARIO');
     component.open(EMPAQUES);
     rowsRequest().flush(page(0, 3, 3));
@@ -117,20 +127,15 @@ describe('TableAccessComponent (HU-04, C8)', () => {
     component.toggleSort('entradas');
     expect(params(rowsRequest())).not.toHaveProperty('sort');
 
-    component.setFilter('id_transaccion', 'T');
-    component.setFilter('id_transaccion', 'T1');
-    component.setFilter('entradas.from', '5');
-    component.setFilter('fecha.to', '2026-12-31');
+    component.setSearch('caf');
     component.setSearch('cafe');
     http.expectNone((r) => r.url.endsWith('/tables/empaques'));
     vi.advanceTimersByTime(DEBOUNCE_MS);
-    expect(params(rowsRequest())).toMatchObject({
-      'f.id_transaccion': 'T1', 'f.entradas.from': '5', 'f.fecha.to': '2026-12-31', q: 'cafe', offset: '0',
-    });
+    expect(params(rowsRequest())).toMatchObject({ q: 'cafe', offset: '0' });
 
-    component.setFilter('id_transaccion', '');
+    component.setSearch('');
     vi.advanceTimersByTime(DEBOUNCE_MS);
-    expect(params(rowsRequest())).not.toHaveProperty('f.id_transaccion');
+    expect(params(rowsRequest())).not.toHaveProperty('q');
   });
 
   it('the Administrator sees the working agency by default and can choose another or "Todas"', () => {
