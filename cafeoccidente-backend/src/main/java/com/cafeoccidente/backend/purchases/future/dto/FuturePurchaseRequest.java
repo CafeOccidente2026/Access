@@ -17,7 +17,8 @@ public record FuturePurchaseRequest(
         @NotBlank String idNumber,
         @NotBlank String specialType,
         @NotNull @Positive Integer announcementNumber,
-        @NotNull @Positive BigDecimal announcedKg,
+        /** Mayor que 0: lo valida el servicio para dar un mensaje claro (hallazgo #10 del 16-nov). */
+        @NotNull BigDecimal announcedKg,
         @NotNull LocalDate deliveryDate,
         String finca,
         String municipality,

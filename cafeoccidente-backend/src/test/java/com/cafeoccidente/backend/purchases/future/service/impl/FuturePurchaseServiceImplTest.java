@@ -114,6 +114,15 @@ class FuturePurchaseServiceImplTest {
         service.create(request(new BigDecimal("500"), TODAY));
     }
 
+    // Hallazgo #10 (16-nov): el mensaje decia "Falta o esta mal: Kilos Anunciados".
+    @Test
+    void zeroAnnouncedKilosAreRejectedWithAClearMessage() {
+        mockHappyPath();
+        assertThatThrownBy(() -> service.create(request(BigDecimal.ZERO, TODAY.plusDays(5))))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Los kilos anunciados deben ser mayores que 0");
+    }
+
     @Test
     void deceasedGrowerIsRejectedBeforeCheckingProgramMembership() {
         when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency()));

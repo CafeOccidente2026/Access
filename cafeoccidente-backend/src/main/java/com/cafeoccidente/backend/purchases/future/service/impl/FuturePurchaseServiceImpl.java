@@ -85,7 +85,10 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         GrowerResponse grower = growerService.findByIdNumber(request.idNumber());
 
-        // Hallazgo #16 (prueba del 16-nov): una entrega con fecha pasada no se anuncia.
+        // Hallazgos #10 y #16 (prueba del 16-nov): kilos en 0 y entregas con fecha pasada no se anuncian.
+        if (request.announcedKg().signum() <= 0) {
+            throw new BusinessRuleException("Los kilos anunciados deben ser mayores que 0");
+        }
         if (request.deliveryDate().isBefore(LocalDate.now(clock))) {
             throw new BusinessRuleException("La fecha de entrega no puede ser anterior a hoy");
         }
