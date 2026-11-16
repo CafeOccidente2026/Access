@@ -263,7 +263,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
                 announcement.announcementDate(),
                 announcement.basePriceLoad(),
                 announcement.healthyUnitPrice(),
-                announcement.costs());
+                announcement.costs(),
+                controlRecordService.getActive(agencyId).getSampleSize());
     }
 
     /** Hallazgo #6: el anuncio con que empezo la compra, si sigue vigente o es de hoy; null = el vigente. */
