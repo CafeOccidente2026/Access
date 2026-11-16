@@ -10,10 +10,6 @@ export interface TableAccessContent {
   readonly agencyNote: string;
   readonly searchLabel: string;
   readonly searchPlaceholder: string;
-  readonly filterPlaceholder: string;
-  readonly fromPlaceholder: string;
-  readonly toPlaceholder: string;
-  readonly filterLabel: string;
   /** "Registro {x} de {n}", como el contador de registros de Access. */
   readonly counter: string;
   readonly loading: string;

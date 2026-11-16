@@ -58,7 +58,6 @@ export class TableAccessComponent {
   /** Agencia pedida por el Administrador: su id o "ALL" (Todas). */
   readonly agency = signal('');
   readonly search = signal('');
-  readonly filters = signal<Readonly<Record<string, string>>>({});
   readonly sort = signal<Sort | null>(null);
   readonly rows = signal<(string | null)[][]>([]);
   readonly total = signal(0);
@@ -87,15 +86,10 @@ export class TableAccessComponent {
     return WIDTHS[column.kind];
   }
 
-  hasRange(column: ColumnInfo): boolean {
-    return column.kind === 'NUMBER' || column.kind === 'DATE';
-  }
-
   open(table: TableInfo): void {
     this.table.set(table);
     this.agency.set(this.auth.isAdmin() ? String(this.auth.agencyId() ?? '') : '');
     this.search.set('');
-    this.filters.set({});
     this.sort.set(null);
     this.reload();
   }
@@ -140,16 +134,6 @@ export class TableAccessComponent {
   setSearch(value: string): void {
     this.search.set(value);
     this.schedule();
-  }
-
-  /** key: la columna (contiene) o columna.from / columna.to (rango). */
-  setFilter(key: string, value: string): void {
-    this.filters.update((f) => ({ ...f, [key]: value }));
-    this.schedule();
-  }
-
-  filterValue(key: string): string {
-    return this.filters()[key] ?? '';
   }
 
   /** Al bajar: cuando el primer registro visible se acerca al final de lo cargado, pide el siguiente tramo. */
@@ -233,11 +217,6 @@ export class TableAccessComponent {
     const search = this.search().trim();
     if (search) {
       params['q'] = search;
-    }
-    for (const [key, value] of Object.entries(this.filters())) {
-      if (value.trim()) {
-        params['f.' + key] = value.trim();
-      }
     }
     if (this.showAgency() && this.agency() && table.byAgency) {
       params['agency'] = this.agency();

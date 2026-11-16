@@ -34,7 +34,7 @@
 
       <p *ngIf="error() as e" class="text-red-600" data-testid="error">{{ e }}</p>
 
-      <!-- Hoja de datos: encabezados y filtros fijos arriba, filas con desplazamiento virtual (solo se pintan las visibles). -->
+      <!-- Hoja de datos: encabezados fijos arriba, filas con desplazamiento virtual (solo se pintan las visibles). -->
       <div class="min-h-0 flex-1 overflow-x-auto rounded border border-slate-400 bg-white">
         <div [style.width.px]="width()" class="flex h-full flex-col text-xs">
           <div class="flex bg-slate-200 font-semibold text-slate-700" role="row">
@@ -44,23 +44,6 @@
               (click)="toggleSort(c.name)">
               {{ c.name }} {{ sortMark(c.name) }}
             </button>
-          </div>
-          <div class="flex border-b border-slate-300 bg-slate-100">
-            <div *ngFor="let c of table()!.columns" class="flex shrink-0 gap-0.5 border-r border-slate-300 p-0.5" [style.width.px]="columnWidth(c)">
-              <ng-container *ngIf="hasRange(c); else contains">
-                <input [type]="c.kind === 'DATE' ? 'date' : 'text'" class="w-1/2 min-w-0 rounded border border-slate-300 px-1"
-                  [placeholder]="p.fromPlaceholder" [attr.aria-label]="p.filterLabel + ' ' + c.name + ' ' + p.fromPlaceholder"
-                  [value]="filterValue(c.name + '.from')" (input)="setFilter(c.name + '.from', $any($event.target).value)" />
-                <input [type]="c.kind === 'DATE' ? 'date' : 'text'" class="w-1/2 min-w-0 rounded border border-slate-300 px-1"
-                  [placeholder]="p.toPlaceholder" [attr.aria-label]="p.filterLabel + ' ' + c.name + ' ' + p.toPlaceholder"
-                  [value]="filterValue(c.name + '.to')" (input)="setFilter(c.name + '.to', $any($event.target).value)" />
-              </ng-container>
-              <ng-template #contains>
-                <input type="text" class="w-full min-w-0 rounded border border-slate-300 px-1" [placeholder]="p.filterPlaceholder"
-                  [attr.aria-label]="p.filterLabel + ' ' + c.name" [value]="filterValue(c.name)"
-                  (input)="setFilter(c.name, $any($event.target).value)" />
-              </ng-template>
-            </div>
           </div>
 
           <cdk-virtual-scroll-viewport class="min-h-0 flex-1" style="height: 60vh" [itemSize]="rowPx" tabindex="0" role="grid"
