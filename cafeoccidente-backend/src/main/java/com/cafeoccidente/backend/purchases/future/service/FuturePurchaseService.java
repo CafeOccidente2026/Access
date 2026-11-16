@@ -1,6 +1,7 @@
 package com.cafeoccidente.backend.purchases.future.service;
 
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
@@ -16,6 +17,9 @@ public interface FuturePurchaseService {
     FuturePurchaseResponse create(FuturePurchaseRequest request);
 
     FuturePurchaseResponse findById(Long id);
+
+    /** Hallazgo #14: Finca, Mpio y Vereda de la ultima compra a futuro de la cedula en la agencia; null si no tiene. */
+    FuturePlaceResponse lastPlace(String idNumber);
 
     /** Anunciadas de Hoy (HU-31, P2): compras a futuro con saldo de la agencia de trabajo, de cualquier fecha, por anuncio. */
     List<PendingAnnouncementRow> pending();

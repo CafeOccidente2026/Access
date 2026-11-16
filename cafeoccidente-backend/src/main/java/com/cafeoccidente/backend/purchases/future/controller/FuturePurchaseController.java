@@ -2,6 +2,7 @@ package com.cafeoccidente.backend.purchases.future.controller;
 
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRestoreRow;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,6 +49,13 @@ public class FuturePurchaseController {
     @PreAuthorize(Roles.ADMIN)
     public List<FuturePurchaseRestoreRow> restore(@RequestParam String idNumber) {
         return restoreService.restore(idNumber);
+    }
+
+    /** Hallazgo #14: Finca, Mpio y Vereda de la ultima compra a futuro de la cedula (204 si no tiene). */
+    @GetMapping("/last-place")
+    public ResponseEntity<FuturePlaceResponse> lastPlace(@RequestParam String idNumber) {
+        FuturePlaceResponse place = futurePurchaseService.lastPlace(idNumber);
+        return place == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(place);
     }
 
     /** Anunciadas de Hoy (HU-31, P2): solo lectura. */

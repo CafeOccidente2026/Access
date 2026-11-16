@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
 import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
@@ -76,6 +77,15 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
                 .filter(a -> today.equals(a.announcementDate()))
                 .stream()
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public FuturePlaceResponse lastPlace(String idNumber) {
+        return futurePurchaseRepository
+                .findFirstByAgencyIdAndIdNumberOrderByIdDesc(currentAgencyProvider.currentAgencyId(), idNumber.trim())
+                .map(p -> new FuturePlaceResponse(p.getFinca(), p.getMunicipality(), p.getVereda()))
+                .orElse(null);
     }
 
     @Override

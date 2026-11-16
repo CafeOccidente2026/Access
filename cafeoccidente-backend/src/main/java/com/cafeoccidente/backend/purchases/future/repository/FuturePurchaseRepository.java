@@ -29,6 +29,9 @@ public interface FuturePurchaseRepository extends JpaRepository<FuturePurchase, 
             """)
     List<PendingAnnouncementRow> pendingByAnnouncement(@Param("agencyId") Long agencyId);
 
+    /** Hallazgo #14: la ultima compra a futuro de la cedula en la agencia. */
+    Optional<FuturePurchase> findFirstByAgencyIdAndIdNumberOrderByIdDesc(Long agencyId, String idNumber);
+
     /** Restaurar Compras Anunciadas: todas las de la cedula en la agencia, con saldo o sin el. */
     List<FuturePurchase> findByAgencyIdAndIdNumberOrderByIdAsc(Long agencyId, String idNumber);
 
