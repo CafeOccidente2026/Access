@@ -38,6 +38,20 @@ describe('sample-quality', () => {
     expect(locked.has('wastePercentage')).toBe(false);
   });
 
+  it('16-nov: a husk weight the server rejects clears Porc Kg Pas, Alm Sana and Factor, even without onError', () => {
+    const err = new HttpErrorResponse({ status: 400, error: { message: 'Peso Tot Pasilla no puede ser mayor que Peso Tot Alm (205 g)' } });
+    const service = { qualityPercentages: vi.fn(() => throwError(() => err)) } as unknown as DryCoffeePurchaseService;
+    const model: Record<string, string> = { totalStoredWeight: '205', totalHuskWeight: '206', huskPercentage: '2', healthyStoredWeight: '200', factor: '87.5' };
+    const locked = new Set<string>(['huskPercentage', 'healthyStoredWeight', 'factor']);
+    const done = vi.fn();
+
+    loadSampleQuality(service, model, locked, 'totalHuskWeight', done);
+
+    expect(done).not.toHaveBeenCalled();
+    expect(model).toMatchObject({ huskPercentage: '', healthyStoredWeight: '', factor: '' });
+    expect(locked.size).toBe(0);
+  });
+
   it('writes and locks the read-only fields, empty when the server sends nothing', () => {
     const model: Record<string, string> = {};
     const locked = new Set<string>();
