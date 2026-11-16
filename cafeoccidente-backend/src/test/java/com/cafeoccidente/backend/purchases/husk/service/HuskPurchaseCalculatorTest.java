@@ -48,6 +48,25 @@ class HuskPurchaseCalculatorTest {
                 BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
+    private HuskPurchaseCalculation calculateWithAlmond(String almondWeight) {
+        HuskPurchaseRequest request = new HuskPurchaseRequest(1L, "123456", null, null, new BigDecimal(almondWeight), 10,
+                new BigDecimal("1250"), new BigDecimal("50"), BigDecimal.ZERO, BigDecimal.ZERO, null);
+        return calculator.calculate(request, controlRecord(), announcement("8908"), seller("S", false),
+                BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    // Prueba a mano del 16-nov: el peso de la almendra sale de la muestra; no puede pasarla ni ser 0.
+    @Test
+    void theAlmondWeightCannotExceedTheSampleNorBeZero() {
+        assertThatThrownBy(() -> calculateWithAlmond("250.5"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Almendra no puede ser mayor que la muestra (250 g)");
+        assertThatThrownBy(() -> calculateWithAlmond("0"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Almendra debe ser mayor que 0");
+        assertThat(calculateWithAlmond("250").almondPercentage()).isEqualByComparingTo("100.00");
+    }
+
     @Test
     void netKgIsGrossMinusTareWithoutAnySplit() {
         assertThat(calculate("S", false).netKg()).isEqualByComparingTo("1200.00");
