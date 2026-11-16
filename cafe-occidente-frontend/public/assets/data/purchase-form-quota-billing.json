@@ -68,6 +68,8 @@
     "saveError": "No se pudo registrar la compra.",
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "invoiceError": "No se pudo generar la factura",
+    "grossNotPositive": "Los Kilos Brutos deben ser mayores que 0",
+    "tareNotBelowGross": "El destare no puede ser mayor o igual que los Kilos Brutos",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
     "priceChangedWarning": "El precio de este tipo de café se actualizó. Si sale, la próxima compra tomará el precio nuevo. ¿Está seguro?",
     "closeConfirm": "Cerrar sin guardar",

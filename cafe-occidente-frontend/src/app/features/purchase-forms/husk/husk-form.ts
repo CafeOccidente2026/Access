@@ -23,6 +23,7 @@ import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages, checkWeight, refocus } from '../weight-check';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
 import { localToday } from '../../../shared/utils/local-date';
@@ -30,7 +31,7 @@ import { localToday } from '../../../shared/utils/local-date';
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
 
-interface HuskMessages {
+interface HuskMessages extends WeightMessages {
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
@@ -116,6 +117,8 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
+  /** Campo al que vuelve el foco al cerrar el aviso de un valor rechazado (hallazgos #5 y #10). */
+  private retryKey: string | null = null;
   private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
@@ -170,7 +173,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
     }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idPart1') {
+    if (key !== 'idPart1' && this.retryKey !== key) {
       this.advanceFocus(key);
     }
   }
@@ -178,6 +181,11 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    // Hallazgos #5 y #10: un peso mal digitado se avisa al momento y el foco vuelve a él.
+    this.retryKey = checkWeight(this, this.locked, key, this.messages(), this.announcementInfo()?.sampleSize);
+    if (this.retryKey) {
+      return;
+    }
     switch (key) {
       case 'idPart1':
         this.lookupGrower();
@@ -286,6 +294,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
 
   dismissError(): void {
+    this.retryKey = refocus(this.retryKey, (k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);

@@ -9,6 +9,8 @@ export interface HuskAnnouncementInfo {
   readonly basePriceDryLoad: number;
   readonly pointPrice: number;
   readonly costs: number;
+  /** Tamaño de la muestra del Registro de Control: Peso Almendra no lo puede pasar (hallazgo #10). */
+  readonly sampleSize?: number | null;
 }
 
 /** Proxima factura del punto (Q7: consecutivo compartido con seco y verde); la asigna el servidor al guardar. */

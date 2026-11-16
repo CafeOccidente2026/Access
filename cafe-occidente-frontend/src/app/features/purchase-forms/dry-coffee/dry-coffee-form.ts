@@ -25,6 +25,7 @@ import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
 import { UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages, checkWeight, refocus, retryField } from '../weight-check';
 import { clearSample, isOverThreshold } from '../sample-quality';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
@@ -34,7 +35,7 @@ import { localToday } from '../../../shared/utils/local-date';
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
 
-interface DryCoffeeMessages {
+interface DryCoffeeMessages extends WeightMessages {
   readonly cooperativeDiscountLabel?: string;
   readonly acceptLabel: string;
   readonly noAnnouncement: string;
@@ -138,6 +139,8 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
+  /** Campo al que vuelve el foco al cerrar el aviso de un valor rechazado (hallazgos #5 y #10). */
+  private retryKey: string | null = null;
   private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
@@ -204,7 +207,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     }
     this.runSideEffects(key);
     this.tick.update((n) => n + 1);
-    if (key !== 'idPart1') {
+    if (key !== 'idPart1' && this.retryKey !== key) {
       this.advanceFocus(key);
     }
   }
@@ -212,6 +215,11 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    // Hallazgos #5 y #10: un peso mal digitado se avisa al momento y el foco vuelve a él.
+    this.retryKey = checkWeight(this, this.locked, key, this.messages());
+    if (this.retryKey) {
+      return;
+    }
     switch (key) {
       case 'fund':
         this.reserveInvoiceNumber();
@@ -317,7 +325,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
             ? { ...prev, wastePercentage: null }
             : { ...prev, defectivePercentage: null, healthyPercentage: null },
         );
-        this.errorMessage.set(serverError(err, this.messages()?.saveError));
+        this.retryKey = retryField(this, this.locked, key, serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -427,6 +435,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Cierra el mensaje de error; si bloqueaba por caficultor fallecido, reinicia todo el formulario. */
   dismissError(): void {
+    this.retryKey = refocus(this.retryKey, (k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
