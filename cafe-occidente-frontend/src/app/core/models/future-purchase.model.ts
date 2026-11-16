@@ -60,3 +60,10 @@ export interface FuturePurchaseResponse {
   readonly qualityIncrement: number;
   readonly basePriceLoad: number;
 }
+
+/** Hallazgo #14: Finca, Mpio y Vereda de la última compra a futuro de la cédula. */
+export interface FuturePlace {
+  readonly finca: string | null;
+  readonly municipality: string | null;
+  readonly vereda: string | null;
+}

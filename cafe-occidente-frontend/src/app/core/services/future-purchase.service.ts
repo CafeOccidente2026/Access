@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api.config';
 import { Announcement } from '../models/dry-coffee-purchase.model';
 import {
+  FuturePlace,
   FuturePurchaseRequest,
   FuturePurchaseResponse,
   FuturePurchaseRestoreRow,
@@ -44,6 +45,11 @@ export class FuturePurchaseService {
   restore(idNumber: string): Observable<FuturePurchaseRestoreRow[]> {
     return this.http.post<FuturePurchaseRestoreRow[]>(
       `${API_BASE_URL}/purchases/future/restore?idNumber=${encodeURIComponent(idNumber)}`, null);
+  }
+
+  /** Hallazgo #14: Finca, Mpio y Vereda de la última compra a futuro de la cédula; null si no tiene. */
+  lastPlace(idNumber: string): Observable<FuturePlace | null> {
+    return this.http.get<FuturePlace | null>(`${API_BASE_URL}/purchases/future/last-place?idNumber=${encodeURIComponent(idNumber)}`);
   }
 
   create(request: FuturePurchaseRequest): Observable<FuturePurchaseResponse> {
