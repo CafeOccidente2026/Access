@@ -99,6 +99,21 @@ class FuturePurchaseServiceImplTest {
         });
     }
 
+    private FuturePurchaseRequest request(BigDecimal kilos, LocalDate deliveryDate) {
+        return new FuturePurchaseRequest("123456", "RN", 1, kilos, deliveryDate, "Finca", "Buesaco", "Vereda");
+    }
+
+    // Hallazgo #16 (16-nov): se guardo una entrega para el 22/11/2016.
+    @Test
+    void aDeliveryDateBeforeTodayIsRejected() {
+        mockHappyPath();
+        assertThatThrownBy(() -> service.create(request(new BigDecimal("500"), TODAY.minusDays(1))))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("La fecha de entrega no puede ser anterior a hoy");
+        verify(futurePurchaseRepository, never()).save(any());
+        service.create(request(new BigDecimal("500"), TODAY));
+    }
+
     @Test
     void deceasedGrowerIsRejectedBeforeCheckingProgramMembership() {
         when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency()));
