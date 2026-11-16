@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.greencoffee.service;
 
+import com.cafeoccidente.backend.purchases.shared.service.NetWeightRule;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
@@ -61,6 +62,7 @@ public class GreenCoffeePurchaseCalculator {
         MoneyValidation.requireNonNegative(basePriceLoad, "Precio Base Carga PC");
 
         // Destare_LostFocus.
+        NetWeightRule.check(request.grossKg(), request.tareKg());
         BigDecimal greenKg = request.grossKg().subtract(request.tareKg());
         BigDecimal netKg = greenKg.multiply(controlRecord.getGreenCoffeePercentage())
                 .divide(HUNDRED, MathContext.DECIMAL64)

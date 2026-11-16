@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.drycoffee.service;
 
+import com.cafeoccidente.backend.purchases.shared.service.NetWeightRule;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
@@ -59,6 +60,7 @@ public class DryCoffeePurchaseCalculator {
         // anuncio/specialInfo() - se valida igual porque alimenta var5/var1 mas abajo.
         MoneyValidation.requireNonNegative(announcement.healthyUnitPrice(), "Pr Sustentación");
 
+        NetWeightRule.check(request.grossKg(), request.tareKg());
         BigDecimal netKg = request.grossKg().subtract(request.tareKg());
 
         BigDecimal wastePercentage = wastePercentage(request.totalStoredWeight(), controlRecord);

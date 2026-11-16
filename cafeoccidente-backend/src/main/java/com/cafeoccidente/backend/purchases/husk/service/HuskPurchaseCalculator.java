@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.purchases.husk.service;
 
+import com.cafeoccidente.backend.purchases.shared.service.NetWeightRule;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
@@ -75,6 +76,7 @@ public class HuskPurchaseCalculator {
         MoneyValidation.requireNonNegative(announcement.healthyUnitPrice(), "Pr Sustentación");
 
         // Destare_LostFocus: sin split Kilos_Verdes, resta directa.
+        NetWeightRule.check(request.grossKg(), request.tareKg());
         BigDecimal netKg = request.grossKg().subtract(request.tareKg()).setScale(SCALE, RoundingMode.HALF_UP);
 
         // Descuento_Fro_LostFocus: Vr_Kilo = (Pr_AlmSana * PorcAlmSana / BasePasilla) - Costos.
