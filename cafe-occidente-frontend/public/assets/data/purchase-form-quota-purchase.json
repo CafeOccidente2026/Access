@@ -18,9 +18,9 @@
   "identificationFields": [
     { "key": "invoice", "label": "Factura", "type": "text", "readonly": true },
     { "key": "productCode", "label": "Cod Prod", "type": "text", "readonly": true },
-    { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency", "readonly": true },
-    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency", "readonly": true },
-    { "key": "deliveryKg", "label": "Kilos Entregados", "type": "number", "readonly": true }
+    { "key": "basePriceLoad", "label": "Precio Base Carga PC", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "huskPrice", "label": "Precio Pasilla", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "deliveryKg", "label": "Kilos Entregados", "type": "number", "readonly": true, "display": "kilos" }
   ],
   "federationHeading": "Información Federación:",
   "federationFields": [
@@ -37,39 +37,39 @@
     { "key": "cellphone", "label": "Cel", "type": "text", "readonly": true, "inputWidthClass": "max-w-[110px]" }
   ],
   "qualityFields": [
-    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true },
-    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true },
-    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true }
+    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true, "display": "money" }
   ],
   "weightFields": [
-    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number" },
-    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage", "readonly": true },
-    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number" },
-    { "key": "huskPercentage", "label": "Porc Kg Pas %", "type": "percentage", "readonly": true },
-    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number" },
-    { "key": "factor", "label": "Factor", "type": "number", "readonly": true }
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number", "display": "typed" },
+    { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage", "readonly": true, "display": "typed" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number", "display": "typed" },
+    { "key": "huskPercentage", "label": "Porc Kg Pas %", "type": "percentage", "readonly": true, "display": "typed" },
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number", "display": "typed" },
+    { "key": "factor", "label": "Factor", "type": "number", "readonly": true, "display": "typed" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "number" },
-    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
-    { "key": "tare", "label": "Destare", "type": "number" },
-    { "key": "netKg", "label": "Kilos Netos", "type": "number", "readonly": true },
-    { "key": "penalty", "label": "Castigo", "type": "currency", "negativeOnly": true }
+    { "key": "bags", "label": "Sacos", "type": "number", "display": "kilos" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number", "display": "kilos" },
+    { "key": "tare", "label": "Destare", "type": "number", "display": "kilos" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number", "readonly": true, "display": "kilos" },
+    { "key": "penalty", "label": "Castigo", "type": "currency", "negativeOnly": true, "display": "money" }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "display": "money" },
   "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
-    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true }
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true, "display": "money" },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true, "display": "money" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "display": "money" }
   ],
   "additionalDiscountFields": [
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true }
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "display": "money" }
   ],
   "settlementSecondaryFields": [
-    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]" }
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money" }
   ],
   "messages": {
     "acceptLabel": "Aceptar",

@@ -2,7 +2,17 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormFieldDefinition } from '../../../core/models';
-import { asPenalty, formatDisplayNumber, formatThousands, parseDisplayNumber } from '../../utils/number-format';
+import {
+  asPenalty,
+  formatDisplayNumber,
+  formatKilos,
+  formatMoney,
+  formatThousands,
+  formatTyped,
+  parseDisplayNumber,
+} from '../../utils/number-format';
+
+const DISPLAY = { money: formatMoney, kilos: formatKilos, typed: formatTyped };
 import { ComboboxComponent } from '../combobox/combobox';
 
 /**
@@ -91,6 +101,9 @@ export class FormFieldComponent implements OnChanges {
   }
 
   private formatted(raw: string | number): string | number {
+    if (this.field.display && !this.field.rawDisplay) {
+      return DISPLAY[this.field.display](raw);
+    }
     const isNumeric = ['number', 'count', 'currency', 'percentage'].includes(this.field.type);
     return isNumeric && !this.field.rawDisplay
       ? formatDisplayNumber(raw, this.field.integer ? 'count' : 'currency')

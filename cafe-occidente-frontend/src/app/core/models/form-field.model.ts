@@ -32,6 +32,9 @@ export interface FormFieldDefinition {
   /** Valor en pesos con puntos de miles mientras se escribe (Caja, Suministros, Caja Menor): se ve 140.000 y se
    *  entrega 140000. */
   readonly liveThousands?: boolean;
+  /** Hallazgo #1: cómo se ve ya confirmado: dinero sin decimales, kilos sin ",00" si son enteros, o como se digitó
+   *  (porcentajes y pesos de la muestra). Sin esto, el formato de siempre según `type`. */
+  readonly display?: 'money' | 'kilos' | 'typed';
 }
 
 export interface FormFieldSection {

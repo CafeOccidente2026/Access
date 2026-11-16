@@ -34,22 +34,22 @@
     },
     { "key": "announcement", "label": "Anuncio", "type": "select", "options": [] },
     { "key": "announcementDate", "label": "Fecha_Anuncio", "type": "date", "readonly": true, "inputWidthClass": "max-w-[128px]" },
-    { "key": "basePriceLoad", "label": "Pr carga perg s", "type": "currency", "readonly": true }
+    { "key": "basePriceLoad", "label": "Pr carga perg s", "type": "currency", "readonly": true, "display": "money" }
   ],
   "qualityFields": [
-    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true },
-    { "key": "defectiveUnitPrice", "label": "Pr Alm Defec", "type": "currency", "readonly": true },
-    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true },
-    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true }
+    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "defectiveUnitPrice", "label": "Pr Alm Defec", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true, "display": "money" }
   ],
   "weightFields": [
-    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency", "readonly": true },
+    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency", "readonly": true, "display": "money" },
     { "key": "finca", "label": "Finca", "type": "text" },
     { "key": "municipality", "label": "Mpio", "type": "text" },
     { "key": "vereda", "label": "Vereda", "type": "text" },
     { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date", "inputWidthClass": "max-w-[128px]" },
-    { "key": "kilos", "label": "Kilos", "type": "number" },
-    { "key": "balance", "label": "Saldo", "type": "number", "readonly": true }
+    { "key": "kilos", "label": "Kilos", "type": "number", "display": "kilos" },
+    { "key": "balance", "label": "Saldo", "type": "number", "readonly": true, "display": "kilos" }
   ],
   "reprintButtonLabel": "Imprimir Manifiesto",
   "messages": {
