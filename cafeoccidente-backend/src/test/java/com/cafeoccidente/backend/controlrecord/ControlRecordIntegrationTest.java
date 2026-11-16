@@ -213,6 +213,21 @@ class ControlRecordIntegrationTest {
                 .andExpect(jsonPath("$.purchasePoint").value("BUESACO1 OCCIDENTE"));
     }
 
+    private String stamp() throws Exception {
+        String body = mockMvc.perform(get("/api/control-records/stamp").header("Authorization", admin))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return json.readTree(body).get("stamp").asString();
+    }
+
+    // Hallazgo #6 (16-nov): la pantalla de compra avisa al salir si el Registro de Control cambio mientras se digitaba.
+    @Test
+    void theStampChangesOnlyWhenTheControlRecordChanges() throws Exception {
+        String before = stamp();
+        assertThat(stamp()).isEqualTo(before);
+        save(current().put("excelsoKg", 72)).andExpect(status().isOk());
+        assertThat(stamp()).isNotEqualTo(before);
+    }
+
     @Test
     void ca2SavedValuesApplyRightAwayToTheNextCalculations() throws Exception {
         DryCoffeePurchaseCalculator calculator = new DryCoffeePurchaseCalculator();

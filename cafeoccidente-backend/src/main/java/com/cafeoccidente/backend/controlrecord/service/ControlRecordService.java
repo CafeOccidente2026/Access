@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.controlrecord.service;
 
+import com.cafeoccidente.backend.controlrecord.dto.ControlRecordStampResponse;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
@@ -14,6 +15,9 @@ public interface ControlRecordService {
     List<ControlRecordResponse> list();
 
     ControlRecordResponse getByAgency(Long agencyId);
+
+    /** Hallazgo #6: huella de los valores del Registro de Control de la agencia. */
+    ControlRecordStampResponse stamp(Long agencyId);
 
     ControlRecordResponse create(Long agencyId, ControlRecordRequest request);
 

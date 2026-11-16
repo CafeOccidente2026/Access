@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.controlrecord.service.impl;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.controlrecord.dto.ControlRecordStampResponse;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
@@ -60,6 +61,11 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         this.mapper = mapper;
         this.history = history;
         this.securityUtils = securityUtils;
+    }
+
+    @Override
+    public ControlRecordStampResponse stamp(Long agencyId) {
+        return new ControlRecordStampResponse(Integer.toHexString(getByAgency(agencyId).toString().hashCode()));
     }
 
     @Override
