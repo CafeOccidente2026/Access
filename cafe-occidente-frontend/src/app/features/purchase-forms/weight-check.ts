@@ -60,11 +60,3 @@ export function checkWeight(
   const message = messages?.[problem]?.replace('{sample}', String(sampleSize ?? ''));
   return retryField(host, locked, key, message);
 }
-
-/** Al cerrar el aviso, el foco vuelve al campo rechazado. */
-export function refocus(key: string | null, focus: (key: string) => void): null {
-  if (key) {
-    focus(key);
-  }
-  return null;
-}

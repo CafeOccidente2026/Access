@@ -1,5 +1,5 @@
 import { Location } from '@angular/common';
-import { Injector, runInInjectionContext } from '@angular/core';
+import { Injector, runInInjectionContext, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,6 +10,7 @@ import { UnsavedCloseForm } from './unsaved-close';
 /** Pantalla mínima: el anuncio vigente y la huella del Registro de Control los pone cada prueba. */
 class TestForm extends UnsavedCloseForm {
   model: Record<string, string> = { idPart1: '990514' };
+  readonly errorMessage = signal<string | null>(null);
   announcement: string | null = 'SDBU-31';
 
   protected hasUnsavedInput(): boolean {
@@ -22,6 +23,14 @@ class TestForm extends UnsavedCloseForm {
 
   start(): void {
     this.rememberPrice();
+  }
+
+  reject(key: string, locked: Set<string>): boolean {
+    return this.rejectedWeight(key, locked, { tareNotBelowGross: 'mal' });
+  }
+
+  refocus(focus: (key: string) => void): void {
+    this.refocusRetry(focus);
   }
 }
 
@@ -69,5 +78,26 @@ describe('UnsavedCloseForm: precio cambiado', () => {
     form.start();
     form.onClose();
     expect(form.priceChanged()).toBe(false);
+  });
+
+  it('the close warning adds the price line only when the price changed', () => {
+    const { form } = setup();
+    const m = { closeWarning: 'Hay datos.', priceChangedWarning: 'Cambió el precio.' } as never;
+    expect(form.closeMessage(m)).toBe('Hay datos.');
+    form.priceChanged.set(true);
+    expect(form.closeMessage(m)).toBe('Hay datos. Cambió el precio.');
+  });
+
+  it('a rejected weight is cleared and the focus goes back to it when the warning closes', () => {
+    const { form } = setup();
+    const focus = vi.fn();
+    form.model = { grossKg: '2', tare: '2' };
+    expect(form.reject('tare', new Set(['tare']))).toBe(true);
+    expect(form.errorMessage()).toBe('mal');
+    form.refocus(focus);
+    expect(focus).toHaveBeenCalledWith('tare');
+    form.refocus(focus);
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(form.reject('grossKg', new Set())).toBe(false);
   });
 });

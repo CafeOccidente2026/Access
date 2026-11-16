@@ -22,8 +22,8 @@ import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
-import { UnsavedCloseForm } from '../unsaved-close';
-import { WeightMessages, checkWeight, refocus } from '../weight-check';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages } from '../weight-check';
 import { serverError } from '../../../shared/utils/server-error';
 import { reserveInvoice } from '../invoice-reservation';
 import { FEDERATION_KEYS, loadFederation } from '../federation';
@@ -32,20 +32,10 @@ import { localToday } from '../../../shared/utils/local-date';
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
 
-interface GreenCoffeeMessages extends WeightMessages {
-  readonly acceptLabel: string;
+interface GreenCoffeeMessages extends PurchaseMessages, WeightMessages {
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
   readonly sampleMissing: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
-  readonly priceChangedWarning?: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type GreenCoffeeContent = PurchaseFormContent & { readonly messages: GreenCoffeeMessages };
@@ -122,8 +112,6 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  /** Campo al que vuelve el foco al cerrar el aviso de un valor rechazado (hallazgos #5 y #10). */
-  private retryKey: string | null = null;
   private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
@@ -186,9 +174,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
-    // Hallazgos #5 y #10: un peso mal digitado se avisa al momento y el foco vuelve a él.
-    this.retryKey = checkWeight(this, this.locked, key, this.messages());
-    if (this.retryKey) {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
       return;
     }
     switch (key) {
@@ -291,7 +277,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Hallazgo #6: el anuncio vigente ahora de este café. */
   protected override currentAnnouncement(): Observable<string> | null {
-    return this.announcementInfo() ? this.service.announcementInfo().pipe(map((i) => i.announcementNumber)) : null;
+    return this.announcementNumber(this.announcementInfo() ? this.service.announcementInfo() : null);
   }
 
   print(): void {
@@ -312,7 +298,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   dismissError(): void {
-    this.retryKey = refocus(this.retryKey, (k) => this.focusField(k));
+    this.refocusRetry((k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);

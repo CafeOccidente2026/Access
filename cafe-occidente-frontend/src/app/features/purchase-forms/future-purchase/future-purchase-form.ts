@@ -16,7 +16,7 @@ import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-inv
 import { advanceFocus, focusField } from '../form-focus';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lockFilled } from '../seller-lookup';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
 import { serverError } from '../../../shared/utils/server-error';
 import { federationValues } from '../federation';
 import { localToday } from '../../../shared/utils/local-date';
@@ -24,19 +24,9 @@ import { Observable, map } from 'rxjs';
 
 type FormModel = Record<string, string>;
 
-interface FuturePurchaseMessages {
-  readonly acceptLabel: string;
+interface FuturePurchaseMessages extends PurchaseMessages {
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
-  readonly priceChangedWarning?: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
   readonly notInProgram: string;
   readonly deliveryDatePast: string;
   readonly kilosNotPositive: string;
@@ -97,8 +87,6 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  /** El campo al que vuelve el foco al cerrar el aviso de un valor rechazado (hallazgo #10). */
-  private retryKey: string | null = null;
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 
@@ -335,10 +323,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     if (wasBlocked) {
       this.reset();
     }
-    if (this.retryKey) {
-      this.focusField(this.retryKey);
-      this.retryKey = null;
-    }
+    this.refocusRetry((k) => this.focusField(k));
   }
 
   /** Hallazgo #6: los anuncios de hoy del Especial elegido; si se publica otro, el precio cambió. */

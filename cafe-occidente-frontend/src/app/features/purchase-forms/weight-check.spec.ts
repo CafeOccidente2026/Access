@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { checkWeight, refocus, weightProblem } from './weight-check';
+import { checkWeight, weightProblem } from './weight-check';
 
 const messages = {
   grossNotPositive: 'Los Kilos Brutos deben ser mayores que 0',
@@ -42,13 +42,5 @@ describe('weight-check', () => {
     checkWeight(host, locked, 'almondWeight', messages, 250);
     expect(host.errorMessage()).toBe('Peso Almendra no puede ser mayor que la muestra (250 g)');
     expect(checkWeight(host, locked, 'grossKg', messages)).toBeNull();
-  });
-
-  it('closing the warning sends the focus back to the rejected field', () => {
-    const focus = vi.fn();
-    expect(refocus('tare', focus)).toBeNull();
-    expect(focus).toHaveBeenCalledWith('tare');
-    refocus(null, focus);
-    expect(focus).toHaveBeenCalledTimes(1);
   });
 });

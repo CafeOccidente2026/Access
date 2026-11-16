@@ -27,8 +27,8 @@ import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-inv
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
-import { UnsavedCloseForm } from '../unsaved-close';
-import { WeightMessages, checkWeight, refocus, retryField } from '../weight-check';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages, retryField } from '../weight-check';
 import { QuotaPick, QuotaPickerComponent, QuotaPickerContent } from './quota-picker';
 import { serverError } from '../../../shared/utils/server-error';
 import { FEDERATION_KEYS, loadFederation } from '../federation';
@@ -36,19 +36,9 @@ import { localToday } from '../../../shared/utils/local-date';
 
 type FormModel = Record<string, string>;
 
-interface QuotaPurchaseMessages extends WeightMessages {
+interface QuotaPurchaseMessages extends PurchaseMessages, WeightMessages {
   readonly cooperativeDiscountLabel?: string;
-  readonly acceptLabel: string;
   readonly noQuota: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
-  readonly priceChangedWarning?: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type QuotaPurchaseContent = PurchaseFormContent & {
@@ -185,8 +175,6 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  /** Campo al que vuelve el foco al cerrar el aviso de un valor rechazado (hallazgos #5 y #10). */
-  private retryKey: string | null = null;
   private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
@@ -262,9 +250,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   }
 
   private runSideEffects(key: string): void {
-    // Hallazgos #5 y #10: un peso mal digitado se avisa al momento y el foco vuelve a él.
-    this.retryKey = checkWeight(this, this.locked, key, this.messages());
-    if (this.retryKey) {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
       return;
     }
     switch (key) {
@@ -521,7 +507,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   /** Cierra el aviso. Q15 (prueba del 9-nov): si era el umbral de especiales, vacia la muestra y vuelve a
    *  Peso Tot Alm; no se guarda nada. */
   dismissError(): void {
-    this.retryKey = refocus(this.retryKey, (k) => this.focusField(k));
+    this.refocusRetry((k) => this.focusField(k));
     this.errorMessage.set(null);
     if (this.sampleRetry) {
       this.sampleRetry = false;
@@ -561,10 +547,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   /** Hallazgo #6: el anuncio vigente ahora del especial elegido (el del cupo o la anunciada no cambia). */
   protected override currentAnnouncement(): Observable<string> | null {
     const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
-    const special = this.model['special'];
-    return this.specialInfo() && fundId && special
-      ? this.service.specialInfo(fundId, special).pipe(map((i) => i.announcementNumber))
-      : null;
+    return this.announcementNumber(this.specialInfo() && fundId ? this.service.specialInfo(fundId, this.model['special']) : null);
   }
 
   protected override hasUnsavedInput(): boolean {
