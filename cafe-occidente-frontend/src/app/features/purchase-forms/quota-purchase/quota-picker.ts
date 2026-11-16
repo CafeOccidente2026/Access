@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
 
 import { QuotaBalance } from '../../../core/models/announcement-quota.model';
 import { AppButtonComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber } from '../../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney, parseDisplayNumber } from '../../../shared/utils/number-format';
 
 /** Textos de la ventana (JSON del formulario, "quotaPicker"). */
 export interface QuotaPickerContent {
@@ -31,6 +31,9 @@ const COLUMNS: readonly string[] = [
  * solo lectura, y un único campo editable, "Esta Entrega". Enter con un valor que no supera el saldo la cierra
  * (CA-2); un valor mayor no se acepta (CA-3). El servidor vuelve a validar todo al guardar la compra.
  */
+/** Hallazgo #1: columnas en kilos; el resto de números son pesos. */
+const KILOS = ['assignedQuota', 'deliveredKg', 'balance'];
+
 @Component({
   selector: 'app-quota-picker',
   standalone: true,
@@ -59,7 +62,7 @@ export class QuotaPickerComponent {
     const values: Record<string, string | number | undefined> = {
       announcement: a.announcementNumber,
       agency: this.agency,
-      date: a.announcementDate,
+      date: formatDate(a.announcementDate),
       healthyUnitPrice: a.healthyUnitPrice,
       defectiveUnitPrice: a.defectiveUnitPrice,
       bonus: a.bonus,
@@ -72,7 +75,10 @@ export class QuotaPickerComponent {
       balance: row.balance,
     };
     const value = values[column];
-    return typeof value === 'number' ? formatDisplayNumber(value, 'currency') : (value ?? '');
+    if (typeof value !== 'number') {
+      return value ?? '';
+    }
+    return KILOS.includes(column) ? formatKilos(value) : formatMoney(value);
   }
 
   select(row: QuotaBalance): void {
