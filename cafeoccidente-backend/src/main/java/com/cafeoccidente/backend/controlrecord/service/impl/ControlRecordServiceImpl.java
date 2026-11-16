@@ -6,6 +6,7 @@ import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeeSampleRule;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
@@ -88,6 +89,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
 
+        checkGreenSample(request);
         ControlRecord controlRecord = new ControlRecord();
         controlRecord.setAgency(agency);
         controlRecord.setActive(true);
@@ -103,6 +105,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public ControlRecordResponse update(Long agencyId, ControlRecordRequest request) {
         ControlRecord controlRecord = getActive(agencyId);
         requireAdminForBusinessValues(controlRecord, request);
+        checkGreenSample(request);
         Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
         applyRequest(controlRecord, request);
         ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
@@ -119,6 +122,10 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public GreenCoffeeAppliedResponse applyGreenCoffeeToAll(GreenCoffeeValuesRequest request) {
         List<ControlRecord> records = controlRecordRepository.findByActiveTrue();
         for (ControlRecord controlRecord : records) {
+            GreenCoffeeSampleRule.checkValues(controlRecord.getSampleSize(), request.greenTotalStoredWeight(),
+                    request.greenTotalHuskWeight(), request.greenHealthyStoredWeight());
+        }
+        for (ControlRecord controlRecord : records) {
             Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
             controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
             controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
@@ -130,6 +137,11 @@ public class ControlRecordServiceImpl implements ControlRecordService {
                     snapshot(updated));
         }
         return new GreenCoffeeAppliedResponse(records.size());
+    }
+
+    private static void checkGreenSample(ControlRecordRequest request) {
+        GreenCoffeeSampleRule.checkValues(request.sampleSize(), request.greenTotalStoredWeight(),
+                request.greenTotalHuskWeight(), request.greenHealthyStoredWeight());
     }
 
     private void requireAdminForBusinessValues(ControlRecord current, ControlRecordRequest request) {

@@ -250,4 +250,20 @@ class ControlRecordIntegrationTest {
                 .andExpect(jsonPath("$.greenHealthyUnitPrice").value(1000.0))
                 .andExpect(jsonPath("$.specialtyThreshold").value(93.5));
     }
+
+    // Prueba a mano del 16-nov: la muestra de cafe verde no puede pasar la muestra ni la pasilla al total.
+    @Test
+    void theGreenCoffeeSampleCannotExceedTheSample() throws Exception {
+        save(current().put("sampleSize", 250).put("greenTotalStoredWeight", 260).put("greenTotalHuskWeight", 5)
+                        .put("greenHealthyStoredWeight", 200))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Peso Tot Alm de cafe verde no puede ser mayor que la muestra (250 g)"));
+        save(current().put("sampleSize", 250).put("greenTotalStoredWeight", 140).put("greenTotalHuskWeight", 150)
+                        .put("greenHealthyStoredWeight", 130))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Peso Tot Pasilla de cafe verde no puede ser mayor que Peso Tot Alm (140 g)"));
+        applyGreenCoffee(admin, "{\"greenTotalStoredWeight\": 900, \"greenTotalHuskWeight\": 7.1, \"greenHealthyStoredWeight\": 132.9,"
+                        + " \"greenHealthyUnitPrice\": 12000, \"greenDefectiveUnitPrice\": 6000}")
+                .andExpect(status().isBadRequest());
+    }
 }

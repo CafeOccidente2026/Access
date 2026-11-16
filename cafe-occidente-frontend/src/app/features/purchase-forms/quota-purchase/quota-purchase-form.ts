@@ -431,7 +431,10 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
 
   /** Peso Tot Alm da Porc Merma; Peso Pasilla da Porc Kg Pas, Peso Alm Sana y Factor (Q2, servidor). */
   private loadQualityPercentage(key: SampleWeightKey): void {
-    loadSampleQuality(this.service, this.model, this.locked, key, () => this.tick.update((n) => n + 1));
+    loadSampleQuality(this.service, this.model, this.locked, key, () => this.tick.update((n) => n + 1), (err) => {
+      this.errorMessage.set(serverError(err, this.messages()?.saveError));
+      this.tick.update((n) => n + 1);
+    });
   }
 
   private recalculate(): void {

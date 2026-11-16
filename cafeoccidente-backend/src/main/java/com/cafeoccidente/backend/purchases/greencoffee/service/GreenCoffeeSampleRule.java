@@ -44,4 +44,26 @@ public final class GreenCoffeeSampleRule {
         }
         return sample;
     }
+
+    /**
+     * Prueba a mano del 16-nov: al guardar el Registro de Control, la muestra de verde (si se digito) no puede pasar
+     * la muestra; la pasilla y la almendra sana no pueden pasar el total. En 0 sigue sin verde (sampleOrNull).
+     */
+    public static void checkValues(BigDecimal sampleSize, BigDecimal total, BigDecimal husk, BigDecimal healthy) {
+        if (total == null || total.signum() <= 0) {
+            return;
+        }
+        if (sampleSize != null && total.compareTo(sampleSize) > 0) {
+            throw new BusinessRuleException("Peso Tot Alm de cafe verde no puede ser mayor que la muestra ("
+                    + DryCoffeePurchaseCalculator.grams(sampleSize) + ")");
+        }
+        if (husk != null && husk.compareTo(total) > 0) {
+            throw new BusinessRuleException("Peso Tot Pasilla de cafe verde no puede ser mayor que Peso Tot Alm ("
+                    + DryCoffeePurchaseCalculator.grams(total) + ")");
+        }
+        if (healthy != null && healthy.compareTo(total) > 0) {
+            throw new BusinessRuleException("Peso Alm Sana de cafe verde no puede ser mayor que Peso Tot Alm ("
+                    + DryCoffeePurchaseCalculator.grams(total) + ")");
+        }
+    }
 }

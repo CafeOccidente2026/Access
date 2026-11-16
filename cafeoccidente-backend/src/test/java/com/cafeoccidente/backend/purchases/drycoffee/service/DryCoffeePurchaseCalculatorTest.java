@@ -203,6 +203,48 @@ class DryCoffeePurchaseCalculatorTest {
                 .hasMessage("La pasilla debe ser menor que la almendra total");
     }
 
+    // Prueba a mano del 16-nov (factura SDTA 43910): Access dejaba Peso Tot Alm 850 con muestra de 250 g.
+    @Test
+    void theTotalAlmondCannotExceedTheSample() {
+        assertThatThrownBy(() -> calculator.checkSample(new BigDecimal("850"), new BigDecimal("50"), controlRecord()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Tot Alm no puede ser mayor que la muestra (250 g)");
+        assertThatThrownBy(() -> calculator.calculate(sample("250.01", "5"), controlRecord(), announcement(),
+                seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO))
+                .hasMessage("Peso Tot Alm no puede ser mayor que la muestra (250 g)");
+    }
+
+    @Test
+    void theTotalAlmondMustBePositive() {
+        assertThatThrownBy(() -> calculator.checkSample(BigDecimal.ZERO, null, controlRecord()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Tot Alm debe ser mayor que 0");
+    }
+
+    @Test
+    void theHuskCannotExceedTheTotalAlmond() {
+        assertThatThrownBy(() -> calculator.checkSample(new BigDecimal("205"), new BigDecimal("205.5"), controlRecord()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Tot Pasilla no puede ser mayor que Peso Tot Alm (205 g)");
+        assertThatThrownBy(() -> calculator.checkSample(new BigDecimal("205"), new BigDecimal("-1"), controlRecord()))
+                .hasMessage("Peso Tot Pasilla no puede ser negativo");
+    }
+
+    @Test
+    void aSampleWithinTheLimitsIsAccepted() {
+        calculator.checkSample(new BigDecimal("250"), new BigDecimal("0"), controlRecord());
+        calculator.checkSample(new BigDecimal("205"), null, controlRecord());
+        calculator.checkSample(null, null, controlRecord());
+    }
+
+    private static DryCoffeePurchaseRequest sample(String total, String husk) {
+        return new DryCoffeePurchaseRequest(
+                1L, "RN", "123456", null, null,
+                10, new BigDecimal("1250"), new BigDecimal("50"),
+                new BigDecimal(total), new BigDecimal(husk),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
+    }
+
     @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(

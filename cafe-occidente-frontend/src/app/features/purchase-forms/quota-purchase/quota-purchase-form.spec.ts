@@ -313,6 +313,15 @@ describe('QuotaPurchaseFormComponent', () => {
     expect(field('healthyStoredWeight')?.value).toBe('190');
   });
 
+  it('16-nov: a total almond over the sample shows the server reason and clears Porc Merma', () => {
+    setup();
+    qualitySpy.mockReturnValueOnce(throwError(() => ({
+      status: 400, error: { message: 'Peso Tot Alm no puede ser mayor que la muestra (250 g)' } })));
+    commit('totalStoredWeight', '850');
+    expect(component.errorMessage()).toBe('Peso Tot Alm no puede ser mayor que la muestra (250 g)');
+    expect(component.model['wastePercentage']).toBe('');
+  });
+
   it('RN-15.6: Retefuente is read-only and shows what the server calculated', () => {
     setup();
     previewSpy.mockReturnValue(of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, withholding: 6000, netToPay: 7100000 }));
