@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -38,6 +39,8 @@ interface HuskMessages {
   readonly savedNotice: string;
   readonly invoiceError: string;
   readonly closeWarning: string;
+  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
+  readonly priceChangedWarning?: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
 }
@@ -200,6 +203,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
     this.service.announcementInfo().subscribe({
       next: (info) => {
         this.announcementInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
       },
       error: (err) => {
@@ -254,7 +258,13 @@ export class HuskFormComponent extends UnsavedCloseForm {
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora de este café. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    return this.announcementInfo() ? this.service.announcementInfo().pipe(map((i) => i.announcementNumber)) : null;
   }
 
   print(): void {

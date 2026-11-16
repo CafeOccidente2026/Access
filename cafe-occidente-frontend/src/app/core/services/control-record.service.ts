@@ -10,6 +10,11 @@ import { ControlRecordRequest, ControlRecordResponse, GreenCoffeeValues } from '
 export class ControlRecordService {
   private readonly http = inject(HttpClient);
 
+  /** Hallazgo #6: huella del Registro de Control de la agencia de trabajo (cambia si cambia algún valor). */
+  stamp(): Observable<{ stamp: string }> {
+    return this.http.get<{ stamp: string }>(`${API_BASE_URL}/control-records/stamp`);
+  }
+
   getByAgency(agencyId: number): Observable<ControlRecordResponse> {
     return this.http.get<ControlRecordResponse>(`${API_BASE_URL}/control-records/${agencyId}`);
   }

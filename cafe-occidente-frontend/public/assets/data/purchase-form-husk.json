@@ -52,6 +52,7 @@
     "savedNotice": "Compra registrada. Documento soporte generado.",
     "invoiceError": "No se pudo generar la factura",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "priceChangedWarning": "El precio de este tipo de café se actualizó. Si sale, la próxima compra tomará el precio nuevo. ¿Está seguro?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario",
     "cellphoneMissing": "Este vendedor no tiene celular registrado. Digítelo para continuar."

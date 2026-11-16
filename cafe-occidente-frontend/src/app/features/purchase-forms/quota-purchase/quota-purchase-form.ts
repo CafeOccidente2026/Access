@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { map } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -44,6 +44,8 @@ interface QuotaPurchaseMessages {
   readonly savedNotice: string;
   readonly invoiceError: string;
   readonly closeWarning: string;
+  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
+  readonly priceChangedWarning?: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
 }
@@ -351,6 +353,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     info$.subscribe({
       next: (info) => {
         this.specialInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
         this.advanceFocus(this.mode === 'future' ? 'idPart1' : 'special');
       },
@@ -544,6 +547,15 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     this.errorMessage.set(null);
     this.fieldCache.clear();
     this.tick.update((n) => n + 1);
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora del especial elegido (el del cupo o la anunciada no cambia). */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    const special = this.model['special'];
+    return this.specialInfo() && fundId && special
+      ? this.service.specialInfo(fundId, special).pipe(map((i) => i.announcementNumber))
+      : null;
   }
 
   protected override hasUnsavedInput(): boolean {

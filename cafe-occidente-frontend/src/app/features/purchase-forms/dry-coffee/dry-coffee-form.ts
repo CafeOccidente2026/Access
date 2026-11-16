@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -43,6 +44,8 @@ interface DryCoffeeMessages {
   readonly savedNotice: string;
   readonly invoiceError: string;
   readonly closeWarning: string;
+  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
+  readonly priceChangedWarning?: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
 }
@@ -271,6 +274,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
       },
       error: (err) => {
@@ -382,7 +386,17 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: this.specialInfo() ? Number(stripAnnouncementPrefix(this.specialInfo()!.announcementNumber)) : undefined,
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora del fondo y especial en pantalla. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    const special = this.model['special'];
+    return this.specialInfo() && fundId && special
+      ? this.service.specialInfo(fundId, special).pipe(map((i) => i.announcementNumber))
+      : null;
   }
 
   print(): void {

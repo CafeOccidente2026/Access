@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -40,6 +41,8 @@ interface GreenCoffeeMessages {
   readonly savedNotice: string;
   readonly invoiceError: string;
   readonly closeWarning: string;
+  /** Hallazgo #6: se suma al aviso si el precio cambió mientras se digitaba. */
+  readonly priceChangedWarning?: string;
   readonly closeConfirm: string;
   readonly closeCancel: string;
 }
@@ -208,6 +211,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         // HU-23 CA-2 / Q23: sin los pesos de verde no hay cálculo ni factura (sin info no hay preview
         // ni Imprimir); se avisa apenas abre la pantalla.
         this.announcementInfo.set(info.sampleReady ? info : null);
+        this.rememberPrice();
         this.sampleMissing.set(!info.sampleReady);
         if (!info.sampleReady) {
           this.errorMessage.set(this.messages()?.sampleMissing ?? null);
@@ -273,7 +277,13 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora de este café. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    return this.announcementInfo() ? this.service.announcementInfo().pipe(map((i) => i.announcementNumber)) : null;
   }
 
   print(): void {

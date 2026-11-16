@@ -25,7 +25,7 @@
 
   <app-confirm-dialog
     *ngIf="pendingClose() && messages() as m"
-    [message]="m.closeWarning"
+    [message]="priceChanged() ? m.closeWarning + ' ' + (m.priceChangedWarning ?? '') : m.closeWarning"
     [confirmLabel]="m.closeConfirm"
     [cancelLabel]="m.closeCancel"
     (confirmed)="confirmClose()"

@@ -46,6 +46,8 @@ export interface HuskPurchaseRequest {
   readonly otherDiscounts: number;
   /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
   readonly payment: PurchasePayment | null;
+  /** Hallazgo #6: el anuncio con que empezó la compra (el que se ve en pantalla). */
+  readonly startedAnnouncementNumber?: number;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */
