@@ -2,7 +2,7 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney, formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 
 /**
  * Reportes "RESUMEN ANUNCIO" y "ANUNCIO" (detallado) de Access (macro "Imprimir Anuncio",
@@ -62,14 +62,13 @@ const THIN = {
 };
 
 /** Peso entero con punto de miles (Format=Standard, DecimalPlaces=0 en Access). */
-const peso = (v: number): string => Math.round(v).toLocaleString('es-CO');
+const peso = formatMoney;
 /** 2 decimales con coma (KN, KV y Factor, Format=Standard); vacio si no aplica. */
 const dec2 = (v: number | null): string =>
-  v == null ? '' : v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-/** "2026-05-09" -> "9/05/2026" (Short Date de Access en la captura). */
+  formatKilos(v);
+/** "2026-05-09" -> "09/05/2026": dd/mm/aaaa en todos los reportes (hallazgo #1 del 16-nov). */
 export function shortDate(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${Number(d)}/${m}/${y}`;
+  return formatDate(iso);
 }
 const sum = (rows: Row[], f: (p: Row) => number): number => rows.reduce((acc, p) => acc + f(p), 0);
 const fill = (template: string, values: Record<string, string | number>): string =>

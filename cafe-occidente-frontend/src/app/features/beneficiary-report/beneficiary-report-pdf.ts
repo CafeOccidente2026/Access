@@ -1,7 +1,7 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { BeneficiaryRow } from '../../core/models/vendor.model';
-import { formatThousands } from '../../shared/utils/number-format';
+import { formatKilos, formatMoney, formatThousands, formatTyped } from '../../shared/utils/number-format';
 import { themeColor } from '../../shared/utils/theme-color';
 import { cooperativeNit } from '../../shared/utils/nit';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
@@ -9,8 +9,8 @@ import { BeneficiaryReport, BeneficiaryReportText } from './beneficiary-report.m
 
 // Mismo teal de los informes de Suministros (styles.css).
 const teal = () => themeColor('--color-report-teal');
-const peso = (v: number): string => Math.round(v).toLocaleString('es-CO');
-const dec2 = (v: number): string => v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const peso = formatMoney;
+const dec2 = formatKilos;
 const fill = (template: string, values: Record<string, string | number>) =>
   Object.entries(values).reduce((t, [k, v]) => t.replace(`{${k}}`, String(v)), template);
 const sum = (rows: readonly BeneficiaryRow[], f: (r: BeneficiaryRow) => number) => rows.reduce((a, r) => a + f(r), 0);
@@ -33,7 +33,7 @@ const fullName = (r: BeneficiaryRow) => `${r.firstName} ${r.lastName ?? ''}`.tri
 /** KVerdes, KNetos, Porc y los 7 valores (Porc no se suma en Access). */
 function amounts(r: BeneficiaryRow): TableCell[] {
   return [
-    right(peso(r.greenKg)), right(dec2(r.netKg)), right(dec2(r.healthyPercentage)), right(peso(r.grossValue)),
+    right(peso(r.greenKg)), right(dec2(r.netKg)), right(formatTyped(r.healthyPercentage)), right(peso(r.grossValue)),
     right(peso(r.associateContribution)), right(peso(r.cooperativeDiscount)), right(peso(r.freightDiscount)),
     right(peso(r.withholding)), right(peso(r.otherDiscounts)), right(peso(r.netToPay)),
   ];

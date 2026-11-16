@@ -2,7 +2,7 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { FutureBalanceRow } from '../../core/models/purchase-report.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { formatKilos, formatMoney, formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { ReportFooterText, footer, shortDate, signatures } from '../announcement-report/announcement-report-pdf';
 
 /** Textos del informe (future-report.json, "balancePdf"). */
@@ -17,8 +17,8 @@ export interface FutureBalanceText extends ReportFooterText {
   readonly total: string;
 }
 
-const kg = (v: number): string => v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const peso = (v: number): string => Math.round(v).toLocaleString('es-CO');
+const kg = formatKilos;
+const peso = formatMoney;
 const r = (value: string, extra: object = {}): TableCell => ({ text: value, alignment: 'right', ...extra });
 const sumOf = (rows: FutureBalanceRow[], f: (p: FutureBalanceRow) => number): number => rows.reduce((a, p) => a + f(p), 0);
 

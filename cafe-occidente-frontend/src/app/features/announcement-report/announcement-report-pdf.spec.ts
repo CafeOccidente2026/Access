@@ -45,8 +45,8 @@ describe('announcement report', () => {
     expect(weightedFactor([row({ factor: null })])).toBeNull();
   });
 
-  it('formats the date like Access Short Date', () => {
-    expect(shortDate('2026-05-09')).toBe('9/05/2026');
+  it('formats the date as dd/mm/aaaa (hallazgo #1)', () => {
+    expect(shortDate('2026-05-09')).toBe('09/05/2026');
   });
 
   it('RN-24.2: the detail has the announcement number column', () => {

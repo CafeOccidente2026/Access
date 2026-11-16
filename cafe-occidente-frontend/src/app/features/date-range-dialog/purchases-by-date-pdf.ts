@@ -1,7 +1,7 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
-import { formatDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { formatKilos, formatMoney, formatTyped, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 
 /**
@@ -36,8 +36,8 @@ const MONEY: readonly (keyof Row)[] = [
 
 const fill = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ''));
-const kg = (v: number | null): string => (v == null ? '' : formatDisplayNumber(v, 'currency'));
-const pesos = (v: number): string => formatDisplayNumber(v, 'count');
+const kg = (v: number | null): string => (v == null ? '' : formatKilos(v));
+const pesos = formatMoney;
 const r = (value: string, extra: object = {}): TableCell => ({ text: value, alignment: 'right', ...extra });
 
 /** Suma en pesos enteros (Q3: los montos se guardan en pesos), sin arrastrar decimales de coma flotante. */
@@ -53,7 +53,7 @@ export function sumKg(rows: readonly Row[]): number {
 function line(p: Row, text: PurchasesByDateText): TableCell[] {
   return [
     stripAnnouncementPrefix(p.announcementNumber), shortDate(p.purchaseDate), p.fundCode,
-    `${p.prefix ?? ''} ${p.invoiceNumber}`.trim(), p.idNumber, r(kg(p.netKg)), r(kg(p.factor)), r(pesos(p.unitPrice)),
+    `${p.prefix ?? ''} ${p.invoiceNumber}`.trim(), p.idNumber, r(kg(p.netKg)), r(formatTyped(p.factor)), r(pesos(p.unitPrice)),
     ...MONEY.map((f) => r(pesos(p[f] as number))),
     p.status === 'ANULADA' ? { text: `${p.specialType} ${text.annulled}`, bold: true } : p.specialType,
   ];
