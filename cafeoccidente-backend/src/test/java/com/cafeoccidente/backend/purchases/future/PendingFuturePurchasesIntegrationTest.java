@@ -11,6 +11,7 @@ import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,9 +63,16 @@ class PendingFuturePurchasesIntegrationTest {
     }
 
     private void future(long agency, String announcement, String daysAgo, String idNumber, int kilos, int saldo) {
+        future(agency, announcement, daysAgo, daysAgo, idNumber, kilos, saldo);
+    }
+
+    /** Registrada hace {@code createdDaysAgo} dias con un anuncio de hace {@code daysAgo}. */
+    private void future(long agency, String announcement, String daysAgo, String createdDaysAgo, String idNumber, int kilos,
+            int saldo) {
         jdbc.update("INSERT INTO compras_anunciadas (creado_en, agencia_id, numero_anuncio, fecha_anuncio, cedula, nombres,"
                 + " tipo, direccion, especial, kilos, saldo, fecha_entrega, pr_alm_sana, pr_alm_defec, bonificacion, costos,"
-                + " pr_inc_calidad, pr_base_cps, creado_por_usuario_id) VALUES (now(), ?, ?, CURRENT_DATE - " + daysAgo + ","
+                + " pr_inc_calidad, pr_base_cps, creado_por_usuario_id) VALUES (now() - interval '" + createdDaysAgo
+                + " days', ?, ?, CURRENT_DATE - " + daysAgo + ","
                 + " ?, 'PRUEBA', 'C', 'VEREDA', 'RN', ?, ?, CURRENT_DATE + 30, 9100, 6000, 30, 692, 0, 1500000, 1)",
                 agency, announcement, idNumber, kilos, saldo);
     }
@@ -109,6 +117,17 @@ class PendingFuturePurchasesIntegrationTest {
         assertThat(numbers(futures.pending(null, null, false))).containsExactly("SDBU-801");
         assertThat(numbers(futures.pending(today.minusDays(45), today.minusDays(30), false))).containsExactly("SDBU-790");
         assertThat(numbers(futures.pending(today.minusDays(45), today, false))).containsExactly("SDBU-801", "SDBU-790");
+    }
+
+    // R5 (17-nov): cuenta el dia en que se registro, no el del anuncio: con el anuncio de ayer (R6) sale hoy.
+    @Test
+    void r5ARegisteredTodayWithYesterdaysAnnouncementIsListedToday() {
+        future(AGENCY, "SDBU-805", "1", "0", "990003507", 700, 700);
+        future(AGENCY, "SDBU-804", "0", "3", "990003508", 600, 600);
+        LocalDate today = LocalDate.now(ZoneId.of("America/Bogota"));
+
+        assertThat(numbers(futures.pending(null, null, false))).containsExactly("SDBU-805");
+        assertThat(numbers(futures.pending(today.minusDays(3), today.minusDays(3), false))).containsExactly("SDBU-804");
     }
 
     private static List<String> numbers(List<PendingAnnouncementRow> rows) {

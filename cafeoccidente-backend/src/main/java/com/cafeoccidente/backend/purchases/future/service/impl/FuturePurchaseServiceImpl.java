@@ -163,9 +163,11 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
 
     @Override
     public List<PendingAnnouncementRow> pending(LocalDate from, LocalDate to, boolean withBalance) {
+        // R5 (17-nov): los dias son de Colombia; "hasta" incluye todo ese dia.
         LocalDate today = LocalDate.now(clock);
         return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId(), withBalance,
-                from == null ? today : from, to == null ? today : to);
+                (from == null ? today : from).atStartOfDay(clock.getZone()).toInstant(),
+                (to == null ? today : to).plusDays(1).atStartOfDay(clock.getZone()).toInstant());
     }
 
     @Override
