@@ -137,6 +137,6 @@ class ColombiaClockIntegrationTest {
                 COLOMBIAN_DAY, AGENCY);
 
         assertThat(invoices.next(AGENCY, controlRecords.getActive(AGENCY)).warning())
-                .isNotEqualTo("La resolución de facturación está vencida");
+                .isNull();
     }
 }
