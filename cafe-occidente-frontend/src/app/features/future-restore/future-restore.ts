@@ -40,7 +40,7 @@ export function futureCells(r: FuturePurchaseRestoreRow): string[] {
 }
 
 export function quotaCells(q: AnnouncementQuotaResponse): string[] {
-  return [String(q.announcementNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
+  return [announcementDisplay(q.displayNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
     kg(q.balance)];
 }
 
