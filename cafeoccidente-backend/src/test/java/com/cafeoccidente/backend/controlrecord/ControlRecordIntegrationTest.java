@@ -63,6 +63,8 @@ class ControlRecordIntegrationTest {
     private ControlRecordService service;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
 
     private String admin;
 
@@ -280,5 +282,37 @@ class ControlRecordIntegrationTest {
         applyGreenCoffee(admin, "{\"greenTotalStoredWeight\": 900, \"greenTotalHuskWeight\": 7.1, \"greenHealthyStoredWeight\": 132.9,"
                         + " \"greenHealthyUnitPrice\": 12000, \"greenDefectiveUnitPrice\": 6000}")
                 .andExpect(status().isBadRequest());
+    }
+
+    /** R1 (17-nov): la resolucion de Buesaco vence en {@code days} dias (Fecha Res + Vigencia en meses). */
+    private void buesacoExpiresIn(int days) {
+        jdbc.update("UPDATE registros_control SET fecha_resolucion = (now() AT TIME ZONE 'America/Bogota')::date + ?"
+                + " - make_interval(months => vigencia) WHERE agencia_id = 1 AND activo", days);
+        entityManager.clear();
+    }
+
+    @Test
+    void r1TheAdministratorIsWarnedTenDaysBeforeAResolutionExpires() throws Exception {
+        buesacoExpiresIn(11);
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')]").isEmpty());
+
+        buesacoExpiresIn(10);
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')].daysLeft").value(10));
+    }
+
+    @Test
+    void r1AnExpiredResolutionStaysInTheAlertsUntilANewOneIsRegistered() throws Exception {
+        buesacoExpiresIn(-1);
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')].daysLeft").value(-1));
+
+        save(current().put("resolutionDate", java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota")).toString()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')]").isEmpty());
     }
 }
