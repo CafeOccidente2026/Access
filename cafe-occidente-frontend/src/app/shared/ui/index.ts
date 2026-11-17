@@ -14,3 +14,4 @@ export * from './form-flow/form-flow';
 export * from './success-overlay/success-overlay';
 export * from './invoice-navigator/invoice-navigator';
 export * from './pdf-generating/pdf-generating';
+export * from './resolution-alert/resolution-alert';

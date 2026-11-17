@@ -40,3 +40,10 @@ export type GreenCoffeeValues = Pick<
   ControlRecordRequest,
   'greenTotalStoredWeight' | 'greenTotalHuskWeight' | 'greenHealthyStoredWeight' | 'greenHealthyUnitPrice' | 'greenDefectiveUnitPrice'
 >;
+
+/** R1 (17-nov): una agencia cuya resolución DIAN vence en daysLeft días (negativo: ya venció). */
+export interface ResolutionAlert {
+  readonly agencyName: string;
+  readonly expirationDate: string;
+  readonly daysLeft: number;
+}
