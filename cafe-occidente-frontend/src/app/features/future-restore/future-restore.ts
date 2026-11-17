@@ -82,7 +82,7 @@ export class FutureRestoreComponent {
     stream: () => this.quotaService.list(),
   });
   /**
-   * Hallazgo #17 (16-nov): como la consulta "ANUNCIADAS HOY" de Access (Fecha_Anuncio = Date()), por defecto las de hoy;
+   * Hallazgo #17 (16-nov) y R5 (17-nov): por defecto las registradas hoy (Access miraba la fecha del anuncio);
    * Desde/Hasta elige otro rango y la casilla muestra todas las que tienen saldo pendiente, de cualquier fecha.
    */
   readonly from = signal(localToday());
