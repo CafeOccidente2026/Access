@@ -147,6 +147,8 @@ class AnnouncementQuotaServiceImplTest {
         assertThat(response.assignedQuota()).isEqualByComparingTo("576.70");
         assertThat(response.deliveredKg()).isEqualByComparingTo("200.00");
         assertThat(response.balance()).isEqualByComparingTo("376.70");
+        // R4 (17-nov): con el prefijo del punto, para que Restaurar Anuncios con Cupos lo muestre como las demas.
+        assertThat(response.displayNumber()).isEqualTo("SDBU-32");
     }
 
     @Test
