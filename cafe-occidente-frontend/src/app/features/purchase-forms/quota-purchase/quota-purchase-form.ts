@@ -24,6 +24,7 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
+import { reserveInvoice } from '../invoice-reservation';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
@@ -277,14 +278,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     }
   }
 
+  /** R1 (17-nov): como Café Seco, la resolución DIAN vencida o sin números se avisa al elegir el Fondo. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        this.tick.update((n) => n + 1);
-      },
-      error: () => this.tick.update((n) => n + 1),
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** RN-21.2.3: el Especial abre la ventana con los anuncios con cupo de ese fondo y especial. */
