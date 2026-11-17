@@ -10,7 +10,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { announcementDisplay, formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-invoice';
 import { advanceFocus, focusField } from '../form-focus';
@@ -44,7 +44,7 @@ const GATE_ORDER = FOCUS_ORDER.filter((key) => !OPTIONAL.includes(key));
 
 /** Texto de cada anuncio en la lista: número y Pr carga perg s (RN-21.4.4). */
 function announcementLabel(a: Announcement): string {
-  return `${announcementDisplay(a.announcementNumber)} · ${formatDisplayNumber(a.basePriceLoad, 'currency')}`;
+  return `${announcementDisplay(a.announcementNumber)} · ${formatMoney(a.basePriceLoad)}`;
 }
 
 /**

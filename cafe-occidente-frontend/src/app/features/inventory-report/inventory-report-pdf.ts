@@ -3,6 +3,7 @@ import type { Content, ContentStack, TableCell, TDocumentDefinitions } from 'pdf
 import { InventoryReportRow } from '../../core/models/inventory.model';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 import { money } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
+import { formatKilos, formatMoney } from '../../shared/utils/number-format';
 
 /** Fila con los controles calculados del reporte (RunningSum = "Sobre todo" en INVENTARIO.txt). */
 export interface BalancedRow extends InventoryReportRow {
@@ -55,28 +56,30 @@ const LAYOUT = {
 };
 
 const label = (text: string, alignment: 'left' | 'center' | 'right' = 'center'): TableCell => ({ text, fontSize: 8, alignment });
-const num = (value: number, alignment: 'center' | 'right' = 'right'): TableCell => ({ text: money(value), alignment });
+const num = (value: number, alignment: 'center' | 'right' = 'right', format: (v: number) => string = money): TableCell =>
+  ({ text: format(value), alignment });
 const txt = (value: string | number | null | undefined, alignment: 'left' | 'center' = 'center'): TableCell =>
   ({ text: value == null ? '' : String(value), alignment });
 
+/** R2 (17-nov): formato del #1, kilos sin ,00 si son enteros y pesos sin decimales; los % siguen con 2. */
 function detailRow(r: BalancedRow): TableCell[] {
   return [
     txt(shortDate(r.date), 'left'),
     txt(r.invoiceNumber),
-    num(r.netKg ?? 0),
+    num(r.netKg ?? 0, 'right', formatKilos),
     num(r.healthyPercentage ?? 0, 'center'),
-    num(r.inventoryValue ?? 0),
+    num(r.inventoryValue ?? 0, 'right', formatMoney),
     txt(r.specialType),
     num(r.weightedPercentage),
     '',
     txt(r.remissionNumber),
-    num(r.quantity ?? 0),
+    num(r.quantity ?? 0, 'right', formatKilos),
     num(r.exitPercentage ?? 0),
-    num(r.outputValue ?? 0),
+    num(r.outputValue ?? 0, 'right', formatMoney),
     '',
-    num(r.balanceKg),
-    num(r.balanceValue),
-    num(r.unitValue),
+    num(r.balanceKg, 'right', formatKilos),
+    num(r.balanceValue, 'right', formatMoney),
+    num(r.unitValue, 'right', formatMoney),
   ];
 }
 

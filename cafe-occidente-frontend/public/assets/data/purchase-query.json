@@ -33,7 +33,7 @@
     { "key": "fund", "label": "Fondo", "type": "text" },
     { "key": "invoice", "label": "Factura", "type": "text", "highlighted": true },
     { "key": "invoiceNumber", "label": "", "ariaLabel": "Número de factura", "type": "text", "highlighted": true },
-    { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency", "integer": true },
+    { "key": "basePriceDryLoad", "label": "Pr Base carga Pergamino Seco", "type": "currency", "integer": true, "display": "money" },
     { "key": "productCode", "label": "Cod Prod", "type": "text", "inputWidthClass": "min-w-[125px]" }
   ],
   "contactFields": [
@@ -46,28 +46,28 @@
   ],
   "qualityFields": [
     { "key": "special", "label": "Especial", "type": "text" },
-    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency" },
-    { "key": "defectStoredPrice", "label": "Pr Alm Defec", "type": "currency", "integer": true },
-    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true },
-    { "key": "costs", "label": "Costos", "type": "currency", "integer": true }
+    { "key": "healthyStoredPrice", "label": "Pr Alm Sana", "type": "currency", "display": "money" },
+    { "key": "defectStoredPrice", "label": "Pr Alm Defec", "type": "currency", "integer": true, "display": "money" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "integer": true, "display": "money" },
+    { "key": "costs", "label": "Costos", "type": "currency", "integer": true, "display": "money" }
   ],
   "weightFields": [
-    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number" },
+    { "key": "totalStoredWeight", "label": "Peso Tot Alm", "type": "number", "display": "typed" },
     { "key": "wastePercentage", "label": "Porc Merma %", "type": "percentage" },
-    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number" },
+    { "key": "totalHuskWeight", "label": "Peso Tot Pasilla", "type": "number", "display": "typed" },
     { "key": "huskPercentage", "label": "% Kg Pasilla", "type": "percentage" },
-    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number" },
-    { "key": "factor", "label": "Factor", "type": "number" }
+    { "key": "healthyStoredWeight", "label": "Peso Alm Sana", "type": "number", "display": "typed" },
+    { "key": "factor", "label": "Factor", "type": "number", "display": "typed" }
   ],
   "netWeightFields": [
-    { "key": "bags", "label": "Sacos", "type": "number", "integer": true },
-    { "key": "grossKg", "label": "Kilos Brutos", "type": "number" },
-    { "key": "greenKg", "label": "Kilos Verdes", "type": "number" },
-    { "key": "tare", "label": "Destare", "type": "number" },
-    { "key": "netKg", "label": "Kilos Netos", "type": "number" },
-    { "key": "penalty", "label": "Castigo", "type": "currency", "integer": true }
+    { "key": "bags", "label": "Sacos", "type": "number", "integer": true, "display": "kilos" },
+    { "key": "grossKg", "label": "Kilos Brutos", "type": "number", "display": "kilos" },
+    { "key": "greenKg", "label": "Kilos Verdes", "type": "number", "display": "kilos" },
+    { "key": "tare", "label": "Destare", "type": "number", "display": "kilos" },
+    { "key": "netKg", "label": "Kilos Netos", "type": "number", "display": "kilos" },
+    { "key": "penalty", "label": "Castigo", "type": "currency", "integer": true, "display": "money" }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "display": "money" },
   "statusField": { "key": "status", "label": "ESTADO", "type": "text" },
   "paymentPanel": {
     "heading": "FORMAS\nDE\nPAGO",
@@ -84,15 +84,15 @@
   },
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true },
-    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency" },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true }
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true, "display": "money" },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "display": "money" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "highlighted": true, "display": "money" }
   ],
   "additionalDiscountFields": [
-    { "key": "associateContribution", "label": "Aporte Socio", "type": "currency" },
-    { "key": "coopDiscount", "label": "Dto Coop", "type": "currency" },
-    { "key": "withholding", "label": "Retefuente", "type": "currency" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency" }
+    { "key": "associateContribution", "label": "Aporte Socio", "type": "currency", "display": "money" },
+    { "key": "coopDiscount", "label": "Dto Coop", "type": "currency", "display": "money" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "display": "money" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "display": "money" }
   ],
   "reprintButtonLabel": "Reimprimir Dcto Equiv"
 }

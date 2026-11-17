@@ -109,7 +109,7 @@ describe('FuturePurchaseFormComponent', () => {
     component = TestBed.createComponent(FuturePurchaseFormComponent).componentInstance;
   }
 
-  const label = 'BU-31 · 1.200.000,00';
+  const label = 'BU-31 · 1.200.000';
 
   function fill(): void {
     component.model['idPart1'] = growerWithoutId.idNumber;

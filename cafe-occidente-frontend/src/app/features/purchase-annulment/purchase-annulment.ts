@@ -7,7 +7,7 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseAnnulmentService } from '../../core/services/purchase-annulment.service';
 import { AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
 import { serverError } from '../../shared/utils/server-error';
@@ -49,7 +49,8 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
     return shortDate(String(value));
   }
   if (type === 'number' || type === 'money') {
-    return formatDisplayNumber(Number(value), type === 'money' ? 'count' : 'currency');
+    // R2 (17-nov): formato del #1, pesos sin decimales y kilos sin ,00 si son enteros.
+    return type === 'money' ? formatMoney(Number(value)) : formatKilos(Number(value));
   }
   return String(value);
 }
