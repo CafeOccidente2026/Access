@@ -72,7 +72,7 @@ public class FuturePurchaseController {
         return futurePurchaseService.openFor(idNumber);
     }
 
-    /** Lista de anuncios del dia del especial (RN-21.4.3). */
+    /** El anuncio vigente del especial (R6, 17-nov: el ultimo aunque no sea de hoy). */
     @GetMapping("/announcements")
     public List<AnnouncementResponse> todayAnnouncements(@RequestParam String specialType) {
         return futurePurchaseService.todayAnnouncements(specialType);

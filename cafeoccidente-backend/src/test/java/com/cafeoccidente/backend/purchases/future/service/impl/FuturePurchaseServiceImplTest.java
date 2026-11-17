@@ -94,6 +94,7 @@ class FuturePurchaseServiceImplTest {
         when(growerService.findByIdNumber("123456")).thenReturn(grower("S"));
         when(fundRepository.findByCode("RP")).thenReturn(Optional.of(fundRp()));
         when(announcementService.findForPurchase(1L, 1L, "RN", 1)).thenReturn(announcement());
+        when(announcementService.findLatest(1L, 1L, "RN")).thenReturn(announcement());
         when(futurePurchaseRepository.save(any())).thenAnswer(inv -> {
             FuturePurchase saved = inv.getArgument(0);
             return saved;
@@ -205,35 +206,18 @@ class FuturePurchaseServiceImplTest {
         assertThat(response.basePriceLoad()).isEqualByComparingTo("1113500.00");
     }
 
+    /** C6 y R6 (17-nov): un solo anuncio por especial del fondo RP, el ultimo publicado, aunque no sea de hoy. */
     @Test
-    void ca2ListsOnlyTodaysAnnouncementsOfTheSpecialInFundRp() {
+    void r6ListsTheLatestAnnouncementOfTheSpecialInFundRpEvenIfItIsNotFromToday() {
         when(fundRepository.findByCode("RP")).thenReturn(Optional.of(fundRp()));
         when(announcementService.history()).thenReturn(List.of(
-                announcement("SDBU-5", TODAY, 1L, "RN"),
+                announcement("SDBU-5", TODAY, 2L, "RN"),
                 announcement("SDBU-4", TODAY.minusDays(1), 1L, "RN"),
-                announcement("SDBU-3", TODAY, 2L, "RN"),
+                announcement("SDBU-3", TODAY.minusDays(2), 1L, "RN"),
                 announcement("SDBU-2", TODAY, 1L, "NESPRESSO - FTUSA")));
 
-        List<AnnouncementResponse> list = service.todayAnnouncements("RN");
-
-        assertThat(list).extracting(AnnouncementResponse::announcementNumber).containsExactly("SDBU-5");
-    }
-
-    /** C6 (prueba del 11-nov, punto 12): un solo anuncio por especial, el ultimo publicado, y solo si es de hoy. */
-    @Test
-    void c6ListsOnlyTheLatestAnnouncementOfTheSpecialAndOnlyIfItIsFromToday() {
-        when(fundRepository.findByCode("RP")).thenReturn(Optional.of(fundRp()));
-        when(announcementService.history()).thenReturn(List.of(
-                announcement("SDBU-7", TODAY, 1L, "RN"),
-                announcement("SDBU-6", TODAY, 1L, "RN")));
         assertThat(service.todayAnnouncements("RN")).extracting(AnnouncementResponse::announcementNumber)
-                .containsExactly("SDBU-7");
-
-        // El ultimo de RN es de ayer (por ejemplo, el de la semilla): la lista queda vacia.
-        when(announcementService.history()).thenReturn(List.of(
-                announcement("SDBU-4", TODAY.minusDays(1), 1L, "RN"),
-                announcement("SDBU-3", TODAY.minusDays(2), 1L, "RN")));
-        assertThat(service.todayAnnouncements("RN")).isEmpty();
+                .containsExactly("SDBU-4");
     }
 
     @Test
@@ -248,13 +232,22 @@ class FuturePurchaseServiceImplTest {
     }
 
     @Test
-    void anAnnouncementOfAnotherDayIsRejected() {
+    void r6TheLatestAnnouncementOfAnotherDayIsAccepted() {
         mockHappyPath();
-        when(announcementService.findForPurchase(1L, 1L, "RN", 1))
-                .thenReturn(announcement("SDBU-1", TODAY.minusDays(1), 1L, "RN"));
+        AnnouncementResponse yesterday = announcement("SDBU-1", TODAY.minusDays(1), 1L, "RN");
+        when(announcementService.findForPurchase(1L, 1L, "RN", 1)).thenReturn(yesterday);
+        when(announcementService.findLatest(1L, 1L, "RN")).thenReturn(yesterday);
+
+        assertThat(service.create(request()).announcementDate()).isEqualTo(TODAY.minusDays(1));
+    }
+
+    @Test
+    void r6AnAnnouncementThatIsNoLongerTheLatestIsRejected() {
+        mockHappyPath();
+        when(announcementService.findLatest(1L, 1L, "RN")).thenReturn(announcement("SDBU-2", TODAY, 1L, "RN"));
 
         assertThatThrownBy(() -> service.create(request()))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("no es de hoy");
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("ya no es el vigente");
         verify(futurePurchaseRepository, never()).save(any());
     }
 }

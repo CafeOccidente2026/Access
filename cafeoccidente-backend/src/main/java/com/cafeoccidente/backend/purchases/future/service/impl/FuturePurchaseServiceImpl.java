@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * "Ingresar Compras a Futuro" (RF-21.4): registra el compromiso de entrega, sin cascada de precio ni factura
  * (ver FuturePurchase). "Fondo" fijo en RP: el formulario de Access no tiene Fondo. El anuncio lo elige el
- * usuario entre los de hoy del especial (RN-21.4.3); Access tomaba el ultimo, sin mirar la fecha.
+ * usuario: el ultimo del especial, sea o no de hoy, como Access (R6, 17-nov; RN-21.4.3 decia solo los de hoy).
  */
 @Service
 public class FuturePurchaseServiceImpl implements FuturePurchaseService {
@@ -68,14 +68,11 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     @Override
     public List<AnnouncementResponse> todayAnnouncements(String specialType) {
         Long fundId = rpFund().getId();
-        LocalDate today = LocalDate.now(clock);
-        // C6 + RN-21.4.3: el ultimo anuncio del especial (la historia viene del mas nuevo al mas viejo), y solo
-        // si es de hoy; asi no se mezclan varios anuncios ni sale uno viejo, como el de la semilla.
+        // C6: el ultimo anuncio del especial (la historia viene del mas nuevo al mas viejo). R6 (17-nov): aunque no
+        // sea de hoy, como Access (macro "Asignar numero anuncio ... PFuture Buys" con ULTIMO ANUN ... PARA COMPRAS).
         return announcementService.history().stream()
                 .filter(a -> a.fundId().equals(fundId) && a.specialType().equals(specialType))
-                .findFirst()
-                .filter(a -> today.equals(a.announcementDate()))
-                .stream()
+                .limit(1)
                 .toList();
     }
 
@@ -111,9 +108,12 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
 
         AnnouncementResponse announcement = announcementService.findForPurchase(
                 agency.getId(), rpFund().getId(), request.specialType(), request.announcementNumber());
-        // RN-21.4.3: solo con un anuncio del dia; al dia siguiente la lista ya es otra.
-        if (!LocalDate.now(clock).equals(announcement.announcementDate())) {
-            throw new BusinessRuleException("El anuncio " + request.announcementNumber() + " no es de hoy");
+        // R6 (17-nov): el anuncio vigente del especial (el ultimo, sea o no de hoy); si se publico otro mientras se
+        // digitaba, se elige de nuevo.
+        AnnouncementResponse latest = announcementService.findLatest(agency.getId(), rpFund().getId(), request.specialType());
+        if (!latest.announcementNumber().equals(announcement.announcementNumber())) {
+            throw new BusinessRuleException("El anuncio " + request.announcementNumber()
+                    + " ya no es el vigente: elija el anuncio otra vez");
         }
 
         FuturePurchase purchase = new FuturePurchase();
