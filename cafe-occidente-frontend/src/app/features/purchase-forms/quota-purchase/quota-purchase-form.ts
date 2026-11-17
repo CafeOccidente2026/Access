@@ -588,7 +588,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
       deliveryKg: this.quotaChoice()?.deliveryKg ?? '',
-      netKg: c ? c.netKg : (weights?.net ?? ''),
+      // R3 (17-nov): como el macro "Establecer Cupos Anunciados" de Access, Kilos Netos = Esta Entrega al aceptar la
+      // ventana; luego Kilos Brutos da el Destare (Brutos - Netos) y, si no alcanzan la entrega, Netos = Brutos.
+      netKg: c ? c.netKg : (weights?.net ?? delivery ?? ''),
       tare: weights?.tare ?? '',
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',
