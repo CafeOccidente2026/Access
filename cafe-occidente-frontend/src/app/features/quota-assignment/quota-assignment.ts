@@ -19,10 +19,15 @@ function optionLabel(candidate: QuotaCandidate): string {
   return `${announcementDisplay(a.announcementNumber)} · ${a.specialType} · ${formatMoney(a.basePriceLoad)}`;
 }
 
+/** Saldo = Cupo - Kilos Entregados; vacío mientras no hay Cupo. El servidor lo vuelve a calcular al guardar. */
+export function liveBalance(quota: string, deliveredKg: number): string {
+  return quota.trim() === '' ? '' : String(parseDisplayNumber(quota) - deliveredKg);
+}
+
 /**
  * "Asignar Cupo a Anuncios" (RF-21.1, Access "AN FUR HEUTE"). La lista la arma el servidor: anuncios de la
  * agencia de trabajo sin cupo, sin pasilla ni verde, con sus Kilos Entregados. Solo Cupo se digita; Saldo
- * lo calcula el servidor. Guardado, el anuncio sale de la lista y su cupo ya no se cambia (RN-21.1.9).
+ * se ve al digitarlo y el servidor lo vuelve a calcular al guardar. Guardado, el anuncio sale de la lista y su cupo ya no se cambia (RN-21.1.9).
  */
 @Component({
   selector: 'app-quota-assignment',
@@ -73,7 +78,8 @@ export class QuotaAssignmentComponent {
       costs: String(a.costs),
       deliveredKg: String(saved?.deliveredKg ?? selected.deliveredKg),
       quota: saved ? String(saved.assignedQuota) : this.quota(),
-      balance: saved ? String(saved.balance) : '',
+      // R2 (17-nov): RN-21.1.8, el Saldo (Cupo - Kilos Entregados) se ve mientras se digita el Cupo.
+      balance: saved ? String(saved.balance) : liveBalance(this.quota(), selected.deliveredKg),
     };
   });
 
