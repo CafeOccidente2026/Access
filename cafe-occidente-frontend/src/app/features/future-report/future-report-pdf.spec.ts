@@ -85,7 +85,7 @@ describe('Informe Saldo Anuncios (HU-35)', () => {
   });
 
   it('RN-21.7.4: grouped by announcement with Sum and Suma total of K Anun, K Entr and Saldo Kg', () => {
-    expect(texts(body[1])[0]).toBe('Anuncio 3443');
+    expect(texts(body[1])[0]).toBe('Anuncio TA-3443');
     const sumRow = texts(body[4]);
     const totalRow = texts(body[5]);
     expect([sumRow[0], sumRow[4], sumRow[5], sumRow[6]]).toEqual(['Sum', '1.500', '900', '600']);

@@ -59,6 +59,15 @@ export function stripAnnouncementPrefix(value: string): string {
   return idx === -1 ? value : value.slice(idx + 1);
 }
 
+/**
+ * R4 (17-nov): el anuncio se muestra con el identificador del punto, "SDTA-3738" -> "TA-3738". "SD" es de los
+ * documentos soporte (lo da la resolucion DIAN), no del anuncio. Se guarda igual; solo cambia lo que se ve.
+ */
+export function announcementDisplay(value: string | null | undefined): string {
+  const text = value ?? '';
+  return /^SD[^-]*-/.test(text) ? text.slice(2) : text;
+}
+
 /** Valida un campo numerico entero sin decimales (precios de anuncio: Pr Base Carga, SobrePr,
  *  Precio Pasilla, Pr Por Punto) mientras el usuario escribe. Devuelve el mensaje de error a
  *  mostrar cerca del campo, o null si el valor (posiblemente vacio, mientras se sigue escribiendo)

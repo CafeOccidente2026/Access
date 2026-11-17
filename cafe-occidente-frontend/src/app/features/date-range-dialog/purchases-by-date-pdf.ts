@@ -1,7 +1,7 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
-import { formatKilos, formatMoney, formatTyped, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatKilos, formatMoney, formatTyped } from '../../shared/utils/number-format';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 
 /**
@@ -52,7 +52,7 @@ export function sumKg(rows: readonly Row[]): number {
 
 function line(p: Row, text: PurchasesByDateText): TableCell[] {
   return [
-    stripAnnouncementPrefix(p.announcementNumber), shortDate(p.purchaseDate), p.fundCode,
+    announcementDisplay(p.announcementNumber), shortDate(p.purchaseDate), p.fundCode,
     `${p.prefix ?? ''} ${p.invoiceNumber}`.trim(), p.idNumber, r(kg(p.netKg)), r(formatTyped(p.factor)), r(pesos(p.unitPrice)),
     ...MONEY.map((f) => r(pesos(p[f] as number))),
     p.status === 'ANULADA' ? { text: `${p.specialType} ${text.annulled}`, bold: true } : p.specialType,

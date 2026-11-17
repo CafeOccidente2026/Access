@@ -17,7 +17,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
@@ -502,7 +502,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       // Castigo_lostFocus/Descuento_Fro_LostFocus (Form_COMPRAS.bas): Asociado = "ASOCIADO"/"NO ASOCIADO"
       // segun Tipo ("S"/"C"); vacio hasta que se conoce el tipo (cedula sin buscar todavia).

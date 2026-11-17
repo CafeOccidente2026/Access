@@ -28,7 +28,7 @@ describe('announcement report', () => {
       row({ invoiceNumber: 5, module: 'HUSK', announcementNumber: 'SDTA-3445', specialType: 'PASILLA' }),
     ]);
 
-    expect(blocks.map((b) => `${b.announcementNumber} ${b.specialType}`)).toEqual(['3443 NESPRESSO', '3444 CV', '3445 PASILLA']);
+    expect(blocks.map((b) => `${b.announcementNumber} ${b.specialType}`)).toEqual(['TA-3443 NESPRESSO', 'TA-3444 CV', 'TA-3445 PASILLA']);
     expect(blocks[0].groups.map((g) => [g.productCode, g.rows.map((p) => p.invoiceNumber)])).toEqual([
       ['A', [1, 4]],
       ['B', [3]],
@@ -54,7 +54,7 @@ describe('announcement report', () => {
     const tables = (doc.content as { table?: { body: unknown[][] } }[]).filter((c) => c.table);
     const detail = tables[1].table!.body;
     expect(detail[0][0]).toMatchObject({ text: 'Anun' });
-    expect(detail[2][0]).toBe('3443');
+    expect(detail[2][0]).toBe('TA-3443');
   });
 
   it('RN-24.4: one PDF, summary first and detail after, each block on its own page', () => {

@@ -2,7 +2,7 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { FutureBalanceRow } from '../../core/models/purchase-report.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { formatKilos, formatMoney, formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatKilos, formatMoney, formatThousands } from '../../shared/utils/number-format';
 import { ReportFooterText, footer, shortDate, signatures } from '../announcement-report/announcement-report-pdf';
 
 /** Textos del informe (future-report.json, "balancePdf"). */
@@ -44,7 +44,7 @@ export function buildFutureBalanceDoc(rows: FutureBalanceRow[], text: FutureBala
   }));
   const body: TableCell[][] = [head];
   for (const [announcement, groupRows] of groups) {
-    body.push([{ text: `${text.announcementLabel} ${stripAnnouncementPrefix(announcement)}`, bold: true, fontSize: 9,
+    body.push([{ text: `${text.announcementLabel} ${announcementDisplay(announcement)}`, bold: true, fontSize: 9,
       colSpan: 11, margin: [0, 3, 0, 0] }, ...Array(10).fill('')]);
     for (const p of groupRows) {
       body.push([shortDate(p.announcementDate), r(/^\d+$/.test(p.idNumber) ? formatThousands(p.idNumber) : p.idNumber),

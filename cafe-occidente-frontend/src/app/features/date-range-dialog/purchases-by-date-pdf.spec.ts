@@ -36,7 +36,7 @@ describe('Compras por fecha (RF-25)', () => {
   it('shows a purchase with its prefix, its factor as Porc and empty Porc when it does not apply', () => {
     const body = table([row({}), row({ invoiceNumber: 27871, module: 'GREEN', specialType: 'CV', factor: null })]);
     const dry = body[2].map(cell);
-    expect(dry.slice(0, 8)).toEqual(['4', '29/10/2026', 'RP', 'SDBU 27869', '990006002', '1.000', '92,11', '12.417']);
+    expect(dry.slice(0, 8)).toEqual(['BU-4', '29/10/2026', 'RP', 'SDBU 27869', '990006002', '1.000', '92,11', '12.417']);
     expect(dry[14]).toBe('12.255.579');
     expect(body[3].map(cell)[6]).toBe('');
   });

@@ -58,7 +58,7 @@ describe('FutureRestoreComponent', () => {
     search(c, '123.456');
 
     expect(previewSpy).toHaveBeenCalledWith('123456');
-    expect(c.rows()).toEqual([['SDBU-1', '05/11/2026', 'ESTANDAR', '1.500', '1.000', '100', '500']]);
+    expect(c.rows()).toEqual([['BU-1', '05/11/2026', 'ESTANDAR', '1.500', '1.000', '100', '500']]);
     expect(restoreSpy).not.toHaveBeenCalled();
     expect(c.canRestore()).toBe(true);
   });
@@ -122,7 +122,7 @@ describe('FutureRestoreComponent', () => {
 
     expect(pendingSpy).toHaveBeenCalledTimes(1);
     expect(listSpy).not.toHaveBeenCalled();
-    expect(c.rows()).toEqual([['SDBU-4', '02/11/2026', 'NESPRESSO - FTUSA', '9.100', '2', '1.500', '300', '1.200']]);
+    expect(c.rows()).toEqual([['BU-4', '02/11/2026', 'NESPRESSO - FTUSA', '9.100', '2', '1.500', '300', '1.200']]);
     expect(c.canRestore()).toBe(false);
   });
 

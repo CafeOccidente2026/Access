@@ -16,7 +16,7 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lookupSeller } from '../seller-lookup';
@@ -344,7 +344,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       agency: this.authService.agencyName() ?? '',
       fund: 'RP',
       date: this.today,
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       invoicePrefix: inv?.prefix ?? '',
       invoiceNumber: inv?.invoiceNumber ?? '',

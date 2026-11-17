@@ -9,14 +9,14 @@ import { AnnouncementQuotaService } from '../../core/services/announcement-quota
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
 
 /** Texto de cada anuncio en la lista: número, especial y Pr Base Carg Perg Seco, para buscar por cualquiera (RN-21.1.2, RN-21.1.3). */
 function optionLabel(candidate: QuotaCandidate): string {
   const a = candidate.announcement;
-  return `${a.announcementNumber} · ${a.specialType} · ${a.basePriceLoad}`;
+  return `${announcementDisplay(a.announcementNumber)} · ${a.specialType} · ${formatMoney(a.basePriceLoad)}`;
 }
 
 /**

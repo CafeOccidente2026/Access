@@ -50,7 +50,7 @@ describe('QuotaAssignmentComponent', () => {
     },
     deliveredKg: 200,
   };
-  const label = 'SDBU-32 · RN · 1200000';
+  const label = 'BU-32 · RN · 1.200.000';
   const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 200, balance: 376.7 };
 
   let assignSpy: ReturnType<typeof vi.fn>;
