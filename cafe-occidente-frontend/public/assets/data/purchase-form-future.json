@@ -56,7 +56,7 @@
   "reprintButtonLabel": "Imprimir Manifiesto",
   "messages": {
     "acceptLabel": "Aceptar",
-    "noAnnouncement": "No hay anuncios de hoy para ese Especial.",
+    "noAnnouncement": "No hay un anuncio publicado para ese Especial.",
     "invoiceError": "No se pudo generar el manifiesto",
     "deceasedBlocked": "No se le puede anunciar una entrega futura a un caficultor fallecido.",
     "idNumberNotFound": "Este número de cédula no existe.",
