@@ -9,20 +9,25 @@ import { AnnouncementQuotaService } from '../../core/services/announcement-quota
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
 
 /** Texto de cada anuncio en la lista: número, especial y Pr Base Carg Perg Seco, para buscar por cualquiera (RN-21.1.2, RN-21.1.3). */
 function optionLabel(candidate: QuotaCandidate): string {
   const a = candidate.announcement;
-  return `${a.announcementNumber} · ${a.specialType} · ${a.basePriceLoad}`;
+  return `${announcementDisplay(a.announcementNumber)} · ${a.specialType} · ${formatMoney(a.basePriceLoad)}`;
+}
+
+/** Saldo = Cupo - Kilos Entregados; vacío mientras no hay Cupo. El servidor lo vuelve a calcular al guardar. */
+export function liveBalance(quota: string, deliveredKg: number): string {
+  return quota.trim() === '' ? '' : String(parseDisplayNumber(quota) - deliveredKg);
 }
 
 /**
  * "Asignar Cupo a Anuncios" (RF-21.1, Access "AN FUR HEUTE"). La lista la arma el servidor: anuncios de la
  * agencia de trabajo sin cupo, sin pasilla ni verde, con sus Kilos Entregados. Solo Cupo se digita; Saldo
- * lo calcula el servidor. Guardado, el anuncio sale de la lista y su cupo ya no se cambia (RN-21.1.9).
+ * se ve al digitarlo y el servidor lo vuelve a calcular al guardar. Guardado, el anuncio sale de la lista y su cupo ya no se cambia (RN-21.1.9).
  */
 @Component({
   selector: 'app-quota-assignment',
@@ -73,7 +78,8 @@ export class QuotaAssignmentComponent {
       costs: String(a.costs),
       deliveredKg: String(saved?.deliveredKg ?? selected.deliveredKg),
       quota: saved ? String(saved.assignedQuota) : this.quota(),
-      balance: saved ? String(saved.balance) : '',
+      // R2 (17-nov): RN-21.1.8, el Saldo (Cupo - Kilos Entregados) se ve mientras se digita el Cupo.
+      balance: saved ? String(saved.balance) : liveBalance(this.quota(), selected.deliveredKg),
     };
   });
 

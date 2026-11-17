@@ -463,7 +463,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     fillCommon();
 
-    expect(viewField('announcement').value).toBe('32');
+    expect(viewField('announcement').value).toBe('BU-32');
     expect(viewField('productCode').value).toBe('0110002000002');
     expect(viewField('associated').value).toBe('NO ASOCIADO');
     component.model['idType'] = 'S';

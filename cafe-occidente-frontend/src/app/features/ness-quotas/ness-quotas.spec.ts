@@ -7,15 +7,15 @@ import { AssociatesContent, displayValue } from '../associates/associates';
 import { quotaCells } from './ness-quotas';
 
 describe('ness quotas', () => {
-  it('formats CuposNess like Access: CEDULA General Number, CUPO Standard', () => {
+  it('R2 (17-nov): CEDULA without thousands and the kilos with the #1 format', () => {
     expect(quotaCells({ idNumber: '990514', names: 'Caficultor', program: 'NESPRESSO', quota: 30000 })).toEqual(
-      ['990514', 'Caficultor', 'NESPRESSO', '30.000,00'],
+      ['990514', 'Caficultor', 'NESPRESSO', '30.000'],
     );
   });
 
   it('adds FACTURADOS and SALDO in the balances view', () => {
     expect(quotaCells({ idNumber: '1', names: 'X', program: 'REGIONAL NARIÑO 4C', quota: 300, invoicedKg: 70.5, balance: 229.5 }))
-      .toEqual(['1', 'X', 'REGIONAL NARIÑO 4C', '300,00', '70,50', '229,50']);
+      .toEqual(['1', 'X', 'REGIONAL NARIÑO 4C', '300', '70,50', '229,50']);
   });
 });
 

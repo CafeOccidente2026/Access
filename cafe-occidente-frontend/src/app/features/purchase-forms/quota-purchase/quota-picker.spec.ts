@@ -35,7 +35,7 @@ describe('QuotaPickerComponent', () => {
     const r = picker.list[0];
 
     expect(picker.columns).toHaveLength(13);
-    expect(picker.cell(r, 'announcement')).toBe('SDBU-12');
+    expect(picker.cell(r, 'announcement')).toBe('BU-12');
     expect(picker.cell(r, 'agency')).toBe('Buesaco 1');
     expect(picker.cell(r, 'healthyUnitPrice')).toBe('8.901');
     expect(picker.cell(r, 'balance')).toBe('1.500');

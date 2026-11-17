@@ -17,21 +17,9 @@ describe('QuotaAssignmentComponent', () => {
     saveButton: 'Guardar',
     savedMessage: 'Cupo guardado correctamente.',
     errorMessage: 'Ocurrió un error.',
-    leftColumn: [
-      { key: 'agency', label: 'Agencia', type: 'text' },
-      { key: 'announcementDate', label: 'Fecha', type: 'date' },
-      { key: 'special', label: 'Especial', type: 'text' },
-      { key: 'basePriceCps', label: 'Pr Base CPS', type: 'currency' },
-    ],
-    rightColumn: [
-      { key: 'healthyStoredPrice', label: 'Pr Sustentación', type: 'currency' },
-      { key: 'defectStoredPrice', label: 'Pr Almendra Defec', type: 'currency' },
-      { key: 'bonus', label: 'Bonificación', type: 'currency' },
-      { key: 'costs', label: 'Costos', type: 'currency' },
-      { key: 'deliveredKg', label: 'Kilos Entregados', type: 'number' },
-      { key: 'quota', label: 'Cupo', type: 'number', liveThousands: true },
-      { key: 'balance', label: 'Saldo', type: 'number' },
-    ],
+    // Las columnas del JSON real: R2 (17-nov) revisa sus formatos.
+    leftColumn: quotaJson.leftColumn,
+    rightColumn: quotaJson.rightColumn,
   };
 
   const candidate = {
@@ -50,7 +38,7 @@ describe('QuotaAssignmentComponent', () => {
     },
     deliveredKg: 200,
   };
-  const label = 'SDBU-32 · RN · 1200000';
+  const label = 'BU-32 · RN · 1.200.000';
   const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 200, balance: 376.7 };
 
   let assignSpy: ReturnType<typeof vi.fn>;
@@ -96,6 +84,31 @@ describe('QuotaAssignmentComponent', () => {
     expect(field('deliveredKg')?.value).toBe('200');
     expect(field('quota')?.readonly).toBe(false);
     expect(field('deliveredKg')?.readonly).toBe(true);
+  });
+
+  it('R2 (17-nov): typing the Cupo fills the Saldo (Cupo - Kilos Entregados) before saving', () => {
+    setup();
+    component.onAnnouncementChange(label);
+    expect(field('balance')?.value).toBe('');
+
+    component.onFieldValueChange({ key: 'quota', value: '13302' });
+
+    expect(field('balance')?.value).toBe('13102');
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
+  it('R2 (17-nov): money without decimals and whole kilos without ,00, as in #1', async () => {
+    setup();
+    const fixture = TestBed.createComponent(QuotaAssignmentComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.onAnnouncementChange(label);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const shown = (key: string) =>
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(`[data-field-key=${key}]`)!.value;
+
+    expect(shown('basePriceCps')).toBe('1.200.000');
+    expect(shown('deliveredKg')).toBe('200');
   });
 
   it('CA-3: saving sends the raw number, shows the Saldo and takes the announcement out of the list', () => {

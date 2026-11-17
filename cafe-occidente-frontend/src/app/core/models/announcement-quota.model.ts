@@ -11,6 +11,8 @@ export interface AnnouncementQuotaResponse {
   readonly assignedQuota: number;
   readonly deliveredKg: number;
   readonly balance: number;
+  /** El anuncio con el prefijo del punto ("SDTA-3738"); se muestra con announcementDisplay (R4). */
+  readonly displayNumber: string;
 }
 
 export interface AnnouncementQuotaRequest {

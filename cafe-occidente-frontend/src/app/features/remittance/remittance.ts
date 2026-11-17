@@ -7,7 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { RemittanceService } from '../../core/services/remittance.service';
 import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDisplayNumber, formatKilos, formatMoney } from '../../shared/utils/number-format';
+import { formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 import { RemittanceWorkbook, remittanceWorkbooks, saveBlob, workbookBlobs } from './remittance-files';
@@ -248,7 +248,7 @@ export class RemittanceComponent {
     return fill(content.summary, {
       status: content.statuses[r.status] ?? r.status,
       purchases: r.purchases,
-      kg: formatDisplayNumber(r.netKg, 'currency'),
+      kg: formatKilos(r.netKg),
       packaging: r.packagingQuantity == null ? ''
         : fill(content.packagingSummary, { quantity: r.packagingQuantity, type: r.packagingType ?? '' }),
     });

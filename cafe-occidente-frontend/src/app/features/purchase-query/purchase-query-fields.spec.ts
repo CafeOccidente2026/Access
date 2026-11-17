@@ -20,7 +20,7 @@ describe('fillQueryContent (RF-26: all the data of the purchase, read only)', ()
     const filled = fillQueryContent(base, detail({ remissions: ['SDBU-RP-0001', 'SDBU-RP-0002'] }));
     expect(value(filled, 'agency')).toBe('Buesaco 1');
     expect(value(filled, 'purchaseDate')).toBe('2026-10-29');
-    expect(value(filled, 'announcement')).toBe('4');
+    expect(value(filled, 'announcement')).toBe('BU-4');
     expect(value(filled, 'remission')).toBe('SDBU-RP-0001, SDBU-RP-0002');
     expect(value(filled, 'invoice')).toBe('SDBU');
     expect(value(filled, 'invoiceNumber')).toBe('27869');

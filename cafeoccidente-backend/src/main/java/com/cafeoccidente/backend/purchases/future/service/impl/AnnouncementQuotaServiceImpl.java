@@ -158,7 +158,8 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
                 numbering.getMasterAnnouncement().getSpecialType(),
                 quota.getAssignedQuota(),
                 delivered,
-                quota.getAssignedQuota().subtract(delivered));
+                quota.getAssignedQuota().subtract(delivered),
+                displayNumber(controlRecord, numbering));
     }
 
     private Map<String, BigDecimal> quotasByDisplayNumber(Long agencyId, ControlRecord controlRecord) {

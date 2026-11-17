@@ -4,6 +4,7 @@ import com.cafeoccidente.backend.controlrecord.dto.ControlRecordStampResponse;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.ResolutionAlertResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import java.util.List;
@@ -18,6 +19,9 @@ public interface ControlRecordService {
 
     /** Hallazgo #6: huella de los valores del Registro de Control de la agencia. */
     ControlRecordStampResponse stamp(Long agencyId);
+
+    /** R1 (17-nov): resoluciones DIAN por vencer o vencidas; {@code agencyId} null = todas las agencias. */
+    List<ResolutionAlertResponse> resolutionAlerts(Long agencyId);
 
     ControlRecordResponse create(Long agencyId, ControlRecordRequest request);
 

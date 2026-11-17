@@ -23,7 +23,7 @@ describe('FutureRestoreComponent', () => {
   const pending = { announcementNumber: 'SDBU-4', announcementDate: '2026-11-02', specialType: 'NESPRESSO - FTUSA',
     healthyUnitPrice: 9100, announcedKg: 1500, remainingKg: 1200, growers: 2 };
   const quota = { id: 9, agencyId: 1, announcementNumber: 4, announcementDate: '2026-11-02', specialType: 'RN',
-    assignedQuota: 2500, deliveredKg: 1000, balance: 1500 };
+    assignedQuota: 2500, deliveredKg: 1000, balance: 1500, displayNumber: 'SDBU-4' };
 
   let previewSpy: ReturnType<typeof vi.fn>;
   let restoreSpy: ReturnType<typeof vi.fn>;
@@ -58,7 +58,7 @@ describe('FutureRestoreComponent', () => {
     search(c, '123.456');
 
     expect(previewSpy).toHaveBeenCalledWith('123456');
-    expect(c.rows()).toEqual([['SDBU-1', '05/11/2026', 'ESTANDAR', '1.500', '1.000', '100', '500']]);
+    expect(c.rows()).toEqual([['BU-1', '05/11/2026', 'ESTANDAR', '1.500', '1.000', '100', '500']]);
     expect(restoreSpy).not.toHaveBeenCalled();
     expect(c.canRestore()).toBe(true);
   });
@@ -113,7 +113,7 @@ describe('FutureRestoreComponent', () => {
     const c = setup('quota');
 
     expect(listSpy).toHaveBeenCalledTimes(1);
-    expect(c.rows()).toEqual([['4', '02/11/2026', 'RN', '2.500', '1.000', '1.500']]);
+    expect(c.rows()).toEqual([['BU-4', '02/11/2026', 'RN', '2.500', '1.000', '1.500']]);
     expect(restoreSpy).not.toHaveBeenCalled();
   });
 
@@ -122,7 +122,7 @@ describe('FutureRestoreComponent', () => {
 
     expect(pendingSpy).toHaveBeenCalledTimes(1);
     expect(listSpy).not.toHaveBeenCalled();
-    expect(c.rows()).toEqual([['SDBU-4', '02/11/2026', 'NESPRESSO - FTUSA', '9.100', '2', '1.500', '300', '1.200']]);
+    expect(c.rows()).toEqual([['BU-4', '02/11/2026', 'NESPRESSO - FTUSA', '9.100', '2', '1.500', '300', '1.200']]);
     expect(c.canRestore()).toBe(false);
   });
 

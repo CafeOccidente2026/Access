@@ -9,7 +9,7 @@ import { AnnouncementQuotaService } from '../../core/services/announcement-quota
 import { ContentService } from '../../core/services/content.service';
 import { FuturePurchaseService } from '../../core/services/future-purchase.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
+import { announcementDisplay, formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { localToday } from '../../shared/utils/local-date';
 import { saveOnce } from '../../shared/utils/save-once';
 import { serverError } from '../../shared/utils/server-error';
@@ -35,18 +35,18 @@ export interface FutureRestoreContent {
 const kg = formatKilos;
 
 export function futureCells(r: FuturePurchaseRestoreRow): string[] {
-  return [r.announcementNumber, formatDate(r.announcementDate), r.specialType, kg(r.announcedKg), kg(r.deliveredKg),
+  return [announcementDisplay(r.announcementNumber), formatDate(r.announcementDate), r.specialType, kg(r.announcedKg), kg(r.deliveredKg),
     kg(r.currentBalance), kg(r.recalculatedBalance)];
 }
 
 export function quotaCells(q: AnnouncementQuotaResponse): string[] {
-  return [String(q.announcementNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
+  return [announcementDisplay(q.displayNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
     kg(q.balance)];
 }
 
 /** Anunciadas de Hoy: Kl_Entregados = kilos anunciados menos el saldo. */
 export function pendingCells(p: PendingAnnouncementRow): string[] {
-  return [p.announcementNumber, formatDate(p.announcementDate), p.specialType, formatMoney(p.healthyUnitPrice), String(p.growers),
+  return [announcementDisplay(p.announcementNumber), formatDate(p.announcementDate), p.specialType, formatMoney(p.healthyUnitPrice), String(p.growers),
     kg(p.announcedKg), kg(p.announcedKg - p.remainingKg), kg(p.remainingKg)];
 }
 
@@ -82,7 +82,7 @@ export class FutureRestoreComponent {
     stream: () => this.quotaService.list(),
   });
   /**
-   * Hallazgo #17 (16-nov): como la consulta "ANUNCIADAS HOY" de Access (Fecha_Anuncio = Date()), por defecto las de hoy;
+   * Hallazgo #17 (16-nov) y R5 (17-nov): por defecto las registradas hoy (Access miraba la fecha del anuncio);
    * Desde/Hasta elige otro rango y la casilla muestra todas las que tienen saldo pendiente, de cualquier fecha.
    */
   readonly from = signal(localToday());

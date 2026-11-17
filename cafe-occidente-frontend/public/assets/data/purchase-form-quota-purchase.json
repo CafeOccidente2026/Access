@@ -12,7 +12,7 @@
       "inputWidthClass": "min-w-[332px] max-w-[332px]"
     },
     { "key": "date", "label": "Fecha", "type": "date", "highlighted": true, "inputWidthClass": "max-w-[128px]" },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true, "inputWidthClass": "max-w-[70px]" },
+    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true, "rawDisplay": true, "inputWidthClass": "max-w-[80px]" },
     { "key": "announcementDate", "label": "Fecha Anuncio", "type": "date", "readonly": true, "inputWidthClass": "max-w-[128px]" }
   ],
   "identificationFields": [

@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
 
 import { QuotaBalance } from '../../../core/models/announcement-quota.model';
 import { AppButtonComponent } from '../../../shared/ui';
-import { formatDate, formatKilos, formatMoney, parseDisplayNumber } from '../../../shared/utils/number-format';
+import { announcementDisplay, formatDate, formatKilos, formatMoney, parseDisplayNumber } from '../../../shared/utils/number-format';
 
 /** Textos de la ventana (JSON del formulario, "quotaPicker"). */
 export interface QuotaPickerContent {
@@ -60,7 +60,7 @@ export class QuotaPickerComponent {
   cell(row: QuotaBalance, column: string): string {
     const a = row.announcement;
     const values: Record<string, string | number | undefined> = {
-      announcement: a.announcementNumber,
+      announcement: announcementDisplay(a.announcementNumber),
       agency: this.agency,
       date: formatDate(a.announcementDate),
       healthyUnitPrice: a.healthyUnitPrice,

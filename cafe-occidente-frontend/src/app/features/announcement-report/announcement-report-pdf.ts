@@ -2,7 +2,7 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { formatDate, formatKilos, formatMoney, formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatDate, formatKilos, formatMoney, formatThousands } from '../../shared/utils/number-format';
 
 /**
  * Reportes "RESUMEN ANUNCIO" y "ANUNCIO" (detallado) de Access (macro "Imprimir Anuncio",
@@ -110,7 +110,7 @@ export function groupByAnnouncement(rows: Row[]): AnnouncementBlock[] {
       groups.set(p.productCode, [...(groups.get(p.productCode) ?? []), p]);
     }
     return {
-      announcementNumber: stripAnnouncementPrefix(blockRows[0].announcementNumber),
+      announcementNumber: announcementDisplay(blockRows[0].announcementNumber),
       specialType: blockRows[0].specialType,
       agencyName: blockRows[0].agencyName,
       rows: blockRows,
@@ -216,7 +216,7 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
         r(peso(p.freightDiscount)), r(peso(p.withholding)), r(peso(p.otherDiscounts)), r(peso(p.netToPay)),
         p.status === 'ANULADA' ? { text: p.paymentMethod, bold: true } : p.paymentMethod,
       ];
-      body.push(withAnnouncement ? [stripAnnouncementPrefix(p.announcementNumber), ...cells] : cells);
+      body.push(withAnnouncement ? [announcementDisplay(p.announcementNumber), ...cells] : cells);
     }
     const n = group.rows.length;
     body.push([

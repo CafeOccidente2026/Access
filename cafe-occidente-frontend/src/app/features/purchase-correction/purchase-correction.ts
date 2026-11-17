@@ -12,7 +12,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseCorrectionService } from '../../core/services/purchase-correction.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
 import { AccessWindowComponent, FormFlowDirective, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { formatDisplayNumber, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { PurchaseQueryContent } from '../purchase-query/purchase-query';
 import { InvoiceBrowser } from '../purchase-query/invoice-browser';
@@ -221,7 +221,7 @@ export class PurchaseCorrectionComponent {
     const after = this.after() as unknown as Record<string, number> | null;
     // Kilos con sus decimales; pesos enteros, como la ficha de Anular Documento.
     const show = (value: number | undefined) =>
-      value == null ? '' : formatDisplayNumber(value, key === 'netKg' ? 'currency' : 'count');
+      value == null ? '' : key === 'netKg' ? formatKilos(value) : formatMoney(value);
     return { before: show(purchase?.[key]), after: show(after?.[key]) };
   }
 

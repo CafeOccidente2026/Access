@@ -21,9 +21,10 @@ import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purc
 import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
+import { reserveInvoice } from '../invoice-reservation';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
@@ -277,14 +278,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     }
   }
 
+  /** R1 (17-nov): como Café Seco, la resolución DIAN vencida o sin números se avisa al elegir el Fondo. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        this.tick.update((n) => n + 1);
-      },
-      error: () => this.tick.update((n) => n + 1),
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** RN-21.2.3: el Especial abre la ventana con los anuncios con cupo de ese fondo y especial. */
@@ -582,7 +578,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
 
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       invoice: inv?.invoiceNumber ?? '',
       productCode: info?.productCode ?? '',
@@ -592,7 +588,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
       deliveryKg: this.quotaChoice()?.deliveryKg ?? '',
-      netKg: c ? c.netKg : (weights?.net ?? ''),
+      // R3 (17-nov): como el macro "Establecer Cupos Anunciados" de Access, Kilos Netos = Esta Entrega al aceptar la
+      // ventana; luego Kilos Brutos da el Destare (Brutos - Netos) y, si no alcanzan la entrega, Netos = Brutos.
+      netKg: c ? c.netKg : (weights?.net ?? delivery ?? ''),
       tare: weights?.tare ?? '',
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',

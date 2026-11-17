@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  announcementDisplay,
   asPenalty,
   formatDate,
   formatKilos,
@@ -192,5 +193,12 @@ describe('formatos de pantalla', () => {
     expect(formatDate('2026-11-16T10:00:00')).toBe('16/11/2026');
     expect(formatDate('')).toBe('');
     expect(formatDate(null)).toBe('');
+  });
+
+  it('R4 (17-nov): the announcement shows with the point identifier, without the support document "SD"', () => {
+    expect(announcementDisplay('SDTA-3738')).toBe('TA-3738');
+    expect(announcementDisplay('SDB2-12')).toBe('B2-12');
+    expect(announcementDisplay('3738')).toBe('3738');
+    expect(announcementDisplay(null)).toBe('');
   });
 });

@@ -7,12 +7,14 @@ import com.cafeoccidente.backend.controlrecord.dto.ControlRecordStampResponse;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.ResolutionAlertResponse;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeeSampleRule;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.controlrecord.service.DianResolutionRule;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
@@ -20,6 +22,9 @@ import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -34,6 +39,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     private final ControlRecordMapper mapper;
     private final ChangeHistoryService history;
     private final SecurityUtils securityUtils;
+    private final Clock clock;
 
     /**
      * Respuesta del area (11-nov): estos valores solo los cambia el Administrador. El % pasilla promedio se cambiaba en
@@ -55,7 +61,9 @@ public class ControlRecordServiceImpl implements ControlRecordService {
             AgencyRepository agencyRepository,
             ControlRecordMapper mapper,
             ChangeHistoryService history,
-            SecurityUtils securityUtils) {
+            SecurityUtils securityUtils,
+            Clock clock) {
+        this.clock = clock;
         this.controlRecordRepository = controlRecordRepository;
         this.agencyRepository = agencyRepository;
         this.mapper = mapper;
@@ -66,6 +74,21 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     @Override
     public ControlRecordStampResponse stamp(Long agencyId) {
         return new ControlRecordStampResponse(Integer.toHexString(getByAgency(agencyId).toString().hashCode()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResolutionAlertResponse> resolutionAlerts(Long agencyId) {
+        LocalDate today = LocalDate.now(clock);
+        List<ControlRecord> records = agencyId == null
+                ? controlRecordRepository.findByActiveTrue()
+                : controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId).stream().toList();
+        return records.stream()
+                .filter(r -> DianResolutionRule.alerts(r, today))
+                .map(r -> new ResolutionAlertResponse(r.getAgency().getName(), DianResolutionRule.expiration(r),
+                        DianResolutionRule.daysLeft(r, today)))
+                .sorted(Comparator.comparing(ResolutionAlertResponse::daysLeft))
+                .toList();
     }
 
     @Override

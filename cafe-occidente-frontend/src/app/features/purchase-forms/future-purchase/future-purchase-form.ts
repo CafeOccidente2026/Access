@@ -10,7 +10,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { formatDisplayNumber, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-invoice';
 import { advanceFocus, focusField } from '../form-focus';
@@ -44,13 +44,13 @@ const GATE_ORDER = FOCUS_ORDER.filter((key) => !OPTIONAL.includes(key));
 
 /** Texto de cada anuncio en la lista: número y Pr carga perg s (RN-21.4.4). */
 function announcementLabel(a: Announcement): string {
-  return `${stripAnnouncementPrefix(a.announcementNumber)} · ${formatDisplayNumber(a.basePriceLoad, 'currency')}`;
+  return `${announcementDisplay(a.announcementNumber)} · ${formatMoney(a.basePriceLoad)}`;
 }
 
 /**
  * "Ingresar Compras a Futuro" (RF-21.4, Form_COMPRAS A FUTURO.bas): sin cascada de precio ni factura - es un
  * compromiso de entrega futura, no una compra liquidada. Cédula busca al caficultor; Especial llena la lista de
- * Anuncio con los anuncios de hoy (RN-21.4.3; Access tomaba el último) y el elegido trae sus precios
+ * Anuncio con el anuncio vigente, el último aunque no sea de hoy, como Access (R6, 17-nov), y el elegido trae sus precios
  * informativos; Imprimir guarda una sola vez y abre el Manifiesto con 2 copias; Kilos_LostFocus simplemente copia
  * SaldoKilos = Kilos (arranca igual al anunciado, se descontará al facturar, RF-21.5). El backend
  * valida fallecido y pertenencia a programa (`GrowerService.requireProgramMembership`) - esos
@@ -73,7 +73,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private readonly base = toSignal(this.content.loadJson<FuturePurchaseContent>('purchase-form-future'));
   readonly messages = computed<FuturePurchaseMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<Announcement | null>(null);
-  /** Anuncios de hoy del especial elegido. */
+  /** El anuncio vigente del especial elegido (R6, 17-nov). */
   readonly todayAnnouncements = signal<Announcement[]>([]);
   /** true mientras se guarda: un segundo Imprimir no vuelve a enviar. */
   readonly saving = signal(false);
@@ -233,7 +233,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  /** RN-21.4.3: el Especial llena la lista de Anuncio con los anuncios de hoy de ese especial. */
+  /** R6 (17-nov): el Especial llena la lista de Anuncio con el anuncio vigente de ese especial. */
   private loadTodayAnnouncements(): void {
     const specialType = this.model['special'];
     this.service.todayAnnouncements(specialType).subscribe({
@@ -326,7 +326,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     this.refocusRetry((k) => this.focusField(k));
   }
 
-  /** Hallazgo #6: los anuncios de hoy del Especial elegido; si se publica otro, el precio cambió. */
+  /** Hallazgo #6: el anuncio vigente del Especial elegido; si se publica otro, el precio cambió. */
   protected override currentAnnouncement(): Observable<string> | null {
     const special = this.model['special'];
     return special && this.todayAnnouncements().length

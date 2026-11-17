@@ -9,15 +9,15 @@
     { "key": "agency", "label": "Agencia", "type": "text" },
     { "key": "announcementDate", "label": "Fecha", "type": "date" },
     { "key": "special", "label": "Especial", "type": "text" },
-    { "key": "basePriceCps", "label": "Pr Base CPS", "type": "currency" }
+    { "key": "basePriceCps", "label": "Pr Base CPS", "type": "currency", "display": "money" }
   ],
   "rightColumn": [
-    { "key": "healthyStoredPrice", "label": "Pr Sustentación", "type": "currency" },
-    { "key": "defectStoredPrice", "label": "Pr Almendra Defec", "type": "currency" },
-    { "key": "bonus", "label": "Bonificación", "type": "currency" },
-    { "key": "costs", "label": "Costos", "type": "currency" },
-    { "key": "deliveredKg", "label": "Kilos Entregados", "type": "number" },
+    { "key": "healthyStoredPrice", "label": "Pr Sustentación", "type": "currency", "display": "money" },
+    { "key": "defectStoredPrice", "label": "Pr Almendra Defec", "type": "currency", "display": "money" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "display": "money" },
+    { "key": "costs", "label": "Costos", "type": "currency", "display": "money" },
+    { "key": "deliveredKg", "label": "Kilos Entregados", "type": "number", "display": "kilos" },
     { "key": "quota", "label": "Cupo", "type": "number", "liveThousands": true },
-    { "key": "balance", "label": "Saldo", "type": "number" }
+    { "key": "balance", "label": "Saldo", "type": "number", "display": "kilos" }
   ]
 }

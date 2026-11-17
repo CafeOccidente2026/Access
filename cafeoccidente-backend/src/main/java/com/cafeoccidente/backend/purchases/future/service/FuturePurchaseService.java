@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface FuturePurchaseService {
 
-    /** RN-21.4.3 y RN-21.4.4: los anuncios de hoy (Colombia) del especial, fondo RP, de la agencia de trabajo. */
+    /** RN-21.4.4 y R6 (17-nov): el anuncio vigente (el ultimo) del especial, fondo RP, de la agencia de trabajo. */
     List<AnnouncementResponse> todayAnnouncements(String specialType);
 
     FuturePurchaseResponse create(FuturePurchaseRequest request);

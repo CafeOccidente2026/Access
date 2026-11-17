@@ -1,7 +1,7 @@
 import { FormFieldDefinition } from '../../core/models/form-field.model';
 import { PurchaseFormContent } from '../../core/models/purchase-form-content.model';
 import { PurchaseQueryDetail } from '../../core/models/purchase-query.model';
-import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatThousands } from '../../shared/utils/number-format';
 
 type Value = string | number | null | undefined;
 
@@ -55,7 +55,7 @@ export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQ
   const values: Record<string, Value> = {
     agency: p.agencyName,
     purchaseDate: p.purchaseDate,
-    announcement: stripAnnouncementPrefix(p.announcementNumber),
+    announcement: announcementDisplay(p.announcementNumber),
     announcementDate: p.announcementDate,
     remission: detail.remissions.join(', '),
     fund: p.fundCode,

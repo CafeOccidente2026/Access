@@ -15,7 +15,7 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
@@ -364,7 +364,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       productCode: info?.productCode ?? '',
       fund: 'RP',

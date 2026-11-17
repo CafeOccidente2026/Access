@@ -73,6 +73,7 @@ describe('QuotaPurchaseFormComponent', () => {
   let withBalanceSpy: ReturnType<typeof vi.fn>;
   let openForSpy: ReturnType<typeof vi.fn>;
   let qualitySpy: ReturnType<typeof vi.fn>;
+  let nextInvoiceSpy: ReturnType<typeof vi.fn>;
   let component: QuotaPurchaseFormComponent;
 
   function setup(mode: 'quota' | 'future' = 'quota') {
@@ -88,6 +89,7 @@ describe('QuotaPurchaseFormComponent', () => {
     withBalanceSpy = vi.fn(() => of([quotaRow]));
     openForSpy = vi.fn(() => of([futurePurchase]));
     createSpy = vi.fn(() => of({}));
+    nextInvoiceSpy = vi.fn(() => of({ invoiceNumber: 27872, prefix: 'SDBU', warning: null }));
     previewSpy = vi.fn(() => of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, netToPay: 7100000 }));
     localStorage.setItem('cafeoccidente.agencyName', 'Buesaco 1');
     TestBed.configureTestingModule({
@@ -103,7 +105,7 @@ describe('QuotaPurchaseFormComponent', () => {
           provide: DryCoffeePurchaseService,
           useValue: {
             funds: () => of([{ id: 1, code: 'RP', name: 'Resolución Propia' }]),
-            nextInvoiceNumber: () => of({ invoiceNumber: 27872, prefix: 'SDBU', warning: null }),
+            nextInvoiceNumber: nextInvoiceSpy,
             specialInfo: specialInfoSpy,
             qualityPercentages: qualitySpy,
             preview: previewSpy,
@@ -166,6 +168,9 @@ describe('QuotaPurchaseFormComponent', () => {
   it('prueba del 11-nov (punto 9): Destare y Kilos Netos salen de Kilos Brutos y Esta Entrega, no se digitan', () => {
     setup();
     pickQuota(); // Esta Entrega 1000
+    // R3 (17-nov): Kilos Netos aparece al aceptar la ventana, antes de la cédula y los Kilos Brutos.
+    expect(anyField('netKg')?.value).toBe(1000);
+    expect(anyField('tare')?.value).toBe('');
     commit('grossKg', '1005');
     expect(anyField('tare')).toMatchObject({ readonly: true, value: 5 });
     expect(anyField('netKg')?.value).toBe(1000);
@@ -179,6 +184,25 @@ describe('QuotaPurchaseFormComponent', () => {
     fillPurchase();
     commit('grossKg', '1005');
     expect(previewSpy).toHaveBeenLastCalledWith(expect.objectContaining({ grossKg: 1005, tareKg: 5, deliveryKg: 1000 }));
+  });
+
+  it('R1 (17-nov): with the DIAN resolution expired the server reason shows as soon as the fund is chosen', () => {
+    setup();
+    const reason = 'La resolución DIAN de esta agencia venció el 04/07/2028. El Administrador debe registrar la nueva resolución en el Registro de Control.';
+    nextInvoiceSpy.mockReturnValue(throwError(() => ({ error: { message: reason } })));
+    commit('fund', 'RP');
+
+    expect(component.errorMessage()).toBe(reason);
+    expect(component.invoiceReservation()).toBeNull();
+  });
+
+  it('R3 (17-nov): in Facturar Compras Anunciadas Kilos Netos also shows as soon as the window is accepted', () => {
+    setup('future');
+    commit('fund', 'RP');
+    commit('idPart1', '990514');
+    component.onQuotaPicked({ row: component.quotaRows()![0], deliveryKg: 800 });
+
+    expect(anyField('netKg')?.value).toBe(800);
   });
 
   it('CA-1: choosing the special opens the window with the quota announcements of that fund and special', () => {

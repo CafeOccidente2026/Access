@@ -21,7 +21,7 @@
     "pending": {
       "windowTitle": "ANUNCIADAS DE HOY",
       "heading": "Anunciadas de Hoy",
-      "note": "Por defecto, las compras a futuro anunciadas hoy, agrupadas por anuncio (como en Access). Con Desde y Hasta se ven las de otras fechas; con la casilla, todas las que tienen saldo pendiente, de cualquier fecha. Solo consulta.",
+      "note": "Por defecto, las compras a futuro registradas hoy, agrupadas por anuncio. Con Desde y Hasta se ven las de otras fechas; con la casilla, todas las que tienen saldo pendiente, de cualquier fecha. Solo consulta.",
       "columns": [
         "Anuncio",
         "Fecha Anuncio",

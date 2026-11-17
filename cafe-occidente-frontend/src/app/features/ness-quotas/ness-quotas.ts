@@ -1,3 +1,4 @@
+import { formatKilos } from '../../shared/utils/number-format';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -28,9 +29,9 @@ export interface NessQuotasContent {
   readonly views: Record<View, { windowTitle: string; heading: string; columns: string[]; note?: string }>;
 }
 
-/** CUPO/FACTURADOS/SALDO con Format Standard (2 decimales); CEDULA General Number (sin miles). */
+/** CUPO/FACTURADOS/SALDO en kilos con el formato del #1 (R2, 17-nov: sin ,00 si son enteros); CEDULA sin miles. */
 export function quotaCells(row: NessQuotaRow | NessQuotaBalanceRow): string[] {
-  const standard = (v: number) => v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const standard = formatKilos;
   const base = [row.idNumber, row.names, row.program, standard(row.quota)];
   return 'balance' in row ? [...base, standard(row.invoicedKg), standard(row.balance)] : base;
 }
