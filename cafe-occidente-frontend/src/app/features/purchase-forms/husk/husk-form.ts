@@ -32,6 +32,7 @@ import { localToday } from '../../../shared/utils/local-date';
 type FormModel = Record<string, string>;
 
 interface HuskMessages extends PurchaseMessages, WeightMessages {
+  readonly cooperativeDiscountLabel?: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
 }
@@ -60,7 +61,7 @@ const ZERO_IF_EMPTY: string[] = ['shrinkageDiscount', 'otherDiscounts'];
 const READONLY: string[] = [
   'agency', 'fund', 'date', 'announcement', 'announcementDate', 'invoicePrefix', 'invoiceNumber',
   'productCode', 'basePriceDryLoad', 'special', 'pointPrice', 'almondPercentage', 'netKg',
-  'kgPrice', 'withholding',
+  'kgPrice', 'withholding', 'grossValue', 'contribution', 'netToPay',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente (sigue el orden visual del JSON: calidad
@@ -339,6 +340,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
     const info = this.announcementInfo();
     const inv = this.invoiceReservation();
     const c = this.calc();
+    const growerType = (this.model['idType'] ?? '').trim().toUpperCase();
 
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
@@ -356,11 +358,18 @@ export class HuskFormComponent extends UnsavedCloseForm {
       netKg: c ? c.netKg : '',
       kgPrice: c?.unitPrice ?? '',
       withholding: c?.withholding ?? '',
+      grossValue: c?.grossValue ?? '',
+      // Como Cafe Seco: Aporte Socio para tipo S, Descuento Coop para tipo C.
+      contribution: c ? (growerType === 'C' ? c.cooperativeDiscount : c.associateContribution) : '',
+      netToPay: c?.netToPay ?? '',
     };
 
     const field = (key: string): FormFieldDefinition => {
       const b = bmap.get(key)!;
-      const patch: { readonly?: boolean; value?: string | number } = {};
+      const patch: { readonly?: boolean; value?: string | number; label?: string } = {};
+      if (key === 'contribution' && growerType === 'C') {
+        patch.label = this.messages()?.cooperativeDiscountLabel ?? b.label;
+      }
       if (READONLY.includes(key)) {
         patch.readonly = true;
         patch.value = computedValues[key];
@@ -372,7 +381,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
-      if (prev && prev.value === next.value && prev.readonly === next.readonly) {
+      if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.label === next.label) {
         return prev;
       }
       this.fieldCache.set(key, next);
