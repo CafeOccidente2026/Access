@@ -49,6 +49,18 @@ export function applyLiveThousands(input: HTMLInputElement, negative = false): s
   return clean;
 }
 
+/**
+ * Para las pantallas que validan lo digitado antes (Actualizar Anuncios): con el campo, pone los puntos sin mover el
+ * cursor; sin él (pruebas), solo formatea. Devuelve el texto con puntos.
+ */
+export function formatTypedMoney(value: string, input?: HTMLInputElement): string {
+  if (input) {
+    applyLiveThousands(input);
+    return input.value;
+  }
+  return formatMoneyInput(typedDigits(value, false));
+}
+
 /** Backspace justo después de un punto (o Supr justo antes) salta el punto y borra el dígito. */
 export function skipThousandsSeparator(event: KeyboardEvent, input: HTMLInputElement): void {
   const at = input.selectionStart;
