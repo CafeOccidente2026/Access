@@ -21,6 +21,7 @@ import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate'
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
+import { settlementLabel, settlementValues } from '../settlement';
 import { askCellphoneOr } from '../seller-cellphone';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
 import { WeightMessages } from '../weight-check';
@@ -358,18 +359,14 @@ export class HuskFormComponent extends UnsavedCloseForm {
       netKg: c ? c.netKg : '',
       kgPrice: c?.unitPrice ?? '',
       withholding: c?.withholding ?? '',
-      grossValue: c?.grossValue ?? '',
-      // Como Cafe Seco: Aporte Socio para tipo S, Descuento Coop para tipo C.
-      contribution: c ? (growerType === 'C' ? c.cooperativeDiscount : c.associateContribution) : '',
-      netToPay: c?.netToPay ?? '',
+      ...settlementValues(c, growerType),
     };
 
     const field = (key: string): FormFieldDefinition => {
       const b = bmap.get(key)!;
-      const patch: { readonly?: boolean; value?: string | number; label?: string } = {};
-      if (key === 'contribution' && growerType === 'C') {
-        patch.label = this.messages()?.cooperativeDiscountLabel ?? b.label;
-      }
+      const patch: { readonly?: boolean; value?: string | number; label?: string } = {
+        label: settlementLabel(b, growerType, this.messages()?.cooperativeDiscountLabel),
+      };
       if (READONLY.includes(key)) {
         patch.readonly = true;
         patch.value = computedValues[key];
