@@ -7,10 +7,9 @@ import {
   formatDisplayNumber,
   formatKilos,
   formatMoney,
-  formatThousands,
   formatTyped,
-  parseDisplayNumber,
 } from '../../utils/number-format';
+import { applyLiveThousands, formatMoneyInput, moneyDigits, skipThousandsSeparator } from '../../utils/live-thousands';
 
 const DISPLAY = { money: formatMoney, kilos: formatKilos, typed: formatTyped };
 import { ComboboxComponent } from '../combobox/combobox';
@@ -67,7 +66,7 @@ export class FormFieldComponent implements OnChanges {
     // Desctos) se salta el formateo entero: se ve tal cual se tipeo, sin agregar ni quitar nada.
     if (this.field.liveThousands && !this.field.readonly) {
       // Solo pesos enteros: un valor guardado con decimales (8379840,00) se ve 8.379.840.
-      this.inputValue = raw === '' ? '' : formatThousands(String(Math.trunc(parseDisplayNumber(String(raw)))));
+      this.inputValue = formatMoneyInput(moneyDigits(raw, !!this.field.negativeOnly));
       return;
     }
     this.inputValue = this.field.readonly || this.formatWhenIdle ? this.formatted(raw) : raw;
@@ -93,14 +92,18 @@ export class FormFieldComponent implements OnChanges {
   /** Blur o Enter. Un campo `negativeOnly` (Castigo) se pasa a negativo antes de avisar que se confirmo. */
   commit(): void {
     if (this.field.negativeOnly && !this.field.readonly) {
-      const negative = asPenalty(String(this.inputValue ?? ''));
-      this.inputValue = negative;
+      const typed = this.field.liveThousands ? moneyDigits(this.inputValue) : String(this.inputValue ?? '');
+      const negative = asPenalty(typed);
+      this.inputValue = this.field.liveThousands ? formatMoneyInput(moneyDigits(negative, true)) : negative;
       this.valueChange.emit(negative);
     }
     this.committed.emit();
   }
 
   private formatted(raw: string | number): string | number {
+    if (this.field.liveThousands) {
+      return formatMoneyInput(moneyDigits(raw, true));
+    }
     if (this.field.display && !this.field.rawDisplay) {
       return DISPLAY[this.field.display](raw);
     }
@@ -110,15 +113,19 @@ export class FormFieldComponent implements OnChanges {
       : raw;
   }
 
-  onInput(value: string | number, input?: HTMLInputElement): void {
+  /** Backspace o Supr junto a un punto de miles borran el digito, no el punto. */
+  onKeydown(event: KeyboardEvent, input: HTMLInputElement): void {
     if (this.field.liveThousands) {
-      const digits = String(value).replace(/\D/g, '');
-      this.inputValue = formatThousands(digits);
-      if (input) {
-        input.value = this.inputValue;
-      }
-      this.typed.add(digits);
-      this.valueChange.emit(digits);
+      skipThousandsSeparator(event, input);
+    }
+  }
+
+  onInput(value: string | number, input?: HTMLInputElement): void {
+    if (this.field.liveThousands && input) {
+      const clean = applyLiveThousands(input, !!this.field.negativeOnly);
+      this.inputValue = input.value;
+      this.typed.add(clean);
+      this.valueChange.emit(clean);
       return;
     }
     const sanitized = this.sanitize(value);
