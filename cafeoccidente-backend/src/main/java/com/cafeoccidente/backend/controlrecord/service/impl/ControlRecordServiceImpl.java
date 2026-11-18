@@ -15,6 +15,7 @@ import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.controlrecord.service.DianResolutionRule;
+import com.cafeoccidente.backend.controlrecord.service.WithholdingPercentageRule;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
@@ -118,7 +119,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
 
-        checkGreenSample(request);
+        checkValues(request);
         ControlRecord controlRecord = new ControlRecord();
         controlRecord.setAgency(agency);
         controlRecord.setActive(true);
@@ -134,7 +135,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public ControlRecordResponse update(Long agencyId, ControlRecordRequest request) {
         ControlRecord controlRecord = getActive(agencyId);
         requireAdminForBusinessValues(controlRecord, request);
-        checkGreenSample(request);
+        checkValues(request);
         Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
         applyRequest(controlRecord, request);
         ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
@@ -168,7 +169,8 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         return new GreenCoffeeAppliedResponse(records.size());
     }
 
-    private static void checkGreenSample(ControlRecordRequest request) {
+    private static void checkValues(ControlRecordRequest request) {
+        WithholdingPercentageRule.check(request.withholdingPercentage());
         GreenCoffeeSampleRule.checkValues(request.sampleSize(), request.greenTotalStoredWeight(),
                 request.greenTotalHuskWeight(), request.greenHealthyStoredWeight());
     }

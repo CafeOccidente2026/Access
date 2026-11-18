@@ -76,7 +76,29 @@ describe('PurchaseCorrectionComponent (HU-05)', () => {
     expect(component.view()?.reprintButtonLabel).toBeFalsy();
     expect(keys(el)).toEqual([...correction.fields.DRY.map((f) => f.key), ...correction.paymentFields.map((f) => f.key)]);
     expect(el.querySelector<HTMLInputElement>('[data-correction] [data-field-key="grossKg"]')?.value).toBe('1000');
-    expect(el.querySelector<HTMLInputElement>('[data-correction] [data-field-key="cardAmount"]')?.value).toBe(String(MIXED.cardAmount));
+    expect(el.querySelector<HTMLInputElement>('[data-correction] [data-field-key="cardAmount"]')?.value).toBe('100.000');
+  });
+
+  it('the money fields show the thousands while typing and keep the clean number; weights do not', async () => {
+    const { component, fixture, el } = await open();
+    preview().flush({ ...CALC, netKg: 1000, netToPay: DRY.netToPay });
+    await settle();
+    const box = (key: string) => el.querySelector<HTMLInputElement>(`[data-correction] [data-field-key="${key}"]`)!;
+    const type = (key: string, value: string) => {
+      box(key).value = value;
+      box(key).dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    };
+
+    type('otherDiscounts', '45690');
+    type('penalty', '-2300');
+    type('cashAmount', '1234567');
+    type('grossKg', '1250,5');
+
+    expect([box('otherDiscounts').value, box('penalty').value, box('cashAmount').value, box('grossKg').value])
+      .toEqual(['45.690', '-2.300', '1.234.567', '1250,5']);
+    expect(component.values()).toMatchObject({ otherDiscounts: '45690', penalty: '-2300', grossKg: '1250,5' });
+    expect(component.payment()['cashAmount']).toBe('1234567');
   });
 
   it('recalculates on the server when a weight changes and puts the difference in cash', async () => {

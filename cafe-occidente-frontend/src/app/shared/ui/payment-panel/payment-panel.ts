@@ -14,6 +14,7 @@ import {
 
 import { PaymentKey, PaymentPanelDefinition, PurchasePayment } from '../../../core/models';
 import { formatThousands } from '../../utils/number-format';
+import { LiveThousandsDirective } from '../live-thousands/live-thousands.directive';
 import { PaymentState, PAYMENT_ORDER, commitPayment, initialPayment, readyPayment, visibleMethods } from './payment-cascade';
 
 const KEY_OF: Record<PaymentKey | 'checkNumber', string> = {
@@ -32,7 +33,7 @@ const KEY_OF: Record<PaymentKey | 'checkNumber', string> = {
 @Component({
   selector: 'app-payment-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LiveThousandsDirective],
   templateUrl: './payment-panel.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -99,9 +100,8 @@ export class PaymentPanelComponent implements OnChanges {
       && PAYMENT_ORDER.reduce((sum, k) => sum + s.amounts[k], 0) === this.netToPay;
   }
 
-  onAmount(key: PaymentKey, input: HTMLInputElement): void {
-    const digits = input.value.replace(/\D/g, '');
-    input.value = formatThousands(digits);
+  /** Monto digitado, ya limpio (la directiva appLiveThousands pone los puntos). */
+  onAmount(key: PaymentKey, digits: string): void {
     this.state.update((s) => s && { ...s, amounts: { ...s.amounts, [key]: Number(digits || '0') } });
     this.unbalanced.set(false);
     this.emit();

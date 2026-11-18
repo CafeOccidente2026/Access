@@ -54,9 +54,9 @@
     { "key": "grossKg", "label": "Kilos Brutos", "type": "number", "display": "kilos" },
     { "key": "tare", "label": "Destare", "type": "number", "display": "kilos" },
     { "key": "netKg", "label": "Kilos Netos", "type": "number", "readonly": true, "display": "kilos" },
-    { "key": "penalty", "label": "Castigo", "type": "currency", "negativeOnly": true, "display": "money" }
+    { "key": "penalty", "label": "Castigo", "type": "currency", "negativeOnly": true, "display": "money", "liveThousands": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "display": "money" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "display": "money", "liveThousands": true },
   "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
@@ -69,7 +69,7 @@
   ],
   "settlementSecondaryFields": [
     { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money" }
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money", "liveThousands": true }
   ],
   "messages": {
     "acceptLabel": "Aceptar",

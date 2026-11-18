@@ -11,7 +11,7 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseCorrectionService } from '../../core/services/purchase-correction.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
-import { AccessWindowComponent, FormFlowDirective, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective, LiveThousandsDirective, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
 import { formatDisplayNumber, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { PurchaseQueryContent } from '../purchase-query/purchase-query';
@@ -25,6 +25,9 @@ export interface CorrectionField {
   readonly key: string;
   readonly label: string;
   readonly text?: boolean;
+  /** Plata: se ve con puntos de miles mientras se digita (appLiveThousands); `negative` deja el menos (Castigo). */
+  readonly money?: boolean;
+  readonly negative?: boolean;
 }
 
 export interface PurchaseCorrectionContent {
@@ -88,7 +91,7 @@ function toPayment(values: Values): PurchasePayment {
 @Component({
   selector: 'app-purchase-correction',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceSearchComponent, PurchaseFormViewComponent],
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceSearchComponent, LiveThousandsDirective, PurchaseFormViewComponent],
   templateUrl: './purchase-correction.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

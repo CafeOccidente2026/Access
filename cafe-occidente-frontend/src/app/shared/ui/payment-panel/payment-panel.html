@@ -7,15 +7,14 @@
         <label class="flex flex-col text-sm">
           <span class="text-slate-700">{{ method.label }}:</span>
           <input
-            #amount
             type="text"
             inputmode="numeric"
             class="w-32 rounded border border-slate-300 bg-white px-2 py-1 text-right text-sm shadow-sm focus:border-blue-400 focus:outline-none read-only:bg-slate-100"
             [attr.data-field-key]="keyOf[method.key]"
             [attr.aria-label]="method.label"
             [readonly]="!state() || readOnly() || method.key === 'card'"
-            [value]="state() ? display(state()!.amounts[method.key]) : ''"
-            (input)="onAmount(method.key, amount)"
+            [appLiveThousands]="state() ? state()!.amounts[method.key] : ''"
+            (liveThousands)="onAmount(method.key, $event)"
             (blur)="leave(method.key)"
             (keydown.enter)="commit(method.key, $event)"
           />

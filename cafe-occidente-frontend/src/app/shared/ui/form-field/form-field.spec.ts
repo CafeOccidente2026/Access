@@ -208,3 +208,48 @@ describe('FormFieldComponent liveThousands con un valor guardado', () => {
     expect(fixture.componentInstance.inputValue).toBe('8.379.840');
   });
 });
+
+describe('FormFieldComponent liveThousands en Castigo y al borrar', () => {
+  const penalty = { key: 'penalty', label: 'Castigo', type: 'currency' as const, liveThousands: true, negativeOnly: true };
+
+  it('Castigo shows the thousands while typing and turns negative when confirmed', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', penalty);
+    fixture.detectChanges();
+    const emitted: (string | number)[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitted.push(v));
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+
+    input.value = '2300';
+    input.dispatchEvent(new Event('input'));
+    expect(input.value).toBe('2.300');
+    expect(emitted.at(-1)).toBe('2300');
+
+    fixture.componentInstance.commit();
+    expect(emitted.at(-1)).toBe('-2300');
+    expect(fixture.componentInstance.inputValue).toBe('-2.300');
+
+    // Ya confirmado (solo lectura) se sigue viendo con puntos.
+    fixture.componentRef.setInput('field', { ...penalty, readonly: true, value: '-2300' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.inputValue).toBe('-2.300');
+  });
+
+  it('Backspace right after a dot deletes the digit, not the dot; other fields are not touched', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'otherDiscounts', label: 'Otros Dscts', type: 'currency', liveThousands: true, value: '45690' });
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+    input.value = '45.690';
+    input.setSelectionRange(3, 3);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }));
+    expect(input.selectionStart).toBe(2);
+
+    fixture.componentRef.setInput('field', { key: 'grossKg', label: 'Kilos Brutos', type: 'number' });
+    fixture.detectChanges();
+    input.value = '1.250';
+    input.setSelectionRange(2, 2);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' }));
+    expect(input.selectionStart).toBe(2);
+  });
+});

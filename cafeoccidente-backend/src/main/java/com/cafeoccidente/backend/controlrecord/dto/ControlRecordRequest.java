@@ -15,7 +15,7 @@ public record ControlRecordRequest(
         @NotNull @PositiveOrZero BigDecimal baseFactor,
         @NotNull @PositiveOrZero BigDecimal baseWithholding,
         @NotNull Integer baseLoad,
-        @NotNull @PositiveOrZero BigDecimal withholdingPercentage,
+        @NotNull BigDecimal withholdingPercentage, // 0 a 3: WithholdingPercentageRule
         @NotNull @PositiveOrZero BigDecimal baseHusk,
         @NotNull @PositiveOrZero BigDecimal avgHuskPercentage,
         @NotBlank String prefix,

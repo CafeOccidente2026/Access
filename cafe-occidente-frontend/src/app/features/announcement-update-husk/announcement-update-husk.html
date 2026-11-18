@@ -16,7 +16,8 @@
             [class.border-slate-300]="!fieldErrors.basePriceLoad"
             [class.bg-white]="!fieldErrors.basePriceLoad"
             [value]="numeric.basePriceLoad"
-            (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+            (input)="onNumericInput('basePriceLoad', $any($event.target).value, $any($event.target))"
+            (keydown)="skipThousandsSeparator($event, $any($event.target))"
             (keydown.enter)="onEnter('basePriceLoad')"
           />
         </label>
@@ -36,7 +37,8 @@
             [class.border-slate-300]="!fieldErrors.pointPrice"
             [class.bg-white]="!fieldErrors.pointPrice"
             [value]="numeric.pointPrice"
-            (input)="onNumericInput('pointPrice', $any($event.target).value)"
+            (input)="onNumericInput('pointPrice', $any($event.target).value, $any($event.target))"
+            (keydown)="skipThousandsSeparator($event, $any($event.target))"
             (focus)="onFocus('pointPrice')"
             (keydown.enter)="onEnter('pointPrice')"
           />

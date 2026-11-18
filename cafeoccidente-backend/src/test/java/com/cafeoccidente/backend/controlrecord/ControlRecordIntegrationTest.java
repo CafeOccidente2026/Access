@@ -284,6 +284,19 @@ class ControlRecordIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // Hallazgo del 18-nov: un 5 en vez de 0,5 hizo retener el 5 %.
+    @Test
+    void theWithholdingPercentageMustBeBetweenZeroAndThree() throws Exception {
+        String message = "El porcentaje de retención en la fuente debe estar entre 0 y 3 % (ejemplo: 0,5)";
+        save(current().put("withholdingPercentage", 5))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(message));
+        save(current().put("withholdingPercentage", -1))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(message));
+        save(current().put("withholdingPercentage", 0.5)).andExpect(status().isOk());
+    }
+
     /** R1 (17-nov): la resolucion de Buesaco vence en {@code days} dias (Fecha Res + Vigencia en meses). */
     private void buesacoExpiresIn(int days) {
         jdbc.update("UPDATE registros_control SET fecha_resolucion = (now() AT TIME ZONE 'America/Bogota')::date + ?"
