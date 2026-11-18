@@ -8,12 +8,13 @@ import { AnnouncementType, Fund } from '../../core/models/dry-coffee-purchase.mo
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
 import { formatTypedMoney, skipThousandsSeparator } from '../../shared/utils/live-thousands';
 import { changedByKeyboard } from '../../shared/utils/select-keys';
 import { AnnouncementUpdateContent, TypeRow } from './announcement-update.model';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 type Field = 'fundId' | 'basePriceLoad';
 type RowField = 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice';
@@ -42,7 +43,7 @@ const CLOSE_ROUTE = '/menu-principal';
 @Component({
   selector: 'app-announcement-update',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, SuccessOverlayComponent],
+  imports: [ConfirmDialogComponent, CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
   templateUrl: './announcement-update.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
