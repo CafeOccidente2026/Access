@@ -20,6 +20,7 @@
     *ngIf="savedNoticeOpen() && messages() as m"
     [message]="m.savedNotice"
     [confirmLabel]="m.acceptLabel"
+    [focusFirstFieldOnClose]="true"
     (confirmed)="savedNoticeOpen.set(false)"
   ></app-confirm-dialog>
 
@@ -28,6 +29,7 @@
     [message]="closeMessage(m)"
     [confirmLabel]="m.closeConfirm"
     [cancelLabel]="m.closeCancel"
+    [safeFocus]="true"
     (confirmed)="confirmClose()"
     (cancelled)="cancelClose()"
   ></app-confirm-dialog>
