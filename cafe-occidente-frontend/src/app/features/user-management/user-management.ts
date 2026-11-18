@@ -38,12 +38,13 @@ import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { UserManagementContent } from './user-management.model';
 import { changedByKeyboard } from '../../shared/utils/select-keys';
 import { saveOnce } from '../../shared/utils/save-once';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /** Pantalla ADMIN: alta de usuarios (HU-08), alta de agencias (HU-09) y edicion de usuarios (fase 3, C4). */
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
+  imports: [ConfirmDialogComponent, CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
   templateUrl: './user-management.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

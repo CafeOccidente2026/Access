@@ -43,7 +43,7 @@
         <app-button [label]="c.cancelLabel" [disabled]="saving()" (pressed)="cancel()"></app-button>
       </div>
 
-      <p *ngIf="message() as m" class="font-bold" role="status">{{ m }}</p>
+      <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="message.set(null)"></app-confirm-dialog>
 
       <div class="flex min-h-0 flex-1 flex-col gap-1">
         <p class="font-bold">{{ c.historyTitle }}</p>

@@ -10,6 +10,7 @@ import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
 import { buildVendorRequest, validationError } from './vendor-entry-request';
 import { VendorEntryContent, VendorKind } from './vendor-entry.model';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /**
  * Catalogar Terceros (RF-28.1, antes "Ingresar Vendedores"): el dialogo elige Persona Juridica (NIT,
@@ -19,7 +20,7 @@ import { VendorEntryContent, VendorKind } from './vendor-entry.model';
 @Component({
   selector: 'app-vendor-entry',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './vendor-entry.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

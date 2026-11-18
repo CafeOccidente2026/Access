@@ -115,7 +115,7 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(service.publishAll).toHaveBeenCalledWith({ fundId: 1, basePriceLoad: 1546900 });
 
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="success-overlay"]')?.textContent).toContain('Anuncio actualizado');
+    expect(el.querySelector('app-confirm-dialog')?.textContent).toContain('Anuncio actualizado');
     vi.advanceTimersByTime(SUCCESS_MESSAGE_DURATION_MS - 1);
     expect(component.message()).toBe('Anuncio actualizado');
     vi.advanceTimersByTime(1);

@@ -15,6 +15,7 @@ import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice
 import { buildRemissionDocDefinition } from './remission-invoice';
 import { printPdf } from '../../shared/utils/pdf-preview';
 import { localToday } from '../../shared/utils/local-date';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /** Textos de la pantalla (public/assets/data/remission-form.json). */
 export interface RemissionFormContent {
@@ -47,7 +48,7 @@ type Pick = Record<PickField, string>;
 @Component({
   selector: 'app-remission-form',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, FormFlowDirective],
   templateUrl: './remission-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

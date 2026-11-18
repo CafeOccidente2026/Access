@@ -166,7 +166,7 @@ describe('AnnouncementUpdateHuskComponent (HU-12)', () => {
     expect(createHusk).toHaveBeenCalledWith({ basePriceLoad: 1200000, pointPrice: 9600 });
 
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="success-overlay"]')?.textContent?.trim()).toBe('Anuncio actualizado');
+    expect(el.querySelector('app-confirm-dialog')?.textContent).toContain('Anuncio actualizado');
     vi.advanceTimersByTime(SUCCESS_MESSAGE_DURATION_MS - 1);
     expect(component.message()).toBe('Anuncio actualizado');
     vi.advanceTimersByTime(1);

@@ -6,6 +6,7 @@ import { Conductor } from '../../core/models/grower.model';
 import { GrowerService } from '../../core/services/grower.service';
 import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 type Mode = 'choose' | 'new' | 'update';
 
@@ -36,7 +37,7 @@ export function dateTime(instant: string | null): string {
 @Component({
   selector: 'app-conductor-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, FormsModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
   templateUrl: './conductor-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

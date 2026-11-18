@@ -33,7 +33,7 @@
       </ul>
     </ng-container>
 
-    <p *ngIf="message()" class="text-slate-700">{{ message() }}</p>
-    <p *ngIf="error() as e" class="text-red-600">{{ e }}</p>
+    <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="message.set(null)"></app-confirm-dialog>
+    <app-confirm-dialog *ngIf="error() as m" [message]="m" (confirmed)="error.set(null)"></app-confirm-dialog>
   </div>
 </app-access-window>

@@ -6,11 +6,12 @@ import { finalize } from 'rxjs';
 
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS } from '../../shared/ui';
 import { validateWholeNumberField } from '../../shared/utils/number-format';
 import { formatTypedMoney, skipThousandsSeparator } from '../../shared/utils/live-thousands';
 import { AnnouncementUpdateHuskContent } from './announcement-update-husk.model';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 type NumericField = 'basePriceLoad' | 'pointPrice';
 
@@ -27,7 +28,7 @@ const FOCUS_ORDER: readonly NumericField[] = ['basePriceLoad', 'pointPrice'];
 @Component({
   selector: 'app-announcement-update-husk',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, SuccessOverlayComponent],
+  imports: [ConfirmDialogComponent, CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
   templateUrl: './announcement-update-husk.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

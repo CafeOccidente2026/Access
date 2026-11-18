@@ -3,7 +3,7 @@
     <div class="flex flex-col gap-3 p-3 text-sm">
       <app-invoice-search [browser]="browser" [texts]="c">
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
-        <p message *ngIf="message() as m" data-testid="message" class="pb-1.5 font-semibold" [class.text-red-600]="noticeError() || !detailValue()" [class.text-teal-700]="!noticeError() && !!detailValue()">{{ m }}</p>
+        <p message *ngIf="listMessage() as m" data-testid="message" class="pb-1.5 font-semibold" [class.text-red-600]="!detailValue()" [class.text-teal-700]="!!detailValue()">{{ m }}</p>
       </app-invoice-search>
 
       <app-purchase-form-view *ngIf="view() as v" [content]="v" [readOnly]="true"></app-purchase-form-view>
@@ -107,4 +107,5 @@
       </form>
     </div>
   </app-access-window>
+  <app-confirm-dialog *ngIf="savedNotice() as m" [message]="m" (confirmed)="savedNotice.set(null)"></app-confirm-dialog>
 </div>
