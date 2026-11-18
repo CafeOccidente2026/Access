@@ -117,7 +117,6 @@
         </table>
       </div>
 
-      <p *ngIf="errorMessage()" class="text-sm text-red-600">{{ errorMessage() }}</p>
 
       <div class="flex justify-end">
         <button
@@ -152,7 +151,6 @@
           </tr>
         </tbody>
       </table>
-      <p *ngIf="errorMessage()" class="text-sm text-red-600">{{ errorMessage() }}</p>
       <div class="flex justify-end gap-2">
         <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="print()">
           {{ c.result['print'] }}
@@ -164,3 +162,4 @@
     </div>
   </app-access-window>
 </div>
+<app-confirm-dialog *ngIf="errorMessage() as m" [message]="m" (confirmed)="errorMessage.set(null)"></app-confirm-dialog>
