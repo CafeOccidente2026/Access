@@ -112,4 +112,15 @@ describe('PaymentPanelComponent completed (prueba del 9-nov, punto 8)', () => {
     cash.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(completed).toHaveLength(0);
   });
+
+  it('the amount shows its thousands while typing without moving the cursor, and the payment keeps the clean number', () => {
+    const { fixture, cash } = render(1000000);
+    cash.value = '9.5000';
+    cash.setSelectionRange(3, 3);
+    cash.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(cash.value).toBe('95.000');
+    expect(cash.selectionStart).toBe(2);
+    expect(fixture.componentInstance.state()!.amounts.cash).toBe(95000);
+  });
 });
