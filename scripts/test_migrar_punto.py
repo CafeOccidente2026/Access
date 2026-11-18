@@ -16,6 +16,7 @@ from migrar_punto import (
     max_remission,
     missing_control_params,
     out_of_range,
+    pending_quotas,
     quota_announcements,
     split_future_purchases,
     transaction_collisions,
@@ -100,6 +101,34 @@ def check_announcement_number():
     assert announcement_number("SDTA", "") == ""
 
 
+def check_pending_quotas():
+    # Decision (b) del 18-nov: solo los cupos con saldo el dia del corte = cupo - kilos netos de las compras validas.
+    announcements = [
+        {"anuncio": "9001", "cupo": "6000.0", "entregados": "1.0"},     # Entregados de Access viejo: no se usa.
+        {"anuncio": "9002", "cupo": "26442.0", "entregados": "0"},
+        {"anuncio": "9003", "cupo": "0.0", "entregados": "0"},          # sin cupo: no es cupo de anuncio.
+        {"anuncio": "9004", "cupo": "500.0", "entregados": "0"},        # sin compras: todo el cupo pendiente.
+    ]
+    purchases = [
+        {"anuncio": "9001", "kilos_netos": "6000.0", "forma_de_pago": "VALIDA"},
+        {"anuncio": "9001", "kilos_netos": "300.0", "forma_de_pago": "VALIDA"},
+        {"anuncio": "9002", "kilos_netos": "20030.0", "forma_de_pago": "VALIDA"},
+        {"anuncio": "9002", "kilos_netos": "900.0", "forma_de_pago": "ANULADA"},  # anulada: no cuenta.
+        {"anuncio": "9003", "kilos_netos": "50.0", "forma_de_pago": "VALIDA"},
+    ]
+    pending = pending_quotas(announcements, purchases)
+    assert [(r["anuncio"], saldo) for r, saldo in pending] == [("9002", Decimal("6412.0")), ("9004", Decimal("500.0"))]
+
+
+def check_quota_purchases_kept_before_the_cut():
+    # Las compras de un cupo cargado entran aunque sean de antes del corte: la web suma Entregados con ellas.
+    desde = date(2026, 9, 1)
+    old = {**purchase("7", "2026-07-15 00:00:00"), "anuncio": "9002"}
+    assert not keeps_purchase(old, desde)
+    assert keeps_purchase(old, desde, {"9002"})
+    assert not keeps_purchase({**old, "anuncio": "9001"}, desde, {"9002"})
+
+
 def check_consecutives():
     # Factura: la mayor de COMPRAS, tambien las anuladas.
     assert max_invoice([purchase("43902"), purchase("43903", estado="ANULADA"), purchase("43001")]) == 43903
@@ -124,6 +153,8 @@ def main():
     check_future_purchases()
     check_quotas()
     check_announcement_number()
+    check_pending_quotas()
+    check_quota_purchases_kept_before_the_cut()
     check_consecutives()
     print("OK")
 
