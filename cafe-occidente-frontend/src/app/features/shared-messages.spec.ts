@@ -2,11 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Type, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 
 import { ContentService } from '../core/services/content.service';
+import { ConfirmDialogComponent } from '../shared/ui/confirm-dialog/confirm-dialog';
 import { AnnouncementUpdateComponent } from './announcement-update/announcement-update';
 import { AnnouncementUpdateHuskComponent } from './announcement-update-husk/announcement-update-husk';
 import { ConductorFormComponent } from './conductor-form/conductor-form';
@@ -111,6 +113,42 @@ describe('every screen shows its messages in the shared dialog', () => {
       expect(shown()).toBeFalsy();
       expect((fixture.nativeElement as HTMLElement).querySelector('app-confirm-dialog')).toBeNull();
       fixture.nativeElement.remove();
+    });
+  }
+});
+
+/** 18-nov: tras guardar en Suministros (y Caja Menor, Prestamo Empaques) y Catalogar Terceros el cursor va al primer
+ *  campo para el siguiente registro, como en las compras; tras un error vuelve al campo donde estaba. */
+describe('saved messages start the next record on the first field', () => {
+  for (const [name, component] of [['Suministros', SuppliesEntryComponent], ['Catalogar Terceros', VendorEntryComponent]] as const) {
+    it(`${name}: saved goes to the first field, an error goes back where it was`, async () => {
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: ContentService, useValue: { loadJson: (n: string) => of(CONTENT[n]) } },
+        ],
+      });
+      const fixture = TestBed.createComponent(component as Type<unknown>);
+      fixture.detectChanges();
+      await Promise.resolve();
+      TestBed.tick();
+      const screen = fixture.componentInstance as Record<string, WritableSignal<unknown>>;
+      const firstField = () =>
+        fixture.debugElement.query(By.directive(ConfirmDialogComponent)).componentInstance.focusFirstFieldOnClose;
+
+      screen['error'].set(false);
+      screen['message'].set('Guardado');
+      fixture.detectChanges();
+      expect(firstField()).toBe(true);
+
+      screen['message'].set(null);
+      fixture.detectChanges();
+      screen['error'].set(true);
+      screen['message'].set('No se pudo guardar');
+      fixture.detectChanges();
+      expect(firstField()).toBe(false);
     });
   }
 });
