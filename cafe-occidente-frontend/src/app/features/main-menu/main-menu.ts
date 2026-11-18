@@ -6,8 +6,9 @@ import { of } from 'rxjs';
 import { AgencyService } from '../../core/services/agency.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, MenuButtonGridComponent } from '../../shared/ui';
+import { AccessWindowComponent, MenuButtonGridComponent, ResolutionAlertComponent } from '../../shared/ui';
 import { MainMenuContent } from './main-menu.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * Panel "MENU PRINCIPAL": puerta de entrada a los modulos del aplicativo. Las opciones se filtran por
@@ -16,7 +17,7 @@ import { MainMenuContent } from './main-menu.model';
 @Component({
   selector: 'app-main-menu',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, MenuButtonGridComponent],
+  imports: [CommonModule, AccessWindowComponent, MenuButtonGridComponent, ResolutionAlertComponent],
   templateUrl: './main-menu.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -40,7 +41,7 @@ export class MainMenuComponent {
     }
     this.agencyError.set(null);
     this.auth.chooseWorkingAgency(agencyId).subscribe({
-      error: () => this.agencyError.set(this.data()?.agencies.errorMessage ?? null),
+      error: (err) => this.agencyError.set(serverError(err, this.data()?.agencies.errorMessage)),
     });
   }
 }

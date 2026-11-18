@@ -44,10 +44,16 @@ class PurchasePaymentServiceImplTest {
 
     @Test
     void aCheckNeedsItsNumber() {
-        for (String number : new String[] {null, "", "  ", "0", "12A", "1234567890"}) {
+        for (String number : new String[] {null, "", "  "}) {
             assertThatThrownBy(() -> service.validate(pay("0", "4944624", "0", "0", number), NET))
                     .as(String.valueOf(number)).hasMessage("Digite el numero de cheque");
         }
+        // Como Caja y Suministros (V21): los ultimos 4 digitos, con sus ceros.
+        for (String number : new String[] {"0", "548", "12A4", "12345", "0000"}) {
+            assertThatThrownBy(() -> service.validate(pay("0", "4944624", "0", "0", number), NET))
+                    .as(number).hasMessage("El cheque son los últimos 4 dígitos");
+        }
+        assertThat(service.validate(pay("0", "4944624", "0", "0", " 0548 "), NET).checkNumber()).isEqualTo("0548");
         // Sin monto en cheque el numero no importa y no se guarda.
         assertThat(service.validate(pay("4944624", "0", "0", "0", "99"), NET).checkNumber()).isNull();
     }

@@ -18,6 +18,8 @@ export interface Announcement {
   readonly agencyId: number;
   readonly fundId: number;
   readonly specialType: string;
+  /** Pr Inc Calidad del anuncio. */
+  readonly qualityIncrement?: number;
 }
 
 /** "Actualizar Anuncio con Factor" (RN-08.2, RN-08.3): un precio para todos los tipos de cafe del fondo. */
@@ -112,6 +114,14 @@ export interface DryCoffeePurchaseRequest {
   readonly otherDiscounts: number;
   /** FORMAS DE PAGO cuadrado; null en preview (todavia no se lleno). */
   readonly payment: PurchasePayment | null;
+  /** Facturar Anuncios con Cupos (RF-21.2): número del anuncio con cupo elegido. */
+  readonly quotaAnnouncementNumber?: number;
+  /** Facturar Compras Anunciadas (RF-21.5): id de la compra anunciada elegida. */
+  readonly futurePurchaseId?: number;
+  /** "Esta Entrega" (cupos y anunciadas). */
+  readonly deliveryKg?: number;
+  /** Hallazgo #6: el anuncio con que empezó la compra (el que se ve en pantalla). */
+  readonly startedAnnouncementNumber?: number;
 }
 
 /** Respuesta del backend: incluye todos los campos calculados de la cascada VBA. */

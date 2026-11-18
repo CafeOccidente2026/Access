@@ -107,6 +107,17 @@ describe('PurchaseQueryComponent (HU-28)', () => {
     expect(component.view()).toBeNull();
   });
 
+  it('prueba del 11-nov (punto 4): a failed detail shows the reason of the server', async () => {
+    const { component } = render();
+    component.go('FIRST');
+    TestBed.tick();
+    http.expectOne(`${URL}/navigate?direction=FIRST`).flush([FIRST]);
+    await settle();
+    http.expectOne(`${URL}/DRY/1225`).flush({ message: 'No existe esa compra en la agencia' }, { status: 404, statusText: 'Not Found' });
+    await settle();
+    expect(component.message()).toBe('No existe esa compra en la agencia');
+  });
+
   it('RN-26.5: shows ESTADO ANULADA', async () => {
     const { component } = render();
     component.go('FIRST');
@@ -114,16 +125,24 @@ describe('PurchaseQueryComponent (HU-28)', () => {
     expect(component.view()?.statusField?.value).toBe('ANULADA');
   });
 
+  it('HU-05: a corrected purchase shows CORREGIDA next to its ESTADO', async () => {
+    const { component } = render();
+    component.go('FIRST');
+    await show(`${URL}/navigate?direction=FIRST`, FIRST, detail({ corrected: true }));
+    expect(component.view()?.statusField?.value).toBe(`VALIDA - ${content.correctedMark}`);
+  });
+
   it('CA-3: Reimprimir Dcto Equiv reprints the invoice of the purchase shown, with ANULADA if it was annulled', async () => {
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     const { component } = render();
     component.go('FIRST');
     await show(`${URL}/navigate?direction=FIRST`, FIRST, detail({ status: 'ANULADA', purchase: DRY }));
 
     component.reprint();
 
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    // Armar el PDF tarda mas de 1 s cuando la suite corre con cobertura.
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1), { timeout: 5000 });
     const doc = createPdf.mock.calls[0][0];
     expect(JSON.stringify(doc.content)).toContain('SDBU - 27.869');
     expect(doc.watermark).toMatchObject({ text: content.annulledMark });

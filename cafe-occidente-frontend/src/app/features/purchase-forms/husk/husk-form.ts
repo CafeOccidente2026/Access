@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -15,26 +16,24 @@ import { GrowerService } from '../../../core/services/grower.service';
 import { HuskPurchaseService } from '../../../core/services/husk-purchase.service';
 import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { askCellphoneOr } from '../seller-cellphone';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages } from '../weight-check';
+import { serverError } from '../../../shared/utils/server-error';
+import { reserveInvoice } from '../invoice-reservation';
+import { localToday } from '../../../shared/utils/local-date';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-husk.json. */
 type FormModel = Record<string, string>;
 
-interface HuskMessages {
-  readonly acceptLabel: string;
+interface HuskMessages extends PurchaseMessages, WeightMessages {
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type HuskContent = PurchaseFormContent & { readonly messages: HuskMessages };
@@ -51,7 +50,8 @@ const EDITABLE: string[] = [
 ];
 
 /** Requeridos para habilitar "Imprimir" (descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idPart1', 'firstName', 'lastName', 'almondWeight', 'bags', 'grossKg', 'tare'];
+// El servidor no calcula sin el celular del vendedor (prueba del 10-nov): sin el no se pide el calculo.
+const REQUIRED: string[] = ['idPart1', 'firstName', 'lastName', 'cellphone', 'almondWeight', 'bags', 'grossKg', 'tare'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). Husk no tiene
  *  Castigo (penalty) - ver docs/informe-formulas-compras-vs-vba.md. */
@@ -107,7 +107,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  private readonly today = new Date().toISOString().slice(0, 10);
+  private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 
@@ -169,10 +169,14 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    if (this.rejectedWeight(key, this.locked, this.messages(), this.announcementInfo()?.sampleSize)) {
+      return;
+    }
     switch (key) {
       case 'idPart1':
         this.lookupGrower();
         break;
+      case 'cellphone':
       case 'almondWeight':
       case 'grossKg':
       case 'tare':
@@ -185,19 +189,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
   /** "Para asignar # factura pasilla": siguiente factura propia de PASILLA. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        if (inv.warning) {
-          this.errorMessage.set(inv.warning);
-        }
-        this.tick.update((n) => n + 1);
-      },
-      error: () => {
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** Cuadro_combinado61_AfterUpdate: Cod Prod + anuncio vigente (Especial "PASILLA" / Fondo "RP"). */
@@ -205,11 +197,12 @@ export class HuskFormComponent extends UnsavedCloseForm {
     this.service.announcementInfo().subscribe({
       next: (info) => {
         this.announcementInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.announcementInfo.set(null);
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
@@ -217,40 +210,8 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
   /** Cedula_LostFocus: busca el caficultor; bloquea el formulario si esta fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findByIdNumber(idNumber).subscribe({
-      next: (grower) => {
-        if (grower.deceased) {
-          this.blockedByDeceased.set(true);
-          this.errorMessage.set(this.messages()?.deceasedBlocked ?? null);
-          this.tick.update((n) => n + 1);
-          return;
-        }
-        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
-        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
-        this.model['idType'] = grower.growerType;
-        this.model['address'] = grower.address;
-        this.model['cellphone'] = grower.phone;
-        this.locked.add('idPart1');
-        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
-        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
-        // la cascada de calculo nunca llegaba a dispararse.
-        ['firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
-        this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
-      },
-      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
-      error: () => {
-        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
-        this.tick.update((n) => n + 1);
-      },
+    lookupSeller(this, this.growerService, this.locked, () => this.tick.update((n) => n + 1), () => {
+      askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
     });
   }
 
@@ -265,9 +226,9 @@ export class HuskFormComponent extends UnsavedCloseForm {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.calc.set(null);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -291,7 +252,13 @@ export class HuskFormComponent extends UnsavedCloseForm {
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora de este café. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    return this.announcementNumber(this.announcementInfo() ? this.service.announcementInfo() : null);
   }
 
   print(): void {
@@ -313,6 +280,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
 
 
   dismissError(): void {
+    this.refocusRetry((k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
@@ -336,6 +304,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     this.tick.update((n) => n + 1);
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {
@@ -375,7 +344,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       agency: this.authService.agencyName() ?? '',
       fund: 'RP',
       date: this.today,
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       invoicePrefix: inv?.prefix ?? '',
       invoiceNumber: inv?.invoiceNumber ?? '',

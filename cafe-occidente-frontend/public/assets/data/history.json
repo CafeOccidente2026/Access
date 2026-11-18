@@ -23,7 +23,9 @@
     "AGENCIA": "Agencia",
     "PERMISO": "Permiso",
     "TERCERO": "Tercero",
-    "REMESA": "Remesa"
+    "REMESA": "Remesa",
+    "COMPRA_ANUNCIADA": "Compra anunciada",
+    "COMPRA": "Compra (factura)"
   },
   "actions": {
     "CREAR": "Crear",
@@ -34,10 +36,28 @@
     "PUBLICAR": "Publicar",
     "CONCEDER": "Conceder",
     "RETIRAR": "Retirar",
-    "DESMARCAR": "Desmarcar"
+    "DESMARCAR": "Desmarcar",
+    "RESTAURAR": "Restaurar",
+    "CORREGIR": "Corregir"
   },
   "fields": {
     "number": "Número",
+    "remainingKg": "Saldo",
+    "sacos": "Sacos",
+    "kilos_brutos": "Kilos Brutos",
+    "destare": "Destare",
+    "kilos_netos": "Kilos Netos",
+    "vr_bruto": "Vr. Bruto",
+    "retefuente": "Retefuente",
+    "neto_a_pagar": "Neto a Pagar",
+    "forma_pago": "Forma de Pago",
+    "numero_cheque": "N° Cheque",
+    "direccion": "Dirección",
+    "celular": "Celular",
+    "efectivo": "Efectivo",
+    "cheque": "Cheque",
+    "transferencia": "Transferencia",
+    "datafono": "Datáfono",
     "status": "Estado",
     "purchases": "Facturas",
     "screen": "Pantalla",

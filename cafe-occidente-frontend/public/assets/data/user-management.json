@@ -5,8 +5,8 @@
   "idNumberLabel": "Cédula",
   "idNumberRequiredMessage": "Digite la cédula del usuario (solo números).",
   "passwordLabel": "Contraseña",
-  "passwordHint": "Mínimo 4 caracteres, combinando letras y números.",
-  "passwordInvalidMessage": "La contraseña debe tener mínimo 4 caracteres y combinar letras y números.",
+  "passwordHint": "Mínimo 8 caracteres, combinando letras y números.",
+  "passwordInvalidMessage": "La contraseña debe tener mínimo 8 caracteres y combinar letras y números.",
   "roleLabel": "Rol",
   "agencyLabel": "Agencia",
   "createUserButton": "Crear usuario",
@@ -14,7 +14,7 @@
   "newAgencyLabel": "Nombre",
   "createAgencyButton": "Crear agencia",
   "agencyCreatedNotice": "Agencia creada y seleccionada. Configure su Registro de Control antes de operar en ella.",
-  "errorMessage": "Ocurrió un error. Verifique los datos e intente de nuevo.",
+  "errorMessage": "No se pudo guardar el usuario.",
   "usersSectionTitle": "Usuarios",
   "activeLabel": "Activo",
   "yes": "Sí",
@@ -24,5 +24,7 @@
   "cancelButton": "Cancelar",
   "newPasswordLabel": "Nueva contraseña",
   "newPasswordHint": "Déjela vacía para no cambiarla.",
-  "userSavedMessage": "Usuario actualizado."
+  "userSavedMessage": "Usuario actualizado.",
+  "unlockButton": "Desbloquear",
+  "userUnlockedMessage": "Usuario desbloqueado: ya puede volver a intentar el ingreso."
 }

@@ -5,6 +5,8 @@ export type FieldType = 'text' | 'number' | 'count' | 'date' | 'select' | 'curre
 export interface FormFieldDefinition {
   readonly key: string;
   readonly label: string;
+  /** Nombre accesible cuando la etiqueta va vacia como en Access (Nombres, Apellidos, N° de factura). */
+  readonly ariaLabel?: string;
   readonly type: FieldType;
   readonly value?: string | number;
   readonly options?: string[];
@@ -27,6 +29,12 @@ export interface FormFieldDefinition {
   readonly digitsOnly?: boolean;
   /** Solo cero o negativo (Castigo, Q1/RN-14.7): al confirmar, 23 queda -23 y vacio queda 0. */
   readonly negativeOnly?: boolean;
+  /** Valor en pesos con puntos de miles mientras se escribe (Caja, Suministros, Caja Menor): se ve 140.000 y se
+   *  entrega 140000. */
+  readonly liveThousands?: boolean;
+  /** Hallazgo #1: cómo se ve ya confirmado: dinero sin decimales, kilos sin ",00" si son enteros, o como se digitó
+   *  (porcentajes y pesos de la muestra). Sin esto, el formato de siempre según `type`. */
+  readonly display?: 'money' | 'kilos' | 'typed';
 }
 
 export interface FormFieldSection {

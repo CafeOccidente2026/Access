@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerCreateRequest;
@@ -18,6 +19,9 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.impl.GrowerServiceImpl;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -26,13 +30,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 /** Item C (cupo) - ver GrowerService.checkQuota y Form_COMPRAS.bas lineas 412/465/518/571/624. */
 class GrowerServiceImplTest {
 
+    /** 2026-01-14 20:00 en Colombia (ya 2026-01-15 en UTC). */
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-15T01:00:00Z"), ClockConfig.COLOMBIA);
+
     private final GrowerRepository growerRepository = mock(GrowerRepository.class);
     private final LegacyNessProgramRepository legacyNessProgramRepository = mock(LegacyNessProgramRepository.class);
     private final AgencyRepository agencyRepository = mock(AgencyRepository.class);
     /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final GrowerService growerService =
-            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository, currentAgencyProvider);
+            new GrowerServiceImpl(growerRepository, legacyNessProgramRepository, agencyRepository, currentAgencyProvider, CLOCK);
 
     /** LegacyNessProgram es una entidad de staging de solo lectura (solo @Getter, sin setters) -
      *  se instancia real y se llenan los campos por reflexion en vez de mockearla. */
@@ -41,6 +48,19 @@ class GrowerServiceImplTest {
         ReflectionTestUtils.setField(program, "programa", programa);
         ReflectionTestUtils.setField(program, "cupo", cupo);
         return program;
+    }
+
+    /** C3: la cedula de NESS viene del CSV como "990514.0"; el bloque Informacion Federacion la muestra sin ".0". */
+    @Test
+    void theNessCedulaComesWithoutTheDecimalOfTheCsv() {
+        LegacyNessProgram ness = program("NESPRESSO", "30000.0");
+        ReflectionTestUtils.setField(ness, "cedula", "990514.0");
+        ReflectionTestUtils.setField(ness, "nombres", "Caficultor Ness Uno Dos");
+        when(legacyNessProgramRepository.findByNormalizedCedula("990514")).thenReturn(List.of(ness));
+
+        assertThat(growerService.findProgram("990514", null)).get()
+                .extracting("cedula", "nombres", "programa", "cupo")
+                .containsExactly("990514", "Caficultor Ness Uno Dos", "NESPRESSO", "30000");
     }
 
     @Test
@@ -117,11 +137,11 @@ class GrowerServiceImplTest {
         Grower association = new Grower();
         association.setIsAssociation(true);
         Grower legacyNull = new Grower();
-        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(association));
+        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(association));
         when(growerRepository.findByIdNumber("1")).thenReturn(Optional.of(legacyNull));
         when(growerRepository.findByIdNumber("2")).thenReturn(Optional.empty());
 
-        assertThat(growerService.isAssociation(" 900723205 ")).isTrue();
+        assertThat(growerService.isAssociation(" 990723205 ")).isTrue();
         assertThat(growerService.isAssociation("1")).isFalse();
         assertThat(growerService.isAssociation("2")).isFalse();
         assertThat(growerService.isAssociation(null)).isFalse();
@@ -170,7 +190,7 @@ class GrowerServiceImplTest {
                 "777", "Ana", null, "Gomez", null, "Coop", "XYZ987", " Vereda El Tambo "));
 
         assertThat(saved.getValue().getAddress()).isEqualTo("Vereda El Tambo");
-        assertThat(saved.getValue().getAffiliationDate()).isEqualTo(java.time.LocalDate.now());
+        assertThat(saved.getValue().getAffiliationDate()).isEqualTo(LocalDate.of(2026, 1, 14));
     }
 
     @Test
@@ -179,8 +199,8 @@ class GrowerServiceImplTest {
         agency.setName("El Tambo");
         Grower grower = new Grower();
         grower.setIdNumber("555");
-        grower.setFirstName("Luis");
-        grower.setLastName("Rosero");
+        grower.setFirstName("Conductor");
+        grower.setLastName("Prueba");
         grower.setAddress("Calle 1");
         grower.setAgency(agency);
         grower.setGrowerType("S");
@@ -193,8 +213,8 @@ class GrowerServiceImplTest {
 
         assertThat(grower.getAffiliationDate()).isEqualTo(java.time.LocalDate.of(2010, 5, 1));
         assertThat(response.affiliationDate()).isEqualTo(java.time.LocalDate.of(2010, 5, 1));
-        assertThat(grower.getFirstName()).isEqualTo("Luis");
-        assertThat(grower.getLastName()).isEqualTo("Rosero");
+        assertThat(grower.getFirstName()).isEqualTo("Conductor");
+        assertThat(grower.getLastName()).isEqualTo("Prueba");
         assertThat(grower.getAddress()).isEqualTo("Calle 1");
         assertThat(grower.getGrowerType()).isEqualTo("S");
         assertThat(grower.getAgency()).isSameAs(agency);
@@ -207,15 +227,15 @@ class GrowerServiceImplTest {
     void conductorWithoutAgencyOrLastNameIsReturnedWithNullsInsteadOfFailing() {
         // Asociados de Access: asociaciones sin "1er Apellido" y filas sin Agencia (V34).
         Grower grower = new Grower();
-        grower.setIdNumber("900723205");
-        grower.setFirstName("FUNDACION SUYUSAMA");
+        grower.setIdNumber("990723205");
+        grower.setFirstName("FUNDACION PRUEBA");
         grower.setAddress("");
         grower.setTransportCompany("TRANSORIENTE");
-        when(growerRepository.findByIdNumber("900723205")).thenReturn(Optional.of(grower));
+        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(grower));
 
-        var response = growerService.findConductor("900723205");
+        var response = growerService.findConductor("990723205");
 
-        assertThat(response.firstName()).isEqualTo("FUNDACION SUYUSAMA");
+        assertThat(response.firstName()).isEqualTo("FUNDACION PRUEBA");
         assertThat(response.lastName()).isNull();
         assertThat(response.agencyName()).isNull();
         assertThat(response.transportCompany()).isEqualTo("TRANSORIENTE");
@@ -232,5 +252,14 @@ class GrowerServiceImplTest {
         growerService.searchConductors("123");
         org.mockito.Mockito.verify(growerRepository).findConductorsByIdNumberPrefix(
                 "123", org.springframework.data.domain.PageRequest.of(0, 10));
+    }
+
+    @Test
+    void s7ConductorSearchOnlyTakesDigitsSoLikeWildcardsDoNotListEveryone() {
+        for (String prefix : new String[] {"%%%", "12_", "1%3", "12a"}) {
+            assertThat(growerService.searchConductors(prefix)).isEmpty();
+        }
+        org.mockito.Mockito.verify(growerRepository, org.mockito.Mockito.never())
+                .findConductorsByIdNumberPrefix(anyString(), org.mockito.ArgumentMatchers.any());
     }
 }

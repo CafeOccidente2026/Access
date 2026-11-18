@@ -19,8 +19,9 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(allowedOrigin));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        // S5: solo lo que la app manda (el token y JSON) y los metodos que tienen endpoints.
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         // Sin allowCredentials: el JWT viaja en la cabecera Authorization y no hay cookies que permitir.
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -3,7 +3,7 @@ package com.cafeoccidente.backend.vendors.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** Consultas "Beneficiario" / "Beneficiario Resumen": COMPRAS INNER JOIN Asociados, campo a campo. */
+/** Consultas "Beneficiario" / "Beneficiario Resumen": COMPRAS INNER JOIN Asociados, campo a campo; productCode = Cod_Prod. */
 public record BeneficiaryRow(
         String agencyName,
         LocalDate purchaseDate,
@@ -22,5 +22,6 @@ public record BeneficiaryRow(
         BigDecimal withholding,
         BigDecimal otherDiscounts,
         BigDecimal netToPay,
-        String specialType) {
+        String specialType,
+        String productCode) {
 }

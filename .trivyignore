@@ -1,0 +1,2 @@
+# Excepciones de Trivy (S1): una vulnerabilidad por linea (CVE-... o GHSA-...), con su motivo y fecha.
+# Solo para casos sin arreglo aplicable o que no afectan a esta app. Revisar en cada actualizacion.

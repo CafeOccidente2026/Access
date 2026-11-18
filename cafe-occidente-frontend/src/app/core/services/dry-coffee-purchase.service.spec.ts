@@ -24,7 +24,7 @@ describe('DryCoffeePurchaseService.qualityPercentages', () => {
     const withSpecial = http.expectOne(`${url}?totalStoredWeight=200&defectiveStoredWeight=10&fundId=1&specialType=NESPRESSO+-+FTUSA`);
     const withoutSpecial = http.expectOne(`${url}?totalStoredWeight=200`);
     // El servicio arma los parametros en la URL (URLSearchParams), no en HttpParams.
-    const query = (url: string) => new URL(url).searchParams;
+    const query = (url: string) => new URL(url, 'http://localhost').searchParams;
     expect(query(withSpecial.request.url).get('specialType')).toBe('NESPRESSO - FTUSA');
     expect(query(withSpecial.request.url).get('fundId')).toBe('1');
     expect(query(withoutSpecial.request.url).has('fundId')).toBe(false);

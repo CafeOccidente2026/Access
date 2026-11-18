@@ -36,6 +36,8 @@ describe('HuskFormComponent - gates de captura', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
@@ -51,13 +53,13 @@ describe('HuskFormComponent - gates de captura', () => {
 
   const growerWithPhone: Grower = {
     id: 1,
-    idNumber: '210514',
-    firstName: 'PAZ',
-    secondName: 'CAROLINA',
-    lastName: 'CASTELBLANCO',
-    secondLastName: 'OSSA',
-    address: 'CLL 14 N 37-20 CASA II',
-    phone: '3117498703',
+    idNumber: '990514',
+    firstName: 'CAFICULTOR',
+    secondName: 'UNO',
+    lastName: 'PRUEBA',
+    secondLastName: 'DOS',
+    address: 'VEREDA PRUEBA',
+    phone: '3000000001',
     growerType: 'C',
     active: true,
     deceased: false,
@@ -66,7 +68,7 @@ describe('HuskFormComponent - gates de captura', () => {
     vehiclePlate: null,
   };
 
-  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '27197019', phone: '' };
+  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '99197019', phone: '' };
 
   const calculation = {
     netKg: 1200,
@@ -84,11 +86,11 @@ describe('HuskFormComponent - gates de captura', () => {
   let createSpy: ReturnType<typeof vi.fn>;
   let component: HuskFormComponent;
 
-  function setup(grower: Grower) {
+  function setup(grower: Grower, announcementFails = false) {
     previewSpy = vi.fn(() => of(calculation));
     const fakeHuskService = {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
-      announcementInfo: () => of(announcementInfo),
+      announcementInfo: () => (announcementFails ? throwError(() => ({ error: { message: 'No hay un anuncio de precio vigente para esa agencia/fondo/especial' } })) : of(announcementInfo)),
       preview: previewSpy,
       create: (createSpy = vi.fn(() => of({}))),
     };
@@ -123,6 +125,11 @@ describe('HuskFormComponent - gates de captura', () => {
     component.model['otherDiscounts'] = '0';
     component.onFieldCommitted('otherDiscounts');
   }
+
+  it('prueba del 11-nov (punto 4): without an announcement it shows the reason of the server', () => {
+    setup(growerWithPhone, true);
+    expect(component.errorMessage()).toBe('No hay un anuncio de precio vigente para esa agencia/fondo/especial');
+  });
 
   it('REGRESIÓN: a grower with a blank migrated phone does not get cellphone permanently locked', () => {
     setup(growerWithoutPhone);
@@ -229,8 +236,8 @@ describe('HuskFormComponent - gates de captura', () => {
     component.onFieldCommitted('idPart1');
     fillEverythingAfterGrower();
     const nextInvoice = vi.spyOn(TestBed.inject(HuskPurchaseService), 'nextInvoiceNumber');
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
     createSpy.mockReturnValue(of(HUSK));
 
@@ -240,7 +247,7 @@ describe('HuskFormComponent - gates de captura', () => {
     expect(component.payment()).toBeNull();
     expect(component.savedNoticeOpen()).toBe(true);
     expect(nextInvoice).toHaveBeenCalledTimes(1);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.lastCall![0]);
     expect(doc).toContain('SDBU - 27.872');
     expect(doc).toContain('7.777.777');
@@ -262,5 +269,41 @@ describe('HuskFormComponent - gates de captura', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  it('prueba del 10-nov: without a cellphone it warns, waits for Celular and calculates once it is typed', () => {
+    setup(growerWithoutPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
+
+    component.dismissError();
+    fillEverythingAfterGrower();
+    expect(previewSpy).not.toHaveBeenCalled();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
+    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(previewSpy.mock.calls[0][0].cellphone).toBe('3001112233');
+  });
+
+  it('a rejected preview shows the message of the server, not the generic one', () => {
+    setup(growerWithPhone);
+    previewSpy.mockReturnValue(throwError(() => ({ error: { message: 'Digite el celular del vendedor.' } })));
+    component.model['idPart1'] = growerWithPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    fillEverythingAfterGrower();
+    expect(component.errorMessage()).toBe('Digite el celular del vendedor.');
+  });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Cédula', () => {
+    setup(growerWithPhone);
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.reset();
+    expect(focus).toHaveBeenLastCalledWith('idPart1');
   });
 });

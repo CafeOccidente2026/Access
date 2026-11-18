@@ -1,16 +1,16 @@
 <div class="flex h-screen flex-col bg-white p-3">
   <app-access-window title="REIMPRIMIR REMISIÓN" bodyClass="bg-white flex-1 flex flex-col">
     <div class="flex flex-1 flex-col gap-3 p-4">
-      <div class="flex items-end gap-3">
+      <div class="flex items-end gap-3" appFormFlow>
         <div class="flex w-56 flex-col gap-1 text-sm">
           <span class="font-medium text-blue-900">Pto Compra</span>
           <app-agency-picker [ariaLabel]="'Pto Compra'"></app-agency-picker>
         </div>
         <label class="flex flex-col gap-1 text-sm">
           <span class="font-medium text-blue-900">N° de Remisión</span>
-          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="remissionNumber()" (input)="remissionNumber.set($any($event.target).value)" (keyup.enter)="search()" />
+          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="remissionNumber()" (input)="remissionNumber.set($any($event.target).value)" />
         </label>
-        <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="search()">
+        <button type="button" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="search()">
           Aceptar
         </button>
         <p *ngIf="message() as m" class="pb-1.5 text-sm text-red-600">{{ m }}</p>

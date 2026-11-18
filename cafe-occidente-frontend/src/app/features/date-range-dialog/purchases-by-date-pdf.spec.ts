@@ -12,7 +12,7 @@ function row(over: Partial<PurchaseReportRow>): PurchaseReportRow {
     specialType: 'RN', productCode: '0110002000002', productName: null, announcementNumber: 'SDBU-4', idNumber: '990006002',
     firstName: 'PRUEBA', lastName: 'REPORTE', greenKg: null, netKg: 1000, factor: 92.11, unitPrice: 12417, grossValue: 12417000,
     inventoryValue: 12417000, associateContribution: 0, cooperativeDiscount: 99336, freightDiscount: 0, withholding: 62085,
-    otherDiscounts: 0, netToPay: 12255579, paymentMethod: 'EFECTIVO', status: 'VALIDA', ...over,
+    otherDiscounts: 0, netToPay: 12255579, paymentMethod: 'EFECTIVO', status: 'VALIDA', announcementDate: '2026-05-09', ...over,
   };
 }
 
@@ -36,7 +36,7 @@ describe('Compras por fecha (RF-25)', () => {
   it('shows a purchase with its prefix, its factor as Porc and empty Porc when it does not apply', () => {
     const body = table([row({}), row({ invoiceNumber: 27871, module: 'GREEN', specialType: 'CV', factor: null })]);
     const dry = body[2].map(cell);
-    expect(dry.slice(0, 8)).toEqual(['4', '29/10/2026', 'RP', 'SDBU 27869', '990006002', '1.000,00', '92,11', '12.417']);
+    expect(dry.slice(0, 8)).toEqual(['BU-4', '29/10/2026', 'RP', 'SDBU 27869', '990006002', '1.000', '92,11', '12.417']);
     expect(dry[14]).toBe('12.255.579');
     expect(body[3].map(cell)[6]).toBe('');
   });
@@ -57,7 +57,7 @@ describe('Compras por fecha (RF-25)', () => {
   it('an annulled purchase shows its values in zero and ANULADA', () => {
     const body = table([row({ status: 'ANULADA', paymentMethod: 'ANULADA', netKg: 0, netToPay: 0, inventoryValue: 0 })]);
     const r = body[2].map(cell);
-    expect(r[5]).toBe('0,00');
+    expect(r[5]).toBe('0');
     expect(r[14]).toBe('0');
     expect(r[15]).toBe('RN ANULADA');
   });
@@ -67,7 +67,7 @@ describe('Compras por fecha (RF-25)', () => {
     const footer = JSON.stringify((doc.footer as (p: number, n: number) => unknown)(2, 5));
     expect(footer).toContain('Página 2 de 5');
     expect(footer).toContain('29/10/2026');
-    expect(JSON.stringify(doc.content)).toContain('Desde 1/10/2026 hasta 29/10/2026');
+    expect(JSON.stringify(doc.content)).toContain('Desde 01/10/2026 hasta 29/10/2026');
     expect(doc.pageOrientation).toBe('landscape');
   });
 

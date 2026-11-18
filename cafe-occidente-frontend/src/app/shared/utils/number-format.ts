@@ -59,6 +59,15 @@ export function stripAnnouncementPrefix(value: string): string {
   return idx === -1 ? value : value.slice(idx + 1);
 }
 
+/**
+ * R4 (17-nov): el anuncio se muestra con el identificador del punto, "SDTA-3738" -> "TA-3738". "SD" es de los
+ * documentos soporte (lo da la resolucion DIAN), no del anuncio. Se guarda igual; solo cambia lo que se ve.
+ */
+export function announcementDisplay(value: string | null | undefined): string {
+  const text = value ?? '';
+  return /^SD[^-]*-/.test(text) ? text.slice(2) : text;
+}
+
 /** Valida un campo numerico entero sin decimales (precios de anuncio: Pr Base Carga, SobrePr,
  *  Precio Pasilla, Pr Por Punto) mientras el usuario escribe. Devuelve el mensaje de error a
  *  mostrar cerca del campo, o null si el valor (posiblemente vacio, mientras se sigue escribiendo)
@@ -98,4 +107,46 @@ export function parseDisplayNumber(value: string | undefined | null): number {
 export function asPenalty(value: string): string {
   const digits = value.trim().replace(/^[+-]/, '');
   return parseDisplayNumber(digits) === 0 ? '0' : `-${digits}`;
+}
+
+type Shown = string | number | null | undefined;
+
+/** El número de un valor de pantalla o del servidor; null si viene vacío o no es número. */
+function numeric(value: Shown): number | null {
+  if (value === '' || value === null || value === undefined) {
+    return null;
+  }
+  const num = typeof value === 'number' ? value : Number.parseFloat(normalizeDecimalComma(value));
+  return Number.isNaN(num) ? null : num;
+}
+
+const esCO = (num: number, decimals: number, fixed: boolean) =>
+  num.toLocaleString('es-CO', { minimumFractionDigits: fixed ? decimals : 0, maximumFractionDigits: decimals });
+
+/** Hallazgo #1 (prueba del 16-nov): dinero sin decimales, en pesos enteros redondeados como se guardan (Q3). */
+export function formatMoney(value: Shown): string {
+  const num = numeric(value);
+  return num === null ? String(value ?? '') : esCO(Math.sign(num) * Math.round(Math.abs(num)), 0, false);
+}
+
+/** Kilos: sin ",00" cuando son enteros; con decimales reales, dos y cortando hacia cero (101,50). */
+export function formatKilos(value: Shown): string {
+  const num = numeric(value);
+  if (num === null) {
+    return String(value ?? '');
+  }
+  const cut = truncateToCents(num);
+  return esCO(cut, 2, !Number.isInteger(cut));
+}
+
+/** Porcentajes y pesos de la muestra: como se digitan (7,1), hasta dos decimales cortando hacia cero. */
+export function formatTyped(value: Shown): string {
+  const num = numeric(value);
+  return num === null ? String(value ?? '') : esCO(truncateToCents(num), 2, false);
+}
+
+/** Fechas dd/mm/aaaa, de yyyy-mm-dd (o de un yyyy-mm-ddThh:mm del servidor). */
+export function formatDate(value: string | null | undefined): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? '');
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : (value ?? '');
 }

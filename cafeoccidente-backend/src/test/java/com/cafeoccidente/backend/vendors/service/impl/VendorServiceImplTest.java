@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
@@ -16,6 +17,8 @@ import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.vendors.dto.VendorCreateRequest;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,10 +27,13 @@ import org.mockito.ArgumentCaptor;
 
 class VendorServiceImplTest {
 
+    /** 2026-01-14 20:00 en Colombia (ya 2026-01-15 en UTC). */
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-15T01:00:00Z"), ClockConfig.COLOMBIA);
+
     private final GrowerRepository growers = mock(GrowerRepository.class);
     private final AgencyRepository agencies = mock(AgencyRepository.class);
     private final ControlRecordRepository controlRecords = mock(ControlRecordRepository.class);
-    private final VendorServiceImpl service = new VendorServiceImpl(growers, agencies, controlRecords);
+    private final VendorServiceImpl service = new VendorServiceImpl(growers, agencies, controlRecords, CLOCK);
     private final Agency agency = new Agency();
 
     @BeforeEach
@@ -49,51 +55,89 @@ class VendorServiceImplTest {
     }
 
     @Test
-    void associationKeepsWholeNameInFirstNameWithSexE() {
-        service.create(new VendorCreateRequest(true, " 900723205 ", "FUNDACION SUYUSAMA", "X", "Y", "Z", "M", "300", "CLL 20 24 64", "520001", "a@b.co"), 4L);
+    void legalPersonKeepsBusinessNameClassificationAndContactData() {
+        service.create(legal(" 990723205 ", " FUNDACION PRUEBA ", "FUNDACION", "M"), 4L);
 
         Grower g = saved();
-        assertThat(g.getIdNumber()).isEqualTo("900723205");
-        assertThat(g.getFirstName()).isEqualTo("FUNDACION SUYUSAMA");
-        // La pantalla de 6 items no tiene apellidos, sexo, telefono, postal ni email.
+        assertThat(g.getIdNumber()).isEqualTo("990723205");
+        assertThat(g.getBusinessName()).isEqualTo("FUNDACION PRUEBA");
+        // Compras y los informes muestran primer_nombre: la razon social va tambien ahi.
+        assertThat(g.getFirstName()).isEqualTo("FUNDACION PRUEBA");
+        assertThat(g.getClassification()).isEqualTo("FUNDACION");
         assertThat(g.getLastName()).isNull();
         assertThat(g.getSecondName()).isNull();
-        assertThat(g.getSex()).isEqualTo("E");
-        assertThat(g.getPhone()).isEmpty();
-        assertThat(g.getPostalCode()).isNull();
-        assertThat(g.getEmail()).isNull();
+        assertThat(g.getSex()).isEqualTo("M");
+        assertThat(g.getPhone()).isEqualTo("3001234567");
+        assertThat(g.getPostalCode()).isEqualTo("520001");
+        assertThat(g.getEmail()).isEqualTo("info@prueba.org");
         assertThat(g.getIsAssociation()).isTrue();
-        assertThat(g.getAddress()).isEqualTo("CLL 20 24 64");
+        assertThat(g.getAddress()).isEqualTo("CALLE PRUEBA 1");
         assertThat(g.getGrowerType()).isEqualTo("C");
-        assertThat(g.getAffiliationDate()).isEqualTo(LocalDate.now());
+        assertThat(g.getAffiliationDate()).isEqualTo(LocalDate.of(2026, 1, 14));
         assertThat(g.getAgency()).isSameAs(agency);
         assertThat(g.getRegistryNumber()).isEqualTo(2);
         assertThat(g.getExported()).isFalse();
     }
 
     @Test
+    void legalPersonWithoutSexIsE() {
+        service.create(legal("990723205", "ASOCIACION ASOPEMA", "ASOCIACION", null), 4L);
+
+        assertThat(saved().getSex()).isEqualTo("E");
+    }
+
+    @Test
+    void legalPersonNeedsBusinessNameAndClassification() {
+        assertThatThrownBy(() -> service.create(legal("990723205", " ", "ASOCIACION", "E"), 4L))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Razón Social");
+        assertThatThrownBy(() -> service.create(legal("990723205", "ASOPEMA", null, "E"), 4L))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Clasificación");
+        verify(growers, never()).save(any());
+    }
+
+    @Test
+    void naturalPersonNeedsFirstName() {
+        assertThatThrownBy(() -> service.create(natural("99124124", " "), 4L))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("1er Nombre");
+        verify(growers, never()).save(any());
+    }
+
+    private static VendorCreateRequest legal(String nit, String businessName, String classification, String sex) {
+        return new VendorCreateRequest(true, nit, null, null, null, null, sex, "3001234567", "CALLE PRUEBA 1",
+                "520001", "info@prueba.org", businessName, classification);
+    }
+
+    private static VendorCreateRequest natural(String idNumber, String firstName) {
+        return new VendorCreateRequest(false, idNumber, firstName, null, null, null, null, null, null, null, null,
+                null, null);
+    }
+
+    @Test
     void personKeepsAllThirteenFields() {
-        service.create(new VendorCreateRequest(false, "59124124", "AURA", "MARIA", "TUTISTAR", " ", "F", "3001234567", "VDA LA PALMA", "522060", "aura@correo.co"), 4L);
+        service.create(new VendorCreateRequest(false, "99124124", "ASOCIADA", "MARIA", "PRUEBA", " ", "F", "3001234567",
+                "VDA LA PALMA", "522060", "aura@correo.co", "IGNORADA", "ASOCIACION"), 4L);
 
         Grower g = saved();
         assertThat(g.getSecondName()).isEqualTo("MARIA");
-        assertThat(g.getLastName()).isEqualTo("TUTISTAR");
+        assertThat(g.getLastName()).isEqualTo("PRUEBA");
         assertThat(g.getSecondLastName()).isNull();
         assertThat(g.getSex()).isEqualTo("F");
         assertThat(g.getPhone()).isEqualTo("3001234567");
         assertThat(g.getPostalCode()).isEqualTo("522060");
         assertThat(g.getEmail()).isEqualTo("aura@correo.co");
         assertThat(g.getIsAssociation()).isFalse();
+        assertThat(g.getBusinessName()).isNull();
+        assertThat(g.getClassification()).isNull();
         assertThat(g.getAccepted()).isFalse();
         assertThat(g.getEligible()).isFalse();
     }
 
     @Test
     void duplicateIdNumberIsRejected() {
-        when(growers.findByIdNumber("59124124")).thenReturn(Optional.of(new Grower()));
+        when(growers.findByIdNumber("99124124")).thenReturn(Optional.of(new Grower()));
 
-        assertThatThrownBy(() -> service.create(new VendorCreateRequest(false, "59124124", "AURA", null, null,
-                null, null, null, null, null, null), 4L)).isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(() -> service.create(natural("99124124", "ASOCIADA"), 4L))
+                .isInstanceOf(BusinessRuleException.class);
         verify(growers, never()).save(any());
     }
 }

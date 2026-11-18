@@ -65,7 +65,7 @@ describe('HistoryComponent', () => {
 
     search.mockReturnValue(throwError(() => new Error('500')));
     component.search();
-    expect(component.error()).toBe(true);
+    expect(component.error()).toBeTruthy();
   });
 
   it('RF-02: with the screen granted, a non administrator only filters by their own agency, without users', () => {

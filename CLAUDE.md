@@ -1,5 +1,8 @@
 # CaféOccidente — Migración de Access a web
 
+> **Regla obligatoria: responde siempre en español, también en los resúmenes y las tablas.** Vale para todo lo que
+> se le escribe al usuario: respuestas, avisos, preguntas, planes, commits y PR.
+
 Monorepo: `cafe-occidente-frontend/` (Angular 22) y `cafeoccidente-backend/` (Spring Boot 4.1.1,
 Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, ambos en la raíz.
 
@@ -14,7 +17,8 @@ Java 21, PostgreSQL 18, Flyway). Un solo `README.md` y un solo `.gitignore`, amb
    salvo lo que el RF cambie explícitamente.
 4. **`capturas/`** es la referencia visual de Access; `docs/legacy-vba-export/` tiene el VBA.
    Las dos carpetas son locales.
-5. RF-22 Inventarios y RF-29 Contabilizado están pendientes de levantamiento: no se inventan reglas.
+5. RF-22 Inventarios está pendiente de levantamiento: no se inventan reglas. RF-29 Contabilizado no se
+   implementa (decisión del área, 11-nov): se hace en el programa contable de la cooperativa.
 6. Si el RF es ambiguo o contradice otra fuente: preguntar, no suponer.
 7. **`docs/traspaso-fase6.md`** (local): estado por fase y PR, decisiones Q1–Q37 en una línea y
    pendientes. Leerlo al empezar una conversación nueva.

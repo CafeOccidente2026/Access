@@ -5,11 +5,14 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
+import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
 import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
 import com.cafeoccidente.backend.purchases.future.repository.FuturePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import com.cafeoccidente.backend.purchases.future.service.DeliveryRule;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.shared.dto.GrowerResponse;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
@@ -18,14 +21,18 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * "Compras a Futuro" (Form_COMPRAS A FUTURO.bas): registra el compromiso de entrega, sin cascada
- * de precio ni factura (ver FuturePurchase). "Fondo" fijo en RP: el formulario real no tiene
- * Cuadro combinado37 (Fondo) - el anuncio vigente se busca directo por agencia+Especial.
+ * "Ingresar Compras a Futuro" (RF-21.4): registra el compromiso de entrega, sin cascada de precio ni factura
+ * (ver FuturePurchase). "Fondo" fijo en RP: el formulario de Access no tiene Fondo. El anuncio lo elige el
+ * usuario: el ultimo del especial, sea o no de hoy, como Access (R6, 17-nov; RN-21.4.3 decia solo los de hoy).
  */
 @Service
 public class FuturePurchaseServiceImpl implements FuturePurchaseService {
@@ -39,6 +46,7 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
     private final GrowerService growerService;
     private final SecurityUtils securityUtils;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final Clock clock;
 
     public FuturePurchaseServiceImpl(
             FuturePurchaseRepository futurePurchaseRepository,
@@ -46,7 +54,7 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
             FundRepository fundRepository,
             AnnouncementService announcementService,
             GrowerService growerService,
-            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider) {
+            SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider, Clock clock) {
         this.futurePurchaseRepository = futurePurchaseRepository;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -54,6 +62,27 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
         this.growerService = growerService;
         this.securityUtils = securityUtils;
         this.currentAgencyProvider = currentAgencyProvider;
+        this.clock = clock;
+    }
+
+    @Override
+    public List<AnnouncementResponse> todayAnnouncements(String specialType) {
+        Long fundId = rpFund().getId();
+        // C6: el ultimo anuncio del especial (la historia viene del mas nuevo al mas viejo). R6 (17-nov): aunque no
+        // sea de hoy, como Access (macro "Asignar numero anuncio ... PFuture Buys" con ULTIMO ANUN ... PARA COMPRAS).
+        return announcementService.history().stream()
+                .filter(a -> a.fundId().equals(fundId) && a.specialType().equals(specialType))
+                .limit(1)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public FuturePlaceResponse lastPlace(String idNumber) {
+        return futurePurchaseRepository
+                .findFirstByAgencyIdAndIdNumberOrderByIdDesc(currentAgencyProvider.currentAgencyId(), idNumber.trim())
+                .map(p -> new FuturePlaceResponse(p.getFinca(), p.getMunicipality(), p.getVereda()))
+                .orElse(null);
     }
 
     @Override
@@ -63,6 +92,13 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         GrowerResponse grower = growerService.findByIdNumber(request.idNumber());
 
+        // Hallazgos #10 y #16 (prueba del 16-nov): kilos en 0 y entregas con fecha pasada no se anuncian.
+        if (request.announcedKg().signum() <= 0) {
+            throw new BusinessRuleException("Los kilos anunciados deben ser mayores que 0");
+        }
+        if (request.deliveryDate().isBefore(LocalDate.now(clock))) {
+            throw new BusinessRuleException("La fecha de entrega no puede ser anterior a hoy");
+        }
         // Texto34_AfterUpdate: "NO LE PUEDE ANUNCIAR A UN FALLECIDO".
         if ("F".equalsIgnoreCase(grower.growerType())) {
             throw new BusinessRuleException("No se le puede anunciar una entrega futura a un caficultor fallecido");
@@ -70,10 +106,15 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
         // Texto34_AfterUpdate: bloqueo de pertenencia a programa (Id_NessOcci) - ver GrowerService.
         growerService.requireProgramMembership(request.idNumber(), request.specialType());
 
-        Fund fund = fundRepository.findByCode(FUND_CODE)
-                .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
-        AnnouncementResponse announcement =
-                announcementService.findLatest(agency.getId(), fund.getId(), request.specialType());
+        AnnouncementResponse announcement = announcementService.findForPurchase(
+                agency.getId(), rpFund().getId(), request.specialType(), request.announcementNumber());
+        // R6 (17-nov): el anuncio vigente del especial (el ultimo, sea o no de hoy); si se publico otro mientras se
+        // digitaba, se elige de nuevo.
+        AnnouncementResponse latest = announcementService.findLatest(agency.getId(), rpFund().getId(), request.specialType());
+        if (!latest.announcementNumber().equals(announcement.announcementNumber())) {
+            throw new BusinessRuleException("El anuncio " + request.announcementNumber()
+                    + " ya no es el vigente: elija el anuncio otra vez");
+        }
 
         FuturePurchase purchase = new FuturePurchase();
         purchase.setCreatedAt(Instant.now());
@@ -106,6 +147,11 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
         return toResponse(futurePurchaseRepository.save(purchase));
     }
 
+    private Fund rpFund() {
+        return fundRepository.findByCode(FUND_CODE)
+                .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
+    }
+
     @Override
     public FuturePurchaseResponse findById(Long id) {
         // Solo de la agencia de trabajo (RF-05.1): la de otra agencia es "no encontrada", como Consultar Compras.
@@ -113,6 +159,61 @@ public class FuturePurchaseServiceImpl implements FuturePurchaseService {
                 .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Compromiso de compra a futuro no encontrado"));
         return toResponse(purchase);
+    }
+
+    @Override
+    public List<PendingAnnouncementRow> pending(LocalDate from, LocalDate to, boolean withBalance) {
+        // R5 (17-nov): los dias son de Colombia; "hasta" incluye todo ese dia.
+        LocalDate today = LocalDate.now(clock);
+        return futurePurchaseRepository.pendingByAnnouncement(currentAgencyProvider.currentAgencyId(), withBalance,
+                (from == null ? today : from).atStartOfDay(clock.getZone()).toInstant(),
+                (to == null ? today : to).plusDays(1).atStartOfDay(clock.getZone()).toInstant());
+    }
+
+    @Override
+    public List<FuturePurchaseResponse> openFor(String idNumber) {
+        return futurePurchaseRepository.findByAgencyIdAndIdNumberAndRemainingKgGreaterThanOrderByIdAsc(
+                currentAgencyProvider.currentAgencyId(), idNumber, BigDecimal.ZERO).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    public FuturePurchase forBilling(Long id, String idNumber, boolean lock) {
+        FuturePurchase purchase = (lock ? futurePurchaseRepository.lockById(id) : futurePurchaseRepository.findById(id))
+                .filter(p -> p.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Compra anunciada no encontrada"));
+        if (idNumber != null && !purchase.getIdNumber().equals(idNumber)) {
+            throw new BusinessRuleException("La cédula no es la de la compra anunciada");
+        }
+        return purchase;
+    }
+
+    @Override
+    public AnnouncementResponse billingAnnouncement(FuturePurchase purchase, Long fundId) {
+        return new AnnouncementResponse(
+                null,
+                purchase.getAnnouncementNumber(),
+                purchase.getAnnouncementDate(),
+                purchase.getBasePriceLoad(),
+                purchase.getDefectiveUnitPrice(),
+                purchase.getHealthyUnitPrice(),
+                purchase.getBonus(),
+                purchase.getCosts(),
+                purchase.getAgency().getId(),
+                fundId,
+                purchase.getSpecialType(),
+                purchase.getQualityIncrement());
+    }
+
+    /** MANDATORY: solo dentro de la transaccion que guarda la compra (con la fila ya bloqueada). */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void deliver(FuturePurchase purchase, BigDecimal deliveryKg, BigDecimal netKg) {
+        DeliveryRule.check(purchase.getRemainingKg(), deliveryKg, netKg, "de la compra anunciada");
+        purchase.setRemainingKg(purchase.getRemainingKg().subtract(netKg));
+        // Escrito ya: el SQL que siga en esta transaccion (p. ej. la anulacion) ve el saldo nuevo.
+        futurePurchaseRepository.saveAndFlush(purchase);
     }
 
     private FuturePurchaseResponse toResponse(FuturePurchase purchase) {

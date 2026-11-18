@@ -5,7 +5,8 @@ import java.time.LocalDate;
 
 /**
  * Fila comun de los informes de Suministros. balance = Saldo (RunningSum de Entradas - Salidas) en
- * los informes de movimiento; null en Relacion Cheques y Forma de Pago, que no lo tienen.
+ * los informes de movimiento; null en Relacion Cheques y Forma de Pago, que no lo tienen. card = Valor del
+ * Informe Datafono (C5); null en los demas informes.
  */
 public record SuppliesReportRow(
         String agencyName,
@@ -20,5 +21,6 @@ public record SuppliesReportRow(
         BigDecimal outflow,
         BigDecimal balance,
         String paymentMethod,
-        Integer checkNumber) {
+        String checkNumber,
+        BigDecimal card) {
 }

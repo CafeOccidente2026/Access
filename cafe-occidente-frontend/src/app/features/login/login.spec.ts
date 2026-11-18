@@ -10,12 +10,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { LoginComponent } from './login';
 
-function loginFailingWith(body: unknown): LoginComponent {
+function loginFailingWith(body: unknown, status = 401): LoginComponent {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: ContentService, useValue: { loadJson: (name: string) => of(name === 'login' ? loginContent : shellContent) } },
-      { provide: AuthService, useValue: { login: () => throwError(() => new HttpErrorResponse({ status: 401, error: body })) } },
+      { provide: AuthService, useValue: { login: () => throwError(() => new HttpErrorResponse({ status, error: body })) } },
     ],
   });
   const component = TestBed.createComponent(LoginComponent).componentInstance;
@@ -34,5 +34,11 @@ describe('LoginComponent', () => {
   it('a wrong password keeps the usual message', () => {
     const component = loginFailingWith({ message: 'Usuario o contrasena invalidos' });
     expect(component.errorMessage()).toBe('Usuario o contraseña incorrectos');
+  });
+
+  it('S4: after too many attempts it says how long to wait, as the server says', () => {
+    const message = 'Demasiados intentos fallidos. Intente de nuevo en 12 minutos.';
+    const component = loginFailingWith({ code: 'LOGIN_LOCKED', message }, 429);
+    expect(component.errorMessage()).toBe(message);
   });
 });

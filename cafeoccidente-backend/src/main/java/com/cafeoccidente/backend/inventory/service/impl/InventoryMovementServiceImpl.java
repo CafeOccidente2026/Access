@@ -13,6 +13,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,19 +75,26 @@ public class InventoryMovementServiceImpl implements InventoryMovementService {
 
     @Override
     public List<InventoryMovementResponse> listByAgency(Long agencyId) {
+        Map<Long, Object[]> sellers = sellerAndFund(agencyId);
         return inventoryMovementRepository.findByAgencyIdOrderByPurchaseDateDesc(agencyId).stream()
-                .map(InventoryMovementServiceImpl::toResponse)
+                .map(movement -> toResponse(movement, sellers))
                 .toList();
     }
 
     @Override
     public InventoryMovementResponse findById(Long id) {
-        return inventoryMovementRepository.findById(id)
-                .map(InventoryMovementServiceImpl::toResponse)
+        InventoryMovement movement = inventoryMovementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Movimiento de inventario no encontrado"));
+        return toResponse(movement, sellerAndFund(movement.getAgency().getId()));
     }
 
-    private static InventoryMovementResponse toResponse(InventoryMovement movement) {
+    private Map<Long, Object[]> sellerAndFund(Long agencyId) {
+        return inventoryMovementRepository.findSellerAndFund(agencyId).stream()
+                .collect(Collectors.toMap(row -> ((Number) row[0]).longValue(), row -> row));
+    }
+
+    private static InventoryMovementResponse toResponse(InventoryMovement movement, Map<Long, Object[]> sellers) {
+        Object[] seller = sellers.getOrDefault(movement.getId(), new Object[3]);
         return new InventoryMovementResponse(
                 movement.getId(),
                 movement.getPurchaseModule(),
@@ -101,6 +110,8 @@ public class InventoryMovementServiceImpl implements InventoryMovementService {
                 movement.getNetKg(),
                 movement.getRemainingKg(),
                 movement.getHealthyPercentage(),
-                movement.getInventoryValue());
+                movement.getInventoryValue(),
+                (String) seller[1],
+                (String) seller[2]);
     }
 }

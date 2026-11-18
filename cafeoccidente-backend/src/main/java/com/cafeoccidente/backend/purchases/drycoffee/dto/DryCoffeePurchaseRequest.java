@@ -14,6 +14,9 @@ import java.math.BigDecimal;
  * Factura, Pr Sustentacion, Bonificacion, Costos, Pr_AlmDefec y los datos del vendedor los resuelve
  * el servidor (anuncio vigente, consecutivo y TERCEROS); si el cliente los manda, se ignoran.
  * address y cellphone solo se usan cuando el tercero los tiene vacios.
+ * quotaAnnouncementNumber lo manda "Facturar Anuncios con Cupos" (RF-21.2): el anuncio con cupo elegido (sus precios
+ * mandan sobre los del anuncio vigente). futurePurchaseId lo manda "Facturar Compras Anunciadas" (RF-21.5): la compra
+ * anunciada elegida (sus precios y su especial mandan). deliveryKg es "Esta Entrega" en las dos.
  */
 public record DryCoffeePurchaseRequest(
         @NotNull Long fundId,
@@ -31,5 +34,29 @@ public record DryCoffeePurchaseRequest(
         @NotNull @PositiveOrZero BigDecimal freightDiscount,
         @NotNull @PositiveOrZero BigDecimal otherDiscounts,
         /** Panel FORMAS DE PAGO; solo create() lo exige (preview calcula antes de que se llene). */
-        @Valid PurchasePaymentRequest payment) {
+        @Valid PurchasePaymentRequest payment,
+        @Positive Integer quotaAnnouncementNumber,
+        @Positive BigDecimal deliveryKg,
+        @Positive Long futurePurchaseId,
+        /** Hallazgo #6: el anuncio con que empezo la compra (el de la pantalla); null = el vigente. */
+        @Positive Integer startedAnnouncementNumber) {
+
+    /** Sin anuncio de inicio: el vigente (Cupos, Anunciadas y los tests). */
+    public DryCoffeePurchaseRequest(Long fundId, String specialType, String idNumber, String address, String cellphone,
+            Integer bagsCount, BigDecimal grossKg, BigDecimal tareKg, BigDecimal totalStoredWeight,
+            BigDecimal defectiveStoredWeight, BigDecimal penalty, BigDecimal freightDiscount, BigDecimal otherDiscounts,
+            PurchasePaymentRequest payment, Integer quotaAnnouncementNumber, BigDecimal deliveryKg, Long futurePurchaseId) {
+        this(fundId, specialType, idNumber, address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight,
+                defectiveStoredWeight, penalty, freightDiscount, otherDiscounts, payment, quotaAnnouncementNumber, deliveryKg,
+                futurePurchaseId, null);
+    }
+
+    /** Compra de seco normal: con el anuncio vigente. */
+    public DryCoffeePurchaseRequest(Long fundId, String specialType, String idNumber, String address, String cellphone,
+            Integer bagsCount, BigDecimal grossKg, BigDecimal tareKg, BigDecimal totalStoredWeight,
+            BigDecimal defectiveStoredWeight, BigDecimal penalty, BigDecimal freightDiscount, BigDecimal otherDiscounts,
+            PurchasePaymentRequest payment) {
+        this(fundId, specialType, idNumber, address, cellphone, bagsCount, grossKg, tareKg, totalStoredWeight,
+                defectiveStoredWeight, penalty, freightDiscount, otherDiscounts, payment, null, null, null);
+    }
 }

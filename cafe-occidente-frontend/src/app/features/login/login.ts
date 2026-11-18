@@ -81,10 +81,16 @@ export class LoginComponent {
         this.navigation.goTo(
           this.auth.isAdmin() ? this.page()?.form.successRoute : this.page()?.form.userSuccessRoute,
         ),
-      // El servidor marca con code USER_DISABLED al usuario desactivado que digito bien su contrasena.
+      // El servidor marca con code USER_DISABLED al usuario desactivado que digito bien su contrasena, y con
+      // LOGIN_LOCKED la espera por intentos fallidos (S4): ese mensaje dice cuanto falta.
       error: (error: unknown) => {
         const form = this.page()?.form;
-        const disabled = error instanceof HttpErrorResponse && error.error?.code === 'USER_DISABLED';
+        const code = error instanceof HttpErrorResponse ? error.error?.code : undefined;
+        if (code === 'LOGIN_LOCKED') {
+          this.errorMessage.set((error as HttpErrorResponse).error.message);
+          return;
+        }
+        const disabled = code === 'USER_DISABLED';
         this.errorMessage.set((disabled ? form?.userDisabledError : form?.invalidCredentialsError) ?? null);
       },
     });

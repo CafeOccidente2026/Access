@@ -15,6 +15,12 @@ export class SuppliesService {
     return this.http.post<SuppliesEntryResponse>(`${API_BASE_URL}/supplies/${endpoint}`, request);
   }
 
+  /** El Id que tomaria la proxima alta de la pantalla (RF §2.1); value es el fondo o el tipo de empaque. */
+  nextTransactionId(screen: string, value: string | null): Observable<{ transactionId: string }> {
+    const params: Record<string, string> = value ? { screen, value } : { screen };
+    return this.http.get<{ transactionId: string }>(`${API_BASE_URL}/supplies/next-id`, { params });
+  }
+
   /** Relacion Cheques es POST: como en Access, marca los cheques que devuelve. */
   report(endpoint: string, params: Record<string, string | number | null>, post = false): Observable<SuppliesReportRow[]> {
     let httpParams = new HttpParams();

@@ -7,7 +7,7 @@ SobrePr = bonificacion x Base Carga del Registro de Control activo de la agencia
     python scripts/completar_sobrepr_anuncios.py            # solo muestra lo que haria
     python scripts/completar_sobrepr_anuncios.py --aplicar  # escribe
 
-DB_NAME del entorno elige la base, como en migrate_eltambo.py.
+DB_NAME del entorno elige la base, como en migrar_punto.py.
 """
 
 import os

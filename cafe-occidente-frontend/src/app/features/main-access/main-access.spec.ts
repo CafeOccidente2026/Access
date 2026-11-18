@@ -47,6 +47,10 @@ describe('MainAccessComponent', () => {
     expect(labels(render('OPERACIONES', ['ACCESO_TABLAS']))).toEqual(['Menú Principal', 'Acceso a Tablas']);
   });
 
+  it('HU-05: the User with Corregir Compra sees Menú Habilitación', () => {
+    expect(labels(render('USUARIO', ['CORREGIR_COMPRA']))).toEqual(['Menú Principal', 'Menú Habilitación']);
+  });
+
   it('welcomes the user of the session', () => {
     expect(render('ADMINISTRADOR').textContent).toContain('jperez');
   });

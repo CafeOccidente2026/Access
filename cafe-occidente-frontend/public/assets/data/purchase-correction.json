@@ -1,0 +1,75 @@
+{
+  "windowTitle": "MENÚ HABILITACIÓN - CORREGIR COMPRA",
+  "invoiceLabel": "Factura",
+  "searchLabel": "Buscar",
+  "backLabel": "Volver",
+  "backRoute": "/acceso-principal",
+  "navigation": [
+    { "direction": "FIRST", "label": "|◄", "title": "Primera compra" },
+    { "direction": "PREV", "label": "◄", "title": "Compra anterior" },
+    { "direction": "NEXT", "label": "►", "title": "Compra siguiente" },
+    { "direction": "LAST", "label": "►|", "title": "Última compra" }
+  ],
+  "modules": { "DRY": "Café Seco", "GREEN": "Café Verde", "HUSK": "Pasilla" },
+  "heading": "Corrección (misma factura, precios del anuncio original)",
+  "fields": {
+    "DRY": [
+      { "key": "totalStoredWeight", "label": "Peso Tot Alm" },
+      { "key": "defectiveStoredWeight", "label": "Peso Tot Pasilla" },
+      { "key": "bagsCount", "label": "Sacos" },
+      { "key": "grossKg", "label": "Kilos Brutos" },
+      { "key": "tareKg", "label": "Destare" },
+      { "key": "penalty", "label": "Castigo" },
+      { "key": "freightDiscount", "label": "Descuento Fro" },
+      { "key": "otherDiscounts", "label": "Otros Desctos" },
+      { "key": "address", "label": "Dirección", "text": true },
+      { "key": "cellphone", "label": "Celular", "text": true }
+    ],
+    "GREEN": [
+      { "key": "bagsCount", "label": "Sacos" },
+      { "key": "grossKg", "label": "Kilos Brutos" },
+      { "key": "tareKg", "label": "Destare" },
+      { "key": "penalty", "label": "Castigo" },
+      { "key": "shrinkageDiscount", "label": "Descuento Fro" },
+      { "key": "otherDiscounts", "label": "Otros Dscts" },
+      { "key": "address", "label": "Dirección", "text": true },
+      { "key": "cellphone", "label": "Cel", "text": true }
+    ],
+    "HUSK": [
+      { "key": "almondWeight", "label": "Peso Almendra" },
+      { "key": "bagsCount", "label": "Sacos" },
+      { "key": "grossKg", "label": "Kilos Brutos" },
+      { "key": "tareKg", "label": "Destare" },
+      { "key": "shrinkageDiscount", "label": "Descuento Fro" },
+      { "key": "otherDiscounts", "label": "Otros Dscts" },
+      { "key": "address", "label": "Dirección", "text": true },
+      { "key": "cellphone", "label": "Cel", "text": true }
+    ]
+  },
+  "paymentFields": [
+    { "key": "cashAmount", "label": "Efectivo" },
+    { "key": "checkAmount", "label": "Cheque" },
+    { "key": "checkNumber", "label": "N° Cheque", "text": true },
+    { "key": "transferAmount", "label": "Transferencia" },
+    { "key": "cardAmount", "label": "Datáfono" }
+  ],
+  "results": [
+    { "key": "netKg", "label": "Kilos Netos" },
+    { "key": "grossValue", "label": "Vr. Bruto" },
+    { "key": "withholding", "label": "Retefuente" },
+    { "key": "netToPay", "label": "Neto a Pagar" }
+  ],
+  "beforeLabel": "Antes",
+  "afterLabel": "Corregida",
+  "paymentTotalLabel": "Tot F de Pago",
+  "saveLabel": "Guardar Corrección",
+  "messages": {
+    "notFound": "No hay ninguna compra con esa factura",
+    "noMore": "No hay más compras en esa dirección",
+    "error": "No se pudo consultar la compra",
+    "annulled": "La compra está anulada: no se puede corregir",
+    "unbalanced": "FORMA DE PAGO DESCUADRADA, REVISE",
+    "saved": "Factura {invoice} corregida. Se reimprime igual desde Consultar Compras.",
+    "saveError": "No se pudo guardar la corrección"
+  }
+}

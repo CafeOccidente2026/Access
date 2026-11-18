@@ -9,8 +9,20 @@ import java.util.List;
 
 /** Resuelve el anuncio de precio vigente para una agencia/fondo/especial y administra su alta. */
 public interface AnnouncementService {
+    /**
+     * Hallazgo #6: el anuncio con que empezo la compra ({@code startedNumber}, el que se ve en pantalla) si sigue siendo el
+     * vigente o es de hoy; si ya no, la compra se rechaza. Null si no viene (el contexto toma el vigente).
+     */
+    AnnouncementResponse findStarted(Long agencyId, Long fundId, String specialType, Integer startedNumber);
+
     /** Costos/Pr Sustentacion/Bonificacion calculados en vivo con el ControlRecord de esa agencia. */
     AnnouncementResponse findLatest(Long agencyId, Long fundId, String specialType);
+
+    /**
+     * El anuncio de una compra: el vigente o, si viene {@code announcementNumber} (Facturar Anuncios con Cupos,
+     * RF-21.2), ese anuncio de la agencia, que tiene que ser del mismo fondo y especial.
+     */
+    AnnouncementResponse findForPurchase(Long agencyId, Long fundId, String specialType, Integer announcementNumber);
 
     /**
      * "Actualizar Anuncio con Factor" (RF-08): un anuncio maestro por cada tipo de cafe del fondo, cada uno

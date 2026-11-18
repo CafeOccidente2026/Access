@@ -1,53 +1,57 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
-import { Announcement, Fund } from '../../../core/models/dry-coffee-purchase.model';
-import { FuturePurchaseRequest, FuturePurchaseResponse } from '../../../core/models/future-purchase.model';
-import { AnnouncementService } from '../../../core/services/announcement.service';
+import { Announcement } from '../../../core/models/dry-coffee-purchase.model';
+import { FuturePurchaseRequest } from '../../../core/models/future-purchase.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContentService } from '../../../core/services/content.service';
 import { FuturePurchaseService } from '../../../core/services/future-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber } from '../../../shared/utils/number-format';
+import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildFuturePurchaseManifestoDocDefinition } from './future-purchase-invoice';
 import { advanceFocus, focusField } from '../form-focus';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lockFilled } from '../seller-lookup';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { serverError } from '../../../shared/utils/server-error';
+import { federationValues } from '../federation';
+import { localToday } from '../../../shared/utils/local-date';
+import { Observable, map } from 'rxjs';
 
 type FormModel = Record<string, string>;
 
-interface FuturePurchaseMessages {
-  readonly acceptLabel: string;
+interface FuturePurchaseMessages extends PurchaseMessages {
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
+  readonly notInProgram: string;
+  readonly deliveryDatePast: string;
+  readonly kilosNotPositive: string;
 }
 
 type FuturePurchaseContent = PurchaseFormContent & { readonly messages: FuturePurchaseMessages };
 
-/** Fondo fijo en RP: el formulario real (Form_COMPRAS A FUTURO.bas) no tiene Cuadro_combinado37
- *  (Fondo) en ningun lado - el anuncio vigente se busca directo por agencia+Especial, mismo patron
- *  que Verde/Pasilla. */
-const RP_FUND_CODE = 'RP';
+const EDITABLE: string[] = ['idPart1', 'special', 'announcement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
+const REQUIRED: string[] = ['idPart1', 'special', 'announcement', 'kilos', 'deliveryDate'];
+const FOCUS_ORDER: string[] = ['idPart1', 'special', 'announcement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
+/** Q5: Finca, Mpio y Vereda son opcionales. Enter pasa por ellos, pero no se bloquean al confirmarlos (prueba del
+ *  10-nov: lo que se escribia ahi por error ya no se podia corregir) ni hacen esperar a la fecha de entrega. */
+const OPTIONAL: string[] = ['finca', 'municipality', 'vereda'];
+const GATE_ORDER = FOCUS_ORDER.filter((key) => !OPTIONAL.includes(key));
 
-const EDITABLE: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
-const REQUIRED: string[] = ['idPart1', 'special', 'kilos', 'deliveryDate'];
-const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca', 'municipality', 'vereda', 'deliveryDate', 'kilos'];
+/** Texto de cada anuncio en la lista: número y Pr carga perg s (RN-21.4.4). */
+function announcementLabel(a: Announcement): string {
+  return `${announcementDisplay(a.announcementNumber)} · ${formatMoney(a.basePriceLoad)}`;
+}
 
 /**
- * "Ingresar Compras a Futuro" (Form_COMPRAS A FUTURO.bas): sin cascada de precio ni factura - es un
- * compromiso de entrega futura, no una compra liquidada. Cédula busca al caficultor; Especial trae
- * el anuncio vigente (Fondo fijo RP) con sus precios informativos; Kilos_LostFocus simplemente copia
+ * "Ingresar Compras a Futuro" (RF-21.4, Form_COMPRAS A FUTURO.bas): sin cascada de precio ni factura - es un
+ * compromiso de entrega futura, no una compra liquidada. Cédula busca al caficultor; Especial llena la lista de
+ * Anuncio con el anuncio vigente, el último aunque no sea de hoy, como Access (R6, 17-nov), y el elegido trae sus precios
+ * informativos; Imprimir guarda una sola vez y abre el Manifiesto con 2 copias; Kilos_LostFocus simplemente copia
  * SaldoKilos = Kilos (arranca igual al anunciado, se descontará al facturar, RF-21.5). El backend
  * valida fallecido y pertenencia a programa (`GrowerService.requireProgramMembership`) - esos
  * mensajes reales se muestran tal cual los devuelve, no se repiten en el frontend.
@@ -62,7 +66,6 @@ const FOCUS_ORDER: string[] = ['idPart1', 'special', 'qualityIncrement', 'finca'
 export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private readonly content = inject(ContentService);
   private readonly service = inject(FuturePurchaseService);
-  private readonly announcementService = inject(AnnouncementService);
   private readonly growerService = inject(GrowerService);
   private readonly authService = inject(AuthService);
   private readonly elementRef = inject(ElementRef);
@@ -70,18 +73,21 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   private readonly base = toSignal(this.content.loadJson<FuturePurchaseContent>('purchase-form-future'));
   readonly messages = computed<FuturePurchaseMessages | undefined>(() => this.base()?.messages);
   readonly announcementInfo = signal<Announcement | null>(null);
-  readonly result = signal<FuturePurchaseResponse | null>(null);
+  /** El anuncio vigente del especial elegido (R6, 17-nov). */
+  readonly todayAnnouncements = signal<Announcement[]>([]);
+  /** true mientras se guarda: un segundo Imprimir no vuelve a enviar. */
+  readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly blockedByDeceased = signal(false);
   readonly savedNoticeOpen = signal(false);
   /** Compra futura no tiene formas de pago: la plantilla compartida la pide, pero nunca se llena. */
   readonly payment = signal<PurchasePayment | null>(null);
   private readonly tick = signal(0);
+  private readonly announcementOptions = computed(() => this.todayAnnouncements().map(announcementLabel));
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
-  private rpFundId: number | null = null;
 
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
@@ -96,9 +102,6 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   constructor() {
     super();
     this.model['agency'] = this.authService.agencyName() ?? '';
-    this.announcementService.funds().subscribe((list) => {
-      this.rpFundId = list.find((f: Fund) => f.code === RP_FUND_CODE)?.id ?? null;
-    });
     // Foco en el primer campo apenas carga el contenido - ver mismo fix en dry-coffee-form.ts.
     effect(() => {
       if (this.base()) {
@@ -121,7 +124,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     }
     // idPart1 se bloquea (locked) recien cuando lookupGrower confirma que la cedula existe - hasta
     // entonces sigue editable para poder corregirla (ver mensaje "no existe" en lookupGrower).
-    if (key !== 'idPart1') {
+    if (key !== 'idPart1' && !OPTIONAL.includes(key)) {
       this.locked.add(key);
     }
     this.runSideEffects(key);
@@ -135,12 +138,55 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     if (key === 'idPart1') {
       this.lookupGrower();
     } else if (key === 'special') {
-      this.loadAnnouncementInfo();
+      this.changeSpecial();
+    } else if (key === 'announcement') {
+      this.pickAnnouncement();
+    } else if (key === 'deliveryDate' && this.model['deliveryDate'] < localToday()) {
+      this.reject('deliveryDate', this.messages()?.deliveryDatePast);
     } else if (key === 'kilos') {
+      if (!(parseDisplayNumber(this.model['kilos']) > 0)) {
+        this.reject('kilos', this.messages()?.kilosNotPositive);
+        return;
+      }
       // Kilos_LostFocus (Form_COMPRAS A FUTURO.bas): SaldoKilos = Kilos al momento de anunciar.
       this.model['balance'] = this.model['kilos'];
       this.locked.add('balance');
     }
+  }
+
+  /** Hallazgos #10 y #16: el valor rechazado se borra, se avisa al momento y el foco vuelve a ese campo. */
+  private reject(key: string, message: string | undefined): void {
+    this.model[key] = '';
+    this.locked.delete(key);
+    this.retryKey = key;
+    this.errorMessage.set(message ?? null);
+  }
+
+  /**
+   * Hallazgos #10 y #11: al elegir el Especial se revisa de una vez el programa NESS (Texto34_AfterUpdate) y se llena
+   * Información Federación con el programa de ese Especial. Si cambia el Especial, el anuncio se elige otra vez.
+   */
+  private changeSpecial(): void {
+    if (this.announcementInfo() && this.announcementInfo()!.specialType !== this.model['special']) {
+      this.model['announcement'] = '';
+      this.locked.delete('announcement');
+      this.announcementInfo.set(null);
+    }
+    const idNumber = (this.model['idPart1'] ?? '').trim();
+    if (!idNumber) {
+      this.loadTodayAnnouncements();
+      return;
+    }
+    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
+      Object.assign(this.model, federationValues(program));
+      if (program) {
+        this.loadTodayAnnouncements();
+      } else {
+        this.unlockSpecial();
+        this.errorMessage.set(this.messages()?.notInProgram ?? null);
+      }
+      this.tick.update((n) => n + 1);
+    });
   }
 
   private lookupGrower(): void {
@@ -162,17 +208,9 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
         this.model['lastNames'] = lastNames;
         this.model['idType'] = grower.growerType;
         this.model['address'] = grower.address;
-        this.model['idNumber'] = idNumber;
-        this.model['fullName'] = [firstNames, lastNames].filter(Boolean).join(' ');
         this.locked.add('idPart1');
-        // Mismo fix aplicado hoy en Seco/Verde/Pasilla/Otros/Cupos: si el dato migrado viene vacio,
-        // no se bloquea, para que el cajero lo pueda completar a mano.
-        ['firstNames', 'lastNames', 'idType', 'address', 'idNumber', 'fullName'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
-        this.lookupProgram();
+        lockFilled(this.model, this.locked, ['firstNames', 'lastNames', 'idType', 'address']);
+        this.loadLastPlace(idNumber);
         this.tick.update((n) => n + 1);
         this.advanceFocus('idPart1');
       },
@@ -183,56 +221,73 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     });
   }
 
-  private lookupProgram(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      this.model['program'] = program ? program.programa : '';
-      if (program) {
-        this.locked.add('program');
-      } else {
-        this.locked.delete('program');
+  /** Hallazgo #14: Finca, Mpio y Vereda de la última compra a futuro de la cédula, si no se han digitado. */
+  private loadLastPlace(idNumber: string): void {
+    this.service.lastPlace(idNumber).subscribe((place) => {
+      for (const key of OPTIONAL) {
+        if (place && !(this.model[key] ?? '').trim()) {
+          this.model[key] = place[key as keyof typeof place] ?? '';
+        }
       }
       this.tick.update((n) => n + 1);
     });
   }
 
-  /** Cuadro_combinado30_AfterUpdate: trae el anuncio vigente (Fondo RP fijo) con sus precios
-   *  informativos - solo para mostrar en pantalla, el backend los vuelve a resolver el mismo al
-   *  guardar (no viajan en el request). */
-  private loadAnnouncementInfo(): void {
+  /** R6 (17-nov): el Especial llena la lista de Anuncio con el anuncio vigente de ese especial. */
+  private loadTodayAnnouncements(): void {
     const specialType = this.model['special'];
-    if (!this.rpFundId || !specialType) {
-      return;
-    }
-    this.announcementService.latest(this.rpFundId, specialType).subscribe({
-      next: (info) => {
-        this.announcementInfo.set(info);
+    this.service.todayAnnouncements(specialType).subscribe({
+      next: (list) => {
+        this.todayAnnouncements.set(list);
+        if (list.length === 0) {
+          this.unlockSpecial();
+          this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        } else {
+          this.rememberPrice();
+        }
         this.tick.update((n) => n + 1);
       },
-      error: () => {
-        this.announcementInfo.set(null);
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+      error: (err) => {
+        this.unlockSpecial();
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
   }
 
+  /** RN-21.4.5: el anuncio elegido trae su fecha, sus precios, la bonificación y los costos. */
+  private pickAnnouncement(): void {
+    const picked = this.todayAnnouncements().find((a) => announcementLabel(a) === this.model['announcement']);
+    if (!picked) {
+      this.model['announcement'] = '';
+      this.locked.delete('announcement');
+      return;
+    }
+    this.announcementInfo.set(picked);
+  }
 
+  private unlockSpecial(): void {
+    this.model['special'] = '';
+    this.locked.delete('special');
+    this.todayAnnouncements.set([]);
+    this.focusField('special');
+  }
 
   /** Extrae el mensaje real del backend (fallecido, no pertenece a programa) en vez de taparlo con
    *  un mensaje generico - esas validaciones viven solo en el backend. */
   private backendErrorMessage(err: unknown): string | null {
-    const message = (err as { error?: { message?: string } })?.error?.message;
-    return message ?? this.messages()?.saveError ?? null;
+    return serverError(err, this.messages()?.saveError);
   }
 
   private buildRequest(): FuturePurchaseRequest | null {
-    if (!REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '')) {
+    const info = this.announcementInfo();
+    if (!info || !hasRequired(this.model, REQUIRED)) {
       return null;
     }
     return {
       idNumber: this.model['idPart1'],
       specialType: this.model['special'],
+      announcementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
       announcedKg: parseDisplayNumber(this.model['kilos']),
       deliveryDate: this.model['deliveryDate'],
       finca: this.model['finca'] || null,
@@ -241,35 +296,24 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     };
   }
 
-  /** Comando36_Click: guarda el compromiso y abre el Manifiesto (la carta-compromiso). */
+  /** Comando36_Click: guarda el compromiso una sola vez y abre el Manifiesto (2 copias, RN-21.4.8). */
   print(): void {
-    if (!this.canPrint()) {
-      return;
-    }
-    const request = this.buildRequest();
+    const request = this.canPrint() ? this.buildRequest() : null;
     if (!request) {
       return;
     }
-    this.errorMessage.set(null);
-    this.service.create(request).subscribe({
-      next: (res) => {
-        this.result.set(res);
-        this.savedNoticeOpen.set(true);
-        this.printManifesto(res);
-        this.tick.update((n) => n + 1);
-      },
-      error: (err) => {
-        console.error('Error al registrar compromiso Compras a Futuro:', err?.error ?? err);
+    saveAndPrint(this, {
+      name: 'Compras a Futuro',
+      save: () => this.service.create(request),
+      invoice: (purchase) => buildFuturePurchaseManifestoDocDefinition(purchase),
+      messages: () => this.messages(),
+      refresh: () => this.tick.update((n) => n + 1),
+      // Fallecido o fuera del programa: el mensaje real del servidor, no uno genérico.
+      saveError: (err) => {
         this.errorMessage.set(this.backendErrorMessage(err));
         this.tick.update((n) => n + 1);
       },
     });
-  }
-
-  private printManifesto(purchase: FuturePurchaseResponse): void {
-    const docDefinition = buildFuturePurchaseManifestoDocDefinition(purchase);
-    pdfMake.vfs = pdfFonts;
-    pdfMake.createPdf(docDefinition).open();
   }
 
   dismissError(): void {
@@ -279,14 +323,25 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     if (wasBlocked) {
       this.reset();
     }
+    this.refocusRetry((k) => this.focusField(k));
+  }
+
+  /** Hallazgo #6: el anuncio vigente del Especial elegido; si se publica otro, el precio cambió. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const special = this.model['special'];
+    return special && this.todayAnnouncements().length
+      ? this.service.todayAnnouncements(special).pipe(map((list) => list.map((a) => a.announcementNumber).join(',')))
+      : null;
   }
 
   @HostListener('document:keydown.escape')
   reset(): void {
     this.model = { agency: this.authService.agencyName() ?? '' };
     this.locked.clear();
+    this.retryKey = null;
+    this.payment.set(null);
     this.announcementInfo.set(null);
-    this.result.set(null);
+    this.todayAnnouncements.set([]);
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     this.savedNoticeOpen.set(false);
@@ -295,12 +350,12 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
   }
 
   protected override hasUnsavedInput(): boolean {
-    return !this.result() && EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
+    return EDITABLE.some((k) => (this.model[k] ?? '').trim() !== '');
   }
 
 
   private canPrint(): boolean {
-    return !this.result() && !!this.announcementInfo() && REQUIRED.every((k) => (this.model[k] ?? '').trim() !== '');
+    return !!this.announcementInfo() && hasRequired(this.model, REQUIRED);
   }
 
   private buildContent(base: FuturePurchaseContent): PurchaseFormContent {
@@ -312,34 +367,39 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
     collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.weightFields);
+    collect(base.netWeightFields);
 
     const info = this.announcementInfo();
     const computedValues: Record<string, string | number> = {
-      announcement: info?.announcementNumber ?? '',
       announcementDate: info?.announcementDate ?? '',
       basePriceLoad: info?.basePriceLoad ?? '',
       healthyUnitPrice: info?.healthyUnitPrice ?? '',
       defectiveUnitPrice: info?.defectiveUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
+      qualityIncrement: info?.qualityIncrement ?? '',
     };
     const READONLY_COMPUTED = Object.keys(computedValues);
 
     const field = (key: string): FormFieldDefinition => {
       const b = bmap.get(key)!;
-      const patch: { readonly?: boolean; value?: string | number } = {};
+      const patch: { readonly?: boolean; value?: string | number; options?: string[] } = {};
+      if (key === 'announcement') {
+        patch.options = this.announcementOptions();
+      }
       if (READONLY_COMPUTED.includes(key)) {
         patch.readonly = true;
         patch.value = computedValues[key];
-      } else if (b.readonly || this.locked.has(key)) {
+      } else if (b.readonly || (this.locked.has(key) && !EDITABLE.includes(key))) {
+        // Hallazgo #12: lo digitado (fecha incluida) se puede corregir hasta guardar; lo que trae el sistema no.
         patch.readonly = true;
         patch.value = this.model[key] ?? '';
-      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
+      } else if (!isSequentialFieldEnabled(key, GATE_ORDER, this.locked)) {
         patch.readonly = true;
       }
       const next: FormFieldDefinition = { ...b, ...patch };
       const prev = this.fieldCache.get(key);
-      if (prev && prev.value === next.value && prev.readonly === next.readonly) {
+      if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.options === next.options) {
         return prev;
       }
       this.fieldCache.set(key, next);
@@ -356,6 +416,7 @@ export class FuturePurchaseFormComponent extends UnsavedCloseForm {
       contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       weightFields: row(base.weightFields),
+      netWeightFields: row(base.netWeightFields),
       reprintButtonLabel: this.canPrint() ? base.reprintButtonLabel : undefined,
     };
   }

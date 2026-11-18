@@ -8,9 +8,11 @@ import { ProductCodeOption } from '../../core/models/inventory.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { InventoryService } from '../../core/services/inventory.service';
-import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
-import { buildInventoryReportDoc } from './inventory-report-pdf';
+import {
+  AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective, PdfGeneratingComponent,
+} from '../../shared/ui';
+import { renderReportPdf } from '../report-pdf/report-pdf';
+import { serverError } from '../../shared/utils/server-error';
 
 /** En Access la consulta INV pedia la especialidad con un InputBox (texto libre, sin lista). La
  *  lista sale de los "Especial" de los formularios de compra, mas los fijos de Verde y Pasilla. */
@@ -41,7 +43,7 @@ export function specialOptions(forms: unknown[]): string[] {
 @Component({
   selector: 'app-inventory-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './inventory-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -61,6 +63,8 @@ export class InventoryReportComponent {
   readonly choice = signal('');
   readonly message = signal<string | null>(null);
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
 
   constructor() {
     if (this.byCode) {
@@ -91,9 +95,10 @@ export class InventoryReportComponent {
           this.message.set(`No hay movimientos de ${this.byCode ? 'ese producto' : 'esa especialidad'} en ${this.year}`);
           return;
         }
-        renderPdfPreview(buildInventoryReportDoc(rows, this.byCode), this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf({ kind: 'inventory', args: [rows, this.byCode] }, this.sanitizer,
+          (url) => this.pdfUrl.set(url), this.generatingPdf);
       },
-      error: () => this.message.set('No se pudo generar el reporte'),
+      error: (err) => this.message.set(serverError(err, 'No se pudo generar el reporte')),
     });
   }
 }

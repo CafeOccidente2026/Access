@@ -12,7 +12,7 @@ export interface SuppliesReport {
   readonly endpoint: string;
   /** Relacion Cheques: POST porque marca los cheques impresos. */
   readonly post?: boolean;
-  readonly layout: 'movement' | 'supplies' | 'packaging' | 'checks' | 'paymentMethods';
+  readonly layout: 'movement' | 'supplies' | 'packaging' | 'checks' | 'paymentMethods' | 'card';
   readonly pdfTitle?: string;
   readonly fixedParams?: Record<string, string>;
   readonly filters: SuppliesReportFilter[];
@@ -23,6 +23,7 @@ export interface SuppliesReport {
 
 export interface SuppliesReportText {
   readonly company: string;
+  readonly nit: string;
   readonly checksTitle: string;
   readonly agencyGroup: string;
   readonly checksGroupSummary: string;
@@ -31,6 +32,7 @@ export interface SuppliesReportText {
   readonly paymentGroupSummary: string;
   readonly sum: string;
   readonly grandTotal: string;
+  readonly cardTotal: string;
   readonly page: string;
 }
 

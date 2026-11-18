@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import menu from '../../../../public/assets/data/main-menu.json';
@@ -80,6 +80,10 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
     ]);
   });
 
+  it('HU-05: the User with Corregir Compra gets the way back to Acceso Principal, where Menú Habilitación is', () => {
+    expect(labels(render('USUARIO', ['CORREGIR_COMPRA']))).toContain('Volver Acceso Principal');
+  });
+
   it('HU-03 CA-3: opening the menu rereads the permissions, so a revoked screen disappears', () => {
     const el = render('USUARIO', ['REGISTRO_CONTROL']);
     expect(labels(el)).toContain('Registro de Control');
@@ -92,11 +96,9 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
     expect(labels(el)).not.toContain('Registro de Control');
   });
 
-  it('RF-05 / Q22: Contabilizado is there, disabled and marked as pending, for Administrator and User', () => {
-    const el = render('USUARIO');
-    const button = Array.from(el.querySelectorAll('app-button')).find((b) => b.textContent?.trim() === 'Contabilizado');
-    expect(button?.querySelector('button')?.disabled).toBe(true);
-    expect(el.textContent).toContain('Pendiente de levantamiento');
+  it('RF-29 no se implementa (decision del area, 11-nov): Contabilizado ya no esta en el menu', () => {
+    expect(labels(render('ADMINISTRADOR'))).not.toContain('Contabilizado');
+    expect(JSON.stringify(menu)).not.toContain('Contabilizado');
   });
 
   it('HU-06 CA-1: choosing an agency in the Agencias button sends it to the server', () => {
@@ -108,5 +110,16 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
     select.dispatchEvent(new Event('change'));
 
     expect(chooseSpy).toHaveBeenCalledWith(4);
+  });
+
+  it('prueba del 11-nov (punto 4): if the agency cannot be chosen, shows the reason of the server', () => {
+    const el = render('ADMINISTRADOR');
+    chooseSpy.mockReturnValue(throwError(() => ({ error: { message: 'La agencia no tiene Registro de Control' } })));
+    const select = el.querySelector('[data-testid="agencies"] select') as HTMLSelectElement;
+    select.value = '4';
+    select.dispatchEvent(new Event('change'));
+
+    fixtureRef?.detectChanges();
+    expect(el.textContent).toContain('La agencia no tiene Registro de Control');
   });
 });

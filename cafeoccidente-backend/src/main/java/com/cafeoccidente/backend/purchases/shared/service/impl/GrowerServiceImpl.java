@@ -15,7 +15,9 @@ import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.LegacyNessProgramRepository;
 import com.cafeoccidente.backend.purchases.shared.service.GrowerService;
+import com.cafeoccidente.backend.purchases.shared.service.NessPrograms;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,24 +47,27 @@ public class GrowerServiceImpl implements GrowerService {
      * </ul>
      */
     private static final Map<String, String> SPECIAL_TO_PROGRAMA = Map.of(
-            "NESPRESSO - FTUSA", "NESPRESSO",
+            "NESPRESSO - FTUSA", NessPrograms.NESPRESSO,
             // Q8 (area de compras, 2026-10-27): las variantes CON TAZA exigen el mismo programa, como
             // en Access (W_AlmSana_AfterUpdate las bloquea con EnProg = 0).
-            "NESPRESSO CON TAZA - FTUSA", "NESPRESSO",
-            "NESPRESSO LATE HARVEST - FTUSA", "NESPRESSO LATE HARVEST",
-            "NESPRESSO LATE HARVEST CON TAZA - FTUSA", "NESPRESSO LATE HARVEST",
-            "REGIONAL NARIÑO 4C", "REGIONAL NARIÑO 4C");
+            "NESPRESSO CON TAZA - FTUSA", NessPrograms.NESPRESSO,
+            "NESPRESSO LATE HARVEST - FTUSA", NessPrograms.LATE_HARVEST,
+            "NESPRESSO LATE HARVEST CON TAZA - FTUSA", NessPrograms.LATE_HARVEST,
+            "REGIONAL NARIÑO 4C", NessPrograms.REGIONAL_NARINO_4C);
 
     private final GrowerRepository growerRepository;
     private final LegacyNessProgramRepository legacyNessProgramRepository;
     private final AgencyRepository agencyRepository;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final Clock clock;
 
     public GrowerServiceImpl(
             GrowerRepository growerRepository,
             LegacyNessProgramRepository legacyNessProgramRepository,
             AgencyRepository agencyRepository,
-            CurrentAgencyProvider currentAgencyProvider) {
+            CurrentAgencyProvider currentAgencyProvider,
+            Clock clock) {
+        this.clock = clock;
         this.growerRepository = growerRepository;
         this.legacyNessProgramRepository = legacyNessProgramRepository;
         this.agencyRepository = agencyRepository;
@@ -116,7 +121,7 @@ public class GrowerServiceImpl implements GrowerService {
         grower.setPhone("");
         grower.setGrowerType("C");
         // FechaAfiliacion: DefaultValue "Date()" en Form_Conductores.txt.
-        grower.setAffiliationDate(LocalDate.now());
+        grower.setAffiliationDate(LocalDate.now(clock));
         grower.setTransportCompany(request.transportCompany());
         grower.setVehiclePlate(request.vehiclePlate());
         Grower saved = growerRepository.save(grower);
@@ -145,7 +150,8 @@ public class GrowerServiceImpl implements GrowerService {
     @Override
     public List<ConductorResponse> searchConductors(String idNumberPrefix) {
         String prefix = idNumberPrefix == null ? "" : idNumberPrefix.trim();
-        if (prefix.length() < CONDUCTOR_SEARCH_MIN_DIGITS) {
+        // S7: solo digitos; % o _ en el LIKE se saltarian el minimo y listarian a todos.
+        if (prefix.length() < CONDUCTOR_SEARCH_MIN_DIGITS || !prefix.chars().allMatch(Character::isDigit)) {
             return List.of();
         }
         return growerRepository.findConductorsByIdNumberPrefix(prefix, PageRequest.of(0, CONDUCTOR_SEARCH_LIMIT))
@@ -196,7 +202,8 @@ public class GrowerServiceImpl implements GrowerService {
         if (match == null) {
             return Optional.empty();
         }
-        return Optional.of(new GrowerProgramResponse(match.getPrograma(), normalizeCupo(match.getCupo())));
+        return Optional.of(new GrowerProgramResponse(match.getPrograma(), withoutCsvDecimal(match.getCupo()),
+                withoutCsvDecimal(match.getCedula()), match.getNombres()));
     }
 
     @Override
@@ -210,7 +217,7 @@ public class GrowerServiceImpl implements GrowerService {
         BigDecimal quota = new BigDecimal(match.getCupo());
         if (netKg.compareTo(quota) > 0) {
             throw new BusinessRuleException(
-                    "CAFICULTOR EXCEDE CUPO ASIGNADO, NO LE PUEDE FACTURAR (cupo: " + normalizeCupo(match.getCupo())
+                    "CAFICULTOR EXCEDE CUPO ASIGNADO, NO LE PUEDE FACTURAR (cupo: " + withoutCsvDecimal(match.getCupo())
                             + " kg, esta compra: " + netKg + " kg)");
         }
     }
@@ -253,8 +260,8 @@ public class GrowerServiceImpl implements GrowerService {
         return null;
     }
 
-    /** Quita el sufijo ".0" (artefacto del CSV origen) para mostrar el cupo como entero. */
-    private static String normalizeCupo(String cupo) {
-        return cupo.endsWith(".0") ? cupo.substring(0, cupo.length() - 2) : cupo;
+    /** Quita el sufijo ".0" (artefacto del CSV origen) para mostrar el cupo y la cedula como enteros. */
+    private static String withoutCsvDecimal(String value) {
+        return value != null && value.endsWith(".0") ? value.substring(0, value.length() - 2) : value;
     }
 }

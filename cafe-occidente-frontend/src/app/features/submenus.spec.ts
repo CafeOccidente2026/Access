@@ -70,7 +70,7 @@ describe('submenus (HU-02)', () => {
   });
 
   it('CA-2 Compras a Futuro', () => {
-    expectInRfOrder(futurePurchases, ['Asignar Cupo a Anuncios', 'Facturar Anuncios con Cupos', 'Anunciadas Hoy',
+    expectInRfOrder(futurePurchases, ['Asignar Cupo a Anuncios', 'Facturar Anuncios con Cupos', 'Anunciadas de Hoy',
       'Ingresar Compras a Futuro', 'Facturar Compras Anunciadas', 'Generar Informe Anuncios a Futuro',
       'Generar Informe Saldo Anuncios', 'Volver al Panel de Control Compras']);
   });
@@ -99,7 +99,7 @@ describe('submenus (HU-02)', () => {
   });
 
   it('CA-3 Suministros', () => {
-    expectInRfOrder(supplies, ['Registrar Suministro Efectivo', 'Informe Caja', 'Relación Cheques', 'Rel Cheques Especial',
+    expectInRfOrder(supplies, ['Registrar Suministro Efectivo', 'Informe Caja', 'Informe Datáfono', 'Relación Cheques', 'Rel Cheques Especial',
       'Rel Formas de Pago', 'Suministro Empaques', 'Préstamo Empaques', 'Informe Empaques', 'Ingresar Suministros',
       'Cheques Girados', 'Informe Suministros RP', 'Informe Suministros LF', 'Caja Menor']);
   });
@@ -114,7 +114,9 @@ describe('submenus (HU-02)', () => {
     expect(option(vendors, 'Ingresar Vendedores')).toBeUndefined();
   });
 
-  it('Actualiza Cupos NESS only shows up for the Administrator', () => {
-    expect(option(vendors, 'Actualiza Cupos NESS')?.roles).toEqual(['ADMINISTRADOR']);
+  it('Actualiza Cupos NESS (RN-28.4.1) is enabled only for the Administrator, also in the route', () => {
+    expect(option(vendors, 'Actualiza Cupos NESS')).toMatchObject({ roles: ['ADMINISTRADOR'], route: '/vendedores/actualiza-cupos-ness' });
+    expect(option(vendors, 'Actualiza Cupos NESS')?.disabled).toBeFalsy();
+    expect(routeRoles('vendedores/actualiza-cupos-ness')).toEqual(['ADMINISTRADOR']);
   });
 });

@@ -10,7 +10,9 @@ public enum Screen {
     ACCESO_TABLAS("Acceso a Tablas"),
     ACTUALIZAR_ANUNCIOS("Actualizar Anuncios"),
     REGISTRO_CONTROL("Registro de Control"),
-    HISTORIAL("Historial");
+    HISTORIAL("Historial"),
+    /** HU-05 Habilitacion (11-nov): corregir una compra sin anularla. */
+    CORREGIR_COMPRA("Corregir Compra");
 
     /** Prefijo de la authority de Spring Security: SCREEN_ANULAR_DOCUMENTO, etc. */
     public static final String AUTHORITY_PREFIX = "SCREEN_";

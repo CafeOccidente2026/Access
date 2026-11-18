@@ -60,7 +60,7 @@ public class PurchaseQueryServiceImpl implements PurchaseQueryService {
             case GREEN -> green.findById(id);
             case HUSK -> husk.findById(id);
         };
-        return new PurchaseQueryDetail(module, purchase, header.status(), repository.payment(module, id).orElse(null),
+        return new PurchaseQueryDetail(module, purchase, header.status(), header.corrected(),repository.payment(module, id).orElse(null),
                 repository.remissions(module, id));
     }
 

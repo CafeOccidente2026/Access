@@ -3,6 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { FormFieldComponent } from './form-field';
 import { FormFieldDefinition } from '../../../core/models';
+import dry from '../../../../../public/assets/data/purchase-form-dry.json';
+import future from '../../../../../public/assets/data/purchase-form-future.json';
+import green from '../../../../../public/assets/data/purchase-form-green.json';
+import husk from '../../../../../public/assets/data/purchase-form-husk.json';
+import quotaPurchase from '../../../../../public/assets/data/purchase-form-quota-purchase.json';
+import query from '../../../../../public/assets/data/purchase-query.json';
 
 describe('FormFieldComponent formatWhenIdle', () => {
   function setup(field: FormFieldDefinition) {
@@ -28,6 +34,19 @@ describe('FormFieldComponent formatWhenIdle', () => {
 
     component.onBlur();
     expect(component.inputValue).toBe('837.984,00');
+  });
+
+  // Hallazgo #1 (16-nov): dinero sin decimales, kilos sin ",00" si son enteros y la muestra como se digitó.
+  it('formats money, kilos and typed values the same in every purchase screen', () => {
+    const shown = (display: 'money' | 'kilos' | 'typed', value: string) =>
+      setup({ key: 'x', label: 'X', type: 'currency', display, value }).inputValue;
+    expect(shown('money', '1546900.00')).toBe('1.546.900');
+    expect(shown('kilos', '500')).toBe('500');
+    expect(shown('kilos', '101.5')).toBe('101,50');
+    expect(shown('typed', '7,1')).toBe('7,1');
+    const keys = (data: object) => JSON.stringify(data).match(/"key":"(netToPay|netKg|wastePercentage)"[^}]*"display":"\w+"/g) ?? [];
+    expect(keys(dry)).toHaveLength(3);
+    expect(keys(quotaPurchase)).toHaveLength(3);
   });
 
   it('leaves rawDisplay and text fields untouched', () => {
@@ -99,5 +118,93 @@ describe('FormFieldComponent labelAbove', () => {
     const label = (fixture.nativeElement as HTMLElement).querySelector('label')!;
     expect(label.classList).toContain('flex-col');
     expect(label.querySelector('span')!.classList).not.toContain('truncate');
+  });
+});
+
+describe('FormFieldComponent accessible name', () => {
+  function input(field: FormFieldDefinition): HTMLInputElement {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', field);
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector('input')!;
+  }
+
+  it('names each box with its label, or with ariaLabel when the label is hidden like in Access', () => {
+    expect(input({ key: 'totalStoredWeight', label: 'Peso Tot Alm', type: 'count' }).getAttribute('aria-label'))
+      .toBe('Peso Tot Alm');
+    expect(input({ key: 'firstName', label: '', ariaLabel: 'Nombres', type: 'text' }).getAttribute('aria-label'))
+      .toBe('Nombres');
+  });
+
+  it('every field of the purchase screens has a name to be found and typed in', () => {
+    const screens = [dry, green, husk, future, quotaPurchase, query];
+    const unnamed = screens
+      .flatMap((screen) => Object.values(screen).filter(Array.isArray).flat())
+      .filter((f): f is FormFieldDefinition => typeof f === 'object' && f !== null && 'key' in f && 'label' in f)
+      .filter((f) => !f.label && !f.ariaLabel)
+      .map((f) => f.key);
+    expect(unnamed).toEqual([]);
+  });
+});
+
+describe('FormFieldComponent full value', () => {
+  it('shows the whole value on hover, for an address longer than its box', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    const address = 'VEREDA LA PALMA KILOMETRO 12 VIA AL MAR FRENTE A LA ESCUELA RURAL';
+    fixture.componentRef.setInput('field', { key: 'address', label: 'Dirección', type: 'text', readonly: true, value: address });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('input')!.title).toBe(address);
+  });
+});
+
+describe('FormFieldComponent liveThousands', () => {
+  it('shows thousand separators while typing a value and passes on only the digits', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'amount', label: 'Vr. Suministro', type: 'currency', liveThousands: true });
+    fixture.detectChanges();
+    const emitted: (string | number)[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitted.push(v));
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+
+    input.value = '140000';
+    input.dispatchEvent(new Event('input'));
+
+    expect(input.value).toBe('140.000');
+    expect(emitted.at(-1)).toBe('140000');
+
+    // El valor que vuelve del padre (solo digitos) se sigue viendo con puntos mientras es editable.
+    fixture.componentRef.setInput('field', { key: 'amount', label: 'Vr. Suministro', type: 'currency', liveThousands: true, value: '1400000' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.inputValue).toBe('1.400.000');
+  });
+});
+
+describe('FormFieldComponent fast typing', () => {
+  it('a late echo of what was typed does not overwrite the following digits (Asignar Cupo, prueba del 9-nov)', () => {
+    const component = TestBed.createComponent(FormFieldComponent).componentInstance;
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '' };
+    component.ngOnChanges();
+    component.onFocus();
+
+    component.onInput('4');
+    component.onInput('40');
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '4' };
+    component.ngOnChanges();
+
+    expect(component.inputValue).toBe('40');
+
+    // Un valor distinto que manda la pantalla (p. ej. al limpiar) si se aplica.
+    component.field = { key: 'quota', label: 'Cupo', type: 'number', value: '' };
+    component.ngOnChanges();
+    expect(component.inputValue).toBe('');
+  });
+});
+
+describe('FormFieldComponent liveThousands con un valor guardado', () => {
+  it('a saved value with decimals (Registro de Control: 8379840,00) shows its whole pesos with thousands', () => {
+    const fixture = TestBed.createComponent(FormFieldComponent);
+    fixture.componentRef.setInput('field', { key: 'baseWithholding', label: 'Base Rete Fuente', type: 'currency', liveThousands: true, value: '8379840,00' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.inputValue).toBe('8.379.840');
   });
 });

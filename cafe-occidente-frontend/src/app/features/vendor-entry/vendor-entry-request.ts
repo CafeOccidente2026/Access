@@ -33,9 +33,9 @@ export function buildVendorRequest(
   const shown = new Set(fields.flatMap((f) => (f.besideSex ? [f.key, 'sex'] : [f.key])));
   const value = (key: string) => (shown.has(key) ? (values[key] ?? '').trim() || null : null);
   return {
-    association: kind === 'association',
+    legalPerson: kind === 'legal',
     idNumber: value('idNumber') ?? '',
-    firstName: value('firstName') ?? '',
+    firstName: value('firstName'),
     secondName: value('secondName'),
     lastName: value('lastName'),
     secondLastName: value('secondLastName'),
@@ -44,5 +44,7 @@ export function buildVendorRequest(
     address: value('address'),
     postalCode: value('postalCode'),
     email: value('email'),
+    businessName: value('businessName'),
+    classification: value('classification'),
   };
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AnnulmentCandidate, AnnulmentDirection } from '../../core/models/purchase-annulment.model';
@@ -7,9 +7,10 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseAnnulmentService } from '../../core/services/purchase-annulment.service';
 import { AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
+import { serverError } from '../../shared/utils/server-error';
 
 export interface PurchaseAnnulmentContent {
   readonly windowTitle: string;
@@ -48,7 +49,8 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
     return shortDate(String(value));
   }
   if (type === 'number' || type === 'money') {
-    return formatDisplayNumber(Number(value), type === 'money' ? 'count' : 'currency');
+    // R2 (17-nov): formato del #1, pesos sin decimales y kilos sin ,00 si son enteros.
+    return type === 'money' ? formatMoney(Number(value)) : formatKilos(Number(value));
   }
   return String(value);
 }
@@ -68,6 +70,7 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
 export class PurchaseAnnulmentComponent {
   private readonly service = inject(PurchaseAnnulmentService);
   private readonly navigation = inject(NavigationService);
+  private readonly host: HTMLElement = inject(ElementRef).nativeElement;
 
   readonly content = toSignal(inject(ContentService).loadJson<PurchaseAnnulmentContent>('purchase-annulment'));
   readonly candidates = signal<AnnulmentCandidate[]>([]);
@@ -94,8 +97,9 @@ export class PurchaseAnnulmentComponent {
         if (!list.length) {
           this.fail(this.content()!.messages.notFound);
         }
+        this.focusButton('annul');
       },
-      error: () => this.fail(this.content()!.messages.error),
+      error: (err) => this.fail(serverError(err, this.content()!.messages.error)),
     });
   }
 
@@ -112,7 +116,7 @@ export class PurchaseAnnulmentComponent {
         this.candidates.set(list);
         this.selected.set(list[0]);
       },
-      error: () => this.fail(this.content()!.messages.error),
+      error: (err) => this.fail(serverError(err, this.content()!.messages.error)),
     });
   }
 
@@ -125,6 +129,7 @@ export class PurchaseAnnulmentComponent {
   startAnnul(): void {
     this.message.set(null);
     this.prompt.set(this.selected()!.annulmentLocked ? 'locked' : 'confirm');
+    this.focusButton(this.prompt() === 'confirm' ? 'accept' : 'locked-accept');
   }
 
   confirm(): void {
@@ -153,6 +158,11 @@ export class PurchaseAnnulmentComponent {
     this.selected.set(null);
     this.prompt.set(null);
     this.message.set(null);
+  }
+
+  /** Prueba del 10-nov: solo con teclado, el foco va al boton que sigue (Anular, y luego Aceptar de la pregunta). */
+  private focusButton(testId: string): void {
+    setTimeout(() => this.host.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus());
   }
 
   private fail(text: string): void {

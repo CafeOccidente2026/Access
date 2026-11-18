@@ -8,10 +8,10 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
-import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
-import { renderPdfPreview } from '../../shared/utils/pdf-preview';
-import { buildBeneficiaryDoc } from './beneficiary-report-pdf';
+import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
+import { renderReportPdf } from '../report-pdf/report-pdf';
 import { BeneficiaryReportContent } from './beneficiary-report.model';
+import { serverError } from '../../shared/utils/server-error';
 
 /**
  * "Genera Inf Ventas Benef" (InputBox de la consulta Beneficiario) e "Inf Ventas Benef por Fechas"
@@ -21,7 +21,7 @@ import { BeneficiaryReportContent } from './beneficiary-report.model';
 @Component({
   selector: 'app-beneficiary-report',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
+  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective, PdfGeneratingComponent],
   templateUrl: './beneficiary-report.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -38,10 +38,14 @@ export class BeneficiaryReportComponent {
   /** RN-28.2.4: solo el Administrador; el servidor lo ignora para otro rol. */
   readonly allAgencies = signal(false);
   readonly idNumber = signal('');
+  /** RN-28.2.2: reporte de todos los beneficiarios. */
+  readonly allBeneficiaries = signal(false);
   readonly from = signal('');
   readonly to = signal('');
   readonly message = signal<string | null>(null);
   readonly pdfUrl = signal<SafeResourceUrl | null>(null);
+  /** R3: el Web Worker esta armando el PDF (aviso "Generando PDF..."). */
+  readonly generatingPdf = signal(false);
 
   accept(event: Event): void {
     event.preventDefault();
@@ -53,9 +57,14 @@ export class BeneficiaryReportComponent {
       this.message.set(content.messages.dates);
       return;
     }
+    const idNumber = this.allBeneficiaries() ? '' : this.idNumber().replace(/\D/g, '');
+    if (report.allBeneficiaries && !this.allBeneficiaries() && !idNumber) {
+      this.message.set(content.messages.idNumber);
+      return;
+    }
     const params = {
       allAgencies: this.allAgencies() ? 'true' : null,
-      idNumber: this.idNumber().replace(/\D/g, ''),
+      idNumber,
       from: report.dates ? this.from() : null,
       to: report.dates ? this.to() : null,
     };
@@ -65,9 +74,10 @@ export class BeneficiaryReportComponent {
           this.message.set(content.messages.empty);
           return;
         }
-        renderPdfPreview(buildBeneficiaryDoc(report, content.text, rows), this.sanitizer, (url) => this.pdfUrl.set(url));
+        renderReportPdf({ kind: 'beneficiary', args: [report, content.text, rows] }, this.sanitizer,
+          (url) => this.pdfUrl.set(url), this.generatingPdf);
       },
-      error: () => this.message.set(content.messages.error),
+      error: (err) => this.message.set(serverError(err, content.messages.error)),
     });
   }
 

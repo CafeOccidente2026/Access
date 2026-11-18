@@ -3,7 +3,7 @@
   "heading": "APLICATIVO DE COMPRAS\nAÑO 2026",
   "logo": {
     "src": "assets/images/cafe-occidente-logo.png",
-    "alt": "CaféOccidente - Cooperativa de caficultores de occidente de Nariño Ltda."
+    "alt": "CaféOccidente - Cooperativa de caficultores de occidente de Nariño"
   },
   "agencies": {
     "label": "Agencias",
@@ -16,8 +16,7 @@
     { "label": "Compras", "route": "/compras", "emphasis": true, "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ANULAR_DOCUMENTO"] },
     { "label": "Suministros", "route": "/suministros", "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Vendedores", "route": "/vendedores", "roles": ["ADMINISTRADOR", "USUARIO"] },
-    { "label": "Contabilizado", "disabled": true, "hint": "Pendiente de levantamiento", "roles": ["ADMINISTRADOR", "USUARIO"] },
-    { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ACCESO_TABLAS", "HISTORIAL"] },
+    { "label": "Volver Acceso Principal", "route": "/acceso-principal", "roles": ["ADMINISTRADOR", "USUARIO"], "screens": ["ACCESO_TABLAS", "HISTORIAL", "CORREGIR_COMPRA"] },
     { "label": "Salir de la aplicación", "route": "/login" }
   ]
 }

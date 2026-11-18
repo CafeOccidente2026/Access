@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -16,27 +17,28 @@ import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { askCellphoneOr } from '../seller-cellphone';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages, retryField } from '../weight-check';
+import { clearSample, isOverThreshold } from '../sample-quality';
+import { serverError } from '../../../shared/utils/server-error';
+import { reserveInvoice } from '../invoice-reservation';
+import { FEDERATION_KEYS, loadFederation } from '../federation';
+import { localToday } from '../../../shared/utils/local-date';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-dry.json. */
 type FormModel = Record<string, string>;
 
-interface DryCoffeeMessages {
-  readonly acceptLabel: string;
+interface DryCoffeeMessages extends PurchaseMessages, WeightMessages {
+  readonly cooperativeDiscountLabel?: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMessages };
@@ -44,15 +46,14 @@ type DryCoffeeContent = PurchaseFormContent & { readonly messages: DryCoffeeMess
 /** Campos editables en el orden de captura del formulario Access. "agency" no entra: la
  *  autocompleta la sesión y nunca la toca el usuario (paso 1). */
 const EDITABLE: string[] = [
-  'fund', 'idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'program', 'quota',
-  'special',
+  'fund', 'idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'special',
   'totalStoredWeight', 'totalHuskWeight',
   'bags', 'grossKg', 'tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (bonus/penalty/descuentos pueden quedar en blanco = 0). */
 const REQUIRED: string[] = [
-  'fund', 'idPart1', 'fullName', 'idType', 'address', 'cellphone',
+  'fund', 'idPart1', 'idType', 'address', 'cellphone',
   'special', 'totalStoredWeight', 'totalHuskWeight', 'bags', 'grossKg', 'tare',
 ];
 
@@ -64,8 +65,12 @@ const READONLY: string[] = [
   // Q2: Peso Alm Sana = Peso Tot Alm - Peso Pasilla, lo calcula el servidor.
   'healthyStoredWeight',
   'agency', 'date', 'announcement', 'announcementDate', 'associated', 'invoicePrefix', 'invoiceNumber',
-  'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs', 'idNumber',
+  'productCode', 'basePriceLoad', 'huskPrice', 'sustentationPrice', 'bonus', 'costs',
+  // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
+  ...FEDERATION_KEYS,
   'wastePercentage', 'huskPercentage', 'factor', 'netKg', 'kgPrice', 'grossValue', 'contribution', 'netToPay',
+  // RN-15.6: la Retefuente la calcula el servidor (acumulado del dia).
+  'withholding',
 ];
 
 /** Orden en que el foco salta de un campo al siguiente que le toca llenar al usuario
@@ -112,6 +117,8 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     healthyPercentage: null,
   });
   readonly calc = signal<DryCoffeePurchaseCalculation | null>(null);
+  /** El aviso abierto es el del umbral de especiales: al Aceptar se vacia la muestra. */
+  private sampleRetry = false;
   /** FORMAS DE PAGO cuadrado (cascada FPef/FPch/FPtx/FPdat); null mientras no cuadra. */
   readonly payment = signal<PurchasePayment | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -122,7 +129,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  private readonly today = new Date().toISOString().slice(0, 10);
+  private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
   private fundOptions: string[] = [];
   private readonly fundIdByName = new Map<string, number>();
@@ -196,6 +203,9 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
+      return;
+    }
     switch (key) {
       case 'fund':
         this.reserveInvoiceNumber();
@@ -217,6 +227,9 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       case 'penalty':
       case 'shrinkageDiscount':
       case 'otherDiscounts':
+      // Dirección y Celular tambien son obligatorios: si se llenan al final, ahi se calcula (prueba del 9-nov).
+      case 'address':
+      case 'cellphone':
         this.recalculate();
         break;
     }
@@ -224,63 +237,14 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Paso 3: siguiente factura del rango DIAN autorizado, alone al confirmar Fondo. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        if (inv.warning) {
-          this.errorMessage.set(inv.warning);
-        }
-        this.tick.update((n) => n + 1);
-      },
-      error: () => {
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** Paso 4: busca el caficultor por cédula; bloquea el formulario si está fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findByIdNumber(idNumber).subscribe({
-      next: (grower) => {
-        if (grower.deceased) {
-          this.blockedByDeceased.set(true);
-          this.errorMessage.set(this.messages()?.deceasedBlocked ?? null);
-          this.tick.update((n) => n + 1);
-          return;
-        }
-        const fullName = [grower.firstName, grower.secondName, grower.lastName, grower.secondLastName]
-          .filter(Boolean)
-          .join(' ');
-        this.model['fullName'] = fullName;
-        // Renglón de contacto como en Access: nombres y apellidos en dos cuadros.
-        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
-        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
-        this.model['idType'] = grower.growerType;
-        this.model['address'] = grower.address;
-        this.model['cellphone'] = grower.phone;
-        this.locked.add('idPart1');
-        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
-        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
-        // la cascada de calculo (Vr. Kilo/Vr. Bruto/Neto a Pagar) nunca llegaba a dispararse.
-        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
-        this.lookupProgram();
-        this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
-      },
-      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
-      error: () => {
-        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
-        this.tick.update((n) => n + 1);
-      },
+    lookupSeller(this, this.growerService, this.locked, () => this.tick.update((n) => n + 1), () => {
+      this.lookupProgram();
+      askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
     });
   }
 
@@ -291,24 +255,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
    * ambiguedad entre programas) y de nuevo al confirmar el Especial (para desambiguar/confirmar).
    */
   private lookupProgram(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findProgram(idNumber, this.model['special']).subscribe((program) => {
-      if (program) {
-        this.model['program'] = program.programa;
-        this.model['quota'] = program.cupo;
-        this.locked.add('program');
-        this.locked.add('quota');
-      } else {
-        this.model['program'] = '';
-        this.model['quota'] = '';
-        this.locked.delete('program');
-        this.locked.delete('quota');
-      }
-      this.tick.update((n) => n + 1);
-    });
+    loadFederation(this.growerService, this.model['idPart1'], this.model['special'], this.model, () => this.tick.update((n) => n + 1));
   }
 
   /** Paso 5: Cod Prod + datos del anuncio vigente para Agencia+Fondo+Especial. */
@@ -321,13 +268,14 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.service.specialInfo(fundId, specialType).subscribe({
       next: (info) => {
         this.specialInfo.set(info);
+        this.rememberPrice();
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         // Limpia el anuncio anterior: si no, Costos/Bonificacion/Pr Sustentación quedan mostrando
         // (y usandose en el calculo) el valor de un Especial/Fondo distinto al que esta seleccionado.
         this.specialInfo.set(null);
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
@@ -363,7 +311,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
             ? { ...prev, wastePercentage: null }
             : { ...prev, defectivePercentage: null, healthyPercentage: null },
         );
-        this.errorMessage.set(err?.error?.message ?? this.messages()?.saveError ?? null);
+        this.retryKey = retryField(this, this.locked, key, serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -385,7 +333,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         // (y el panel de pago usando) el resultado de un calculo anterior con otros datos de entrada.
         this.calc.set(null);
         if (!this.clearSampleOverThreshold(err)) {
-          this.errorMessage.set(this.messages()?.saveError ?? null);
+          this.errorMessage.set(serverError(err, this.messages()?.saveError));
         }
         this.tick.update((n) => n + 1);
       },
@@ -393,21 +341,17 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   /**
-   * Q15: en los NESPRESSO el Factor supero el umbral de especiales. Se avisa con el mensaje del
-   * servidor, se limpian y desbloquean los pesos de la muestra y se vuelve a Peso Tot Alm.
+   * Q15: en los NESPRESSO el Factor supero el umbral de especiales. Se avisa con el mensaje del servidor; al
+   * Aceptar (dismissError) se vacia la muestra y se vuelve a Peso Tot Alm. No se guarda nada.
    */
   private clearSampleOverThreshold(err: { error?: { code?: string; message?: string } } | undefined): boolean {
-    if (err?.error?.code !== 'UMBRAL_ESPECIALES') {
+    if (!isOverThreshold(err)) {
       return false;
     }
-    for (const key of ['totalStoredWeight', 'totalHuskWeight', 'healthyStoredWeight']) {
-      this.model[key] = '';
-      this.locked.delete(key);
-    }
-    this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
-    this.errorMessage.set(err.error.message ?? null);
+    this.sampleRetry = true;
+    this.calc.set(null);
+    this.errorMessage.set(err?.error?.message ?? null);
     this.tick.update((n) => n + 1);
-    this.focusField('totalStoredWeight');
     return true;
   }
 
@@ -436,7 +380,14 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       freightDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: this.specialInfo() ? Number(stripAnnouncementPrefix(this.specialInfo()!.announcementNumber)) : undefined,
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora del fondo y especial en pantalla. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    const fundId = this.fundIdByName.get(this.model['fund'] ?? '');
+    return this.announcementNumber(this.specialInfo() && fundId ? this.service.specialInfo(fundId, this.model['special']) : null);
   }
 
   print(): void {
@@ -454,14 +405,12 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       messages: () => this.messages(),
       refresh: () => this.tick.update((n) => n + 1),
       saveError: (err) => {
-        // El mensaje amigable de abajo no cambia (no queremos exponerle detalle tecnico al cajero),
-        // pero el detalle real del backend (400 con fieldErrors, 500, etc.) queda en consola para
-        // quien esta debuggeando - sin esto, "Verifique los datos" no dice cual dato ni por que.
+        // Prueba del 11-nov (punto 4): el cajero ve el motivo del servidor; el detalle completo queda en consola.
         console.error('Error al registrar compra Cafe Seco:', err?.error ?? err);
         if (this.clearSampleOverThreshold(err)) {
           return;
         }
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -469,11 +418,19 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Cierra el mensaje de error; si bloqueaba por caficultor fallecido, reinicia todo el formulario. */
   dismissError(): void {
+    this.refocusRetry((k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
     if (wasBlocked) {
       this.reset();
+    }
+    if (this.sampleRetry) {
+      this.sampleRetry = false;
+      clearSample(this.model, this.locked);
+      this.qualityCalc.set({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
+      this.tick.update((n) => n + 1);
+      this.focusField('totalStoredWeight');
     }
   }
 
@@ -494,6 +451,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     this.prefillAgency();
     this.reserveInvoiceNumber();
     this.tick.update((n) => n + 1);
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {
@@ -544,7 +502,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       // Castigo_lostFocus/Descuento_Fro_LostFocus (Form_COMPRAS.bas): Asociado = "ASOCIADO"/"NO ASOCIADO"
       // segun Tipo ("S"/"C"); vacio hasta que se conoce el tipo (cedula sin buscar todavia).
@@ -557,7 +515,6 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       sustentationPrice: info?.healthyUnitPrice ?? '',
       bonus: info?.bonus ?? '',
       costs: info?.costs ?? '',
-      idNumber: this.model['idPart1'] ?? '',
       healthyStoredWeight: this.model['healthyStoredWeight'] ?? '',
       wastePercentage: q.wastePercentage ?? '',
       huskPercentage: q.defectivePercentage ?? '',
@@ -566,6 +523,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       kgPrice: c?.unitPrice ?? '',
       grossValue: c?.grossValue ?? '',
       contribution: c ? (growerType === 'C' ? c.cooperativeDiscount : c.associateContribution) : '',
+      withholding: c?.withholding ?? '',
       netToPay: c?.netToPay ?? '',
     };
 
@@ -576,11 +534,11 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
         patch.options = this.fundOptions;
       }
       if (key === 'contribution') {
-        patch.label = growerType === 'C' ? 'Descuento Coop' : 'Aporte Socio';
+        patch.label = growerType === 'C' ? (this.messages()?.cooperativeDiscountLabel ?? b.label) : b.label;
       }
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';

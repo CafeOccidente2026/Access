@@ -7,6 +7,8 @@ import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,9 +83,20 @@ class InvoiceConsecutiveIntegrationTest {
         lastNumber(record.getResolutionTo());
 
         assertThatThrownBy(() -> service.next(agencyId, record))
-                .isInstanceOf(BusinessRuleException.class).hasMessage(InvoiceConsecutiveServiceImpl.RANGE_EXHAUSTED);
+                .isInstanceOf(BusinessRuleException.class).hasMessageStartingWith("Se acabaron los números de la resolución DIAN");
         assertThatThrownBy(() -> service.take(agencyId, record))
-                .isInstanceOf(BusinessRuleException.class).hasMessage(InvoiceConsecutiveServiceImpl.RANGE_EXHAUSTED);
+                .isInstanceOf(BusinessRuleException.class).hasMessageStartingWith("Se acabaron los números de la resolución DIAN");
+    }
+
+    @Test
+    void anExpiredResolutionGivesNoNumber() {
+        // R1 (17-nov): el dia siguiente al vencimiento ya no se factura, en ninguna de las compras.
+        record.setResolutionDate(LocalDate.now(ZoneId.of("America/Bogota")).minusMonths(record.getValidity()).minusDays(1));
+
+        assertThatThrownBy(() -> service.next(agencyId, record))
+                .isInstanceOf(BusinessRuleException.class).hasMessageStartingWith("La resolución DIAN de esta agencia venció el");
+        assertThatThrownBy(() -> service.take(agencyId, record))
+                .isInstanceOf(BusinessRuleException.class).hasMessageStartingWith("La resolución DIAN de esta agencia venció el");
     }
 
     @Test

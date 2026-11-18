@@ -1,8 +1,8 @@
-/** Alta de "Ingresar Vendedores" (VendorCreateRequest del backend). */
+/** Alta de "Catalogar Terceros" (VendorCreateRequest del backend). */
 export interface VendorCreateRequest {
-  readonly association: boolean;
+  readonly legalPerson: boolean;
   readonly idNumber: string;
-  readonly firstName: string;
+  readonly firstName: string | null;
   readonly secondName: string | null;
   readonly lastName: string | null;
   readonly secondLastName: string | null;
@@ -11,6 +11,8 @@ export interface VendorCreateRequest {
   readonly address: string | null;
   readonly postalCode: string | null;
   readonly email: string | null;
+  readonly businessName: string | null;
+  readonly classification: string | null;
 }
 
 /** Los 28 campos del formulario "Asociados" de Access. */
@@ -72,6 +74,8 @@ export interface BeneficiaryRow {
   readonly otherDiscounts: number;
   readonly netToPay: number;
   readonly specialType: string | null;
+  /** Cod_Prod: el informe agrupa por tipo de café dentro de cada cédula (RN-28.2.6). */
+  readonly productCode: string;
 }
 
 export interface NessQuotaRow {
@@ -89,4 +93,23 @@ export interface NessQuotaPage {
 export interface NessQuotaBalanceRow extends NessQuotaRow {
   readonly invoicedKg: number;
   readonly balance: number;
+}
+
+/** Vista previa o resultado de Actualiza Cupos NESS (HU-54); con errores no se cargo nada. */
+export interface NessQuotaUploadResult {
+  readonly errors: string[];
+  readonly warnings: string[];
+  readonly rows: number;
+  readonly added: number;
+  readonly changed: number;
+  readonly unchanged: number;
+  readonly removed: number;
+}
+
+/** Una carga anterior de la lista NESS: quien, cuando y que archivo. */
+export interface NessQuotaUploadRecord extends Omit<NessQuotaUploadResult, 'errors' | 'warnings'> {
+  readonly id: number;
+  readonly date: string;
+  readonly username: string;
+  readonly fileName: string;
 }

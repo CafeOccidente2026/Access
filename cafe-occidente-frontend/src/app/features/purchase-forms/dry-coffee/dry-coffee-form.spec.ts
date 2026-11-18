@@ -9,9 +9,10 @@ import { DryCoffeeFormComponent } from './dry-coffee-form';
 import { ContentService } from '../../../core/services/content.service';
 import { DryCoffeePurchaseService } from '../../../core/services/dry-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
-import { Grower } from '../../../core/models/grower.model';
+import { Grower, GrowerProgram } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 import { DRY } from '../../purchase-query/purchase-query.testing';
+import dryContent from '../../../../../public/assets/data/purchase-form-dry.json';
 
 /**
  * Cubre el gate REQUIRED/hasRequiredCascadeInputs de buildRequest() (dry-coffee-form.ts) - el mismo
@@ -24,10 +25,17 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
     windowTitle: 'Compras Café Seco',
     theme: 'sky',
-    topFields: [],
-    identificationFields: [],
+    topFields: [
+      { key: 'agency', label: 'Agencia', type: 'text' },
+      { key: 'announcement', label: 'Anuncio', type: 'number' },
+      { key: 'associated', label: '', ariaLabel: 'Asociado', type: 'text' },
+    ],
+    identificationFields: [{ key: 'productCode', label: 'Cod Prod', type: 'text' }],
+    federationFields: ['idNumber', 'fullName', 'program', 'quota'].map((key) => ({ key, label: key, type: 'text' as const })),
+    additionalDiscountFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
     messages: {
       acceptLabel: 'Aceptar',
+      tareNotBelowGross: 'El destare no puede ser mayor o igual que los Kilos Brutos',
       noAnnouncement: 'No hay anuncio',
       deceasedBlocked: 'No se le puede facturar a un fallecido.',
       idNumberNotFound: 'Este número de cédula no existe.',
@@ -37,18 +45,20 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
   const growerWithPhone: Grower = {
     id: 1,
-    idNumber: '210514',
-    firstName: 'PAZ',
-    secondName: 'CAROLINA',
-    lastName: 'CASTELBLANCO',
-    secondLastName: 'OSSA',
-    address: 'CLL 14 N 37-20 CASA II',
-    phone: '3117498703',
+    idNumber: '990514',
+    firstName: 'CAFICULTOR',
+    secondName: 'UNO',
+    lastName: 'PRUEBA',
+    secondLastName: 'DOS',
+    address: 'VEREDA PRUEBA',
+    phone: '3000000001',
     growerType: 'C',
     active: true,
     deceased: false,
@@ -57,7 +67,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     vehiclePlate: null,
   };
 
-  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '27197019', address: 'EL CIDRAL', phone: '' };
+  const growerWithoutPhone: Grower = { ...growerWithPhone, idNumber: '99197019', address: 'VEREDA PRUEBA DOS', phone: '' };
 
   const calculation = {
     basePriceLoad: 1113500,
@@ -78,6 +88,10 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
   let createSpy: ReturnType<typeof vi.fn>;
   let qualitySpy: ReturnType<typeof vi.fn>;
   let component: DryCoffeeFormComponent;
+  let focusSpy: ReturnType<typeof vi.fn>;
+  let nessProgram: GrowerProgram | null = null;
+
+  afterEach(() => (nessProgram = null));
 
   function setup(grower: Grower) {
     previewSpy = vi.fn(() => of(calculation));
@@ -103,7 +117,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     };
     const fakeGrowerService = {
       findByIdNumber: vi.fn(() => of(grower)),
-      findProgram: () => of(null),
+      findProgram: vi.fn(() => of(nessProgram)),
     };
 
     localStorage.setItem('cafeoccidente.agencyId', '1');
@@ -119,6 +133,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       ],
     });
     component = TestBed.createComponent(DryCoffeeFormComponent).componentInstance;
+    focusSpy = vi.fn();
+    (component as any).focusField = focusSpy;
   }
 
   function fillCommon(): void {
@@ -179,6 +195,22 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.onFieldCommitted('cellphone');
     expect((component as any).locked.has('cellphone')).toBe(true);
     expect(component.model['cellphone']).toBe('3001112233');
+  });
+
+  it('calculates when Celular is filled in last, after the discounts (prueba del 9-nov)', () => {
+    setup(growerWithoutPhone);
+    fillCommon();
+    fillWeightsAndBags();
+    for (const field of ['tare', 'penalty', 'shrinkageDiscount', 'otherDiscounts']) {
+      component.model[field] = field === 'tare' ? '50' : '0';
+      component.onFieldCommitted(field);
+    }
+    expect(previewSpy).not.toHaveBeenCalled();
+
+    component.model['cellphone'] = '3001234567';
+    component.onFieldCommitted('cellphone');
+
+    expect(previewSpy).toHaveBeenCalledTimes(1);
   });
 
   it('locks address/cellphone/idType normally when the migrated grower data is complete', () => {
@@ -272,10 +304,18 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     expect(qualitySpy).toHaveBeenLastCalledWith(220, 20, expect.any(Number), 'RN');
     expect(component.errorMessage()).toBe(message);
+    // Prueba del 9-nov (punto 9): el foco no se mueve detras del aviso; se vacia y se vuelve al Aceptar.
+    expect(focusSpy).not.toHaveBeenCalledWith('totalStoredWeight');
+
+    component.dismissError();
+
     expect(component.model['totalStoredWeight']).toBe('');
     expect(component.model['totalHuskWeight']).toBe('');
+    expect(component.model['healthyStoredWeight']).toBe('');
+    expect(component.qualityCalc()).toEqual({ wastePercentage: null, defectivePercentage: null, healthyPercentage: null });
     expect((component as any).locked.has('totalStoredWeight')).toBe(false);
     expect((component as any).locked.has('totalHuskWeight')).toBe(false);
+    expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
   });
 
   it('Q15: if the save is rejected over the threshold, the sample weights are cleared too', () => {
@@ -293,10 +333,15 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.print();
 
     expect(component.errorMessage()).toBe(message);
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    component.dismissError();
     expect(component.model['totalStoredWeight']).toBe('');
+    expect(component.calc()).toBeNull();
+    expect(focusSpy).toHaveBeenLastCalledWith('totalStoredWeight');
   });
 
-  it('a failed weight that is not the threshold keeps the generic message', () => {
+  // Hallazgo #10 (16-nov): el peso rechazado se borra y queda editable para digitarlo otra vez.
+  it('a failed weight that is not the threshold shows the server message and frees the field', () => {
     setup(growerWithPhone);
     fillCommon();
     qualitySpy.mockReturnValue(throwError(() => ({ error: { message: 'otro' } })));
@@ -304,7 +349,24 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     component.onFieldCommitted('totalStoredWeight');
 
     expect(component.errorMessage()).toBe('otro');
-    expect(component.model['totalStoredWeight']).toBe('220');
+    expect(component.model['totalStoredWeight']).toBe('');
+    expect((component as any).locked.has('totalStoredWeight')).toBe(false);
+    expect((component as any).retryKey).toBe('totalStoredWeight');
+    component.dismissError();
+    expect((component as any).retryKey).toBeNull();
+  });
+
+  // Hallazgo #5 (16-nov): Destare igual a Kilos Brutos se rechaza al dar Enter, sin esperar el cálculo.
+  it('a tare equal to the gross kilos is rejected at once', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    component.model['grossKg'] = '2';
+    component.onFieldCommitted('grossKg');
+    component.model['tare'] = '2';
+    component.onFieldCommitted('tare');
+
+    expect(component.errorMessage()).toBe(content.messages['tareNotBelowGross']);
+    expect(component.model['tare']).toBe('');
   });
 
   it('Imprimir saves, opens the invoice with the payment and leaves the form clean with the next invoice', async () => {
@@ -316,8 +378,8 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
       component.onFieldCommitted(field);
     }
     const nextInvoice = vi.spyOn(TestBed.inject(DryCoffeePurchaseService), 'nextInvoiceNumber');
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
     createSpy.mockReturnValue(of(DRY));
 
@@ -327,7 +389,7 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
     expect(component.payment()).toBeNull();
     expect(component.savedNoticeOpen()).toBe(true);
     expect(nextInvoice).toHaveBeenCalledTimes(1);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.lastCall![0]);
     expect(doc).toContain('SDBU - 27.869');
     expect(doc).toContain('7.777.777');
@@ -352,5 +414,117 @@ describe('DryCoffeeFormComponent - gate REQUIRED de la cascada', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  const viewField = (key: string) => {
+    const v = component.viewContent()!;
+    return [...v.topFields, ...v.identificationFields, ...(v.federationFields ?? []), ...(v.additionalDiscountFields ?? [])]
+      .find((f) => f.key === key)!;
+  };
+
+  it('RN-15.6: Retefuente is read-only and shows what the server calculated', () => {
+    setup(growerWithPhone);
+    previewSpy.mockReturnValue(of({ ...calculation, withholding: 6000 }));
+    expect(viewField('withholding').readonly).toBe(true);
+    expect(viewField('withholding').value).toBe('');
+
+    fillCommon();
+    fillWeightsAndBags();
+    component.model['tare'] = '50';
+    component.onFieldCommitted('tare');
+
+    expect(viewField('withholding').readonly).toBe(true);
+    expect(viewField('withholding').value).toBe(6000);
+  });
+
+  it('C3: with NESS the Federación block shows the cédula, name, program and quota of NESS, read only', () => {
+    nessProgram = { programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' };
+    setup(growerWithPhone);
+    fillCommon();
+    for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO', quota: '200' })) {
+      expect(viewField(key)).toMatchObject({ value, readonly: true });
+    }
+  });
+
+  it('C3: without NESS the Federación block stays empty and the seller data below is filled as usual', () => {
+    setup(growerWithPhone);
+    fillCommon();
+    for (const key of ['idNumber', 'fullName', 'program', 'quota']) {
+      expect(viewField(key)).toMatchObject({ value: '', readonly: true });
+    }
+    expect(component.model['firstName']).toBe('CAFICULTOR UNO');
+    expect(component.model['lastName']).toBe('PRUEBA DOS');
+  });
+
+  it('the agency is not editable, the special brings announcement and Cod Prod, and S/C says if associated', () => {
+    setup(growerWithPhone);
+    expect(viewField('agency').readonly).toBe(true);
+    expect(viewField('agency').value).toBe('Buesaco');
+
+    fillCommon();
+
+    expect(viewField('announcement').value).toBe('BU-32');
+    expect(viewField('productCode').value).toBe('0110002000002');
+    expect(viewField('associated').value).toBe('NO ASOCIADO');
+    component.model['idType'] = 'S';
+    component.onFieldCommitted('special');
+    expect(viewField('associated').value).toBe('ASOCIADO');
+  });
+  it('prueba del 10-nov: without a cellphone it warns and waits for Celular; then it goes on from Celular', () => {
+    setup(growerWithoutPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    component.model['fund'] = 'RP';
+    component.onFieldCommitted('fund');
+    component.model['idPart1'] = growerWithoutPhone.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
+
+    component.dismissError();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
+  });
+
+  it('a grower with a cellphone goes straight on to Especial, without a warning', () => {
+    setup(growerWithPhone);
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    fillCommon();
+    expect(component.errorMessage()).toBeNull();
+    expect(advance).toHaveBeenCalledWith('idPart1');
+  });
+
+  it('the contribution says Descuento Coop for a type C grower (from the JSON)', () => {
+    const editable = content as { additionalDiscountFields?: PurchaseFormContent['additionalDiscountFields'] };
+    const original = editable.additionalDiscountFields;
+    editable.additionalDiscountFields = [
+      { key: 'contribution', label: 'Aporte Socio', type: 'currency' },
+      { key: 'withholding', label: 'Retefuente', type: 'currency' },
+    ];
+    try {
+      setup(growerWithPhone);
+      component.model['idPart1'] = growerWithPhone.idNumber;
+      component.onFieldCommitted('idPart1');
+      const label = component.viewContent()?.additionalDiscountFields?.find((f) => f.key === 'contribution')?.label;
+      expect(label).toBe('Descuento Coop');
+    } finally {
+      editable.additionalDiscountFields = original;
+    }
+  });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Fondo', () => {
+    setup(growerWithPhone);
+    component.reset();
+    expect(focusSpy).toHaveBeenLastCalledWith('fund');
+  });
+});
+
+describe('purchase-form-dry.json', () => {
+  it('the ASOCIADO / NO ASOCIADO box is wide enough not to cut "NO ASOCIADO" (text-sm + padding)', () => {
+    const box = dryContent.topFields.find((f) => f.key === 'associated')!;
+    const width = Number(/max-w-\[(\d+)px\]/.exec(box.inputWidthClass ?? '')?.[1]);
+    expect(width).toBeGreaterThanOrEqual(120);
   });
 });

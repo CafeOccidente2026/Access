@@ -1,8 +1,10 @@
 package com.cafeoccidente.backend.purchases.husk.service;
 
+import com.cafeoccidente.backend.purchases.shared.service.NetWeightRule;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.util.MoneyValidation;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
+import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseCalculator;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
@@ -55,6 +57,14 @@ public class HuskPurchaseCalculator {
         // esto se confirmo contra compras_migrar.csv. Se guarda la version con precision completa
         // para el calculo y se redondea solo la que se expone en la respuesta.
         BigDecimal sampleSize = sampleSize(controlRecord);
+        // Prueba a mano del 16-nov: la almendra sale de la muestra; no puede ser 0 ni pasarla.
+        if (request.almondWeight().signum() <= 0) {
+            throw new BusinessRuleException("Peso Almendra debe ser mayor que 0");
+        }
+        if (request.almondWeight().compareTo(sampleSize) > 0) {
+            throw new BusinessRuleException("Peso Almendra no puede ser mayor que la muestra ("
+                    + DryCoffeePurchaseCalculator.grams(sampleSize) + ")");
+        }
         BigDecimal almondPercentageRaw = request.almondWeight()
                 .multiply(HUNDRED)
                 .divide(sampleSize, MathContext.DECIMAL64);
@@ -66,6 +76,7 @@ public class HuskPurchaseCalculator {
         MoneyValidation.requireNonNegative(announcement.healthyUnitPrice(), "Pr Sustentación");
 
         // Destare_LostFocus: sin split Kilos_Verdes, resta directa.
+        NetWeightRule.check(request.grossKg(), request.tareKg());
         BigDecimal netKg = request.grossKg().subtract(request.tareKg()).setScale(SCALE, RoundingMode.HALF_UP);
 
         // Descuento_Fro_LostFocus: Vr_Kilo = (Pr_AlmSana * PorcAlmSana / BasePasilla) - Costos.

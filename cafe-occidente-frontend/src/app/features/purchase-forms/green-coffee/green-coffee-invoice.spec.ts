@@ -28,15 +28,15 @@ describe('buildGreenCoffeeInvoiceDocDefinition ("Factura verdes")', () => {
   it('has the dry coffee layout with Kilos Verdes between Destare and Kilos Netos, like Access', () => {
     const doc = buildGreenCoffeeInvoiceDocDefinition(purchase, null);
     expect(labels(doc)).toEqual(['Sacos', 'Kilos Brutos', 'Destare', 'Kilos Verdes', 'Kilos Netos Pergamino']);
-    expect(JSON.stringify(doc.content)).toContain('"1.000,00"');
+    expect(JSON.stringify(doc.content)).toContain('"1.000"');
   });
 
   it('takes the sample of the Registro de Control and the header of the invoice', () => {
     const text = JSON.stringify(buildGreenCoffeeInvoiceDocDefinition(purchase, null).content);
     expect(text).toContain('SDBU - 27.875');
     expect(text).toContain('186,18');
-    expect(text).toContain('94,00');
-    expect(text).toContain('11.844.000,00');
+    expect(text).toContain('"94"');
+    expect(text).toContain('11.844.000');
   });
 
   it('a purchase saved before the sample (V15) prints the sample rows in zero', () => {

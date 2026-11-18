@@ -33,9 +33,8 @@ public class SuppliesReadRepository {
         String sql = String.join(" UNION ALL ", PURCHASE_TABLES.entrySet().stream()
                 .map(e -> "SELECT '" + e.getKey() + "' AS module, p.id, p.numero_factura, p.agencia_id,"
                         + " a.nombre AS agency_name, f.codigo AS fund_code, p.fecha_compra, p.cedula,"
-                        // En compras check_number es texto; Caja.Cheque en Access era numerico.
-                        + " p.neto_a_pagar, p.forma_pago,"
-                        + " CASE WHEN p.numero_cheque ~ '^[0-9]{1,9}$' THEN CAST(p.numero_cheque AS INTEGER) END AS numero_cheque,"
+                        // El cheque es texto de 4 digitos con sus ceros (V21, V25): no se pasa a numero.
+                        + " p.neto_a_pagar, p.forma_pago, p.numero_cheque,"
                         + " p.creado_en, s.origen_id AS split_id, s.efectivo, s.cheque,"
                         + " s.transferencia, s.datafono, s.numero_cheque AS split_check_number"
                         + " FROM " + e.getValue() + " p JOIN agencias a ON a.id = p.agencia_id"
@@ -61,15 +60,42 @@ public class SuppliesReadRepository {
                     rs.getString("cedula"),
                     rs.getBigDecimal("neto_a_pagar"),
                     rs.getString("forma_pago"),
-                    (Integer) rs.getObject("numero_cheque"),
+                    rs.getString("numero_cheque"),
                     createdAt == null ? null : createdAt.toInstant());
             // Pago mixto migrado de Access: una fila por forma de pago en vez del neto bajo una sola.
             return rs.getObject("split_id") == null ? List.of(payment)
                     : payment.splitInto(rs.getBigDecimal("efectivo"), rs.getBigDecimal("cheque"),
                             rs.getBigDecimal("transferencia"), rs.getBigDecimal("datafono"),
-                            (Integer) rs.getObject("split_check_number"));
+                            rs.getString("split_check_number"));
         });
         return rows.stream().flatMap(List::stream).toList();
+    }
+
+    /**
+     * 6B (11-nov): lo pagado con datafono para el informe de Caja, leido de la cuenta por cobrar. Solo las
+     * PENDIENTE: al anular la compra pasa a ANULADA y sale del informe. Fondo, fecha y orden son los de la compra.
+     */
+    public List<PurchasePayment> cardReceivables(Long agencyId, LocalDate from, LocalDate to) {
+        String sql = String.join(" UNION ALL ", PURCHASE_TABLES.entrySet().stream()
+                .map(e -> "SELECT c.modulo_compra, p.id, c.numero_factura, c.agencia_id, a.nombre AS agency_name,"
+                        + " f.codigo AS fund_code, p.fecha_compra, c.cedula_vendedor, c.valor, p.creado_en"
+                        + " FROM cuentas_por_cobrar c JOIN " + e.getValue() + " p ON p.id = c.compra_id"
+                        + " JOIN agencias a ON a.id = c.agencia_id JOIN fondos f ON f.id = p.fondo_id"
+                        + " WHERE c.modulo_compra = '" + e.getKey() + "' AND c.estado = 'PENDIENTE'"
+                        + " AND (CAST(:agencyId AS BIGINT) IS NULL OR c.agencia_id = :agencyId)"
+                        + " AND p.fecha_compra BETWEEN :from AND :to")
+                .toList());
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("agencyId", agencyId)
+                .addValue("from", from)
+                .addValue("to", to);
+        return jdbc.query(sql, params, (rs, i) -> {
+            Timestamp createdAt = rs.getTimestamp("creado_en");
+            return new PurchasePayment(rs.getString("modulo_compra"), rs.getLong("id"), rs.getInt("numero_factura"),
+                    rs.getLong("agencia_id"), rs.getString("agency_name"), rs.getString("fund_code"),
+                    rs.getObject("fecha_compra", LocalDate.class), rs.getString("cedula_vendedor"),
+                    rs.getBigDecimal("valor"), "DATAFONO", null, createdAt == null ? null : createdAt.toInstant());
+        });
     }
 
     /** Relacion cheques caja: [1er nombre] & " " & [2o nombre], [1er apellido] & " " & [2o apellido]. */

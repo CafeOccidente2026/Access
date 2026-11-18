@@ -1,12 +1,14 @@
 import type { Content, ContentStack, ContentTable, CustomTableLayout, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
+import { formatKilos, formatMoney, formatTyped } from '../../shared/utils/number-format';
 import { RemissionResponse } from '../../core/models/inventory.model';
-import { money, wholePeso } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
+import { cooperativeNit } from '../../shared/utils/nit';
+import { themeColor } from '../../shared/utils/theme-color';
+
 
 // Encabezado del papel preimpreso (capturas/remision-formato.png). Direccion y NIT como en la factura;
 // telefonos leidos de la captura (baja resolucion) - pendientes de confirmar con una remision real.
 const COMPANY = 'COOPERATIVA DE CAFICULTORES DE OCCIDENTE DE NARIÑO.';
-const NIT = 'NIT. 891.200.986-8';
 const ADDRESS = 'CARRERA 32 A No. 18 - 105 - TELEFONO: 602 721 9700 - CELULAR: 311 749 8702 - PASTO (N)';
 
 const T = { fontSize: 6 };
@@ -51,7 +53,7 @@ function header(remission: RemissionResponse, logoDataUrl: string | null): Conte
             ],
           },
           { text: COMPANY, bold: true, fontSize: 6, margin: [0, 4, 0, 0] },
-          { text: NIT, fontSize: 6, margin: [0, 2, 0, 0] },
+          { text: `NIT. ${cooperativeNit()}`, fontSize: 6, margin: [0, 2, 0, 0] },
           { text: ADDRESS, bold: true, fontSize: 5.5, margin: [0, 3, 0, 0] },
         ],
       },
@@ -60,7 +62,7 @@ function header(remission: RemissionResponse, logoDataUrl: string | null): Conte
         table: {
           widths: ['*'],
           heights: [36],
-          body: [[{ text: `Nº ${remission.displayNumber}`, color: '#c00000', bold: true, fontSize: 14, alignment: 'center', margin: [0, 10, 0, 0] }]],
+          body: [[{ text: `Nº ${remission.displayNumber}`, color: themeColor('--color-remission-number'), bold: true, fontSize: 14, alignment: 'center', margin: [0, 10, 0, 0] }]],
         },
         layout: { hLineWidth: () => 1.5, vLineWidth: () => 1.5 },
       },
@@ -100,7 +102,7 @@ function dateBlock(remission: RemissionResponse): ContentTable {
         ],
         [
           { text: 'Hora Salida:', ...T, colSpan: 3 }, {}, {},
-          { text: 'HH : MM', ...HEAD, color: '#aaaaaa' }, { text: 'am', ...HEAD, color: '#aaaaaa' }, { text: 'pm', ...HEAD, color: '#aaaaaa' },
+          { text: 'HH : MM', ...HEAD, color: themeColor('--color-print-placeholder') }, { text: 'am', ...HEAD, color: themeColor('--color-print-placeholder') }, { text: 'pm', ...HEAD, color: themeColor('--color-print-placeholder') },
           { text: 'DESPACHOS', bold: true, fontSize: 10, alignment: 'center' },
           {}, {},
         ],
@@ -123,7 +125,7 @@ function dispatchBlock(remission: RemissionResponse, withFactor: boolean): Conte
       return [
         EMPTY, EMPTY, EMPTY,
         { text: '$', ...VALUE, fontSize: 7, alignment: 'right' },
-        { text: wholePeso(line.outputValue), ...VALUE, fontSize: 7, alignment: 'right' },
+        { text: formatMoney(line.outputValue), ...VALUE, fontSize: 7, alignment: 'right' },
         EMPTY,
       ];
     }
@@ -134,9 +136,9 @@ function dispatchBlock(remission: RemissionResponse, withFactor: boolean): Conte
       { text: remission.agencyName, ...VALUE, fontSize: 7 },
       { text: line.specialType ?? '', ...VALUE, fontSize: 7 },
       { text: line.sacos == null ? '' : String(line.sacos), ...VALUE, fontSize: 7, alignment: 'right' },
-      { text: line.grossKg == null ? '' : money(line.grossKg), ...VALUE, fontSize: 7, alignment: 'right' },
-      { text: money(line.quantity), ...VALUE, fontSize: 7, alignment: 'right' },
-      { text: withFactor && factor != null ? money(factor) : '', ...VALUE, fontSize: 7, alignment: 'right' },
+      { text: line.grossKg == null ? '' : formatKilos(line.grossKg), ...VALUE, fontSize: 7, alignment: 'right' },
+      { text: formatKilos(line.quantity), ...VALUE, fontSize: 7, alignment: 'right' },
+      { text: withFactor && factor != null ? formatTyped(factor) : '', ...VALUE, fontSize: 7, alignment: 'right' },
     ];
   };
   const labeled = (label: string, value: string | null, extra: Partial<TableCell> = {}): TableCell =>

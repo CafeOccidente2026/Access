@@ -21,6 +21,7 @@ function suppliesRoutes(): Routes {
   };
   const reports: Record<string, string> = {
     'informe-caja': 'cash',
+    'informe-datafono': 'card',
     'informe-rp': 'suppliesRp',
     'informe-lf': 'suppliesLf',
     'informe-empaques': 'packaging',
@@ -53,6 +54,12 @@ function vendorsRoutes(): Routes {
     { path: 'vendedores/asociados', loadComponent: () => import('./features/associates/associates').then((m) => m.AssociatesComponent) },
     { path: 'vendedores/cupos-ness', loadComponent: ness, data: { view: 'quotas' } },
     { path: 'vendedores/saldos-cupos-ness', loadComponent: ness, data: { view: 'balances' } },
+    {
+      // RN-28.4.1: solo el Administrador.
+      path: 'vendedores/actualiza-cupos-ness',
+      data: { roles: ADMIN },
+      loadComponent: () => import('./features/ness-quota-upload/ness-quota-upload').then((m) => m.NessQuotaUploadComponent),
+    },
   ];
 }
 
@@ -190,13 +197,44 @@ export const routes: Routes = [
           import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
             (m) => m.QuotaPurchaseFormComponent,
           ),
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
+      },
+      {
+        // HU-34 y HU-35: los dos informes de Compras a Futuro, Administrador y Usuario.
+        path: 'compras/futuro/informe-anuncios',
+        data: { view: 'announcement' },
+        loadComponent: () => import('./features/future-report/future-report').then((m) => m.FutureReportComponent),
+      },
+      {
+        path: 'compras/futuro/informe-saldo',
+        data: { view: 'balance' },
+        loadComponent: () => import('./features/future-report/future-report').then((m) => m.FutureReportComponent),
+      },
+      {
+        // HU-31 (P2): Administrador y Usuario, solo consulta.
+        path: 'compras/futuro/anunciadas-hoy',
+        data: { view: 'pending' },
+        loadComponent: () => import('./features/future-restore/future-restore').then((m) => m.FutureRestoreComponent),
+      },
+      {
+        // Q5: los dos Restaurar, solo el Administrador.
+        path: 'compras/futuro/restaurar-anunciadas',
+        data: { roles: ADMIN, view: 'future' },
+        loadComponent: () => import('./features/future-restore/future-restore').then((m) => m.FutureRestoreComponent),
+      },
+      {
+        path: 'compras/futuro/restaurar-cupos',
+        data: { roles: ADMIN, view: 'quota' },
+        loadComponent: () => import('./features/future-restore/future-restore').then((m) => m.FutureRestoreComponent),
       },
       {
         path: 'compras/futuro/facturar-anunciadas',
         loadComponent: () =>
-          import('./features/purchase-forms/quota-billing/quota-billing-form').then(
-            (m) => m.QuotaBillingFormComponent,
+          import('./features/purchase-forms/quota-purchase/quota-purchase-form').then(
+            (m) => m.QuotaPurchaseFormComponent,
           ),
+        data: { mode: 'future' },
+        canDeactivate: [dryCoffeeUnsavedChangesGuard],
       },
       {
         path: 'compras/inventarios',
@@ -253,6 +291,13 @@ export const routes: Routes = [
           import('./features/date-range-dialog/date-range-dialog').then(
             (m) => m.DateRangeDialogComponent,
           ),
+      },
+      {
+        // HU-05 (11-nov): "Menu Habilitacion" de Acceso Principal corrige la compra con la misma factura.
+        path: 'menu-habilitacion',
+        data: { roles: ADMIN, screens: ['CORREGIR_COMPRA'] },
+        loadComponent: () =>
+          import('./features/purchase-correction/purchase-correction').then((m) => m.PurchaseCorrectionComponent),
       },
       {
         path: 'compras/anular',

@@ -1,0 +1,5 @@
+{
+  "upcoming": "La resolución DIAN de {agency} vence el {date} (faltan {days} días). Registre la nueva resolución en el Registro de Control.",
+  "today": "La resolución DIAN de {agency} vence hoy, {date}. Registre la nueva resolución en el Registro de Control.",
+  "expired": "La resolución DIAN de {agency} venció el {date}. Las compras de esa agencia están bloqueadas hasta que se registre la nueva resolución en el Registro de Control."
+}

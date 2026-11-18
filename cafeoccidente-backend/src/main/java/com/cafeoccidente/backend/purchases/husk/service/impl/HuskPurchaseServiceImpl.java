@@ -9,6 +9,9 @@ import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.husk.dto.AnnouncementInfoResponse;
+import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
+import com.cafeoccidente.backend.purchases.correction.dto.PurchaseCorrection;
+import com.cafeoccidente.backend.purchases.correction.service.PurchaseCorrectionService;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseResponse;
 import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
@@ -29,6 +32,7 @@ import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
 import com.cafeoccidente.backend.purchases.shared.service.InvoiceConsecutiveService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -56,6 +60,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     private final InvoiceConsecutiveService invoiceConsecutiveService;
     private final InventoryMovementService inventoryMovementService;
     private final PurchasePaymentService purchasePaymentService;
+    private final PurchaseCorrectionService purchaseCorrectionService;
+    private final Clock clock;
 
     public HuskPurchaseServiceImpl(
             HuskPurchaseRepository huskPurchaseRepository,
@@ -70,7 +76,11 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
             PurchaseContextService purchaseContextService,
             InvoiceConsecutiveService invoiceConsecutiveService,
             InventoryMovementService inventoryMovementService,
-            PurchasePaymentService purchasePaymentService) {
+            PurchasePaymentService purchasePaymentService,
+            PurchaseCorrectionService purchaseCorrectionService,
+            Clock clock) {
+        this.clock = clock;
+        this.purchaseCorrectionService = purchaseCorrectionService;
         this.huskPurchaseRepository = huskPurchaseRepository;
         this.fundRepository = fundRepository;
         this.productCodeResolver = productCodeResolver;
@@ -92,17 +102,71 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     public HuskPurchaseResponse create(HuskPurchaseRequest request) {
         // Agencia del token, fondo, producto, anuncio, Registro de Control y vendedor (Q8).
         PurchaseContext context = purchaseContextService.forSave(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone());
-        AnnouncementResponse announcement = context.announcement();
-        PurchaseSeller seller = context.seller();
+                request.fundId(), SPECIAL_TYPE, started(request.fundId(), request.startedAnnouncementNumber()),
+                request.idNumber(), request.address(), request.cellphone());
         HuskPurchaseCalculation calculation = runCalculation(request, context);
 
         Long currentUserId = securityUtils.getCurrentUserId();
 
         HuskPurchase purchase = new HuskPurchase();
-        purchase.setPurchaseDate(LocalDate.now());
+        purchase.setPurchaseDate(LocalDate.now(clock));
         // HU-15: el numero lo toma el servidor dentro de esta transaccion (Q7: compartido seco/verde/pasilla).
         purchase.setInvoiceNumber(invoiceConsecutiveService.take(context.agency().getId(), context.controlRecord()));
+        fill(purchase, request, context, calculation);
+        purchase.setCreatedByUserId(currentUserId);
+        purchase.setCreatedAt(Instant.now());
+
+        HuskPurchase savedPurchase = huskPurchaseRepository.save(purchase);
+        purchasePaymentService.record(
+                "HUSK", savedPurchase.getId(), savedPurchase.getInvoiceNumber(), request.payment(), context);
+
+        recordInventory(savedPurchase, context);
+
+        return mapper.toResponse(savedPurchase, context.controlRecord());
+    }
+
+    /**
+     * HU-05 (11-nov): corrige pesos, castigo, descuentos, direccion, celular y pago con los precios del anuncio
+     * original. Fondo, cedula, fecha, anuncio y numero de factura no cambian.
+     */
+    @Override
+    @Transactional
+    public HuskPurchaseResponse correct(Long id, HuskPurchaseRequest request) {
+        PurchaseCorrection correction =
+                purchaseCorrectionService.start(AnnulmentModule.HUSK, id, request.address(), request.cellphone());
+        HuskPurchase purchase = huskPurchaseRepository.findById(id).orElseThrow();
+        HuskPurchaseRequest fixed = fixedRequest(purchase, request);
+        HuskPurchaseCalculation calculation = runCalculation(fixed, correction.context());
+        purchaseCorrectionService.settle(correction, calculation.netKg(), request.payment());
+        fill(purchase, fixed, correction.context(), calculation);
+        HuskPurchase saved = huskPurchaseRepository.saveAndFlush(purchase);
+        recordInventory(saved, correction.context());
+        purchaseCorrectionService.close(correction);
+        return mapper.toResponse(saved, correction.context().controlRecord());
+    }
+
+    /** Neto, retencion y demas de la correccion, sin guardar: con el anuncio original y la compra bloqueada. */
+    @Override
+    @Transactional
+    public HuskPurchaseCalculation previewCorrection(Long id, HuskPurchaseRequest request) {
+        PurchaseCorrection correction =
+                purchaseCorrectionService.start(AnnulmentModule.HUSK, id, request.address(), request.cellphone());
+        HuskPurchase purchase = huskPurchaseRepository.findById(id).orElseThrow();
+        return runCalculation(fixedRequest(purchase, request), correction.context());
+    }
+
+    /** Lo digitado, con lo que la correccion deja fijo (fondo, cedula y, segun el modulo, especial o Vr Kilo Comp). */
+    private static HuskPurchaseRequest fixedRequest(HuskPurchase purchase, HuskPurchaseRequest request) {
+        return new HuskPurchaseRequest(purchase.getFund().getId(), purchase.getIdNumber(),
+                request.address(), request.cellphone(), request.almondWeight(), request.bagsCount(), request.grossKg(),
+                request.tareKg(), request.shrinkageDiscount(), request.otherDiscounts(), request.payment());
+    }
+
+    /** Lo que sale del contexto y del calculo, igual al crear y al corregir; el pago se valida contra el neto. */
+    private void fill(HuskPurchase purchase, HuskPurchaseRequest request, PurchaseContext context,
+            HuskPurchaseCalculation calculation) {
+        AnnouncementResponse announcement = context.announcement();
+        PurchaseSeller seller = context.seller();
         purchase.setAgency(context.agency());
         purchase.setFund(context.fund());
         purchase.setSpecialType(SPECIAL_TYPE);
@@ -138,21 +202,15 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
                 purchasePaymentService.validate(request.payment(), calculation.netToPay());
         purchase.setPaymentMethod(payment.paymentMethod());
         purchase.setCheckNumber(payment.checkNumber());
-        purchase.setCreatedByUserId(currentUserId);
-        purchase.setCreatedAt(Instant.now());
+    }
 
-        HuskPurchase savedPurchase = huskPurchaseRepository.save(purchase);
-        purchasePaymentService.record(
-                "HUSK", savedPurchase.getId(), savedPurchase.getInvoiceNumber(), request.payment(), context);
-
+    private void recordInventory(HuskPurchase purchase, PurchaseContext context) {
         inventoryMovementService.recordFromPurchase(
-                InventoryMovement.PurchaseModule.HUSK, savedPurchase.getId(),
+                InventoryMovement.PurchaseModule.HUSK, purchase.getId(),
                 context.agency().getId(), context.productCode().getId(), purchase.getSpecialType(),
                 purchase.getInvoiceNumber(),
                 purchase.getPurchaseDate(), purchase.getBagsCount(), purchase.getGrossKg(), purchase.getNetKg(),
                 purchase.getAlmondPercentage(), purchase.getInventoryValue());
-
-        return mapper.toResponse(savedPurchase, context.controlRecord());
     }
 
     @Override
@@ -167,7 +225,8 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
     @Override
     public HuskPurchaseCalculation preview(HuskPurchaseRequest request) {
         return runCalculation(request, purchaseContextService.forPreview(
-                request.fundId(), SPECIAL_TYPE, request.idNumber(), request.address(), request.cellphone()));
+                request.fundId(), SPECIAL_TYPE, started(request.fundId(), request.startedAnnouncementNumber()),
+                request.idNumber(), request.address(), request.cellphone()));
     }
 
     private HuskPurchaseCalculation runCalculation(HuskPurchaseRequest request, PurchaseContext context) {
@@ -204,6 +263,12 @@ public class HuskPurchaseServiceImpl implements HuskPurchaseService {
                 announcement.announcementDate(),
                 announcement.basePriceLoad(),
                 announcement.healthyUnitPrice(),
-                announcement.costs());
+                announcement.costs(),
+                controlRecordService.getActive(agencyId).getSampleSize());
+    }
+
+    /** Hallazgo #6: el anuncio con que empezo la compra, si sigue vigente o es de hoy; null = el vigente. */
+    private AnnouncementResponse started(Long fundId, Integer startedNumber) {
+        return announcementService.findStarted(currentAgencyProvider.currentAgencyId(), fundId, SPECIAL_TYPE, startedNumber);
     }
 }

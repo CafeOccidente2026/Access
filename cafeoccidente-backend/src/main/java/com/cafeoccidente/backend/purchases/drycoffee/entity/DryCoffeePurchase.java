@@ -175,4 +175,8 @@ public class DryCoffeePurchase {
 
     @Column(name = "creado_en", nullable = false)
     private Instant createdAt;
+
+    /** Compra anunciada que factura (RF-21.5, V17): la anulacion le devuelve los kilos por aqui. */
+    @Column(name = "compra_anunciada_id")
+    private Long futurePurchaseId;
 }

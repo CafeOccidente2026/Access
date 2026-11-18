@@ -30,6 +30,16 @@ describe('PaymentPanelComponent', () => {
     expect(inputs.every((i) => i.readOnly)).toBe(true);
   });
 
+  it('names every box, so it can be found and typed in', () => {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('definition', definition);
+    fixture.componentRef.setInput('saved', { cashAmount: 1, checkAmount: 1, transferAmount: 1, cardAmount: 1, checkNumber: '4321' });
+    fixture.detectChanges();
+
+    const names = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('input')).map((i) => i.getAttribute('aria-label'));
+    expect(names).toEqual(['Efectivo', 'Cheque', 'Núm Cheque', 'Transfer', 'Datáfono', 'Tot F de Pago']);
+  });
+
   it('starts with only Efectivo and the total; lowering a form and leaving it shows the next one beside it', async () => {
     const fixture = TestBed.createComponent(PaymentPanelComponent);
     fixture.componentRef.setInput('definition', definition);
@@ -75,3 +85,31 @@ describe('PaymentPanelComponent', () => {
   });
 });
 
+
+describe('PaymentPanelComponent completed (prueba del 9-nov, punto 8)', () => {
+  function render(net: number) {
+    const fixture = TestBed.createComponent(PaymentPanelComponent);
+    fixture.componentRef.setInput('definition', definition);
+    fixture.componentRef.setInput('netToPay', net);
+    fixture.detectChanges();
+    const completed: number[] = [];
+    fixture.componentInstance.completed.subscribe(() => completed.push(1));
+    const cash = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('[data-field-key="payCash"]')!;
+    return { fixture, completed, cash };
+  }
+
+  it('Enter on Efectivo with the whole net says the payment is complete, as Access sent the focus to Imprimir', () => {
+    const { completed, cash } = render(1000);
+    cash.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(completed).toHaveLength(1);
+  });
+
+  it('Enter on Efectivo with less than the net goes on to Cheque and is not complete yet', () => {
+    const { fixture, completed, cash } = render(1000);
+    cash.value = '600';
+    cash.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    cash.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(completed).toHaveLength(0);
+  });
+});

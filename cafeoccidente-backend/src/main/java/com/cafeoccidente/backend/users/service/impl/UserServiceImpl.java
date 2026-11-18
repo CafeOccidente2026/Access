@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.users.service.impl;
 
+import com.cafeoccidente.backend.common.security.LoginThrottle;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.Roles;
@@ -47,6 +48,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final ChangeHistoryService history;
+    private final LoginThrottle loginThrottle;
 
     public UserServiceImpl(
             UserRepository userRepository,
@@ -55,7 +57,8 @@ public class UserServiceImpl implements UserService {
             GrowerRepository growerRepository,
             PasswordEncoder passwordEncoder,
             UserMapper userMapper,
-            ChangeHistoryService history) {
+            ChangeHistoryService history,
+            LoginThrottle loginThrottle) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.agencyRepository = agencyRepository;
@@ -63,6 +66,13 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.history = history;
+        this.loginThrottle = loginThrottle;
+    }
+
+    @Override
+    public void unlock(Long id) {
+        User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        loginThrottle.unlock(user.getUsername());
     }
 
     @Override
@@ -107,10 +117,16 @@ public class UserServiceImpl implements UserService {
             throw new BusinessRuleException(LAST_ADMIN);
         }
         UserResponse before = userMapper.toResponse(user);
-        user.setRole(role);
-        user.setAgency(agency(request.agencyId()));
-        user.setActive(request.active());
+        Agency agency = agency(request.agencyId());
         boolean passwordChanged = request.password() != null && !request.password().isEmpty();
+        // S6: cambiar contrasena, rol o agencia, o desactivar, cierra las sesiones abiertas del usuario.
+        if (passwordChanged || !role.getId().equals(user.getRole().getId())
+                || !agency.getId().equals(user.getAgency().getId()) || (user.isActive() && !request.active())) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+        }
+        user.setRole(role);
+        user.setAgency(agency);
+        user.setActive(request.active());
         if (passwordChanged) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }

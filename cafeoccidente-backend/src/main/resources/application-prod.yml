@@ -1,20 +1,16 @@
-spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: validate
-  flyway:
-    enabled: true
+# Detras de Caddy: la web y /api salen del mismo origen (sin CORS).
+server:
+  # Toma X-Forwarded-For/Proto/Host de Caddy (R0): con native, Tomcat supone el puerto 80/443 y el login desde el
+  # navegador da 403 (CORS) si Caddy se publica en otro puerto. Es seguro porque el backend solo es alcanzable desde
+  # Caddy, y Caddy reemplaza los X-Forwarded-* que mande el cliente.
+  forward-headers-strategy: framework
+  error:
+    include-stacktrace: never
+    include-message: never
 
-jwt:
-  secret: ${JWT_SECRET}
-
-app:
-  admin:
-    username: ${ADMIN_USERNAME}
-    password: ${ADMIN_PASSWORD}
-  cors:
-    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:4200}
+# Sin documentacion de la API en produccion (S8): /v3/api-docs y /swagger-ui responden 404.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

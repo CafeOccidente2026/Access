@@ -6,8 +6,8 @@ import { RemittancePurchase } from '../../core/models/remittance.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { RemittanceService } from '../../core/services/remittance.service';
-import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent } from '../../shared/ui';
-import { formatDisplayNumber } from '../../shared/utils/number-format';
+import { AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective } from '../../shared/ui';
+import { formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 import { RemittanceWorkbook, remittanceWorkbooks, saveBlob, workbookBlobs } from './remittance-files';
@@ -66,7 +66,7 @@ const fill = (text: string, values: Record<string, string | number>) =>
 @Component({
   selector: 'app-remittance',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent],
+  imports: [CommonModule, AccessWindowComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective],
   templateUrl: './remittance.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -248,7 +248,7 @@ export class RemittanceComponent {
     return fill(content.summary, {
       status: content.statuses[r.status] ?? r.status,
       purchases: r.purchases,
-      kg: formatDisplayNumber(r.netKg, 'currency'),
+      kg: formatKilos(r.netKg),
       packaging: r.packagingQuantity == null ? ''
         : fill(content.packagingSummary, { quantity: r.packagingQuantity, type: r.packagingType ?? '' }),
     });
@@ -259,11 +259,11 @@ export class RemittanceComponent {
   }
 
   kg(value: number): string {
-    return formatDisplayNumber(value, 'currency');
+    return formatKilos(value);
   }
 
   money(value: number): string {
-    return formatDisplayNumber(value, 'count');
+    return formatMoney(value);
   }
 
   date(iso: string): string {

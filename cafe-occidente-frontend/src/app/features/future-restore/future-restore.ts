@@ -1,0 +1,147 @@
+import { CommonModule, Location } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { rxResource, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
+
+import { AnnouncementQuotaResponse } from '../../core/models/announcement-quota.model';
+import { FuturePurchaseRestoreRow, PendingAnnouncementRow } from '../../core/models/future-purchase.model';
+import { AnnouncementQuotaService } from '../../core/services/announcement-quota.service';
+import { ContentService } from '../../core/services/content.service';
+import { FuturePurchaseService } from '../../core/services/future-purchase.service';
+import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
+import { announcementDisplay, formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
+import { localToday } from '../../shared/utils/local-date';
+import { saveOnce } from '../../shared/utils/save-once';
+import { serverError } from '../../shared/utils/server-error';
+
+/**
+ * 'future' = Restaurar Compras Anunciadas; 'quota' = Restaurar Anuncios con Cupos (solo consulta, P5);
+ * 'pending' = Anunciadas de Hoy (solo consulta, HU-31 con la respuesta P2).
+ */
+type View = 'future' | 'quota' | 'pending';
+
+export interface FutureRestoreContent {
+  readonly idNumberLabel: string;
+  readonly searchButton: string;
+  readonly restoreButton: string;
+  readonly backLabel: string;
+  readonly views: Record<View, { windowTitle: string; heading: string; note: string; columns: string[] }>;
+  /** Hallazgo #17: filtro de Anunciadas de Hoy. */
+  readonly filters: { from: string; to: string; withBalance: string };
+  readonly messages: { empty: string; error: string; restored: string; unchanged: string };
+}
+
+/** Hallazgo #1: kilos sin ",00" si son enteros y fechas dd/mm/aaaa. */
+const kg = formatKilos;
+
+export function futureCells(r: FuturePurchaseRestoreRow): string[] {
+  return [announcementDisplay(r.announcementNumber), formatDate(r.announcementDate), r.specialType, kg(r.announcedKg), kg(r.deliveredKg),
+    kg(r.currentBalance), kg(r.recalculatedBalance)];
+}
+
+export function quotaCells(q: AnnouncementQuotaResponse): string[] {
+  return [announcementDisplay(q.displayNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
+    kg(q.balance)];
+}
+
+/** Anunciadas de Hoy: Kl_Entregados = kilos anunciados menos el saldo. */
+export function pendingCells(p: PendingAnnouncementRow): string[] {
+  return [announcementDisplay(p.announcementNumber), formatDate(p.announcementDate), p.specialType, formatMoney(p.healthyUnitPrice), String(p.growers),
+    kg(p.announcedKg), kg(p.announcedKg - p.remainingKg), kg(p.remainingKg)];
+}
+
+/**
+ * Tablas de Compras a Futuro: Anunciadas de Hoy (Administrador y Usuario) y los dos "Restaurar" (solo el Administrador, Q5). Restaurar Compras Anunciadas recalcula desde
+ * cero el saldo de los compromisos de una cédula (P6): primero muestra el saldo guardado y el recalculado, y Restaurar
+ * lo aplica. Restaurar Anuncios con Cupos solo muestra el saldo de cada cupo, que ya se calcula al vuelo (P5).
+ */
+@Component({
+  selector: 'app-future-restore',
+  standalone: true,
+  imports: [CommonModule, AccessWindowComponent, FormFlowDirective],
+  templateUrl: './future-restore.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class FutureRestoreComponent {
+  private readonly futureService = inject(FuturePurchaseService);
+  private readonly quotaService = inject(AnnouncementQuotaService);
+  private readonly location = inject(Location);
+
+  readonly viewKey: View = inject(ActivatedRoute).snapshot.data['view'];
+  readonly content = toSignal(inject(ContentService).loadJson<FutureRestoreContent>('future-restore'));
+  readonly view = computed(() => this.content()?.views[this.viewKey]);
+
+  readonly idNumber = signal('');
+  readonly futureRows = signal<FuturePurchaseRestoreRow[] | null>(null);
+  readonly saving = signal(false);
+  readonly message = signal<string | null>(null);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
+  private readonly quotas = rxResource({
+    params: () => (this.viewKey === 'quota' ? true : undefined),
+    stream: () => this.quotaService.list(),
+  });
+  /**
+   * Hallazgo #17 (16-nov) y R5 (17-nov): por defecto las registradas hoy (Access miraba la fecha del anuncio);
+   * Desde/Hasta elige otro rango y la casilla muestra todas las que tienen saldo pendiente, de cualquier fecha.
+   */
+  readonly from = signal(localToday());
+  readonly to = signal(localToday());
+  readonly withBalance = signal(false);
+  private readonly pending = rxResource({
+    params: () =>
+      this.viewKey === 'pending' ? { from: this.from(), to: this.to(), withBalance: this.withBalance() } : undefined,
+    stream: ({ params }) => this.futureService.pending(params.from, params.to, params.withBalance),
+  });
+
+  readonly rows = computed<string[][] | null>(() => {
+    if (this.viewKey === 'quota') {
+      return this.quotas.hasValue() ? this.quotas.value().map(quotaCells) : null;
+    }
+    if (this.viewKey === 'pending') {
+      return this.pending.hasValue() ? this.pending.value().map(pendingCells) : null;
+    }
+    return this.futureRows()?.map(futureCells) ?? null;
+  });
+  readonly failed = computed(() => {
+    const fallback = this.content()?.messages.error;
+    const resourceError = this.quotas.error() ?? this.pending.error();
+    return this.error() ?? (resourceError ? serverError(resourceError, fallback) : null);
+  });
+  /** Hay algo que restaurar: algún saldo guardado no es el recalculado. */
+  readonly canRestore = computed(() =>
+    (this.futureRows() ?? []).some((r) => r.currentBalance !== r.recalculatedBalance));
+
+  search(event: Event, idNumber: string): void {
+    event.preventDefault();
+    this.idNumber.set(idNumber.replace(/\D/g, ''));
+    this.message.set(null);
+    this.error.set(null);
+    if (!this.idNumber()) {
+      return;
+    }
+    this.futureService.restorePreview(this.idNumber()).subscribe({
+      next: (rows) => this.futureRows.set(rows),
+      error: (err) => this.error.set(serverError(err, this.content()?.messages.error)),
+    });
+  }
+
+  restore(): void {
+    if (!this.canRestore()) {
+      return;
+    }
+    const changed = this.futureRows()!.filter((r) => r.currentBalance !== r.recalculatedBalance).length;
+    saveOnce(this.saving, () => this.futureService.restore(this.idNumber()), {
+      next: (rows) => {
+        // Lo que quedó guardado es el saldo recalculado.
+        this.futureRows.set(rows.map((r) => ({ ...r, currentBalance: r.recalculatedBalance })));
+        this.message.set(this.content()?.messages.restored.replace('{n}', String(changed)) ?? null);
+      },
+      error: (err) => this.error.set(serverError(err, this.content()?.messages.error)),
+    });
+  }
+
+  back(): void {
+    this.location.back();
+  }
+}

@@ -39,9 +39,12 @@ export class DryCoffeePurchaseService {
     return this.http.get<NextInvoiceNumber>(`${API_BASE_URL}/purchases/dry-coffee/next-invoice-number`);
   }
 
-  /** Cod Prod + datos del anuncio vigente (paso "Especial"). */
-  specialInfo(fundId: number, specialType: string): Observable<SpecialInfo> {
-    const params = `fundId=${fundId}&specialType=${encodeURIComponent(specialType)}`;
+  /** Cod Prod + datos del anuncio vigente (paso "Especial"), del anuncio con cupo elegido (RF-21.2) o de la compra
+   *  anunciada elegida (RF-21.5). */
+  specialInfo(fundId: number, specialType: string, announcementNumber?: number, futurePurchaseId?: number): Observable<SpecialInfo> {
+    const announcement = announcementNumber ? `&announcementNumber=${announcementNumber}` : '';
+    const future = futurePurchaseId ? `&futurePurchaseId=${futurePurchaseId}` : '';
+    const params = `fundId=${fundId}&specialType=${encodeURIComponent(specialType)}${announcement}${future}`;
     return this.http.get<SpecialInfo>(`${API_BASE_URL}/purchases/dry-coffee/special-info?${params}`);
   }
 

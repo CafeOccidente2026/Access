@@ -25,4 +25,6 @@ export interface UserManagementContent {
   readonly newPasswordLabel: string;
   readonly newPasswordHint: string;
   readonly userSavedMessage: string;
+  readonly unlockButton: string;
+  readonly userUnlockedMessage: string;
 }

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Observable, map } from 'rxjs';
 
 import { FormFieldDefinition, PurchaseFormContent, PurchasePayment } from '../../../core/models';
 import {
@@ -14,53 +15,54 @@ import { ContentService } from '../../../core/services/content.service';
 import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-purchase.service';
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
-import { parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
+import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
-import { UnsavedCloseForm } from '../unsaved-close';
+import { askCellphoneOr } from '../seller-cellphone';
+import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
+import { WeightMessages } from '../weight-check';
+import { serverError } from '../../../shared/utils/server-error';
+import { reserveInvoice } from '../invoice-reservation';
+import { FEDERATION_KEYS, loadFederation } from '../federation';
+import { localToday } from '../../../shared/utils/local-date';
 
 /** Valores digitados, indexados por la `key` del campo en purchase-form-green.json. */
 type FormModel = Record<string, string>;
 
-interface GreenCoffeeMessages {
-  readonly acceptLabel: string;
+interface GreenCoffeeMessages extends PurchaseMessages, WeightMessages {
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
   readonly sampleMissing: string;
-  readonly idNumberNotFound: string;
-  readonly saveError: string;
-  readonly savedNotice: string;
-  readonly invoiceError: string;
-  readonly closeWarning: string;
-  readonly closeConfirm: string;
-  readonly closeCancel: string;
 }
 
 type GreenCoffeeContent = PurchaseFormContent & { readonly messages: GreenCoffeeMessages };
 
 /**
  * Especial ("CV") y Fondo ("RP") son fijos en VERDES (sin AfterUpdate/combo real - ver
- * Form_VERDES.bas y VERDES.txt), a diferencia de Cafe Seco. "program" (Programa Federacion) se deja
- * siempre editable sin autocompletado: no hay tabla de programa migrada para VERDES (a diferencia de
- * staging_legacy_ness en Cafe Seco).
+ * Form_VERDES.bas y VERDES.txt), a diferencia de Cafe Seco. El bloque Informacion Federacion sale de
+ * NESS (C3) y es de solo lectura.
  */
 const EDITABLE: string[] = [
-  'idPart1', 'fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone', 'program',
+  'idPart1', 'firstName', 'lastName', 'idType', 'address', 'cellphone',
   'bags', 'grossKg', 'tare', 'compKgPrice', 'penalty', 'shrinkageDiscount', 'otherDiscounts',
 ];
 
 /** Requeridos para habilitar "Imprimir" (penalty/descuentos pueden quedar en blanco = 0). */
-const REQUIRED: string[] = ['idPart1', 'fullName', 'bags', 'grossKg', 'tare', 'compKgPrice'];
+// El servidor no calcula sin el celular del vendedor (prueba del 10-nov): sin el no se pide el calculo.
+const REQUIRED: string[] = ['idPart1', 'cellphone', 'bags', 'grossKg', 'tare', 'compKgPrice'];
 
 /** Si se confirman en blanco quedan en 0 (no bloquean, pero tampoco se ven vacios). */
 const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts'];
 
 const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoicePrefix',
-  'invoiceNumber', 'basePriceLoad', 'special', 'idNumber', 'healthyStoredPrice', 'defectStoredPrice',
+  'invoiceNumber', 'basePriceLoad', 'special', 'healthyStoredPrice', 'defectStoredPrice',
   'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding',
+  // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
+  ...FEDERATION_KEYS,
   // HU-23 CA-2: muestra fija del Registro de Control.
   'totalStoredWeight', 'wastePercentage', 'totalHuskWeight', 'huskPercentage', 'healthyStoredWeight', 'factor',
 ];
@@ -110,7 +112,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
   override model: FormModel = {};
   private readonly locked = new Set<string>();
-  private readonly today = new Date().toISOString().slice(0, 10);
+  private readonly today = localToday();
   private readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 
@@ -172,10 +174,14 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
 
   private runSideEffects(key: string): void {
+    if (this.rejectedWeight(key, this.locked, this.messages())) {
+      return;
+    }
     switch (key) {
       case 'idPart1':
         this.lookupGrower();
         break;
+      case 'cellphone':
       case 'grossKg':
       case 'tare':
       case 'compKgPrice':
@@ -189,19 +195,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
   /** "Para asignar # factura verdes": siguiente factura propia de VERDES. */
   private reserveInvoiceNumber(): void {
-    this.service.nextInvoiceNumber().subscribe({
-      next: (inv) => {
-        this.invoiceReservation.set(inv);
-        if (inv.warning) {
-          this.errorMessage.set(inv.warning);
-        }
-        this.tick.update((n) => n + 1);
-      },
-      error: () => {
-        this.errorMessage.set(this.messages()?.saveError ?? null);
-        this.tick.update((n) => n + 1);
-      },
-    });
+    reserveInvoice(this, this.service.nextInvoiceNumber(), () => this.tick.update((n) => n + 1));
   }
 
   /** "Asignar numero anuncio verdes": Cod Prod + anuncio vigente (Especial "CV" / Fondo "RP" fijos). */
@@ -211,15 +205,16 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         // HU-23 CA-2 / Q23: sin los pesos de verde no hay cálculo ni factura (sin info no hay preview
         // ni Imprimir); se avisa apenas abre la pantalla.
         this.announcementInfo.set(info.sampleReady ? info : null);
+        this.rememberPrice();
         this.sampleMissing.set(!info.sampleReady);
         if (!info.sampleReady) {
           this.errorMessage.set(this.messages()?.sampleMissing ?? null);
         }
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.announcementInfo.set(null);
-        this.errorMessage.set(this.messages()?.noAnnouncement ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.noAnnouncement));
         this.tick.update((n) => n + 1);
       },
     });
@@ -227,45 +222,15 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
 
   /** Cedula_AfterUpdate: busca el caficultor; bloquea el formulario si esta fallecido. */
   private lookupGrower(): void {
-    const idNumber = (this.model['idPart1'] ?? '').trim();
-    if (!idNumber) {
-      return;
-    }
-    this.growerService.findByIdNumber(idNumber).subscribe({
-      next: (grower) => {
-        if (grower.deceased) {
-          this.blockedByDeceased.set(true);
-          this.errorMessage.set(this.messages()?.deceasedBlocked ?? null);
-          this.tick.update((n) => n + 1);
-          return;
-        }
-        const fullName = [grower.firstName, grower.secondName, grower.lastName, grower.secondLastName]
-          .filter(Boolean)
-          .join(' ');
-        this.model['fullName'] = fullName;
-        this.model['firstName'] = [grower.firstName, grower.secondName].filter(Boolean).join(' ');
-        this.model['lastName'] = [grower.lastName, grower.secondLastName].filter(Boolean).join(' ');
-        this.model['idType'] = grower.growerType;
-        this.model['address'] = grower.address;
-        this.model['cellphone'] = grower.phone;
-        this.locked.add('idPart1');
-        // Si el dato migrado viene vacio (p.ej. caficultores historicos sin celular registrado), no se
-        // bloquea: sin esto el campo quedaba en blanco y bloqueado para siempre, y como esta en REQUIRED
-        // la cascada de calculo nunca llegaba a dispararse.
-        ['fullName', 'firstName', 'lastName', 'idType', 'address', 'cellphone'].forEach((k) => {
-          if ((this.model[k] ?? '').trim() !== '') {
-            this.locked.add(k);
-          }
-        });
-        this.tick.update((n) => n + 1);
-        this.advanceFocus('idPart1');
-      },
-      // No encontrado: cedula no registrada - avisa y no deja avanzar hasta que se corrija.
-      error: () => {
-        this.errorMessage.set(this.messages()?.idNumberNotFound ?? 'Este número de cédula no existe.');
-        this.tick.update((n) => n + 1);
-      },
+    lookupSeller(this, this.growerService, this.locked, () => this.tick.update((n) => n + 1), () => {
+      this.lookupProgram();
+      askCellphoneOr(this.elementRef.nativeElement, this, () => this.advanceFocus('idPart1'));
     });
+  }
+
+  /** C3: el bloque Informacion Federacion sale de NESS (especial CV); sin NESS queda vacio. */
+  private lookupProgram(): void {
+    loadFederation(this.growerService, this.model['idPart1'], 'CV', this.model, () => this.tick.update((n) => n + 1));
   }
 
   /** Destare_LostFocus / Castigo_lostFocus / Descuento_Fro_LostFocus / OtrosDescuentos: recalcula la cascada. */
@@ -279,9 +244,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
         this.calc.set(c);
         this.tick.update((n) => n + 1);
       },
-      error: () => {
+      error: (err) => {
         this.calc.set(null);
-        this.errorMessage.set(this.messages()?.saveError ?? null);
+        this.errorMessage.set(serverError(err, this.messages()?.saveError));
         this.tick.update((n) => n + 1);
       },
     });
@@ -306,7 +271,13 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       shrinkageDiscount: num(this.model['shrinkageDiscount']),
       otherDiscounts: num(this.model['otherDiscounts']),
       payment: this.payment(),
+      startedAnnouncementNumber: Number(stripAnnouncementPrefix(info.announcementNumber)),
     };
+  }
+
+  /** Hallazgo #6: el anuncio vigente ahora de este café. */
+  protected override currentAnnouncement(): Observable<string> | null {
+    return this.announcementNumber(this.announcementInfo() ? this.service.announcementInfo() : null);
   }
 
   print(): void {
@@ -327,6 +298,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   dismissError(): void {
+    this.refocusRetry((k) => this.focusField(k));
     const wasBlocked = this.blockedByDeceased();
     this.errorMessage.set(null);
     this.blockedByDeceased.set(false);
@@ -350,6 +322,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     this.reserveInvoiceNumber();
     this.loadAnnouncementInfo();
     this.tick.update((n) => n + 1);
+    this.focusField(FOCUS_ORDER[0]);
   }
 
   protected override hasUnsavedInput(): boolean {
@@ -391,7 +364,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
       date: this.today,
-      announcement: info?.announcementNumber ? stripAnnouncementPrefix(info.announcementNumber) : '',
+      announcement: announcementDisplay(info?.announcementNumber),
       announcementDate: info?.announcementDate ?? '',
       productCode: info?.productCode ?? '',
       fund: 'RP',
@@ -409,7 +382,6 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       huskPercentage: info?.sample?.huskPercentage ?? '',
       healthyStoredWeight: info?.sample?.healthyStoredWeight ?? '',
       factor: info?.sample?.factor ?? '',
-      idNumber: this.model['idPart1'] ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
       kgPrice: c?.unitPrice ?? '',
@@ -421,7 +393,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       const patch: { readonly?: boolean; value?: string | number } = {};
       if (READONLY.includes(key)) {
         patch.readonly = true;
-        patch.value = computedValues[key];
+        patch.value = computedValues[key] ?? this.model[key] ?? '';
       } else if (this.locked.has(key)) {
         patch.readonly = true;
         patch.value = this.model[key] ?? '';

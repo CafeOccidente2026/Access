@@ -35,6 +35,10 @@ public class User {
     @Column(name = "activo", nullable = false)
     private boolean active = true;
 
+    /** S6: sube al cambiar contrasena, rol o agencia, o al desactivar; los tokens con otra version no valen. */
+    @Column(name = "version_token", nullable = false)
+    private int tokenVersion;
+
     @ManyToOne
     @JoinColumn(name = "rol_id", nullable = false)
     private Role role;

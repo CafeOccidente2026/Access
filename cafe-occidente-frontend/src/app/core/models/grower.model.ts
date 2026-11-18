@@ -31,10 +31,12 @@ export interface Conductor {
   readonly vehiclePlate: string | null;
 }
 
-/** Programa/Cupo informativos (staging_legacy_ness) - ver GrowerService.findProgram. */
+/** Programa/Cupo informativos (staging_legacy_ness), con la cédula y el nombre de NESS - ver GrowerService.findProgram. */
 export interface GrowerProgram {
   readonly programa: string;
   readonly cupo: string;
+  readonly cedula: string;
+  readonly nombres: string;
 }
 
 /** Alta rápida de conductor (Grower sin datos de caficultor) - ver GrowerService.createConductor. */

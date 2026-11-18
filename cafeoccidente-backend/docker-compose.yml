@@ -18,8 +18,12 @@ services:
       - postgres
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      # S2: si existen, la app entra con APP_DB_USER y Flyway con FLYWAY_USER (deploy/roles-bd.sql);
+      # si no, con DB_USER, como antes. DB_USER sigue siendo el superusuario del contenedor de la base.
+      DB_USER: ${APP_DB_USER:-${DB_USER}}
+      DB_PASSWORD: ${APP_DB_PASSWORD:-${DB_PASSWORD}}
+      FLYWAY_USER: ${FLYWAY_USER:-}
+      FLYWAY_PASSWORD: ${FLYWAY_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}

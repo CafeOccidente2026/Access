@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { API_BASE_URL } from '../../core/config/api.config';
 import { AnnulmentCandidate } from '../../core/models/purchase-annulment.model';
@@ -16,7 +16,7 @@ const data = content as PurchaseAnnulmentContent;
 const URL = `${API_BASE_URL}/purchases/annulment`;
 const candidate = {
   module: 'DRY', id: 1, agencyId: 4, agencyName: 'El Tambo', prefix: 'SDTA', invoiceNumber: 43388,
-  purchaseDate: '2026-06-03', fundCode: 'RP', idNumber: '79374104', firstName: 'JESUS', lastName: null,
+  purchaseDate: '2026-06-03', fundCode: 'RP', idNumber: '99374104', firstName: 'CAFICULTOR', lastName: null,
   specialType: 'NESPRESSO - FTUSA', netKg: 1200.5, netToPay: 9267436, paymentMethod: 'MIXTO', status: 'VALIDA',
   annulmentLocked: false, annulledAt: null,
 } as AnnulmentCandidate;
@@ -32,7 +32,7 @@ describe('purchase annulment', () => {
     const v = (key: string) => fieldValue(candidate, key, data.fields.find((f) => f.key === key)?.type, data);
     expect(v('module')).toBe('Café Seco');
     expect(v('invoice')).toBe('SDTA 43388');
-    expect(v('name')).toBe('JESUS');
+    expect(v('name')).toBe('CAFICULTOR');
     expect(v('purchaseDate')).toBe('03/06/2026');
     expect(v('netKg')).toBe('1.200,50');
     expect(v('netToPay')).toBe('9.267.436');
@@ -93,6 +93,16 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     fixture.detectChanges();
     expect(component.selected()?.invoiceNumber).toBe(43389);
     expect(el.textContent).toContain(data.messages.noMore);
+  });
+
+  it('prueba del 11-nov (punto 4): a failed search or walk shows the reason of the server', () => {
+    const { component } = render();
+    component.search(new Event('submit'), '43388');
+    http.expectOne(`${URL}?invoiceNumber=43388`).flush({ message: 'No tiene permisos para realizar esta accion' }, { status: 403, statusText: 'Forbidden' });
+    expect(component.message()).toBe('No tiene permisos para realizar esta accion');
+    component.go('FIRST');
+    http.expectOne(`${URL}/navigate?direction=FIRST`).flush(null, { status: 500, statusText: 'Error' });
+    expect(component.message()).toBe(data.messages.error);
   });
 
   it('CA-1: finds the purchase by invoice number', () => {
@@ -166,5 +176,36 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     expect(accept.disabled).toBe(true);
     http.expectOne({ method: 'POST', url: `${URL}/DRY/1` }).flush(annulled);
     expect(component.saving()).toBe(false);
+  });
+
+  it('prueba del 10-nov: only with the keyboard, the found purchase puts the focus on Anular and then on Aceptar', () => {
+    vi.useFakeTimers();
+    const { fixture, component, el } = render();
+    document.body.appendChild(el);
+    component.search(new Event('submit'), '43388');
+    http.expectOne(`${URL}?invoiceNumber=43388`).flush([candidate]);
+    fixture.detectChanges();
+    vi.runAllTimers();
+    expect(document.activeElement?.textContent?.trim()).toBe(data.annulLabel);
+
+    askToAnnul(fixture, el);
+    vi.runAllTimers();
+    expect(document.activeElement).toBe(el.querySelector('[data-testid="accept"]'));
+    vi.useRealTimers();
+    el.remove();
+  });
+
+  it('a purchase closed in Access puts the focus on the Aceptar of its message', () => {
+    vi.useFakeTimers();
+    const { fixture, component, el } = render();
+    document.body.appendChild(el);
+    showFirst(component, { ...candidate, annulmentLocked: true });
+    fixture.detectChanges();
+    component.startAnnul();
+    fixture.detectChanges();
+    vi.runAllTimers();
+    expect(document.activeElement?.textContent?.trim()).toBe(data.acceptLabel);
+    vi.useRealTimers();
+    el.remove();
   });
 });

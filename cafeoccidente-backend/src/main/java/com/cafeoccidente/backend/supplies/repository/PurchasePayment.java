@@ -18,7 +18,7 @@ public record PurchasePayment(
         String idNumber,
         BigDecimal netToPay,
         String paymentMethod,
-        Integer checkNumber,
+        String checkNumber,
         Instant createdAt) {
 
     /**
@@ -26,7 +26,7 @@ public record PurchasePayment(
      * ActualizaCaja (FPef) / ActualizaCh (FPch, con NumCheque) / ActualizaTx (FPtx) / ActualizaDat (FPdat).
      */
     public List<PurchasePayment> splitInto(BigDecimal cash, BigDecimal check, BigDecimal transfer, BigDecimal card,
-            Integer splitCheckNumber) {
+            String splitCheckNumber) {
         List<PurchasePayment> parts = new ArrayList<>();
         addPart(parts, cash, "EFECTIVO", null);
         addPart(parts, check, "CHEQUE", splitCheckNumber);
@@ -35,7 +35,7 @@ public record PurchasePayment(
         return parts;
     }
 
-    private void addPart(List<PurchasePayment> parts, BigDecimal amount, String method, Integer check) {
+    private void addPart(List<PurchasePayment> parts, BigDecimal amount, String method, String check) {
         if (amount != null && amount.signum() > 0) {
             parts.add(new PurchasePayment(module, id, invoiceNumber, agencyId, agencyName, fundCode, purchaseDate,
                     idNumber, amount, method, check, createdAt));

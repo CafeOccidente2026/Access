@@ -12,8 +12,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class PurchaseQueryRepository {
 
-    /** Agencia y ESTADO de una compra; vacio si no existe. */
-    public record Header(Long agencyId, String status) {
+    /** Agencia, ESTADO y si se corrigio (HU-05) de una compra; vacio si no existe. */
+    public record Header(Long agencyId, String status, boolean corrected) {
     }
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -23,8 +23,9 @@ public class PurchaseQueryRepository {
     }
 
     public Optional<Header> header(AnnulmentModule module, Long id) {
-        return jdbc.query("SELECT agencia_id, estado FROM " + module.table() + " WHERE id = :id",
-                new MapSqlParameterSource("id", id), (rs, i) -> new Header(rs.getLong("agencia_id"), rs.getString("estado")))
+        return jdbc.query("SELECT agencia_id, estado, corregida FROM " + module.table() + " WHERE id = :id",
+                new MapSqlParameterSource("id", id),
+                (rs, i) -> new Header(rs.getLong("agencia_id"), rs.getString("estado"), rs.getBoolean("corregida")))
                 .stream().findFirst();
     }
 

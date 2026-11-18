@@ -16,6 +16,7 @@
     "ACCESO_TABLAS": "Acceso a Tablas",
     "ACTUALIZAR_ANUNCIOS": "Actualizar Anuncios",
     "REGISTRO_CONTROL": "Registro de Control (solo su agencia)",
-    "HISTORIAL": "Historial (solo su agencia)"
+    "HISTORIAL": "Historial (solo su agencia)",
+    "CORREGIR_COMPRA": "Corregir Compra (Menú Habilitación)"
   }
 }

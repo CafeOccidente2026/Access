@@ -3,14 +3,17 @@ package com.cafeoccidente.backend.supplies.controller;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.supplies.dto.EntryResponse;
 import com.cafeoccidente.backend.supplies.dto.LedgerEntryRequest;
+import com.cafeoccidente.backend.supplies.dto.NextTransactionIdResponse;
 import com.cafeoccidente.backend.supplies.dto.PackagingEntryRequest;
 import com.cafeoccidente.backend.supplies.service.SuppliesEntryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,6 +28,13 @@ public class SuppliesEntryController {
 
     public SuppliesEntryController(SuppliesEntryService suppliesEntryService) {
         this.suppliesEntryService = suppliesEntryService;
+    }
+
+    @GetMapping("/next-id")
+    @ResponseStatus(HttpStatus.OK)
+    public NextTransactionIdResponse nextTransactionId(
+            @RequestParam String screen, @RequestParam(required = false) String value) {
+        return new NextTransactionIdResponse(suppliesEntryService.nextTransactionId(screen, value));
     }
 
     @PostMapping("/cash")

@@ -1,7 +1,8 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
-import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { cooperativeNit } from '../../shared/utils/nit';
+import { announcementDisplay, formatDate, formatKilos, formatMoney, formatThousands } from '../../shared/utils/number-format';
 
 /**
  * Reportes "RESUMEN ANUNCIO" y "ANUNCIO" (detallado) de Access (macro "Imprimir Anuncio",
@@ -32,7 +33,14 @@ export interface AnnouncementReportText {
   readonly trusted: string;
   readonly signatures: readonly string[];
   readonly page: string;
+  /** Linea bajo el NIT (Compras a Futuro: "COMPRAS A FUTURO"). */
+  readonly subtitle?: string;
+  /** false = el detalle sin la columna Anun (Informe Anuncios a Futuro: es de un solo anuncio). */
+  readonly announcementColumn?: boolean;
 }
+
+/** Lo minimo que necesitan las firmas y el pie de pagina (tambien los usa el informe Saldo Anuncios). */
+export type ReportFooterText = Pick<AnnouncementReportText, 'trusted' | 'signatures' | 'page'>;
 
 interface ProductGroup {
   readonly productCode: string;
@@ -54,14 +62,13 @@ const THIN = {
 };
 
 /** Peso entero con punto de miles (Format=Standard, DecimalPlaces=0 en Access). */
-const peso = (v: number): string => Math.round(v).toLocaleString('es-CO');
+const peso = formatMoney;
 /** 2 decimales con coma (KN, KV y Factor, Format=Standard); vacio si no aplica. */
 const dec2 = (v: number | null): string =>
-  v == null ? '' : v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-/** "2026-05-09" -> "9/05/2026" (Short Date de Access en la captura). */
+  formatKilos(v);
+/** "2026-05-09" -> "09/05/2026": dd/mm/aaaa en todos los reportes (hallazgo #1 del 16-nov). */
 export function shortDate(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${Number(d)}/${m}/${y}`;
+  return formatDate(iso);
 }
 const sum = (rows: Row[], f: (p: Row) => number): number => rows.reduce((acc, p) => acc + f(p), 0);
 const fill = (template: string, values: Record<string, string | number>): string =>
@@ -103,7 +110,7 @@ export function groupByAnnouncement(rows: Row[]): AnnouncementBlock[] {
       groups.set(p.productCode, [...(groups.get(p.productCode) ?? []), p]);
     }
     return {
-      announcementNumber: stripAnnouncementPrefix(blockRows[0].announcementNumber),
+      announcementNumber: announcementDisplay(blockRows[0].announcementNumber),
       specialType: blockRows[0].specialType,
       agencyName: blockRows[0].agencyName,
       rows: blockRows,
@@ -121,7 +128,8 @@ function reportHeader(title: string, block: AnnouncementBlock, date: string, pag
     stack: [
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 752, y2: 0, lineWidth: 1 }] },
       { text: text.cooperative, bold: true, fontSize: 9, alignment: 'center', margin: [0, 3, 0, 0] },
-      { text: text.nit, bold: true, fontSize: 8, alignment: 'center' },
+      { text: `${text.nit} ${cooperativeNit()}`, bold: true, fontSize: 8, alignment: 'center' },
+      ...(text.subtitle ? [{ text: text.subtitle, bold: true, fontSize: 9, alignment: 'center' as const }] : []),
       {
         columns: [
           { text: title, bold: true, fontSize: 16, width: 170 },
@@ -134,7 +142,7 @@ function reportHeader(title: string, block: AnnouncementBlock, date: string, pag
   };
 }
 
-function signatures(text: AnnouncementReportText): Content {
+export function signatures(text: ReportFooterText): Content {
   return {
     unbreakable: true,
     margin: [0, 18, 0, 0],
@@ -177,12 +185,15 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
   // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt, con la
   // columna Anun (RN-24.2) al frente. FP se ensancha (a costa de Nombre y Apellidos) porque guarda la
   // forma de pago completa y "ANULADA" en negrilla tiene que caber en una linea.
-  const twips = [600, 651, 1299, 1032, 561, 1371, 1350, 737, 885, 750, 840, 1020, 855, 900, 855, 900, 960, 1185, 1100];
+  const withAnnouncement = text.announcementColumn !== false;
+  const twips = [600, 651, 1299, 1032, 561, 1371, 1350, 737, 885, 750, 840, 1020, 855, 900, 855, 900, 960, 1185, 1100]
+    .slice(withAnnouncement ? 0 : 1);
   const total = twips.reduce((a, t) => a + t, 0);
   const widths = twips.map((t) => (t * 752) / total - 2);
   const columns = twips.length;
+  const firstNumber = withAnnouncement ? 7 : 6;
   const head: TableCell[] = text.detailColumns.map((t, i) => ({
-    text: t, bold: true, fontSize: 6, alignment: i >= 7 && i < columns - 1 ? 'right' : 'left',
+    text: t, bold: true, fontSize: 6, alignment: i >= firstNumber && i < columns - 1 ? 'right' : 'left',
   }));
   const sums = (rows: Row[]): TableCell[] => [
     r(dec2(greenKg(rows)), b), r(peso(sum(rows, (p) => p.netKg)), b), '', '', r(peso(sum(rows, (p) => p.grossValue)), b),
@@ -190,20 +201,22 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
     r(peso(sum(rows, (p) => p.freightDiscount)), b), r(peso(sum(rows, (p) => p.withholding)), b),
     r(peso(sum(rows, (p) => p.otherDiscounts)), b), r(peso(sum(rows, (p) => p.netToPay)), b), '',
   ];
-  const label = (value: string): TableCell[] => [{ text: value, bold: true, colSpan: 7 }, '', '', '', '', '', ''];
+  const span = firstNumber;
+  const label = (value: string): TableCell[] => [{ text: value, bold: true, colSpan: span }, ...Array(span - 1).fill('')];
 
   const body: TableCell[][] = [head];
   for (const group of block.groups) {
     body.push([{ text: groupTitle(group), bold: true, fontSize: 9, colSpan: columns, margin: [0, 3, 0, 0] }, ...Array(columns - 1).fill('')]);
     for (const p of group.rows) {
-      body.push([
-        stripAnnouncementPrefix(p.announcementNumber), r(String(p.invoiceNumber)),
+      const cells: TableCell[] = [
+        r(String(p.invoiceNumber)),
         r(/^\d+$/.test(p.idNumber) ? formatThousands(p.idNumber) : p.idNumber), r(shortDate(p.purchaseDate)),
         p.fundCode, p.firstName, p.lastName ?? '', r(dec2(p.greenKg)), r(dec2(p.netKg)), r(dec2(p.factor)),
         r(peso(p.unitPrice)), r(peso(p.grossValue)), r(peso(p.associateContribution)), r(peso(p.cooperativeDiscount)),
         r(peso(p.freightDiscount)), r(peso(p.withholding)), r(peso(p.otherDiscounts)), r(peso(p.netToPay)),
         p.status === 'ANULADA' ? { text: p.paymentMethod, bold: true } : p.paymentMethod,
-      ]);
+      ];
+      body.push(withAnnouncement ? [announcementDisplay(p.announcementNumber), ...cells] : cells);
     }
     const n = group.rows.length;
     body.push([
@@ -222,7 +235,7 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
   };
 }
 
-function footer(text: AnnouncementReportText): TDocumentDefinitions['footer'] {
+export function footer(text: ReportFooterText): TDocumentDefinitions['footer'] {
   const printed = new Date().toLocaleDateString('es-CO', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });

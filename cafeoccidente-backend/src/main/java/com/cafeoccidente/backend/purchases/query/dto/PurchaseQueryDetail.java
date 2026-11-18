@@ -16,6 +16,8 @@ public record PurchaseQueryDetail(
         AnnulmentModule module,
         Object purchase,
         String status,
+        /** HU-05: la compra se corrigio con "Menu Habilitacion" (misma factura). */
+        boolean corrected,
         PurchasePaymentRequest payment,
         List<String> remissions) {
 }

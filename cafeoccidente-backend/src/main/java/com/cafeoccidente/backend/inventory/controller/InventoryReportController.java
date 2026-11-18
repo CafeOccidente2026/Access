@@ -5,6 +5,7 @@ import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.inventory.dto.InventoryReportRow;
 import com.cafeoccidente.backend.inventory.dto.ProductCodeOption;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,8 +21,11 @@ public class InventoryReportController {
 
     private final InventoryReportService inventoryReportService;
     private final CurrentAgencyProvider currentAgencyProvider;
+    private final Clock clock;
 
-    public InventoryReportController(InventoryReportService inventoryReportService, CurrentAgencyProvider currentAgencyProvider) {
+    public InventoryReportController(
+            InventoryReportService inventoryReportService, CurrentAgencyProvider currentAgencyProvider, Clock clock) {
+        this.clock = clock;
         this.inventoryReportService = inventoryReportService;
         this.currentAgencyProvider = currentAgencyProvider;
     }
@@ -32,7 +36,7 @@ public class InventoryReportController {
             @RequestParam(required = false) String productCode,
             @RequestParam(required = false) String specialType) {
         return inventoryReportService.report(
-                currentAgencyProvider.currentAgencyId(), productCode, specialType, LocalDate.now());
+                currentAgencyProvider.currentAgencyId(), productCode, specialType, LocalDate.now(clock));
     }
 
     @GetMapping("/product-codes")

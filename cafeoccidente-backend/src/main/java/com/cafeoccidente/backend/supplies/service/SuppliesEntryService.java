@@ -7,6 +7,12 @@ import com.cafeoccidente.backend.supplies.dto.PackagingEntryRequest;
 /** Altas de las pantallas de "MENUS SUMINISTROS". Cada metodo = un formulario de Access. */
 public interface SuppliesEntryService {
 
+    /**
+     * El Id de transaccion que tomaria la proxima alta (RF §2.1), para mostrarlo en pantalla. screen es la clave de la
+     * pantalla (cash, supply, packaging...) y value el fondo o el tipo de empaque elegido.
+     */
+    String nextTransactionId(String screen, String value);
+
     /** "Caja suministros" (Caja, Entradas). */
     EntryResponse createCashSupply(LedgerEntryRequest request);
 

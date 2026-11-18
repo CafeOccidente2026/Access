@@ -21,4 +21,9 @@ export class UserService {
   update(id: number, request: UpdateUserRequest): Observable<User> {
     return this.http.put<User>(`${API_BASE_URL}/users/${id}`, request);
   }
+
+  /** S4: quita la espera por intentos fallidos de login. */
+  unlock(id: number): Observable<void> {
+    return this.http.post<void>(`${API_BASE_URL}/users/${id}/unlock`, null);
+  }
 }

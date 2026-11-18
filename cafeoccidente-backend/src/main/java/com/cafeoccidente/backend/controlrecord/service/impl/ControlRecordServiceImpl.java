@@ -2,22 +2,32 @@ package com.cafeoccidente.backend.controlrecord.service.impl;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
+import com.cafeoccidente.backend.common.security.SecurityUtils;
+import com.cafeoccidente.backend.controlrecord.dto.ControlRecordStampResponse;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordRequest;
 import com.cafeoccidente.backend.controlrecord.dto.ControlRecordResponse;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeAppliedResponse;
+import com.cafeoccidente.backend.controlrecord.dto.ResolutionAlertResponse;
+import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeeSampleRule;
 import com.cafeoccidente.backend.controlrecord.dto.GreenCoffeeValuesRequest;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.mapper.ControlRecordMapper;
 import com.cafeoccidente.backend.controlrecord.repository.ControlRecordRepository;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.controlrecord.service.DianResolutionRule;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService.Action;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService.Entity;
 import com.cafeoccidente.backend.history.service.Snapshots;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,16 +38,57 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     private final AgencyRepository agencyRepository;
     private final ControlRecordMapper mapper;
     private final ChangeHistoryService history;
+    private final SecurityUtils securityUtils;
+    private final Clock clock;
+
+    /**
+     * Respuesta del area (11-nov): estos valores solo los cambia el Administrador. El % pasilla promedio se cambiaba en
+     * Access para favorecer compras; el Usuario con el permiso temporal de la pantalla cambia el resto.
+     */
+    private static final List<Map.Entry<Function<ControlRecord, BigDecimal>, Function<ControlRecordRequest, BigDecimal>>>
+            ADMIN_ONLY = List.of(
+                    Map.entry(ControlRecord::getAvgHuskPercentage, ControlRecordRequest::avgHuskPercentage),
+                    Map.entry(ControlRecord::getAssociatePercentage, ControlRecordRequest::associatePercentage),
+                    Map.entry(ControlRecord::getNonAssociateDiscount, ControlRecordRequest::nonAssociateDiscount),
+                    Map.entry(ControlRecord::getGreenTotalStoredWeight, ControlRecordRequest::greenTotalStoredWeight),
+                    Map.entry(ControlRecord::getGreenTotalHuskWeight, ControlRecordRequest::greenTotalHuskWeight),
+                    Map.entry(ControlRecord::getGreenHealthyStoredWeight, ControlRecordRequest::greenHealthyStoredWeight),
+                    Map.entry(ControlRecord::getGreenHealthyUnitPrice, ControlRecordRequest::greenHealthyUnitPrice),
+                    Map.entry(ControlRecord::getGreenDefectiveUnitPrice, ControlRecordRequest::greenDefectiveUnitPrice));
 
     public ControlRecordServiceImpl(
             ControlRecordRepository controlRecordRepository,
             AgencyRepository agencyRepository,
             ControlRecordMapper mapper,
-            ChangeHistoryService history) {
+            ChangeHistoryService history,
+            SecurityUtils securityUtils,
+            Clock clock) {
+        this.clock = clock;
         this.controlRecordRepository = controlRecordRepository;
         this.agencyRepository = agencyRepository;
         this.mapper = mapper;
         this.history = history;
+        this.securityUtils = securityUtils;
+    }
+
+    @Override
+    public ControlRecordStampResponse stamp(Long agencyId) {
+        return new ControlRecordStampResponse(Integer.toHexString(getByAgency(agencyId).toString().hashCode()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResolutionAlertResponse> resolutionAlerts(Long agencyId) {
+        LocalDate today = LocalDate.now(clock);
+        List<ControlRecord> records = agencyId == null
+                ? controlRecordRepository.findByActiveTrue()
+                : controlRecordRepository.findByAgencyIdAndActiveTrue(agencyId).stream().toList();
+        return records.stream()
+                .filter(r -> DianResolutionRule.alerts(r, today))
+                .map(r -> new ResolutionAlertResponse(r.getAgency().getName(), DianResolutionRule.expiration(r),
+                        DianResolutionRule.daysLeft(r, today)))
+                .sorted(Comparator.comparing(ResolutionAlertResponse::daysLeft))
+                .toList();
     }
 
     @Override
@@ -67,6 +118,7 @@ public class ControlRecordServiceImpl implements ControlRecordService {
         Agency agency = agencyRepository.findById(agencyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
 
+        checkGreenSample(request);
         ControlRecord controlRecord = new ControlRecord();
         controlRecord.setAgency(agency);
         controlRecord.setActive(true);
@@ -81,6 +133,8 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     @Transactional
     public ControlRecordResponse update(Long agencyId, ControlRecordRequest request) {
         ControlRecord controlRecord = getActive(agencyId);
+        requireAdminForBusinessValues(controlRecord, request);
+        checkGreenSample(request);
         Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
         applyRequest(controlRecord, request);
         ControlRecordResponse updated = mapper.toResponse(controlRecordRepository.save(controlRecord));
@@ -97,6 +151,10 @@ public class ControlRecordServiceImpl implements ControlRecordService {
     public GreenCoffeeAppliedResponse applyGreenCoffeeToAll(GreenCoffeeValuesRequest request) {
         List<ControlRecord> records = controlRecordRepository.findByActiveTrue();
         for (ControlRecord controlRecord : records) {
+            GreenCoffeeSampleRule.checkValues(controlRecord.getSampleSize(), request.greenTotalStoredWeight(),
+                    request.greenTotalHuskWeight(), request.greenHealthyStoredWeight());
+        }
+        for (ControlRecord controlRecord : records) {
             Map<String, String> before = snapshot(mapper.toResponse(controlRecord));
             controlRecord.setGreenTotalStoredWeight(request.greenTotalStoredWeight());
             controlRecord.setGreenTotalHuskWeight(request.greenTotalHuskWeight());
@@ -108,6 +166,19 @@ public class ControlRecordServiceImpl implements ControlRecordService {
                     snapshot(updated));
         }
         return new GreenCoffeeAppliedResponse(records.size());
+    }
+
+    private static void checkGreenSample(ControlRecordRequest request) {
+        GreenCoffeeSampleRule.checkValues(request.sampleSize(), request.greenTotalStoredWeight(),
+                request.greenTotalHuskWeight(), request.greenHealthyStoredWeight());
+    }
+
+    private void requireAdminForBusinessValues(ControlRecord current, ControlRecordRequest request) {
+        boolean changed = ADMIN_ONLY.stream().anyMatch(field ->
+                field.getKey().apply(current).compareTo(field.getValue().apply(request)) != 0);
+        if (changed && !securityUtils.isAdmin()) {
+            throw new BusinessRuleException("Solo el Administrador puede cambiar este valor");
+        }
     }
 
     private static Map<String, String> snapshot(ControlRecordResponse record) {

@@ -10,11 +10,13 @@ on:
     paths:
       - "cafeoccidente-backend/**"
       - ".github/workflows/backend-ci.yml"
+      - "deploy/roles-bd.sql"
   push:
     branches: [main, develop]
     paths:
       - "cafeoccidente-backend/**"
       - ".github/workflows/backend-ci.yml"
+      - "deploy/roles-bd.sql"
 
 jobs:
   build:
@@ -42,8 +44,12 @@ jobs:
     env:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://localhost:5432/cafeoccidente_ci
-      DB_USER: ci_user
-      DB_PASSWORD: ci_password
+      # S2: la app entra con un rol sin permisos de esquema; Flyway con el rol dueno (deploy/roles-bd.sql).
+      DB_USER: ci_app
+      DB_PASSWORD: ci_app_password
+      FLYWAY_USER: ci_migrador
+      FLYWAY_PASSWORD: ci_migrador_password
+      DB_ROLES_RESTRINGIDOS: "true"
       JWT_SECRET: ci-test-secret-key-minimo-32-caracteres-para-hs256
       ADMIN_USERNAME: ci_admin
       ADMIN_PASSWORD: ci_admin_password_2026
@@ -64,6 +70,15 @@ jobs:
           java-version: "21"
           cache: "maven"
 
+      # Igual que en produccion: el superusuario del contenedor solo crea los roles.
+      - name: Crear los roles de la base (migrador y app)
+        env:
+          PGPASSWORD: ci_password
+        run: >-
+          psql -h localhost -U ci_user -d cafeoccidente_ci -v ON_ERROR_STOP=1
+          -v migrador=ci_migrador -v clave_migrador=ci_migrador_password
+          -v app=ci_app -v clave_app=ci_app_password -f ../deploy/roles-bd.sql
+
       - name: Compilar y correr pruebas (levanta el contexto completo de Spring)
         # verify tambien genera la cobertura de JaCoCo (target/site/jacoco/jacoco.xml).
         run: ./mvnw -B verify
@@ -76,8 +91,38 @@ jobs:
           key: ${{ runner.os }}-sonar-backend
           restore-keys: ${{ runner.os }}-sonar
 
-      # Informativo: un fallo de SonarCloud no pone el check en rojo ni bloquea el merge.
-      - name: Analisis SonarCloud (informativo)
+      # Obligatorio: si SonarCloud no corre, el job queda en rojo (antes un fallo pasaba en verde).
+      - name: Analisis SonarCloud
+        id: sonar
         if: env.SONAR_TOKEN != ''
-        continue-on-error: true
         run: ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar
+
+      # Si Sonar no corrio, el resumen del run lo dice con todas las letras.
+      - name: Avisar que Sonar no corrio
+        if: failure() && steps.sonar.outcome == 'failure'
+        run: |
+          echo "::error title=SonarCloud::Sonar no corrio: vuelva a correr el job"
+          echo "### :x: Sonar no corrió: vuelva a correr el job" >> "$GITHUB_STEP_SUMMARY"
+          echo "El analisis de SonarCloud fallo (por ejemplo, la descarga del analizador). Revise el paso 'Analisis SonarCloud' y vuelva a correr el job." >> "$GITHUB_STEP_SUMMARY"
+
+      # Sin el secret (por ejemplo, un PR desde un fork) no se analiza; se avisa en el resumen.
+      - name: Avisar que falta SONAR_TOKEN
+        if: env.SONAR_TOKEN == ''
+        run: |
+          echo "### :warning: Sonar no corrió: falta el secret SONAR_TOKEN" >> "$GITHUB_STEP_SUMMARY"
+
+      # El jar trae todas las dependencias reales del backend.
+      # Librerias con vulnerabilidades altas o criticas (con arreglo publicado) dejan el job en rojo.
+      # Excepciones solo en .trivyignore, con su motivo. La accion va fijada por commit (v0.36.0).
+      - name: Escaneo de librerias (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          version: v0.76.1
+          scan-type: rootfs
+          scan-ref: cafeoccidente-backend/target
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          exit-code: "1"
+          format: table

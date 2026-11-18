@@ -4,8 +4,8 @@
   "compactFields": true,
   "topFields": [
     { "key": "idPart1", "label": "Cédula", "type": "text", "digitsOnly": true },
-    { "key": "firstNames", "label": "", "type": "text", "readonly": true },
-    { "key": "lastNames", "label": "", "type": "text", "readonly": true },
+    { "key": "firstNames", "label": "", "ariaLabel": "Nombres", "type": "text", "readonly": true, "inputWidthClass": "min-w-[200px] max-w-[200px]" },
+    { "key": "lastNames", "label": "", "ariaLabel": "Apellidos", "type": "text", "readonly": true, "inputWidthClass": "min-w-[220px] max-w-[220px]" },
     { "key": "idType", "label": "Tipo", "type": "text", "readonly": true }
   ],
   "federationHeading": "Información Federación:",
@@ -15,7 +15,7 @@
     { "key": "program", "label": "Programa", "type": "text", "readonly": true, "rowWidthClass": "w-[150px]", "inputWidthClass": "min-w-0" }
   ],
   "identificationFields": [
-    { "key": "address", "label": "Direccion", "type": "text", "readonly": true },
+    { "key": "address", "label": "Direccion", "type": "text", "readonly": true, "rowWidthClass": "flex-1", "inputWidthClass": "max-w-none" },
     { "key": "agency", "label": "Agencia", "type": "text", "readonly": true }
   ],
   "contactFields": [
@@ -29,36 +29,44 @@
         "NESPRESSO CON TAZA - FTUSA",
         "NESPRESSO LATE HARVEST CON TAZA - FTUSA",
         "REGIONAL NARIÑO 4C"
-      ]
+      ],
+      "inputWidthClass": "min-w-[332px] max-w-[332px]"
     },
-    { "key": "announcement", "label": "Anuncio", "type": "number", "readonly": true },
-    { "key": "announcementDate", "label": "Fecha_Anuncio", "type": "date", "readonly": true },
-    { "key": "basePriceLoad", "label": "Pr carga perg s", "type": "currency", "readonly": true }
+    { "key": "announcement", "label": "Anuncio", "type": "select", "options": [] },
+    { "key": "announcementDate", "label": "Fecha_Anuncio", "type": "date", "readonly": true, "inputWidthClass": "max-w-[128px]" },
+    { "key": "basePriceLoad", "label": "Pr carga perg s", "type": "currency", "readonly": true, "display": "money" }
   ],
   "qualityFields": [
-    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true },
-    { "key": "defectiveUnitPrice", "label": "Pr Alm Defec", "type": "currency", "readonly": true },
-    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true },
-    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true }
+    { "key": "healthyUnitPrice", "label": "Pr Alm Sana", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "defectiveUnitPrice", "label": "Pr Alm Defec", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "bonus", "label": "Bonificación", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "costs", "label": "Costos", "type": "currency", "readonly": true, "display": "money" },
+    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency", "readonly": true, "display": "money" }
   ],
   "weightFields": [
-    { "key": "qualityIncrement", "label": "Pr IncCalidad", "type": "currency" },
-    { "key": "finca", "label": "Finca", "type": "text" },
-    { "key": "municipality", "label": "Mpio", "type": "text" },
-    { "key": "vereda", "label": "Vereda", "type": "text" },
-    { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date" },
-    { "key": "kilos", "label": "Kilos", "type": "number" },
-    { "key": "balance", "label": "Saldo", "type": "number", "readonly": true }
+    { "key": "finca", "label": "Finca", "type": "text", "inputWidthClass": "min-w-[260px] max-w-[260px]" },
+    { "key": "municipality", "label": "Mpio", "type": "text", "inputWidthClass": "min-w-[260px] max-w-[260px]" },
+    { "key": "vereda", "label": "Vereda", "type": "text", "inputWidthClass": "min-w-[260px] max-w-[260px]" }
+  ],
+  "netWeightFields": [
+    { "key": "deliveryDate", "label": "Fecha Entrega", "type": "date", "inputWidthClass": "max-w-[128px]" },
+    { "key": "kilos", "label": "Kilos", "type": "number", "display": "kilos" },
+    { "key": "balance", "label": "Saldo", "type": "number", "readonly": true, "display": "kilos" }
   ],
   "reprintButtonLabel": "Imprimir Manifiesto",
   "messages": {
     "acceptLabel": "Aceptar",
-    "noAnnouncement": "No hay un anuncio activo para ese Especial.",
+    "noAnnouncement": "No hay un anuncio publicado para ese Especial.",
+    "invoiceError": "No se pudo generar el manifiesto",
     "deceasedBlocked": "No se le puede anunciar una entrega futura a un caficultor fallecido.",
     "idNumberNotFound": "Este número de cédula no existe.",
-    "saveError": "No se pudo registrar el compromiso. Verifique los datos.",
+    "notInProgram": "CAFICULTOR NO PERTENECE A NINGUN PROGRAMA, NO PUEDE ANUNCIAR ESTE TIPO DE CAFE",
+    "deliveryDatePast": "La fecha de entrega no puede ser anterior a hoy",
+    "kilosNotPositive": "Los kilos anunciados deben ser mayores que 0",
+    "saveError": "No se pudo registrar el compromiso.",
     "savedNotice": "Compromiso registrado. Manifiesto generado.",
     "closeWarning": "Si cierra sin imprimir se perderá la información capturada y no se guardará nada. ¿Desea cerrar de todas formas?",
+    "priceChangedWarning": "El precio de este tipo de café se actualizó. Si sale, la próxima compra tomará el precio nuevo. ¿Está seguro?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario"
   }

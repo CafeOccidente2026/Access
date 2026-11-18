@@ -203,10 +203,156 @@ class DryCoffeePurchaseCalculatorTest {
                 .hasMessage("La pasilla debe ser menor que la almendra total");
     }
 
+    // Prueba a mano del 16-nov (factura SDTA 43910): Access dejaba Peso Tot Alm 850 con muestra de 250 g.
+    @Test
+    void theTotalAlmondCannotExceedTheSample() {
+        assertThatThrownBy(() -> calculator.checkSample(new BigDecimal("850"), new BigDecimal("50"), controlRecord()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Tot Alm no puede ser mayor que la muestra (250 g)");
+        assertThatThrownBy(() -> calculator.calculate(sample("250.01", "5"), controlRecord(), announcement(),
+                seller("S", false), BigDecimal.ZERO, BigDecimal.ZERO))
+                .hasMessage("Peso Tot Alm no puede ser mayor que la muestra (250 g)");
+    }
+
+    @Test
+    void theTotalAlmondMustBePositive() {
+        assertThatThrownBy(() -> calculator.checkSample(BigDecimal.ZERO, null, controlRecord()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Tot Alm debe ser mayor que 0");
+    }
+
+    @Test
+    void theHuskCannotExceedTheTotalAlmond() {
+        assertThatThrownBy(() -> calculator.checkSample(new BigDecimal("205"), new BigDecimal("205.5"), controlRecord()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Peso Tot Pasilla no puede ser mayor que Peso Tot Alm (205 g)");
+        assertThatThrownBy(() -> calculator.checkSample(new BigDecimal("205"), new BigDecimal("-1"), controlRecord()))
+                .hasMessage("Peso Tot Pasilla no puede ser negativo");
+    }
+
+    @Test
+    void aSampleWithinTheLimitsIsAccepted() {
+        calculator.checkSample(new BigDecimal("250"), new BigDecimal("0"), controlRecord());
+        calculator.checkSample(new BigDecimal("205"), null, controlRecord());
+        calculator.checkSample(null, null, controlRecord());
+    }
+
+    private static DryCoffeePurchaseRequest sample(String total, String husk) {
+        return new DryCoffeePurchaseRequest(
+                1L, "RN", "123456", null, null,
+                10, new BigDecimal("1250"), new BigDecimal("50"),
+                new BigDecimal(total), new BigDecimal(husk),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
+    }
+
+    // Hallazgo #5 (16-nov): Sacos 500, Brutos 2, Destare 2 dejaba Netos 0 y Neto a Pagar 0.
+    @Test
+    void zeroOrNegativeNetKilosAreRejected() {
+        assertThatThrownBy(() -> calculator.calculate(request("50"), controlRecord(), announcement(), seller("S", false),
+                BigDecimal.ZERO, BigDecimal.ZERO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("El destare no puede ser mayor o igual que los Kilos Brutos");
+    }
+
     @Test
     void deadGrowerIsRejected() {
         assertThatThrownBy(() -> calculator.calculate(
                 request(), controlRecord(), announcement(), seller("F", false), BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);
+    }
+
+    private static AnnouncementResponse announcement(String base, String costs, String defectivePrice,
+            String healthyPrice, String bonus) {
+        return new AnnouncementResponse(1L, "1", null, new BigDecimal(base), new BigDecimal(defectivePrice),
+                new BigDecimal(healthyPrice), new BigDecimal(bonus), new BigDecimal(costs), 1L, 1L, "RN", null);
+    }
+
+    private static DryCoffeePurchaseRequest sample(String grossKg, String totalStored, String husk) {
+        return new DryCoffeePurchaseRequest(1L, "RN", "123456", null, null, 1, new BigDecimal(grossKg), BigDecimal.ZERO,
+                new BigDecimal(totalStored), new BigDecimal(husk), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                null);
+    }
+
+    @Test
+    void rf14ExampleWithWeightsThatAddUpGivesKiloPrice12780() {
+        // RF-14 con Peso Tot Alm 193,27 (Q2: 193,27 - 7,1 = 186,17), PasillaRef 6,36 y Precio Pasilla 6.000.
+        ControlRecord cr = controlRecord();
+        cr.setAvgHuskPercentage(new BigDecimal("6.36"));
+
+        DryCoffeePurchaseCalculation result = calculator.calculate(sample("100", "193.27", "7.1"), cr,
+                announcement("1546900", "0", "6000", "12375.20", "640"), seller("S", false),
+                BigDecimal.ZERO, BigDecimal.ZERO);
+
+        assertThat(result.basePriceLoad()).isEqualByComparingTo("1546900");
+        assertThat(result.wastePercentage()).isEqualByComparingTo("22.69");
+        assertThat(result.defectivePercentage()).isEqualByComparingTo("2.84");
+        assertThat(result.healthyStoredWeight()).isEqualByComparingTo("186.17");
+        assertThat(result.healthyPercentage()).isEqualByComparingTo("94.00");
+        // 13.015,23 + (-235,56) = 12.779,67: Vr. Kilo en pesos enteros HALF_UP (Q3).
+        assertThat(result.unitPrice()).isEqualByComparingTo("12780");
+        assertThat(result.grossValue()).isEqualByComparingTo("1278000");
+    }
+
+    @Test
+    void invoice43002OfElTamboMatchesAccess() {
+        // Factura real 43002 (17-ene-2026): Access guarda Vr. Kilo 20.963, calculado con el Factor completo
+        // (92,105263...); con el Factor redondeado a 92,11 daria 20.962. El Factor se muestra 92,11.
+        DryCoffeePurchaseCalculation result = calculator.calculate(sample("30", "200", "10"), controlRecord(),
+                announcement("2657500", "698", "10000", "20562", "240"), seller("S", false),
+                BigDecimal.ZERO, BigDecimal.ZERO);
+
+        assertThat(result.basePriceLoad()).isEqualByComparingTo("2570250");
+        assertThat(result.healthyPercentage()).isEqualByComparingTo("92.11");
+        assertThat(result.wastePercentage()).isEqualByComparingTo("20");
+        assertThat(result.defectivePercentage()).isEqualByComparingTo("4");
+        assertThat(result.unitPrice()).isEqualByComparingTo("20963");
+        assertThat(result.grossValue()).isEqualByComparingTo("628890");
+        assertThat(result.associateContribution()).isEqualByComparingTo("12578");
+        assertThat(result.cooperativeDiscount()).isEqualByComparingTo("0");
+        assertThat(result.withholding()).isEqualByComparingTo("0");
+        assertThat(result.netToPay()).isEqualByComparingTo("616312");
+    }
+
+    /** Factor 100 = Factor Base y sin pasilla: Vr. Kilo = Pr Sustentacion + Bonificacion, sin termino 2. */
+    private ControlRecord flatRecord() {
+        ControlRecord cr = controlRecord();
+        cr.setBaseFactor(new BigDecimal("100"));
+        cr.setBaseWithholding(new BigDecimal("1000000"));
+        cr.setAssociatePercentage(new BigDecimal("0.8"));
+        return cr;
+    }
+
+    private DryCoffeePurchaseCalculation flat(String netKg, String bonus, String growerType,
+            String accumulatedGross, String accumulatedWithholding) {
+        return calculator.calculate(sample(netKg, "175", "0"), flatRecord(),
+                announcement("1200000", "0", "0", "6000", bonus), seller(growerType, false),
+                new BigDecimal(accumulatedGross), new BigDecimal(accumulatedWithholding));
+    }
+
+    @Test
+    void ca5ZeroBonusLeavesTheBasePriceAsTheSupportPrice() {
+        assertThat(flat("100", "0", "S", "0", "0").unitPrice()).isEqualByComparingTo("6000");
+        assertThat(flat("100", "240", "S", "0", "0").unitPrice()).isEqualByComparingTo("6240");
+    }
+
+    @Test
+    void associateContributionAndCooperativeDiscountUseTheControlRecordPercentage() {
+        // 600.000 x 0,8 %: S paga aporte y C descuento cooperativo, nunca los dos.
+        DryCoffeePurchaseCalculation associate = flat("100", "0", "S", "0", "0");
+        DryCoffeePurchaseCalculation nonAssociate = flat("100", "0", "C", "0", "0");
+
+        assertThat(associate.associateContribution()).isEqualByComparingTo("4800");
+        assertThat(associate.cooperativeDiscount()).isEqualByComparingTo("0");
+        assertThat(nonAssociate.associateContribution()).isEqualByComparingTo("0");
+        assertThat(nonAssociate.cooperativeDiscount()).isEqualByComparingTo("4800");
+        assertThat(nonAssociate.netToPay()).isEqualByComparingTo("595200");
+    }
+
+    @Test
+    void rf16WithholdingInDryCoffee600kThen600kThen300k() {
+        // Base 1.000.000 y 0,5 %: 600.000 no retiene; 600.000 + 600.000 = 1.200.000 -> 6.000; luego 300.000 -> 1.500.
+        assertThat(flat("100", "0", "C", "0", "0").withholding()).isEqualByComparingTo("0");
+        assertThat(flat("100", "0", "C", "600000", "0").withholding()).isEqualByComparingTo("6000");
+        assertThat(flat("50", "0", "C", "1200000", "6000").withholding()).isEqualByComparingTo("1500");
     }
 }

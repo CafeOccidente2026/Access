@@ -1,0 +1,61 @@
+{
+  "idNumberLabel": "Cédula",
+  "searchButton": "Buscar",
+  "restoreButton": "Restaurar",
+  "backLabel": "Volver",
+  "views": {
+    "future": {
+      "windowTitle": "RESTAURA COMPRAS A FUTURO",
+      "heading": "Restaurar Compras Anunciadas",
+      "note": "El saldo se recalcula desde cero: kilos anunciados menos los kilos netos de las compras no anuladas que la facturaron. Restaurar solo cambia los que no cuadran y queda en el Historial.",
+      "columns": [
+        "Anuncio",
+        "Fecha",
+        "Especial",
+        "Kilos",
+        "Kl_Entregados",
+        "Saldo actual",
+        "Saldo recalculado"
+      ]
+    },
+    "pending": {
+      "windowTitle": "ANUNCIADAS DE HOY",
+      "heading": "Anunciadas de Hoy",
+      "note": "Por defecto, las compras a futuro registradas hoy, agrupadas por anuncio. Con Desde y Hasta se ven las de otras fechas; con la casilla, todas las que tienen saldo pendiente, de cualquier fecha. Solo consulta.",
+      "columns": [
+        "Anuncio",
+        "Fecha Anuncio",
+        "Especial",
+        "Pr Alm Sana",
+        "Productores",
+        "Kilos Anunciados",
+        "Kl_Entregados",
+        "Saldo"
+      ]
+    },
+    "quota": {
+      "windowTitle": "RESTAURAR CUPOS",
+      "heading": "Restaurar Anuncios con Cupos",
+      "note": "El saldo de cada cupo ya se calcula en cada consulta (cupo menos los kilos netos de las compras no anuladas con ese anuncio), así que no hay nada que restaurar: esta pantalla solo lo muestra.",
+      "columns": [
+        "Anuncio",
+        "Fecha",
+        "Especial",
+        "Cupo",
+        "Kl_Entregados",
+        "Saldo"
+      ]
+    }
+  },
+  "messages": {
+    "empty": "No hay registros.",
+    "error": "No se pudo consultar las compras anunciadas.",
+    "restored": "Saldo restaurado en {n} compra(s) anunciada(s).",
+    "unchanged": "Los saldos ya están correctos: no hay nada que restaurar."
+  },
+  "filters": {
+    "from": "Desde",
+    "to": "Hasta",
+    "withBalance": "Ver todas las que tienen saldo pendiente"
+  }
+}

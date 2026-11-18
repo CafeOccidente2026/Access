@@ -19,12 +19,16 @@ public class ChangeHistoryRepository {
 
     private static final TypeReference<Map<String, String>> FIELDS = new TypeReference<>() { };
 
-    /** Filtros opcionales: un parametro null no filtra. to es exclusivo (el dia siguiente al elegido). */
+    /**
+     * Filtros opcionales: un parametro null no filtra. from y to son dias completos de Colombia: la base corre en UTC y
+     * un cambio a las 8 p. m. ya seria del dia siguiente.
+     */
+    private static final String COLOMBIAN_DAY = "CAST(h.fecha AT TIME ZONE 'America/Bogota' AS DATE)";
     private static final String WHERE = " WHERE (CAST(:entity AS VARCHAR) IS NULL OR h.entidad = :entity)"
             + " AND (CAST(:agencyId AS BIGINT) IS NULL OR h.agencia_id = :agencyId)"
             + " AND (CAST(:userId AS BIGINT) IS NULL OR h.usuario_id = :userId)"
-            + " AND (CAST(:from AS DATE) IS NULL OR h.fecha >= CAST(:from AS DATE))"
-            + " AND (CAST(:to AS DATE) IS NULL OR h.fecha < CAST(:to AS DATE) + 1)";
+            + " AND (CAST(:from AS DATE) IS NULL OR " + COLOMBIAN_DAY + " >= CAST(:from AS DATE))"
+            + " AND (CAST(:to AS DATE) IS NULL OR " + COLOMBIAN_DAY + " <= CAST(:to AS DATE))";
 
     private final NamedParameterJdbcTemplate jdbc;
     private final JsonMapper json;

@@ -39,7 +39,7 @@ describe('inventory report', () => {
     const paged = buildInventoryReportDoc(rows, false);
     expect(paged.pageSize).toBe('LETTER');
     expect(paged.pageOrientation).toBe('landscape');
-    expect(JSON.stringify(paged.content)).toContain('"600.000,00"');
+    expect(JSON.stringify(paged.content)).toContain('"600.000"');
   });
 
   it('really renders both variants (auto height cannot carry a page footer)', async () => {

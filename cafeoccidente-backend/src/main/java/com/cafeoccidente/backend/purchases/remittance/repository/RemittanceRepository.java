@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -81,8 +82,10 @@ public class RemittanceRepository {
     }
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final Clock clock;
 
-    public RemittanceRepository(NamedParameterJdbcTemplate jdbc) {
+    public RemittanceRepository(NamedParameterJdbcTemplate jdbc, Clock clock) {
+        this.clock = clock;
         this.jdbc = jdbc;
     }
 
@@ -132,9 +135,9 @@ public class RemittanceRepository {
     /** RN-11.9: salida en EMPAQUES con el numero de la remesa como transaccion y el detalle "Remision". */
     public void addPackagingExit(Long agencyId, String number, String packagingType, String idNumber, int quantity) {
         jdbc.update("INSERT INTO empaques (id_transaccion, agencia_id, tipo_empaque, fecha, cedula, detalle, entradas,"
-                + " salidas, creado_en) VALUES (:number, :agencyId, :type, CURRENT_DATE, :idNumber, 'Remision', 0,"
+                + " salidas, creado_en) VALUES (:number, :agencyId, :type, :today, :idNumber, 'Remision', 0,"
                 + " :quantity, now())", new MapSqlParameterSource().addValue("number", number)
-                        .addValue("agencyId", agencyId).addValue("type", packagingType).addValue("idNumber", idNumber)
+                        .addValue("today", LocalDate.now(clock)).addValue("agencyId", agencyId).addValue("type", packagingType).addValue("idNumber", idNumber)
                         .addValue("quantity", quantity));
     }
 

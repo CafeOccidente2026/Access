@@ -164,8 +164,9 @@ export class ComboboxComponent implements OnChanges, OnDestroy {
       if (this.isOpen && this.highlightedIndex >= 0 && this.filteredOptions[this.highlightedIndex]) {
         event.preventDefault();
         this.selectOption(this.filteredOptions[this.highlightedIndex]);
-      } else {
-        this.commitIfValid();
+        this.announceNext();
+      } else if (this.commitIfValid()) {
+        this.announceNext();
       }
     } else if (event.key === 'Escape') {
       if (this.isOpen) {
@@ -185,6 +186,12 @@ export class ComboboxComponent implements OnChanges, OnDestroy {
   onOptionMouseDown(event: MouseEvent, option: string): void {
     event.preventDefault();
     this.selectOption(option);
+    this.announceNext();
+  }
+
+  /** Opcion elegida (clic o Enter): appFormFlow pasa al siguiente campo, como las pantallas de compra. */
+  private announceNext(): void {
+    this.inputEl?.nativeElement.dispatchEvent(new CustomEvent('flow-next', { bubbles: true }));
   }
 
   onBlur(): void {
@@ -209,17 +216,21 @@ export class ComboboxComponent implements OnChanges, OnDestroy {
 
   /** Solo confirma si lo tipeado coincide EXACTO (sin importar mayus/tildes) con una opcion real -
    *  si no, se queda tal cual esta, editable, sin avanzar (igual que la cedula no encontrada). */
-  private commitIfValid(): void {
+  private commitIfValid(): boolean {
     const typed = this.inputText.trim();
     const match = this.options.find((o) => normalize(o) === normalize(typed));
     if (!match) {
-      return;
+      return false;
     }
     if (match !== this.inputText) {
       this.inputText = match;
     }
-    this.valueChange.emit(match);
+    // Al salir con el mismo valor no se reenvia: ese eco tardio limpiaba Cupo en Asignar Cupo (prueba del 9-nov).
+    if (match !== this.value) {
+      this.valueChange.emit(match);
+    }
     this.committed.emit();
+    return true;
   }
 
   private scrollHighlightedIntoView(): void {

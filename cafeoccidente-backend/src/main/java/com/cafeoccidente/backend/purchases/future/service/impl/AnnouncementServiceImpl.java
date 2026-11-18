@@ -26,6 +26,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.FundRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.ProductCodeRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +58,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     private final ControlRecordService controlRecordService;
     private final CurrentAgencyProvider currentAgencyProvider;
     private final ChangeHistoryService history;
+    private final Clock clock;
 
     public AnnouncementServiceImpl(
             AnnouncementRepository announcementRepository,
@@ -66,7 +68,9 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             ControlRecordRepository controlRecordRepository,
             ControlRecordService controlRecordService,
             CurrentAgencyProvider currentAgencyProvider,
-            ChangeHistoryService history) {
+            ChangeHistoryService history,
+            Clock clock) {
+        this.clock = clock;
         this.announcementRepository = announcementRepository;
         this.agencyAnnouncementNumberRepository = agencyAnnouncementNumberRepository;
         this.fundRepository = fundRepository;
@@ -75,6 +79,23 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         this.controlRecordService = controlRecordService;
         this.currentAgencyProvider = currentAgencyProvider;
         this.history = history;
+    }
+
+    @Override
+    public AnnouncementResponse findStarted(Long agencyId, Long fundId, String specialType, Integer startedNumber) {
+        if (startedNumber == null) {
+            return null;
+        }
+        AnnouncementResponse latest = findLatest(agencyId, fundId, specialType);
+        String number = latest.announcementNumber();
+        if (number.substring(number.lastIndexOf('-') + 1).equals(startedNumber.toString())) {
+            return latest;
+        }
+        AnnouncementResponse started = findForPurchase(agencyId, fundId, specialType, startedNumber);
+        if (!LocalDate.now(clock).equals(started.announcementDate())) {
+            throw new BusinessRuleException("El anuncio " + startedNumber + " ya no está vigente: empiece la compra otra vez");
+        }
+        return started;
     }
 
     @Override
@@ -157,10 +178,10 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                 .toList();
     }
 
-    private static Announcement master(Fund fund, String specialType, BigDecimal basePriceLoad,
+    private Announcement master(Fund fund, String specialType, BigDecimal basePriceLoad,
             BigDecimal specialSurcharge, BigDecimal defectiveUnitPrice) {
         Announcement master = new Announcement();
-        master.setAnnouncementDate(LocalDate.now());
+        master.setAnnouncementDate(LocalDate.now(clock));
         master.setBasePriceLoad(basePriceLoad);
         master.setSpecialSurcharge(specialSurcharge);
         master.setDefectiveUnitPrice(defectiveUnitPrice);
@@ -184,7 +205,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Fondo RP no encontrado"));
 
         Announcement master = new Announcement();
-        master.setAnnouncementDate(LocalDate.now());
+        master.setAnnouncementDate(LocalDate.now(clock));
         master.setBasePriceLoad(request.basePriceLoad());
         master.setPointPrice(request.pointPrice());
         master.setDefectiveUnitPrice(BigDecimal.ZERO);
@@ -245,6 +266,22 @@ public class AnnouncementServiceImpl implements AnnouncementService {
                     master.getQualityIncrement());
         }
         return toResponse(callerNumbering, callerControlRecord);
+    }
+
+    @Override
+    public AnnouncementResponse findForPurchase(
+            Long agencyId, Long fundId, String specialType, Integer announcementNumber) {
+        if (announcementNumber == null) {
+            return findLatest(agencyId, fundId, specialType);
+        }
+        AgencyAnnouncementNumber numbering = agencyAnnouncementNumberRepository
+                .findByAgencyIdAndAnnouncementNumber(agencyId, announcementNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe ese anuncio para esta agencia"));
+        Announcement master = numbering.getMasterAnnouncement();
+        if (!master.getFund().getId().equals(fundId) || !master.getSpecialType().equals(specialType)) {
+            throw new BusinessRuleException("El anuncio " + announcementNumber + " no es de ese fondo y especial");
+        }
+        return toResponse(numbering, controlRecordService.getActive(agencyId));
     }
 
     @Override

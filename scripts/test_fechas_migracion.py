@@ -1,5 +1,5 @@
 """
-Check de las horas de migrate_eltambo.py (sin BD ni framework):
+Check de las horas de migrar_punto.py (sin BD ni framework):
 python scripts/test_fechas_migracion.py
 
 Access guarda la hora local de Colombia. Al migrar, creado_en (timestamptz) de compras, Caja, Caja Menor,
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from psycopg2.extensions import adapt
 
-from migrate_eltambo import parse_timestamp
+from migrar_punto import parse_timestamp
 
 
 def main():

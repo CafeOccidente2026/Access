@@ -147,8 +147,8 @@ class ElTamboVendorsValidationTest {
 
     /**
      * NESSYRAINSALDO sobre CUPOS (la tabla que dejo CalCuposSaldoNess en Access) y NESS, anuladas
-     * incluidas: una cedula cuya unica compra del programa fue anulada sale con FACTURADOS 0 (5248772 y
-     * 98215933).
+     * incluidas: una cedula cuya unica compra del programa fue anulada sale con FACTURADOS 0 (hay dos casos
+     * en los datos de El Tambo).
      */
     @Test
     void quotaBalancesMatchNessYRainSaldo() throws IOException {

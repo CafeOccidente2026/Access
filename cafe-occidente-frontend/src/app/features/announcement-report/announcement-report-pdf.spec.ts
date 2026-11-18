@@ -10,9 +10,9 @@ function row(over: Partial<PurchaseReportRow>): PurchaseReportRow {
   return {
     module: 'DRY', invoiceNumber: 1, purchaseDate: '2026-05-09', agencyName: 'EL TAMBO', fundCode: 'LF', prefix: 'SDTA',
     specialType: 'NESPRESSO', productCode: '0110001000007', productName: null, announcementNumber: 'SDTA-3443',
-    idNumber: '27286462', firstName: 'MARIA', lastName: 'ESPAÑA', greenKg: null, netKg: 100, factor: 90, unitPrice: 19115,
+    idNumber: '99286462', firstName: 'MARIA', lastName: 'PRUEBA', greenKg: null, netKg: 100, factor: 90, unitPrice: 19115,
     grossValue: 1911500, inventoryValue: 1911500, associateContribution: 0, cooperativeDiscount: 0, freightDiscount: 0,
-    withholding: 0, otherDiscounts: 0, netToPay: 1911500, paymentMethod: 'EFECTIVO', status: 'VALIDA', ...over,
+    withholding: 0, otherDiscounts: 0, netToPay: 1911500, paymentMethod: 'EFECTIVO', status: 'VALIDA', announcementDate: '2026-05-09', ...over,
   };
 }
 
@@ -28,11 +28,15 @@ describe('announcement report', () => {
       row({ invoiceNumber: 5, module: 'HUSK', announcementNumber: 'SDTA-3445', specialType: 'PASILLA' }),
     ]);
 
-    expect(blocks.map((b) => `${b.announcementNumber} ${b.specialType}`)).toEqual(['3443 NESPRESSO', '3444 CV', '3445 PASILLA']);
+    expect(blocks.map((b) => `${b.announcementNumber} ${b.specialType}`)).toEqual(['TA-3443 NESPRESSO', 'TA-3444 CV', 'TA-3445 PASILLA']);
     expect(blocks[0].groups.map((g) => [g.productCode, g.rows.map((p) => p.invoiceNumber)])).toEqual([
       ['A', [1, 4]],
       ['B', [3]],
     ]);
+  });
+
+  it('6C: prints the cooperative NIT stored without separators, formatted as before', () => {
+    expect(json([row({})])).toContain('NIT. 891.200.986-8');
   });
 
   it('weights the factor by KN only over rows with a factor, and is empty when none has one', () => {
@@ -41,8 +45,8 @@ describe('announcement report', () => {
     expect(weightedFactor([row({ factor: null })])).toBeNull();
   });
 
-  it('formats the date like Access Short Date', () => {
-    expect(shortDate('2026-05-09')).toBe('9/05/2026');
+  it('formats the date as dd/mm/aaaa (hallazgo #1)', () => {
+    expect(shortDate('2026-05-09')).toBe('09/05/2026');
   });
 
   it('RN-24.2: the detail has the announcement number column', () => {
@@ -50,7 +54,7 @@ describe('announcement report', () => {
     const tables = (doc.content as { table?: { body: unknown[][] } }[]).filter((c) => c.table);
     const detail = tables[1].table!.body;
     expect(detail[0][0]).toMatchObject({ text: 'Anun' });
-    expect(detail[2][0]).toBe('3443');
+    expect(detail[2][0]).toBe('TA-3443');
   });
 
   it('RN-24.4: one PDF, summary first and detail after, each block on its own page', () => {

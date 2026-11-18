@@ -18,6 +18,9 @@ export interface InventoryMovementResponse {
   readonly remainingKg: number;
   readonly healthyPercentage: number | null;
   readonly inventoryValue: number;
+  /** Cedula del vendedor y fondo de la compra (C7: columna Cedula y filtro por Fondo). */
+  readonly idNumber: string | null;
+  readonly fundCode: string | null;
 }
 
 export interface RemissionLineRequest {

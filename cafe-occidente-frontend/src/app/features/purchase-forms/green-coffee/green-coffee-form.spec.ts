@@ -20,6 +20,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     theme: 'teal',
     topFields: [],
     identificationFields: [],
+    federationFields: ['idNumber', 'fullName', 'program'].map((key) => ({ key, label: key, type: 'text' as const })),
     weightFields: [
       { key: 'totalStoredWeight', label: 'Peso Tot Alm', type: 'count' },
       { key: 'factor', label: 'Factor', type: 'number' },
@@ -36,18 +37,20 @@ describe('GreenCoffeeFormComponent - guardado', () => {
       closeWarning: 'Hay datos sin guardar.',
       closeConfirm: 'Cerrar',
       closeCancel: 'Cancelar',
+      cellphoneMissing: 'Este vendedor no tiene celular. Digítelo para continuar.',
+      cooperativeDiscountLabel: 'Descuento Coop',
     },
   };
 
   const grower: Grower = {
     id: 1,
-    idNumber: '210514',
-    firstName: 'PAZ',
-    secondName: 'CAROLINA',
-    lastName: 'CASTELBLANCO',
-    secondLastName: 'OSSA',
-    address: 'CLL 14 N 37-20 CASA II',
-    phone: '3117498703',
+    idNumber: '990514',
+    firstName: 'CAFICULTOR',
+    secondName: 'UNO',
+    lastName: 'PRUEBA',
+    secondLastName: 'DOS',
+    address: 'VEREDA PRUEBA',
+    phone: '3000000001',
     growerType: 'C',
     active: true,
     deceased: false,
@@ -63,10 +66,10 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     totalStoredWeight: 140, wastePercentage: 44, huskWeight: 12.5, huskPercentage: 5, healthyStoredWeight: 186.18, factor: 94,
   };
 
-  function setup(sampleReady = true): void {
+  function setup(sampleReady = true, announcementFails = false): void {
     const fakeGreenService = {
       nextInvoiceNumber: () => of({ invoiceNumber: 100, prefix: 'SDBU', warning: null }),
-      announcementInfo: () =>
+      announcementInfo: () => announcementFails ? throwError(() => ({ error: { message: 'No hay un anuncio de precio vigente para esa agencia/fondo/especial' } })) :
         of({
           fundId: 1,
           productCode: '0110002000010',
@@ -93,7 +96,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
         { provide: GreenCoffeePurchaseService, useValue: fakeGreenService },
-        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)) } },
+        { provide: GrowerService, useValue: { findByIdNumber: vi.fn(() => of(grower)), findProgram: vi.fn(() => of(null)) } },
       ],
     });
     component = TestBed.createComponent(GreenCoffeeFormComponent).componentInstance;
@@ -133,6 +136,29 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     expect(component.saving()).toBe(false);
   });
 
+  const federation = (key: string) => component.viewContent()!.federationFields!.find((f) => f.key === key)!;
+
+  it('C3: with NESS the Federación block shows the cédula, name and program of NESS, read only', () => {
+    setup();
+    (TestBed.inject(GrowerService).findProgram as ReturnType<typeof vi.fn>).mockReturnValue(of({ programa: 'NESPRESSO', cupo: '200', cedula: '990514', nombres: 'CAFICULTOR DOS NESS' }));
+    component.model['idPart1'] = grower.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(TestBed.inject(GrowerService).findProgram).toHaveBeenCalledWith('990514', 'CV');
+    for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' })) {
+      expect(federation(key)).toMatchObject({ value, readonly: true });
+    }
+  });
+
+  it('C3: without NESS the block stays empty and the purchase is calculated and saved all the same', () => {
+    setup();
+    fillEverything();
+    for (const key of ['idNumber', 'fullName', 'program']) {
+      expect(federation(key)).toMatchObject({ value: '', readonly: true });
+    }
+    expect(component.model['firstName']).toBe('CAFICULTOR UNO');
+    expect(component.calc()).not.toBeNull();
+  });
+
   it('does not ask for the preview (nor warn) while a required field is still missing, like Cafe Seco', () => {
     setup();
     const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
@@ -144,6 +170,11 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     expect(preview).not.toHaveBeenCalled();
     expect(component.errorMessage()).toBeNull();
+  });
+
+  it('prueba del 11-nov (punto 4): without an announcement it shows the reason of the server', () => {
+    setup(true, true);
+    expect(component.errorMessage()).toBe('No hay un anuncio de precio vigente para esa agencia/fondo/especial');
   });
 
   it('HU-23 CA-2: shows the fixed sample of the control record as read-only', () => {
@@ -158,8 +189,8 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     setup();
     fillEverything();
     // El PDF no se abre de verdad: se mira el documento que se arma.
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     createSpy.mockReturnValue(of({
       id: 1, purchaseDate: '2026-10-29', invoiceNumber: 100, agencyName: 'Buesaco', fundCode: 'RP', specialType: 'CV',
       productCode: '0110002000010', announcementNumber: 'SDBU-5', announcementDate: '2026-10-29', basePriceLoad: 1113500,
@@ -172,7 +203,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     }));
 
     component.print();
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.calls[0][0]);
     expect(doc).toContain('"Kilos Verdes"');
     expect(doc).toContain('SDBU - 100');
@@ -197,8 +228,8 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     setup();
     fillEverything();
     const nextInvoice = vi.spyOn(TestBed.inject(GreenCoffeePurchaseService), 'nextInvoiceNumber');
-    const open = vi.fn();
-    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ open } as unknown as ReturnType<typeof pdfMake.createPdf>);
+    const getBlob = vi.fn();
+    const createPdf = vi.spyOn(pdfMake, 'createPdf').mockReturnValue({ getBlob } as unknown as ReturnType<typeof pdfMake.createPdf>);
     component.payment.set({ cashAmount: 0, checkAmount: 0, transferAmount: 7777777, cardAmount: 0, checkNumber: null });
     createSpy.mockReturnValue(of(GREEN));
 
@@ -208,7 +239,7 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     expect(component.payment()).toBeNull();
     expect(component.savedNoticeOpen()).toBe(true);
     expect(nextInvoice).toHaveBeenCalledTimes(1);
-    await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(getBlob).toHaveBeenCalledTimes(1));
     const doc = JSON.stringify(createPdf.mock.lastCall![0]);
     expect(doc).toContain('SDBU - 27.875');
     expect(doc).toContain('7.777.777');
@@ -228,5 +259,57 @@ describe('GreenCoffeeFormComponent - guardado', () => {
 
     await vi.waitFor(() => expect(component.errorMessage()).toBe(content.messages['invoiceError']));
     createPdf.mockRestore();
+  });
+
+  it('prueba del 10-nov: without a cellphone it warns, waits for Celular and calculates once it is typed', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    (TestBed.inject(GrowerService).findByIdNumber as ReturnType<typeof vi.fn>).mockReturnValue(of({ ...grower, phone: '' }));
+    const advance = vi.fn();
+    (component as any).advanceFocus = advance;
+    component.model['idPart1'] = grower.idNumber;
+    component.onFieldCommitted('idPart1');
+    expect(component.errorMessage()).toBe(content.messages['cellphoneMissing']);
+    expect(advance).not.toHaveBeenCalledWith('idPart1');
+
+    component.dismissError();
+    component.model['cellphone'] = '3001112233';
+    component.onFieldCommitted('cellphone');
+    expect(advance).toHaveBeenLastCalledWith('cellphone');
+
+    for (const [key, value] of [['bags', '10'], ['grossKg', '1250'], ['tare', '50'], ['compKgPrice', '12000']]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+    expect(preview.mock.calls.at(-1)![0].cellphone).toBe('3001112233');
+  });
+
+  it('a rejected preview shows the message of the server, not the generic one', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    preview.mockReturnValue(throwError(() => ({ error: { message: 'Digite el celular del vendedor.' } })));
+    for (const [key, value] of [['idPart1', grower.idNumber], ['bags', '10'], ['grossKg', '1250'], ['tare', '50'], ['compKgPrice', '12000']]) {
+      component.model[key] = value;
+      component.onFieldCommitted(key);
+    }
+    expect(component.errorMessage()).toBe('Digite el celular del vendedor.');
+  });
+
+  it('a cellphone typed at the end also recalculates', () => {
+    setup();
+    const preview = TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>;
+    fillEverything();
+    preview.mockClear();
+    component.model['cellphone'] = '3001112244';
+    component.onFieldCommitted('cellphone');
+    expect(preview).toHaveBeenCalledTimes(1);
+  });
+
+  it('prueba del 10-nov: after Imprimir or Escape the focus goes back to Cédula', () => {
+    setup();
+    const focus = vi.fn();
+    (component as any).focusField = focus;
+    component.reset();
+    expect(focus).toHaveBeenLastCalledWith('idPart1');
   });
 });

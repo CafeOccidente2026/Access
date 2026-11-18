@@ -63,6 +63,8 @@ class ControlRecordIntegrationTest {
     private ControlRecordService service;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
 
     private String admin;
 
@@ -152,6 +154,49 @@ class ControlRecordIntegrationTest {
         applyGreenCoffee(admin, GREEN_VALUES.replace("140", "-1")).andExpect(status().isBadRequest());
     }
 
+    /** Usuario de Buesaco con el permiso temporal de la pantalla Registro de Control (RF-02). */
+    private String clerkWithPermission() {
+        User clerk = new User();
+        clerk.setUsername("regcontrol_usuario");
+        clerk.setPasswordHash(passwordEncoder.encode("clave-reg1"));
+        clerk.setRole(roles.findByName(Roles.USUARIO).orElseThrow());
+        clerk.setAgency(agencies.findById(1L).orElseThrow());
+        Long clerkId = users.save(clerk).getId();
+        jdbc.update("INSERT INTO permisos (usuario_id, pantalla, concedido_por) VALUES (?, 'REGISTRO_CONTROL', ?)", clerkId, clerkId);
+        return "Bearer " + jwtService.generateToken(new SecurityUser(clerk));
+    }
+
+    private ResultActions saveAs(String token, ObjectNode body) throws Exception {
+        return mockMvc.perform(put(BUESACO).header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON).content(body.toString()));
+    }
+
+    /**
+     * Respuesta del area (11-nov): % pasilla promedio, % asociados, % no asociados y los 5 valores de cafe verde solo
+     * los cambia el Administrador; el Usuario con el permiso temporal cambia el resto (por ejemplo, el Fiel).
+     */
+    @Test
+    void withThePermissionTheBusinessValuesStayForTheAdministrator() throws Exception {
+        String clerk = clerkWithPermission();
+        saveAs(clerk, current().put("trustedId", "99304051")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.trustedId").value("99304051"));
+
+        for (String field : List.of("avgHuskPercentage", "associatePercentage", "nonAssociateDiscount",
+                "greenTotalStoredWeight", "greenTotalHuskWeight", "greenHealthyStoredWeight",
+                "greenHealthyUnitPrice", "greenDefectiveUnitPrice")) {
+            ObjectNode body = current();
+            body.put(field, body.get(field).decimalValue().add(BigDecimal.ONE));
+            saveAs(clerk, body).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Solo el Administrador puede cambiar este valor"));
+        }
+        assertThat(service.getActive(1L).getAvgHuskPercentage()).isEqualByComparingTo(current().get("avgHuskPercentage").decimalValue());
+
+        // El Administrador si los cambia.
+        ObjectNode body = current();
+        body.put("avgHuskPercentage", new BigDecimal("6.14"));
+        save(body).andExpect(status().isOk()).andExpect(jsonPath("$.avgHuskPercentage").value(6.14));
+    }
+
     @Test
     void aSecondControlRecordForTheSameAgencyIsRejected() throws Exception {
         mockMvc.perform(post(BUESACO).header("Authorization", admin)
@@ -168,6 +213,21 @@ class ControlRecordIntegrationTest {
         save(current().put("purchasePoint", "OTRO PUNTO"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.purchasePoint").value("BUESACO1 OCCIDENTE"));
+    }
+
+    private String stamp() throws Exception {
+        String body = mockMvc.perform(get("/api/control-records/stamp").header("Authorization", admin))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return json.readTree(body).get("stamp").asString();
+    }
+
+    // Hallazgo #6 (16-nov): la pantalla de compra avisa al salir si el Registro de Control cambio mientras se digitaba.
+    @Test
+    void theStampChangesOnlyWhenTheControlRecordChanges() throws Exception {
+        String before = stamp();
+        assertThat(stamp()).isEqualTo(before);
+        save(current().put("excelsoKg", 72)).andExpect(status().isOk());
+        assertThat(stamp()).isNotEqualTo(before);
     }
 
     @Test
@@ -206,5 +266,53 @@ class ControlRecordIntegrationTest {
                 .andExpect(jsonPath("$.greenTotalStoredWeight").value(140.0))
                 .andExpect(jsonPath("$.greenHealthyUnitPrice").value(1000.0))
                 .andExpect(jsonPath("$.specialtyThreshold").value(93.5));
+    }
+
+    // Prueba a mano del 16-nov: la muestra de cafe verde no puede pasar la muestra ni la pasilla al total.
+    @Test
+    void theGreenCoffeeSampleCannotExceedTheSample() throws Exception {
+        save(current().put("sampleSize", 250).put("greenTotalStoredWeight", 260).put("greenTotalHuskWeight", 5)
+                        .put("greenHealthyStoredWeight", 200))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Peso Tot Alm de cafe verde no puede ser mayor que la muestra (250 g)"));
+        save(current().put("sampleSize", 250).put("greenTotalStoredWeight", 140).put("greenTotalHuskWeight", 150)
+                        .put("greenHealthyStoredWeight", 130))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Peso Tot Pasilla de cafe verde no puede ser mayor que Peso Tot Alm (140 g)"));
+        applyGreenCoffee(admin, "{\"greenTotalStoredWeight\": 900, \"greenTotalHuskWeight\": 7.1, \"greenHealthyStoredWeight\": 132.9,"
+                        + " \"greenHealthyUnitPrice\": 12000, \"greenDefectiveUnitPrice\": 6000}")
+                .andExpect(status().isBadRequest());
+    }
+
+    /** R1 (17-nov): la resolucion de Buesaco vence en {@code days} dias (Fecha Res + Vigencia en meses). */
+    private void buesacoExpiresIn(int days) {
+        jdbc.update("UPDATE registros_control SET fecha_resolucion = (now() AT TIME ZONE 'America/Bogota')::date + ?"
+                + " - make_interval(months => vigencia) WHERE agencia_id = 1 AND activo", days);
+        entityManager.clear();
+    }
+
+    @Test
+    void r1TheAdministratorIsWarnedTenDaysBeforeAResolutionExpires() throws Exception {
+        buesacoExpiresIn(11);
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')]").isEmpty());
+
+        buesacoExpiresIn(10);
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')].daysLeft").value(10));
+    }
+
+    @Test
+    void r1AnExpiredResolutionStaysInTheAlertsUntilANewOneIsRegistered() throws Exception {
+        buesacoExpiresIn(-1);
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')].daysLeft").value(-1));
+
+        save(current().put("resolutionDate", java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota")).toString()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/control-records/resolution-alerts").header("Authorization", admin))
+                .andExpect(jsonPath("$[?(@.agencyName == 'Buesaco 1')]").isEmpty());
     }
 }

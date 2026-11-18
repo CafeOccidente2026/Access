@@ -5,6 +5,7 @@
       { "label": "Registrar Suministro Efectivo", "route": "/suministros/caja", "emphasis": true },
       { "label": "Ajustes Caja Café", "route": "/suministros/ajustes-caja" },
       { "label": "Informe Caja", "route": "/suministros/informe-caja" },
+      { "label": "Informe Datáfono", "route": "/suministros/informe-datafono" },
       { "label": "Relación Cheques", "route": "/suministros/relacion-cheques" },
       { "label": "Rel Cheques Especial", "route": "/suministros/relacion-cheques-especial" },
       { "label": "Rel Formas de Pago", "route": "/suministros/formas-de-pago" },

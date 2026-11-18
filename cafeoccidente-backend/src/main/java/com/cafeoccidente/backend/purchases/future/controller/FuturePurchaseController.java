@@ -1,17 +1,26 @@
 package com.cafeoccidente.backend.purchases.future.controller;
 
 import com.cafeoccidente.backend.common.security.Roles;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePlaceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRequest;
 import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseResponse;
+import com.cafeoccidente.backend.purchases.future.dto.FuturePurchaseRestoreRow;
+import com.cafeoccidente.backend.purchases.future.dto.PendingAnnouncementRow;
+import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,9 +30,52 @@ import org.springframework.web.bind.annotation.RestController;
 public class FuturePurchaseController {
 
     private final FuturePurchaseService futurePurchaseService;
+    private final FuturePurchaseRestoreService restoreService;
 
-    public FuturePurchaseController(FuturePurchaseService futurePurchaseService) {
+    public FuturePurchaseController(
+            FuturePurchaseService futurePurchaseService, FuturePurchaseRestoreService restoreService) {
         this.futurePurchaseService = futurePurchaseService;
+        this.restoreService = restoreService;
+    }
+
+    /** Restaurar Compras Anunciadas (Q5: solo el Administrador): lo que quedaria, sin escribir. */
+    @GetMapping("/restore")
+    @PreAuthorize(Roles.ADMIN)
+    public List<FuturePurchaseRestoreRow> restorePreview(@RequestParam String idNumber) {
+        return restoreService.preview(idNumber);
+    }
+
+    /** Recalcula el saldo desde cero (P6) y lo deja en el Historial. */
+    @PostMapping("/restore")
+    @PreAuthorize(Roles.ADMIN)
+    public List<FuturePurchaseRestoreRow> restore(@RequestParam String idNumber) {
+        return restoreService.restore(idNumber);
+    }
+
+    /** Hallazgo #14: Finca, Mpio y Vereda de la ultima compra a futuro de la cedula (204 si no tiene). */
+    @GetMapping("/last-place")
+    public ResponseEntity<FuturePlaceResponse> lastPlace(@RequestParam String idNumber) {
+        FuturePlaceResponse place = futurePurchaseService.lastPlace(idNumber);
+        return place == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(place);
+    }
+
+    /** Anunciadas de Hoy: solo lectura; por defecto las de hoy (hallazgo #17). */
+    @GetMapping("/pending")
+    public List<PendingAnnouncementRow> pending(@RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to, @RequestParam(defaultValue = "false") boolean withBalance) {
+        return futurePurchaseService.pending(from, to, withBalance);
+    }
+
+    /** Ventana de Facturar Compras Anunciadas (RN-21.5.2). */
+    @GetMapping("/open")
+    public List<FuturePurchaseResponse> openFor(@RequestParam String idNumber) {
+        return futurePurchaseService.openFor(idNumber);
+    }
+
+    /** El anuncio vigente del especial (R6, 17-nov: el ultimo aunque no sea de hoy). */
+    @GetMapping("/announcements")
+    public List<AnnouncementResponse> todayAnnouncements(@RequestParam String specialType) {
+        return futurePurchaseService.todayAnnouncements(specialType);
     }
 
     @PostMapping

@@ -1,12 +1,12 @@
 """
-Check de la tabla de agencias de migrate_eltambo.py (sin BD ni framework):
+Check de la tabla de agencias de migrar_punto.py (sin BD ni framework):
 python scripts/test_equivalencias_agencias.py
 """
 
 import csv
 import re
 
-from migrate_eltambo import AGENCY_ALIASES, DATA_DIR, EXTRA_AGENCIES, ROOT, canonical_access_value
+from migrar_punto import AGENCY_ALIASES, DATA_DIR, EXTRA_AGENCIES, ROOT, canonical_access_value
 
 SEED = ROOT / "cafeoccidente-backend" / "src" / "main" / "resources" / "db" / "migration" / "V2__datos_semilla.sql"
 

@@ -56,7 +56,7 @@ describe('UserManagementComponent', () => {
     userService.create.mockReturnValue(pendingUser);
     const fixture = TestBed.createComponent(UserManagementComponent);
     const component = fixture.componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '1061699481', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', idNumber: '9961699481', password: 'clave1234', roleId: 1, agencyId: 1 });
 
     component.createUser();
     component.createUser();
@@ -97,15 +97,15 @@ describe('UserManagementComponent', () => {
     const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn> };
     userService.create.mockReturnValue(of({}));
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
-    Object.assign(component, { username: 'fiel1', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', password: 'clave1234', roleId: 1, agencyId: 1 });
 
     component.createUser();
     expect(userService.create).not.toHaveBeenCalled();
     expect(component.userError()).toBe(content.idNumberRequiredMessage);
 
-    component.idNumber = '1061699481';
+    component.idNumber = '9961699481';
     component.createUser();
-    expect(userService.create).toHaveBeenCalledWith({ username: 'fiel1', idNumber: '1061699481', password: 'ab12', roleId: 1, agencyId: 1 });
+    expect(userService.create).toHaveBeenCalledWith({ username: 'fiel1', idNumber: '9961699481', password: 'clave1234', roleId: 1, agencyId: 1 });
   });
 
   it('C4: editing sends agency, role, active and only a new password; the list shows the saved user', () => {
@@ -127,6 +127,33 @@ describe('UserManagementComponent', () => {
     expect(component.editNotice()).toBe(content.userSavedMessage);
   });
 
+  it('S4: Desbloquear lets the user try again before the 15 minutes, only once per click burst', () => {
+    const unlock = vi.fn(() => of(undefined));
+    (TestBed.inject(UserService) as unknown as { unlock: typeof unlock }).unlock = unlock;
+    const component = TestBed.createComponent(UserManagementComponent).componentInstance;
+    component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+
+    component.unlock();
+    expect(unlock).toHaveBeenCalledExactlyOnceWith(7);
+    expect(component.editNotice()).toBe(content.userUnlockedMessage);
+    expect(component.editing()).not.toBeNull();
+  });
+
+  it('S4: while unlocking, a second click does not send again; an error is shown as it comes', () => {
+    const pending = new Subject<void>();
+    const unlock = vi.fn(() => pending);
+    (TestBed.inject(UserService) as unknown as { unlock: typeof unlock }).unlock = unlock;
+    const component = TestBed.createComponent(UserManagementComponent).componentInstance;
+    component.unlock();
+    expect(unlock).not.toHaveBeenCalled();
+    component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    component.unlock();
+    component.unlock();
+    expect(unlock).toHaveBeenCalledTimes(1);
+    pending.error(new HttpErrorResponse({ status: 404, error: { message: 'Usuario no encontrado' } }));
+    expect(component.editError()).toBe('Usuario no encontrado');
+  });
+
   it('C4: the server rules (last Administrator, own account) are shown as they come', () => {
     const userService = TestBed.inject(UserService) as unknown as { update: ReturnType<typeof vi.fn> };
     userService.update = vi.fn(() => throwError(() => new HttpErrorResponse({
@@ -143,13 +170,14 @@ describe('UserManagementComponent', () => {
     const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
     userService.update = vi.fn();
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'abcd', roleId: 1, agencyId: 1 });
+    // Minimo 8 (13-nov): 7 caracteres con letras y numeros ya no alcanza.
+    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'abc1234', roleId: 1, agencyId: 1 });
     component.createUser();
     expect(userService.create).not.toHaveBeenCalled();
     expect(component.userError()).toBe(content.passwordInvalidMessage);
 
     component.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
-    component.editPassword = '1234';
+    component.editPassword = 'nueva12';
     component.saveEdit();
     expect(userService.update).not.toHaveBeenCalled();
     expect(component.editError()).toBe(content.passwordInvalidMessage);
@@ -163,13 +191,101 @@ describe('UserManagementComponent', () => {
     userService.create.mockReturnValue(throwError(() => new HttpErrorResponse({
       status: 400, error: { message: 'Ya existe un usuario con esa cedula' } })));
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
-    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'ab12', roleId: 1, agencyId: 1 });
+    Object.assign(component, { username: 'fiel1', idNumber: '55', password: 'clave1234', roleId: 1, agencyId: 1 });
     component.onEnter('username');
     component.onEnter('desconocido');
     expect(userService.create).not.toHaveBeenCalled();
     component.onEnter('agencyId');
     expect(userService.create).toHaveBeenCalled();
     expect(component.userError()).toBe('Ya existe un usuario con esa cedula');
+  });
+
+  it('prueba del 9-nov (segunda): choosing Rol moves to Agencia, and choosing Agencia moves to Crear Usuario without saving', async () => {
+    const userService = TestBed.inject(UserService) as unknown as { create: ReturnType<typeof vi.fn> };
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const choose = async (key: string) => {
+      const select = el.querySelector<HTMLSelectElement>(`[data-field-key="${key}"]`)!;
+      select.value = select.options[1].value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve));
+    };
+
+    await choose('roleId');
+    expect(document.activeElement?.getAttribute('data-field-key')).toBe('agencyId');
+
+    await choose('agencyId');
+    expect(document.activeElement?.textContent?.trim()).toBe(content.createUserButton);
+    expect(userService.create).not.toHaveBeenCalled();
+    fixture.nativeElement.remove();
+  });
+
+  it('decision del 10-nov: an arrow on Rol only changes it; the focus stays until Enter', async () => {
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve)); // foco inicial en Usuario
+    const select = (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>('[data-field-key="roleId"]')!;
+    select.focus();
+
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    select.value = select.options[1].value;
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement).toBe(select);
+
+    select.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement?.getAttribute('data-field-key')).toBe('agencyId');
+    fixture.nativeElement.remove();
+  });
+
+  it('pedido del 18-nov: Editar opens above the list instead of Crear usuario, scrolls to it and focuses its first field', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    fixture.componentInstance.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    const box = el.querySelector('[data-testid="edit-user"]')!;
+    const list = el.querySelector('[data-testid="users"]')!;
+    expect(box.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(el.querySelector('[data-create-user]')).toBeNull();
+    expect(scroll).toHaveBeenCalled();
+    expect(document.activeElement?.hasAttribute('data-edit-role')).toBe(true);
+
+    // Sin cedula, el primer campo es la Cedula.
+    fixture.componentInstance.startEdit({ id: 1, username: 'admin', idNumber: null, active: true, roleId: 1, roleName: 'ADMINISTRADOR', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement?.hasAttribute('data-edit-first')).toBe(true);
+
+    fixture.componentInstance.cancelEdit();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="edit-user"]')).toBeNull();
+    expect(el.querySelector('[data-create-user]')).not.toBeNull();
+    fixture.nativeElement.remove();
+  });
+
+  it('pedido del 18-nov: the browser and password managers do not autofill Usuario or the passwords', () => {
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-field-key="username"]')?.getAttribute('autocomplete')).toBe('off');
+    expect(el.querySelector('[data-field-key="password"]')?.getAttribute('autocomplete')).toBe('new-password');
+
+    fixture.componentInstance.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="edit-user"] input[type="password"]')?.getAttribute('autocomplete')).toBe('new-password');
   });
 
   it('creating an agency is optional: an empty name does nothing', () => {

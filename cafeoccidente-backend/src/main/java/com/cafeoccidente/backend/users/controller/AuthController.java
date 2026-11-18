@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.users.controller;
 import com.cafeoccidente.backend.users.dto.LoginRequest;
 import com.cafeoccidente.backend.users.dto.LoginResponse;
 import com.cafeoccidente.backend.users.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +21,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        return authService.login(request, http.getRemoteAddr());
     }
 }

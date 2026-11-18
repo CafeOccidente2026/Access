@@ -45,6 +45,8 @@ export class PaymentPanelComponent implements OnChanges {
   /** Pago ya guardado (Consultar Compras): se muestra tal cual y no se puede cambiar. */
   @Input() saved: PurchasePayment | null = null;
   @Output() readonly paymentChange = new EventEmitter<PurchasePayment | null>();
+  /** Enter en la ultima forma con el pago cuadrado: como Access (Comando56.SetFocus), el foco pasa a Imprimir. */
+  @Output() readonly completed = new EventEmitter<void>();
 
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   readonly state = signal<PaymentState | null>(null);
@@ -117,6 +119,11 @@ export class PaymentPanelComponent implements OnChanges {
     const next = this.apply(field);
     if (next) {
       setTimeout(() => this.host.querySelector<HTMLInputElement>(`[data-field-key="${KEY_OF[next]}"]`)?.select());
+      return;
+    }
+    const s = this.state();
+    if (s && this.netToPay != null && readyPayment(this.netToPay, s)) {
+      this.completed.emit();
     }
   }
 

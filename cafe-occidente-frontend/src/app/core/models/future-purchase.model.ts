@@ -3,11 +3,36 @@
 export interface FuturePurchaseRequest {
   readonly idNumber: string;
   readonly specialType: string;
+  /** Número del anuncio del día elegido en la lista (RN-21.4.3). */
+  readonly announcementNumber: number;
   readonly announcedKg: number;
   readonly deliveryDate: string;
   readonly finca: string | null;
   readonly municipality: string | null;
   readonly vereda: string | null;
+}
+
+/** Anunciadas de Hoy (HU-31, P2): un anuncio con la suma de sus compras a futuro que tienen saldo. */
+export interface PendingAnnouncementRow {
+  readonly announcementNumber: string;
+  readonly announcementDate: string;
+  readonly specialType: string;
+  readonly healthyUnitPrice: number;
+  readonly announcedKg: number;
+  readonly remainingKg: number;
+  readonly growers: number;
+}
+
+/** Restaurar Compras Anunciadas: saldo guardado y el que sale de recalcular desde cero. */
+export interface FuturePurchaseRestoreRow {
+  readonly id: number;
+  readonly announcementNumber: string;
+  readonly announcementDate: string;
+  readonly specialType: string;
+  readonly announcedKg: number;
+  readonly deliveredKg: number;
+  readonly currentBalance: number;
+  readonly recalculatedBalance: number;
 }
 
 export interface FuturePurchaseResponse {
@@ -34,4 +59,11 @@ export interface FuturePurchaseResponse {
   readonly costs: number;
   readonly qualityIncrement: number;
   readonly basePriceLoad: number;
+}
+
+/** Hallazgo #14: Finca, Mpio y Vereda de la última compra a futuro de la cédula. */
+export interface FuturePlace {
+  readonly finca: string | null;
+  readonly municipality: string | null;
+  readonly vereda: string | null;
 }

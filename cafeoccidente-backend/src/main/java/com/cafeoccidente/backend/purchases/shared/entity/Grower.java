@@ -143,4 +143,12 @@ public class Grower {
     /** Asociados.Pais (codigo). */
     @Column(name = "pais")
     private String country;
+
+    /** Persona juridica (HU-51): nombre de la entidad; tambien se copia en primer_nombre. */
+    @Column(name = "razon_social")
+    private String businessName;
+
+    /** Persona juridica (HU-51): ASOCIACION o FUNDACION. */
+    @Column(name = "clasificacion")
+    private String classification;
 }

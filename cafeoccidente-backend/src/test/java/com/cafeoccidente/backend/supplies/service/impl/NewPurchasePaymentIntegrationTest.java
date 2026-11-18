@@ -38,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SuppressWarnings("null")
 class NewPurchasePaymentIntegrationTest {
 
-    private static final String GROWER = "1086360394";
+    private static final String GROWER = "9986360394";
 
     @Autowired
     private DryCoffeePurchaseService purchases;
@@ -61,8 +61,9 @@ class NewPurchasePaymentIntegrationTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
         agencyId = CurrentAgencyProvider.workingAgency(user.get()).getId();
-        Assumptions.assumeTrue(jdbc.queryForObject(
-                "SELECT count(*) FROM terceros WHERE identificacion = ?", Long.class, GROWER) > 0, "FALTA el tercero " + GROWER + " (viene de asociados_migrar.csv): corra 'python scripts/migrate_eltambo.py' contra esta base.");
+        // Vendedor ficticio: la prueba es transaccional y no deja el tercero en la base.
+        jdbc.update("INSERT INTO terceros (identificacion, primer_nombre, primer_apellido, agencia_id, direccion, telefono, tipo)"
+                + " VALUES (?, 'CAFICULTOR', 'PRUEBA', ?, 'VEREDA PRUEBA', '3000000001', 'S')", GROWER, agencyId);
     }
 
     @AfterEach
@@ -86,13 +87,13 @@ class NewPurchasePaymentIntegrationTest {
         // HU-15: el numero lo pone el servidor, el mismo que el encabezado mostro como proximo.
         int shown = purchases.nextInvoiceNumber().invoiceNumber();
         DryCoffeePurchaseResponse saved = purchases.create(request(
-                new PurchasePaymentRequest(net.subtract(check), check, BigDecimal.ZERO, BigDecimal.ZERO, "987654")));
+                new PurchasePaymentRequest(net.subtract(check), check, BigDecimal.ZERO, BigDecimal.ZERO, "0548")));
         String invoice = String.valueOf(saved.invoiceNumber());
         LocalDate today = LocalDate.now();
 
         assertThat(saved.invoiceNumber()).isEqualTo(shown);
         assertThat(saved.paymentMethod()).isEqualTo("MIXTO");
-        assertThat(saved.checkNumber()).isEqualTo("987654");
+        assertThat(saved.checkNumber()).isEqualTo("0548");
 
         List<SuppliesReportServiceImpl.Line> cash = supplies.cashBook(agencyId, today, today).stream()
                 .filter(l -> l.transactionId().equals(invoice)).toList();
@@ -100,7 +101,7 @@ class NewPurchasePaymentIntegrationTest {
         assertThat(cash).filteredOn(l -> l.paymentMethod().equals("CHEQUE"))
                 .singleElement().satisfies(l -> {
                     assertThat(l.outflow()).isEqualByComparingTo(check);
-                    assertThat(l.checkNumber()).isEqualTo(987654);
+                    assertThat(l.checkNumber()).isEqualTo("0548");
                 });
         assertThat(cash).filteredOn(l -> l.paymentMethod().equals("EFECTIVO"))
                 .singleElement().satisfies(l -> assertThat(l.outflow()).isEqualByComparingTo(net.subtract(check)));
@@ -115,7 +116,7 @@ class NewPurchasePaymentIntegrationTest {
                 + " JOIN compras_cafe_seco p ON s.origen = 'DRY' AND s.origen_id = p.id WHERE p.id = ?", saved.id());
         assertThat((BigDecimal) split.get("efectivo")).isEqualByComparingTo(net.subtract(check));
         assertThat((BigDecimal) split.get("cheque")).isEqualByComparingTo(check);
-        assertThat(split.get("numero_cheque")).isEqualTo(987654);
+        assertThat(split.get("numero_cheque")).isEqualTo("0548");
     }
 
     @Test

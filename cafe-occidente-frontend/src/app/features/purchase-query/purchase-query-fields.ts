@@ -1,7 +1,7 @@
 import { FormFieldDefinition } from '../../core/models/form-field.model';
 import { PurchaseFormContent } from '../../core/models/purchase-form-content.model';
 import { PurchaseQueryDetail } from '../../core/models/purchase-query.model';
-import { formatThousands, stripAnnouncementPrefix } from '../../shared/utils/number-format';
+import { announcementDisplay, formatThousands } from '../../shared/utils/number-format';
 
 type Value = string | number | null | undefined;
 
@@ -48,14 +48,14 @@ function moduleValues(detail: PurchaseQueryDetail): Record<string, Value> {
 
 /**
  * "Consultar Compras" (Cns_Compras, RF-26): la ficha de solo lectura con todos los datos de la compra
- * (RN-26.4), su ESTADO (RN-26.5) y sus formas de pago guardadas, incluida la transferencia.
+ * (RN-26.4), su ESTADO (RN-26.5, con la marca de corregida de HU-05) y sus formas de pago guardadas.
  */
-export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQueryDetail): PurchaseFormContent {
+export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQueryDetail, correctedMark = ''): PurchaseFormContent {
   const p = detail.purchase;
   const values: Record<string, Value> = {
     agency: p.agencyName,
     purchaseDate: p.purchaseDate,
-    announcement: stripAnnouncementPrefix(p.announcementNumber),
+    announcement: announcementDisplay(p.announcementNumber),
     announcementDate: p.announcementDate,
     remission: detail.remissions.join(', '),
     fund: p.fundCode,
@@ -81,7 +81,7 @@ export function fillQueryContent(content: PurchaseFormContent, detail: PurchaseQ
     coopDiscount: p.cooperativeDiscount,
     withholding: p.withholding,
     otherDiscounts: p.otherDiscounts,
-    status: detail.status,
+    status: detail.corrected ? `${detail.status} - ${correctedMark}` : detail.status,
     ...moduleValues(detail),
   };
   const fill = (f: FormFieldDefinition): FormFieldDefinition => ({ ...f, readonly: true, value: values[f.key] ?? '' });

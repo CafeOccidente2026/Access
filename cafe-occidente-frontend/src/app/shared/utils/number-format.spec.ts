@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  announcementDisplay,
   asPenalty,
+  formatDate,
+  formatKilos,
+  formatMoney,
+  formatTyped,
   formatDisplayNumber,
   formatThousands,
   parseDisplayNumber,
@@ -154,5 +159,46 @@ describe('formatThousands without regex gives exactly the same as before', () =>
       expect(() => oldFormatThousands(value as unknown as string)).toThrow();
       expect(() => formatThousands(value as unknown as string)).toThrow();
     }
+  });
+});
+
+/** Hallazgo #1 (prueba del 16-nov): el mismo formato en pantallas, facturas, listas y reportes. */
+describe('formatos de pantalla', () => {
+  it('money has no decimals', () => {
+    expect(formatMoney(1546900)).toBe('1.546.900');
+    expect(formatMoney('8908.00')).toBe('8.908');
+    expect(formatMoney(409823.7)).toBe('409.824');
+    expect(formatMoney(-235.5)).toBe('-236');
+    expect(formatMoney('')).toBe('');
+    expect(formatMoney(null)).toBe('');
+  });
+
+  it('kilos drop ",00" when whole and keep their real decimals', () => {
+    expect(formatKilos(500)).toBe('500');
+    expect(formatKilos('1500.00')).toBe('1.500');
+    expect(formatKilos(101.5)).toBe('101,50');
+    expect(formatKilos(-235.569)).toBe('-235,56');
+    expect(formatKilos('abc')).toBe('abc');
+  });
+
+  it('percentages and sample weights show as typed', () => {
+    expect(formatTyped('7,1')).toBe('7,1');
+    expect(formatTyped(92.118)).toBe('92,11');
+    expect(formatTyped(250)).toBe('250');
+    expect(formatTyped(undefined)).toBe('');
+  });
+
+  it('dates are dd/mm/aaaa', () => {
+    expect(formatDate('2026-11-16')).toBe('16/11/2026');
+    expect(formatDate('2026-11-16T10:00:00')).toBe('16/11/2026');
+    expect(formatDate('')).toBe('');
+    expect(formatDate(null)).toBe('');
+  });
+
+  it('R4 (17-nov): the announcement shows with the point identifier, without the support document "SD"', () => {
+    expect(announcementDisplay('SDTA-3738')).toBe('TA-3738');
+    expect(announcementDisplay('SDB2-12')).toBe('B2-12');
+    expect(announcementDisplay('3738')).toBe('3738');
+    expect(announcementDisplay(null)).toBe('');
   });
 });

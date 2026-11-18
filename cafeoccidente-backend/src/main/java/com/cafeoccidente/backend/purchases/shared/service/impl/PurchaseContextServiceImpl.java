@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.purchases.shared.service.impl;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseContext;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchaseSeller;
@@ -14,6 +15,7 @@ import com.cafeoccidente.backend.purchases.shared.repository.GrowerDailyTotalsRe
 import com.cafeoccidente.backend.purchases.shared.service.ProductCodeResolver;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseContextService;
 import com.cafeoccidente.backend.purchases.shared.service.PurchaseSellerService;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -30,6 +32,7 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
     private final ControlRecordService controlRecordService;
     private final PurchaseSellerService purchaseSellerService;
     private final GrowerDailyTotalsRepository dailyTotals;
+    private final Clock clock;
 
     public PurchaseContextServiceImpl(
             CurrentAgencyProvider currentAgencyProvider,
@@ -39,7 +42,9 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
             AnnouncementService announcementService,
             ControlRecordService controlRecordService,
             PurchaseSellerService purchaseSellerService,
-            GrowerDailyTotalsRepository dailyTotals) {
+            GrowerDailyTotalsRepository dailyTotals,
+            Clock clock) {
+        this.clock = clock;
         this.currentAgencyProvider = currentAgencyProvider;
         this.agencyRepository = agencyRepository;
         this.fundRepository = fundRepository;
@@ -51,21 +56,26 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
     }
 
     @Override
-    public PurchaseContext forPreview(Long fundId, String specialType, String idNumber, String address, String cellphone) {
+    public PurchaseContext forPreview(
+            Long fundId, String specialType, AnnouncementResponse announcement, String idNumber, String address,
+            String cellphone) {
         PurchaseSeller seller = purchaseSellerService.resolve(idNumber, address, cellphone);
-        return context(fundId, specialType, seller);
+        return context(fundId, specialType, announcement, seller);
     }
 
     /** MANDATORY: el bloqueo del tercero solo sirve dentro de la transaccion del guardado. */
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public PurchaseContext forSave(Long fundId, String specialType, String idNumber, String address, String cellphone) {
+    public PurchaseContext forSave(
+            Long fundId, String specialType, AnnouncementResponse announcement, String idNumber, String address,
+            String cellphone) {
         PurchaseSeller seller = purchaseSellerService.resolveAndComplete(idNumber, address, cellphone);
         dailyTotals.lockGrower(seller.idNumber());
-        return context(fundId, specialType, seller);
+        return context(fundId, specialType, announcement, seller);
     }
 
-    private PurchaseContext context(Long fundId, String specialType, PurchaseSeller seller) {
+    private PurchaseContext context(
+            Long fundId, String specialType, AnnouncementResponse announcement, PurchaseSeller seller) {
         Agency agency = agencyRepository.findById(currentAgencyProvider.currentAgencyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agencia no encontrada"));
         Fund fund = fundRepository.findById(fundId)
@@ -74,9 +84,9 @@ public class PurchaseContextServiceImpl implements PurchaseContextService {
                 agency,
                 fund,
                 productCodeResolver.resolve(specialType, fund.getId()),
-                announcementService.findLatest(agency.getId(), fund.getId(), specialType),
+                announcement != null ? announcement : announcementService.findLatest(agency.getId(), fund.getId(), specialType),
                 controlRecordService.getActive(agency.getId()),
                 seller,
-                dailyTotals.sum(seller.idNumber(), LocalDate.now()));
+                dailyTotals.sum(seller.idNumber(), LocalDate.now(clock)));
     }
 }

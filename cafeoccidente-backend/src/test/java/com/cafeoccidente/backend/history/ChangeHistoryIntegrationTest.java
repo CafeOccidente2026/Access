@@ -125,12 +125,12 @@ class ChangeHistoryIntegrationTest {
 
     @Test
     void newUsersReassignmentsAndDeactivationsAreRecordedWithoutThePassword() throws Exception {
-        send(post("/api/users"), "{\"username\": \"hist_nuevo\", \"idNumber\": \"990000901\", \"password\": \"clave1\","
+        send(post("/api/users"), "{\"username\": \"hist_nuevo\", \"idNumber\": \"990000901\", \"password\": \"clave1234\","
                 + " \"roleId\": " + roles.findByName(Roles.USUARIO).orElseThrow().getId() + ", \"agencyId\": 1}")
                 .andExpect(status().isCreated());
         Map<String, Object> created = last("USUARIO");
         assertThat(created).containsEntry("accion", "CREAR");
-        assertThat((String) created.get("despues")).contains("hist_nuevo").contains("USUARIO").doesNotContain("clave1");
+        assertThat((String) created.get("despues")).contains("hist_nuevo").contains("USUARIO").doesNotContain("clave1234");
         long id = (Long) created.get("entidad_id");
 
         send(put("/api/users/" + id), userBody(Roles.USUARIO, 4, true, null)).andExpect(status().isOk());
@@ -142,11 +142,11 @@ class ChangeHistoryIntegrationTest {
         send(put("/api/users/" + id), userBody(Roles.OPERACIONES, 4, true, null)).andExpect(status().isOk());
         assertThat(last("USUARIO")).containsEntry("accion", "MODIFICAR");
 
-        send(put("/api/users/" + id), userBody(Roles.OPERACIONES, 4, false, "secreta9")).andExpect(status().isOk());
+        send(put("/api/users/" + id), userBody(Roles.OPERACIONES, 4, false, "secreta99")).andExpect(status().isOk());
         Map<String, Object> deactivated = last("USUARIO");
         assertThat(deactivated).containsEntry("accion", "DESACTIVAR");
         String after = (String) deactivated.get("despues");
-        assertThat(after).contains("\"password\": \"cambiada\"").doesNotContain("secreta9");
+        assertThat(after).contains("\"password\": \"cambiada\"").doesNotContain("secreta99");
         String hash = jdbc.queryForObject("SELECT contrasena_hash FROM usuarios WHERE id = ?", String.class, id);
         assertThat(after).doesNotContain(hash);
 
@@ -197,5 +197,20 @@ class ChangeHistoryIntegrationTest {
         mockMvc.perform(get("/api/history").param("entity", "AGENCIA").param("userId", admin.getId().toString())
                         .param("from", "2000-01-01").param("to", "2000-01-02").header("Authorization", token))
                 .andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
+    void aChangeAtEightPmInColombiaIsFilteredByTheColombianDay() throws Exception {
+        // 2026-01-14 20:00 en Colombia: en UTC (la zona del servidor) ya es el 15. SET LOCAL vale solo en esta
+        // transaccion: el driver toma la zona de la JVM, que en el contenedor es UTC y en esta maquina no.
+        jdbc.execute("SET LOCAL TIME ZONE 'UTC'");
+        jdbc.update("INSERT INTO historial_cambios (fecha, usuario_id, entidad, entidad_id, accion)"
+                + " VALUES ('2026-01-14 20:00:00-05', ?, 'AGENCIA', 1, 'CREAR')", admin.getId());
+
+        for (String[] day : new String[][] {{"2026-01-14", "1"}, {"2026-01-15", "0"}}) {
+            mockMvc.perform(get("/api/history").param("userId", admin.getId().toString())
+                            .param("from", day[0]).param("to", day[0]).header("Authorization", token))
+                    .andExpect(jsonPath("$.total").value(Integer.parseInt(day[1])));
+        }
     }
 }

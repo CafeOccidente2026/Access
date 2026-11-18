@@ -1,3 +1,4 @@
+import { formatKilos } from '../../shared/utils/number-format';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -9,6 +10,7 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { VendorService } from '../../core/services/vendor.service';
 import { AccessWindowComponent, AgencyPickerComponent, FormFlowDirective } from '../../shared/ui';
+import { serverError } from '../../shared/utils/server-error';
 
 type View = 'quotas' | 'balances';
 
@@ -27,9 +29,9 @@ export interface NessQuotasContent {
   readonly views: Record<View, { windowTitle: string; heading: string; columns: string[]; note?: string }>;
 }
 
-/** CUPO/FACTURADOS/SALDO con Format Standard (2 decimales); CEDULA General Number (sin miles). */
+/** CUPO/FACTURADOS/SALDO en kilos con el formato del #1 (R2, 17-nov: sin ,00 si son enteros); CEDULA sin miles. */
 export function quotaCells(row: NessQuotaRow | NessQuotaBalanceRow): string[] {
-  const standard = (v: number) => v.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const standard = formatKilos;
   const base = [row.idNumber, row.names, row.program, standard(row.quota)];
   return 'balance' in row ? [...base, standard(row.invoicedKg), standard(row.balance)] : base;
 }
@@ -60,7 +62,8 @@ export class NessQuotasComponent {
   readonly total = signal(0);
   readonly page = signal(0);
   readonly loaded = signal(false);
-  readonly error = signal(false);
+  /** Motivo del ultimo error (prueba del 11-nov, punto 4); null si no hubo. */
+  readonly error = signal<string | null>(null);
   private idNumber = '';
   readonly pageSize = 50;
 
@@ -81,8 +84,8 @@ export class NessQuotasComponent {
   }
 
   load(): void {
-    this.error.set(false);
-    const done = { error: () => this.error.set(true) };
+    this.error.set(null);
+    const done = { error: (err: unknown) => this.error.set(serverError(err, this.content()?.messages.error)) };
     if (this.viewKey === 'quotas') {
       this.vendorService.nessQuotas(this.idNumber, this.page()).subscribe({
         next: (p) => this.show(p.rows.map(quotaCells), p.total),

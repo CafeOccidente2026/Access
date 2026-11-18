@@ -47,6 +47,10 @@ npm start
 
 Se abre en **http://localhost:4200** (entra directo a `/login`).
 
+El frontend llama al backend en `/api` (ruta relativa). En local, `npm start` manda `/api` al backend del
+**8090** con `proxy.conf.json`; en un servidor, lo hace el mismo proxy que sirve la web. Un solo build sirve
+para cualquier ambiente.
+
 Otros comandos útiles:
 ```bash
 npm run build   # compila para producción (carpeta dist/)
@@ -117,6 +121,99 @@ Para bajar el backend cuando termines de trabajar:
 ```bash
 docker compose down -v
 ```
+
+---
+
+## 4. Despliegue (producción)
+
+Todo está en `deploy/`. Corre en cualquier Linux con Docker y Docker Compose. Solo Caddy queda
+expuesto (80 y 443): sirve la web, manda `/api` al backend y hace el HTTPS. La base y el backend
+no publican puertos.
+
+**Requisitos:** Docker, el repositorio clonado y, con dominio público, los puertos 80 y 443
+abiertos y el DNS apuntando al servidor.
+
+**Primer arranque:**
+```bash
+cd deploy
+cp .env.example .env      # llenar DOMINIO, TLS_MODO, claves y JWT_SECRET (no se sube a git)
+docker compose -f docker-compose.prod.yml up -d --build
+```
+> **Ojo con las variables del shell:** Docker Compose les da prioridad sobre `deploy/.env`. Si en la terminal hay
+> `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`… exportadas (por ejemplo, después de `source cafeoccidente-backend/.env`),
+> el compose usa esas y no las del `.env`: el rol de la app se crearía con otro nombre y, en el siguiente arranque
+> desde otra terminal, el backend no encuentra su usuario. Corra los comandos desde una terminal limpia y, si hay
+> duda, revise con `docker compose -f docker-compose.prod.yml config | grep -E "DB_USER|APP_DB_USER"`.
+
+Flyway crea el esquema al arrancar el backend. Con `TLS_MODO=auto` Caddy pide el certificado a
+Let's Encrypt; con `TLS_MODO=interno` (intranet sin dominio) usa uno propio y el navegador pide
+aceptarlo la primera vez.
+
+**Actualizar:**
+```bash
+git pull && cd deploy && docker compose -f docker-compose.prod.yml up -d --build
+```
+Los navegadores toman la versión nueva solos: `index.html` y los textos se revalidan en cada visita y los archivos
+del build llevan un hash en el nombre (Caddy, R2). Solo la **primera vez** que se despliega esta configuración, un
+equipo que ya tenía la aplicación abierta puede necesitar **Ctrl+F5** una vez (guardó la versión anterior sin esa regla).
+
+**Respaldos:** el servicio `backup` hace un `pg_dump -Fc` todos los días a las 23:00 (hora de
+Colombia) en `CARPETA_RESPALDOS` (por defecto `deploy/respaldos/`) y borra los de más de
+`RESPALDO_DIAS` días. Esa carpeta se debe copiar fuera del servidor. Respaldo manual:
+```bash
+docker compose -f docker-compose.prod.yml exec backup sh /respaldo.sh ahora
+```
+
+**Restaurar** (borra la base actual; pide escribir `SI`):
+```bash
+./restaurar.sh respaldos/cafeoccidente_AAAAMMDD_HHMM.dump
+```
+
+### Usuario de la base (seguridad)
+
+La app no se conecta como superusuario. Hay tres usuarios, cada uno con su clave en `deploy/.env`:
+- `DB_ADMIN_USER`: el superusuario del contenedor; solo administra.
+- `FLYWAY_USER`: dueño del esquema; lo usan Flyway (al arrancar el backend) y los respaldos.
+- `DB_USER`: la app; lee y escribe filas, sin crear, cambiar ni borrar tablas.
+
+`deploy/roles-bd.sql` crea los dos últimos y deja los permisos. En una base **nueva** lo corre solo el
+primer arranque (`deploy/initdb/`). En una base que **ya existe** (con el superusuario de antes):
+1. Respaldo: `docker compose -f docker-compose.prod.yml exec backup sh /respaldo.sh ahora`.
+2. Crear los roles (queda igual si se corre dos veces):
+   ```bash
+   docker compose -f docker-compose.prod.yml cp roles-bd.sql postgres:/tmp/roles-bd.sql
+   docker compose -f docker-compose.prod.yml exec postgres psql -U <usuario actual> -d <base> -v ON_ERROR_STOP=1 \
+     -v migrador=cafeoccidente_migrador -v clave_migrador='<clave>' \
+     -v app=cafeoccidente_app -v clave_app='<clave>' -f /tmp/roles-bd.sql
+   ```
+3. En `deploy/.env`: `DB_ADMIN_USER`/`DB_ADMIN_PASSWORD` = el usuario y clave de antes; `FLYWAY_USER`/
+   `FLYWAY_PASSWORD` y `DB_USER`/`DB_PASSWORD` = los roles nuevos.
+4. `docker compose -f docker-compose.prod.yml up -d` y revisar en el log del backend que arranca sin errores.
+
+Sin `FLYWAY_USER` el backend migra con `DB_USER`, como antes.
+
+### Impresión directa de facturas (en cada equipo de caja)
+
+Las facturas (Seco, Verde, Pasilla, Cupos y Anunciadas), la reimpresión de Consultar Compras y la
+remisión de Registrar Salidas se mandan a imprimir sin abrir otra pestaña. Una página web no puede
+saltarse el cuadro de impresión por su cuenta; Chrome (o Edge) sí lo hace si se abre con la bandera
+`--kiosk-printing`. Los informes siguen saliendo en la vista previa de la pantalla.
+
+En cada equipo:
+1. **Impresora predeterminada:** en Windows, Configuración → Impresoras, dejar como predeterminada la
+   impresora de facturas.
+2. **Acceso directo:** crear un acceso directo en el escritorio con este destino (ajustar la ruta de
+   Chrome y la dirección del servidor):
+   ```
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --app=https://SERVIDOR
+   ```
+   `--app` la abre como ventana propia de la aplicación; se puede quitar si se prefiere una pestaña normal.
+3. **Primera impresión:** abrir Chrome normal (sin la bandera), imprimir una factura de prueba y en el
+   cuadro dejar papel, márgenes «Ninguno» y escala 100 %. Chrome recuerda esa configuración.
+4. **Cerrar Chrome del todo** (también el icono de la bandeja) antes de usar el acceso directo: la
+   bandera solo vale si Chrome arranca con ella.
+
+Sin la bandera todo sigue funcionando: aparece el cuadro de impresión normal en la misma pestaña.
 
 ---
 

@@ -51,7 +51,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     /** Una fila de la Caja / Suministros de Access, venga de donde venga. */
     record Line(String source, Long sourceId, String agencyName, String transactionId, String fundCode,
             LocalDate date, String idNumber, String detail, BigDecimal inflow, BigDecimal outflow,
-            String paymentMethod, Integer checkNumber, Instant createdAt) {
+            String paymentMethod, String checkNumber, Instant createdAt, BigDecimal card) {
 
         CheckRelationMark.Key key() {
             return new CheckRelationMark.Key(source, sourceId);
@@ -92,6 +92,24 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
                 .filter(l -> CASH.equals(l.paymentMethod()) && l.fundCode().startsWith(fund)));
     }
 
+    /**
+     * C5 (prueba del 11-nov, punto 5): lo pagado con datafono, en su propio informe (no en el de Caja). Sale de la
+     * cuenta por cobrar PENDIENTE: al anular la compra pasa a ANULADA y deja de salir. Mismo periodo y fondo que Caja.
+     */
+    @Override
+    public List<SuppliesReportRow> cardPayments(Long agencyId, String fundCode, LocalDate today) {
+        String fund = likePrefix(fundCode);
+        List<Line> lines = suppliesReadRepository.cardReceivables(agencyId, yearStart(today), yearEnd(today)).stream()
+                .filter(p -> p.fundCode().startsWith(fund))
+                .map(p -> new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
+                        p.purchaseDate(), p.idNumber(), null, BigDecimal.ZERO, BigDecimal.ZERO, p.paymentMethod(), null,
+                        p.createdAt(), p.netToPay()))
+                .sorted(BY_DATE)
+                .toList();
+        Map<String, GrowerName> growers = growers(lines);
+        return lines.stream().map(l -> row(l, growers.get(l.idNumber()), null)).toList();
+    }
+
     @Override
     public List<SuppliesReportRow> pettyCashMovement(Long agencyId, LocalDate today) {
         return withBalance(pettyCashEntryRepository.findInPeriod(agencyId, yearStart(today), yearEnd(today)).stream()
@@ -118,7 +136,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     @Transactional
     public List<SuppliesReportRow> checkRelation(Long agencyId, LocalDate from, LocalDate to, LocalDate today) {
         List<Line> checks = cashBook(agencyId, yearStart(today), yearEnd(today)).stream()
-                .filter(l -> l.checkNumber() != null && l.checkNumber() > 0)
+                .filter(l -> l.checkNumber() != null && !l.checkNumber().matches("0*"))
                 .toList();
         if (from != null && to != null) {
             // UnCheckCheq: SET Rel_cheques = 0 WHERE Fecha Between FechaDesde And FechaHasta
@@ -228,18 +246,20 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
 
     private static Line line(String source, LedgerEntry e, BigDecimal inflow, BigDecimal outflow, String method) {
         return new Line(source, e.getId(), e.getAgency().getName(), e.getTransactionId(), e.getFund().getCode(),
-                e.getEntryDate(), e.getIdNumber(), e.getDetail(), inflow, outflow, method, e.getCheckNumber(), e.getCreatedAt());
+                e.getEntryDate(), e.getIdNumber(), e.getDetail(), inflow, outflow, method, e.getCheckNumber(), e.getCreatedAt(),
+                null);
     }
 
     private static Line line(PackagingEntry e) {
         return new Line("PACKAGING", e.getId(), e.getAgency().getName(), e.getTransactionId(), e.getPackagingType(),
                 e.getEntryDate(), e.getIdNumber(), e.getDetail(), BigDecimal.valueOf(e.getInflow()),
-                BigDecimal.valueOf(e.getOutflow()), null, null, e.getCreatedAt());
+                BigDecimal.valueOf(e.getOutflow()), null, null, e.getCreatedAt(), null);
     }
 
     private static Line line(PurchasePayment p, BigDecimal inflow, BigDecimal outflow) {
         return new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
-                p.purchaseDate(), p.idNumber(), null, inflow, outflow, p.paymentMethod(), p.checkNumber(), p.createdAt());
+                p.purchaseDate(), p.idNumber(), null, inflow, outflow, p.paymentMethod(),
+                p.checkNumber(), p.createdAt(), null);
     }
 
     private static SuppliesReportRow row(Line l, GrowerName g, BigDecimal balance) {
@@ -249,7 +269,7 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     private static SuppliesReportRow row(Line l, GrowerName g, BigDecimal balance, String detail) {
         return new SuppliesReportRow(l.agencyName(), l.transactionId(), l.fundCode(), l.date(), l.idNumber(),
                 g == null ? null : g.firstNames(), g == null ? null : g.lastNames(), detail,
-                l.inflow(), l.outflow(), balance, l.paymentMethod(), l.checkNumber());
+                l.inflow(), l.outflow(), balance, l.paymentMethod(), l.checkNumber(), l.card());
     }
 
     /** Criterio LIKE x & "*" de los InputBox de Access; vacio = todo. */

@@ -79,7 +79,7 @@ class ElTamboCashBookMigrationValidationTest {
         BigDecimal outflow = book.stream().map(SuppliesReportServiceImpl.Line::outflow).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<SuppliesReportServiceImpl.Line> checks = book.stream()
-                .filter(l -> l.checkNumber() != null && l.checkNumber() > 0)
+                .filter(l -> l.checkNumber() != null && !l.checkNumber().matches("0*"))
                 .toList();
         Set<CheckRelationMark.Key> marked = new HashSet<>();
         marks.findAllById(checks.stream().map(SuppliesReportServiceImpl.Line::key).toList())

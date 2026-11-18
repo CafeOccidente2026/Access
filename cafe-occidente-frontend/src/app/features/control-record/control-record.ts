@@ -11,9 +11,9 @@ import { AgencyService } from '../../core/services/agency.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ContentService } from '../../core/services/content.service';
 import { ControlRecordService } from '../../core/services/control-record.service';
-import { AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent } from '../../shared/ui';
+import { AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent, FormFlowDirective } from '../../shared/ui';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
-import { ControlRecordContent } from './control-record.model';
+import { ControlRecordContent, ControlRecordField } from './control-record.model';
 
 /** Pantalla ADMIN "Registro de Control": ver/crear/editar el ControlRecord de una agencia. Como en
  *  Access, abre ya con el registro de la agencia de la sesion cargado; el selector queda para
@@ -21,7 +21,7 @@ import { ControlRecordContent } from './control-record.model';
 @Component({
   selector: 'app-control-record',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent],
+  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './control-record.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -45,6 +45,7 @@ export class ControlRecordComponent {
    *  ciclo de deteccion de cambios, a diferencia de llamar un metodo simple desde *ngFor. */
   readonly leftFields = computed(() => this.buildFields(this.page()?.leftColumn));
   readonly rightFields = computed(() => this.buildFields(this.page()?.rightColumn));
+  readonly greenFields = computed(() => this.buildFields(this.page()?.greenColumn));
 
   constructor() {
     // La lista primero: el prefijo sugerido de una agencia sin registro sale de ella. Con el permiso de
@@ -221,7 +222,7 @@ export class ControlRecordComponent {
     };
   }
 
-  private buildFields(base: FormFieldDefinition[] | undefined): FormFieldDefinition[] {
+  private buildFields(base: ControlRecordField[] | undefined): FormFieldDefinition[] {
     if (!base) {
       return [];
     }
@@ -230,7 +231,7 @@ export class ControlRecordComponent {
     return base.map((f) => ({
       ...f,
       value: model[f.key] ?? '',
-      readonly: !agencySelected || !!f.readonly,
+      readonly: !agencySelected || !!f.readonly || (!!f.adminOnly && !this.isAdmin),
     }));
   }
 }

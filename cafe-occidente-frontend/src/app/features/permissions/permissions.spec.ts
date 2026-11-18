@@ -56,7 +56,9 @@ describe('PermissionsComponent (HU-03)', () => {
     choose(component, 5);
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="catalog"]')?.textContent).toContain('Anular Documento');
-    expect(component.catalog()).toEqual(['ANULAR_DOCUMENTO', 'ACCESO_TABLAS', 'ACTUALIZAR_ANUNCIOS', 'REGISTRO_CONTROL', 'HISTORIAL']);
+    expect(component.catalog()).toEqual(
+      ['ANULAR_DOCUMENTO', 'ACCESO_TABLAS', 'ACTUALIZAR_ANUNCIOS', 'REGISTRO_CONTROL', 'HISTORIAL', 'CORREGIR_COMPRA'],
+    );
   });
 
   it('Operaciones is not offered Actualizar Anuncios, which its role already has', () => {
@@ -107,11 +109,11 @@ describe('PermissionsComponent (HU-03)', () => {
     component.toggle('HISTORIAL', true);
     component.save();
     http.expectOne(`${API_BASE_URL}/permissions`).flush(null, { status: 400, statusText: 'Bad Request' });
-    expect(component.error()).toBe(true);
+    expect(component.error()).toBeTruthy();
 
     component.revoke('HISTORIAL');
     http.expectOne(`${API_BASE_URL}/permissions/5/HISTORIAL`).flush(null, { status: 404, statusText: 'Not Found' });
-    expect(component.error()).toBe(true);
+    expect(component.error()).toBeTruthy();
   });
 
   it('double submit: while saving, Guardar and Retirar send only once and are disabled', () => {

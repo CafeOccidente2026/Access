@@ -5,6 +5,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
+import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.config.CorsConfig;
 import com.cafeoccidente.backend.common.config.SecurityConfig;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
@@ -20,6 +21,7 @@ import com.cafeoccidente.backend.purchases.report.service.PurchaseReportService;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementService;
+import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseRestoreService;
 import com.cafeoccidente.backend.purchases.future.service.FuturePurchaseService;
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
@@ -34,6 +36,7 @@ import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.service.AuthService;
 import com.cafeoccidente.backend.users.service.UserService;
 import com.cafeoccidente.backend.users.service.WorkingAgencyService;
+import com.cafeoccidente.backend.vendors.service.NessQuotaUploadService;
 import com.cafeoccidente.backend.vendors.service.VendorReportService;
 import com.cafeoccidente.backend.vendors.service.VendorService;
 import java.util.ArrayList;
@@ -72,7 +75,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  * apagada: @Valid corre antes que @PreAuthorize y un 400 taparia el 403.
  */
 @WebMvcTest
-@Import({SecurityConfig.class, CorsConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
+@Import({SecurityConfig.class, CorsConfig.class, ClockConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
 class EndpointAuthorizationTest {
 
     private static final String A = "ADMINISTRADOR";
@@ -97,11 +100,11 @@ class EndpointAuthorizationTest {
 
     /** Body por defecto "{}"; estos no lo aceptan (lista, o boolean primitivo que no admite null). */
     private static final Map<String, String> BODIES = Map.of(
-            "/api/vendors", "{\"association\": false}");
+            "/api/vendors", "{\"legalPerson\": false}");
 
-    /** Las 5 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
-    private static final List<String> SCREENS =
-            List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS", "REGISTRO_CONTROL", "HISTORIAL");
+    /** Las 6 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
+    private static final List<String> SCREENS = List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS",
+            "REGISTRO_CONTROL", "HISTORIAL", "CORREGIR_COMPRA");
 
     private static void add(Set<String> roles, HttpMethod method, String pattern, String url) {
         MATRIX.add(new Endpoint(method, pattern, url, roles, null));
@@ -128,6 +131,8 @@ class EndpointAuthorizationTest {
         add(ADMIN, "REGISTRO_CONTROL", put, "/api/control-records/{agencyId}", "/api/control-records/1");
         // Cafe verde en todas las agencias a la vez (area de compras, 2026-10-26): solo el Administrador.
         add(ADMIN, put, "/api/control-records/green-coffee");
+        add(ADMIN_USER, get, "/api/control-records/stamp");
+        add(ADMIN, "REGISTRO_CONTROL", get, "/api/control-records/resolution-alerts", "/api/control-records/resolution-alerts");
         add(ADMIN, get, "/api/users");
         // Historial de cambios (area de compras, 2026-10-22): el Administrador o con el permiso.
         add(ADMIN, "HISTORIAL", get, "/api/history", "/api/history");
@@ -137,10 +142,11 @@ class EndpointAuthorizationTest {
         add(ADMIN, delete, "/api/permissions/{userId}/{screen}", "/api/permissions/1/HISTORIAL");
         // RF-03 Acceso a Tablas, solo lectura: el Administrador o con el permiso.
         add(ADMIN, "ACCESO_TABLAS", get, "/api/tables", "/api/tables");
-        add(ADMIN, "ACCESO_TABLAS", get, "/api/tables/{code}", "/api/tables/CAJA");
+        add(ADMIN, "ACCESO_TABLAS", get, "/api/tables/{table}", "/api/tables/empaques");
         add(ADMIN, post, "/api/users");
         // Fase 3, C4: editar y reasignar usuarios, solo el Administrador.
         add(ADMIN, put, "/api/users/{id}", "/api/users/1");
+        add(ADMIN, post, "/api/users/{id}/unlock", "/api/users/1/unlock");
         add(ADMIN, get, "/api/roles");
 
         // Actualizar Anuncios: RF-08 y RF-09 (Administrador y Operaciones).
@@ -169,6 +175,10 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/purchases/husk/announcement-info");
         // Generar Reporte Anuncio (Q14: Administrador y Usuario, prima sobre RF-24) y Compras por fecha (RF-25).
         add(ADMIN_USER, get, "/api/purchases/reports/by-date", "/api/purchases/reports/by-date?from=2026-01-01&to=2026-01-01");
+        // Informes de Compras a Futuro (RF-21.6 y RF-21.7): Administrador y Usuario.
+        add(ADMIN_USER, get, "/api/purchases/reports/future-announcement",
+                "/api/purchases/reports/future-announcement?announcement=1&from=2026-01-01&to=2026-01-01");
+        add(ADMIN_USER, get, "/api/purchases/reports/future-balance", "/api/purchases/reports/future-balance?announcement=1");
         // Consultar Compras (RF-26): Administrador y Usuario.
         add(ADMIN_USER, get, "/api/purchases/query", "/api/purchases/query?invoiceNumber=1");
         add(ADMIN_USER, get, "/api/purchases/query/navigate", "/api/purchases/query/navigate?direction=FIRST");
@@ -178,11 +188,34 @@ class EndpointAuthorizationTest {
         add(ADMIN, "ANULAR_DOCUMENTO", get, "/api/purchases/annulment/navigate",
                 "/api/purchases/annulment/navigate?direction=FIRST");
         add(ADMIN, "ANULAR_DOCUMENTO", post, "/api/purchases/annulment/{module}/{id}", "/api/purchases/annulment/DRY/1");
+        // HU-05 Corregir Compra (Habilitacion, 11-nov): el Administrador o con el permiso, como Anular Documento.
+        add(ADMIN, "CORREGIR_COMPRA", get, "/api/purchases/correction", "/api/purchases/correction?invoiceNumber=1");
+        add(ADMIN, "CORREGIR_COMPRA", get, "/api/purchases/correction/navigate",
+                "/api/purchases/correction/navigate?direction=FIRST");
+        add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/DRY/{id}", "/api/purchases/correction/DRY/1");
+        add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/GREEN/{id}", "/api/purchases/correction/GREEN/1");
+        add(ADMIN, "CORREGIR_COMPRA", put, "/api/purchases/correction/HUSK/{id}", "/api/purchases/correction/HUSK/1");
+        add(ADMIN, "CORREGIR_COMPRA", post, "/api/purchases/correction/DRY/{id}/preview",
+                "/api/purchases/correction/DRY/1/preview");
+        add(ADMIN, "CORREGIR_COMPRA", post, "/api/purchases/correction/GREEN/{id}/preview",
+                "/api/purchases/correction/GREEN/1/preview");
+        add(ADMIN, "CORREGIR_COMPRA", post, "/api/purchases/correction/HUSK/{id}/preview",
+                "/api/purchases/correction/HUSK/1/preview");
 
         // Compras a Futuro: RF-21.x (RF-21.1 Asignar Cupo: Administrador y Usuario).
         add(ADMIN_USER, post, "/api/purchases/future");
         add(ADMIN_USER, get, "/api/purchases/future/{id}", "/api/purchases/future/1");
+        add(ADMIN_USER, get, "/api/purchases/future/open", "/api/purchases/future/open?idNumber=1");
+        add(ADMIN_USER, get, "/api/purchases/future/pending");
+        add(ADMIN_USER, get, "/api/purchases/future/last-place", "/api/purchases/future/last-place?idNumber=1");
+        // Restaurar Compras Anunciadas (Q5): solo el Administrador.
+        add(ADMIN, get, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
+        add(ADMIN, post, "/api/purchases/future/restore", "/api/purchases/future/restore?idNumber=1");
+        add(ADMIN_USER, get, "/api/purchases/future/announcements", "/api/purchases/future/announcements?specialType=X");
         add(ADMIN_USER, get, "/api/announcement-quotas");
+        add(ADMIN_USER, get, "/api/announcement-quotas/available");
+        add(ADMIN_USER, get, "/api/announcement-quotas/with-balance",
+                "/api/announcement-quotas/with-balance?fundId=1&specialType=X");
         add(ADMIN_USER, get, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
         add(ADMIN_USER, put, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
 
@@ -216,7 +249,10 @@ class EndpointAuthorizationTest {
                 "issued-checks", "packaging", "packaging-loans")) {
             add(ADMIN_USER, post, "/api/supplies/" + entry);
         }
+        // RF §2.1: el Id que tomaria cada alta, para mostrarlo en pantalla.
+        add(ADMIN_USER, get, "/api/supplies/next-id", "/api/supplies/next-id?screen=cash&value=RP");
         add(ADMIN_USER, get, "/api/supplies/reports/cash");
+        add(ADMIN_USER, get, "/api/supplies/reports/card");
         add(ADMIN_USER, get, "/api/supplies/reports/petty-cash");
         add(ADMIN_USER, get, "/api/supplies/reports/supplies", "/api/supplies/reports/supplies?fund=RP");
         add(ADMIN_USER, get, "/api/supplies/reports/packaging");
@@ -231,6 +267,11 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, get, "/api/vendors/reports/beneficiary");
         add(ADMIN_USER, get, "/api/vendors/ness-quotas");
         add(ADMIN_USER, get, "/api/vendors/ness-quota-balances");
+        // RN-28.4.1 Actualiza Cupos NESS: solo el Administrador.
+        add(ADMIN, post, "/api/vendors/ness-quotas/upload/preview",
+                "/api/vendors/ness-quotas/upload/preview?fileName=NESS.xlsx");
+        add(ADMIN, post, "/api/vendors/ness-quotas/upload", "/api/vendors/ness-quotas/upload?fileName=NESS.xlsx");
+        add(ADMIN, get, "/api/vendors/ness-quotas/uploads");
 
         // Sesion y boton Agencias (RF-05.1, RN-05.2: solo el Administrador elige agencia).
         add(ALL, get, "/api/me");
@@ -271,6 +312,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private AnnouncementService announcementService;
     @MockitoBean private AnnouncementQuotaService announcementQuotaService;
     @MockitoBean private FuturePurchaseService futurePurchaseService;
+    @MockitoBean private FuturePurchaseRestoreService futurePurchaseRestoreService;
     @MockitoBean private GreenCoffeePurchaseService greenCoffeePurchaseService;
     @MockitoBean private HuskPurchaseService huskPurchaseService;
     @MockitoBean private GrowerService growerService;
@@ -278,6 +320,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private SuppliesReportService suppliesReportService;
     @MockitoBean private VendorService vendorService;
     @MockitoBean private VendorReportService vendorReportService;
+    @MockitoBean private NessQuotaUploadService nessQuotaUploadService;
     @MockitoBean private PermissionService permissionService;
     @MockitoBean private TableAccessService tableAccessService;
 

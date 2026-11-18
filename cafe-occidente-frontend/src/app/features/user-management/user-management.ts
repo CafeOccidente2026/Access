@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
-/** Misma regla que UserRequest.password en el backend (Pattern): minimo 4 caracteres, letras y numeros. */
-const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{4,}$/;
+/** Misma regla que UserRequest.password en el backend (Pattern): minimo 8 caracteres, letras y numeros. */
+const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 /** Orden de captura y de avance de foco al presionar Enter. */
 const FOCUS_ORDER: readonly string[] = ['username', 'idNumber', 'password', 'roleId', 'agencyId'];
@@ -36,6 +36,8 @@ import { RoleService } from '../../core/services/role.service';
 import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { UserManagementContent } from './user-management.model';
+import { changedByKeyboard } from '../../shared/utils/select-keys';
+import { saveOnce } from '../../shared/utils/save-once';
 
 /** Pantalla ADMIN: alta de usuarios (HU-08), alta de agencias (HU-09) y edicion de usuarios (fase 3, C4). */
 @Component({
@@ -107,6 +109,20 @@ export class UserManagementComponent {
       return;
     }
     this.focusField(FOCUS_ORDER[idx + 1]);
+  }
+
+  /** Prueba del 9-nov (segunda): al elegir en una lista pasa al siguiente campo; despues de Agencia, a Crear Usuario
+   *  (sin crear: eso lo hace Enter). */
+  onChosen(field: string): void {
+    if (changedByKeyboard(this.elementRef.nativeElement.querySelector(`[data-field-key="${field}"]`))) {
+      return; // con la flecha solo cambia (decision del 10-nov)
+    }
+    const next = FOCUS_ORDER[FOCUS_ORDER.indexOf(field) + 1];
+    if (next) {
+      this.focusField(next);
+      return;
+    }
+    setTimeout(() => this.elementRef.nativeElement.querySelector('[data-create-user] button')?.focus());
   }
 
   private focusField(key: string): void {
@@ -181,6 +197,12 @@ export class UserManagementComponent {
     this.editPassword = '';
     this.editIdNumber = '';
     this.editing.set(user);
+    // Pedido del 18-nov: el cuadro sale arriba; la pantalla sube a el y el cursor queda en su primer campo.
+    setTimeout(() => {
+      const box = this.elementRef.nativeElement.querySelector('[data-testid="edit-user"]') as HTMLElement | null;
+      box?.scrollIntoView({ block: 'start' });
+      (box?.querySelector('[data-edit-first], [data-edit-role]') as HTMLElement | null)?.focus();
+    });
   }
 
   cancelEdit(): void {
@@ -219,5 +241,19 @@ export class UserManagementComponent {
         },
         error: (err: HttpErrorResponse) => this.editError.set(apiError(err) ?? this.page()?.errorMessage ?? null),
       });
+  }
+
+  /** S4: quita la espera por intentos fallidos de login del usuario en edicion, sin cerrar la edicion. */
+  unlock(): void {
+    const user = this.editing();
+    if (!user) {
+      return;
+    }
+    this.editError.set(null);
+    this.editNotice.set(null);
+    saveOnce(this.saving, () => this.userService.unlock(user.id), {
+      next: () => this.editNotice.set(this.page()?.userUnlockedMessage ?? null),
+      error: (err: HttpErrorResponse) => this.editError.set(apiError(err) ?? this.page()?.errorMessage ?? null),
+    });
   }
 }

@@ -1,5 +1,6 @@
 <div class="h-screen bg-gradient-to-br from-panel-sky to-panel-cyan p-4" *ngIf="data() as d">
   <app-access-window [title]="d.windowTitle" bodyClass="bg-gradient-to-br from-panel-sky to-panel-cyan" closeRoute="/login">
+    <app-resolution-alert></app-resolution-alert>
     <div class="grid h-full grid-cols-[280px_1fr] gap-8 p-8">
       <div class="flex flex-col gap-3">
         <label *ngIf="isAdmin" class="flex flex-col gap-1 text-sm" data-testid="agencies">

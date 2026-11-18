@@ -13,7 +13,7 @@
         </div>
       </ng-container>
 
-      <div *ngIf="mode() === 'new'" class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
+      <div *ngIf="mode() === 'new'" appFormFlow class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
         <label for="conductor-fecha">Fecha</label>
         <input id="conductor-fecha" type="text" readonly class="rounded border border-slate-300 bg-slate-100 px-2 py-1" [value]="shortDate(today)" />
         <label for="conductor-cedula">Cédula</label>
@@ -33,11 +33,11 @@
         <span></span>
         <div class="flex justify-end gap-2">
           <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 hover:bg-slate-100" (click)="choose('choose')">Cancelar</button>
-          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-medium hover:bg-slate-200" (click)="create()">Ingresar Conductor</button>
+          <button type="button" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-medium hover:bg-slate-200" (click)="create()">Ingresar Conductor</button>
         </div>
       </div>
 
-      <div *ngIf="mode() === 'update'" class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
+      <div *ngIf="mode() === 'update'" appFormFlow class="grid w-[32rem] grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 text-sm">
         <span>Cédula</span>
         <app-combobox
           [options]="matchLabels()"
@@ -65,7 +65,7 @@
         <span></span>
         <div class="flex justify-end gap-2">
           <button type="button" class="rounded border border-slate-400 bg-white px-3 py-1 hover:bg-slate-100" (click)="choose('choose')">Cancelar</button>
-          <button type="button" class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-medium hover:bg-slate-200 disabled:opacity-50" [disabled]="!selected()" (click)="save()">Actualiza Conductor</button>
+          <button type="button" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-3 py-1 font-medium hover:bg-slate-200 disabled:opacity-50" [disabled]="!selected()" (click)="save()">Actualiza Conductor</button>
         </div>
       </div>
 

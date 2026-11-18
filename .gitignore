@@ -54,5 +54,8 @@ target/
 docs/
 .env 
 .idea/ 
-.vscode/
 requerimientos_del_sistema
+__pycache__/
+
+# Respaldos de produccion (datos reales)
+deploy/respaldos/

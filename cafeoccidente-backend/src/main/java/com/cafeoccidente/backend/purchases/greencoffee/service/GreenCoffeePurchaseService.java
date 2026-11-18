@@ -8,6 +8,12 @@ import com.cafeoccidente.backend.purchases.shared.dto.NextInvoiceNumberResponse;
 public interface GreenCoffeePurchaseService {
     GreenCoffeePurchaseResponse create(GreenCoffeePurchaseRequest request);
 
+    /** HU-05: corrige la compra de la agencia de trabajo sin anularla y con el mismo numero de factura. */
+    GreenCoffeePurchaseResponse correct(Long id, GreenCoffeePurchaseRequest request);
+
+    /** Vista previa de la correccion: el calculo con el anuncio original, sin guardar. */
+    GreenCoffeePurchaseCalculation previewCorrection(Long id, GreenCoffeePurchaseRequest request);
+
     GreenCoffeePurchaseResponse findById(Long id);
 
     /** Recalcula la cascada completa sin persistir. */

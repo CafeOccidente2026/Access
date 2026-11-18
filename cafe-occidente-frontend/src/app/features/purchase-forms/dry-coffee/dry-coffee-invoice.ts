@@ -1,7 +1,9 @@
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 
+import { formatDate, formatKilos, formatMoney, formatTyped } from '../../../shared/utils/number-format';
 import { DryCoffeePurchaseResponse } from '../../../core/models/dry-coffee-purchase.model';
 import { PurchasePayment } from '../../../core/models/payment-method.model';
+import { cooperativeNit } from '../../../shared/utils/nit';
 
 /** Formato colombiano con 2 decimales (Valor Bruto, Aporte Socio, Retefuente, Neto a Pagar, pesos/kilos...). */
 export function money(value: number): string {
@@ -23,10 +25,7 @@ function longSpanishDate(isoDate: string): string {
   });
 }
 
-function shortDate(isoDate: string): string {
-  const d = new Date(isoDate + 'T00:00:00');
-  return `${d.getDate()}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-}
+const shortDate = formatDate;
 
 export const CELL = { fontSize: 8, margin: [2, 2, 2, 2] as [number, number, number, number] };
 export const LABEL_CELL = { ...CELL };
@@ -84,7 +83,7 @@ export function paymentCells(purchase: InvoiceParty & WithPayment): Content[] {
   return (
     [['EFECTIVO $', cash], ['CHEQUE $', check], ['TRANSFER $', transfer], ['DATAFONO $', cardTerminal]] as const
   ).map(([label, value]) => ({
-    table: { widths: ['*', 70], body: [paymentRow(label, money(value))] },
+    table: { widths: ['*', 70], body: [paymentRow(label, formatMoney(value))] },
     layout: 'noBorders',
   }));
 }
@@ -112,8 +111,8 @@ export function buildInvoiceDoc(
               {
                 stack: [
                   { text: 'COOPERATIVA DE CAFICULTORES', bold: true, fontSize: 10 },
-                  { text: 'DE OCCIDENTE DE NARIÑO LTDA.', bold: true, fontSize: 10 },
-                  { text: 'NIT 891.200.986-8', fontSize: 9 },
+                  { text: 'DE OCCIDENTE DE NARIÑO', bold: true, fontSize: 10 },
+                  { text: `NIT ${cooperativeNit()}`, fontSize: 9 },
                   { text: 'Pasto, Carrera 32A No. 18-105', fontSize: 8 },
                   { text: 'Tel 6027219788', fontSize: 8 },
                 ],
@@ -197,13 +196,17 @@ export function buildInvoiceDoc(
     { text: legal, fontSize: 7, alignment: 'center', margin: [0, 20, 0, 0] },
   ];
 
-  // Macro "Imprime Factura" abre el reporte "Factura" dos veces (comprador y vendedor), sin rotulo
-  // de Original/Copia -> dos paginas identicas. structuredClone porque pdfmake muta los nodos al
-  // maquetar y no admite reusar las mismas referencias en dos paginas.
+  // Macro "Imprime Factura" abre el reporte "Factura" dos veces; RN-18.3 (decision del usuario): cada
+  // pagina lleva su rotulo. structuredClone porque pdfmake muta los nodos al maquetar y no admite
+  // reusar las mismas referencias en dos paginas.
+  const labeled = (label: string): Content[] => [
+    { text: label, bold: true, fontSize: 8, alignment: 'right', margin: [0, 0, 0, 2] },
+    ...structuredClone(copy),
+  ];
   return {
     pageSize: 'LETTER',
     pageMargins: [30, 30, 30, 30],
-    content: [...copy, { stack: structuredClone(copy), pageBreak: 'before' }],
+    content: [...labeled('Original Caficultor'), { stack: labeled('Copia Operaciones'), pageBreak: 'before' }],
     defaultStyle: { font: 'Roboto' },
   };
 }
@@ -234,10 +237,10 @@ export function dryCoffeeMainTable(
     { text: factor ?? '', ...CELL, alignment: 'right' },
   ];
 
-  /** NETO A PAGAR es la unica fila de esta columna que sale en negro y negrita (no azul) - se
-   *  distingue del resto de las etiquetas de LIQUIDACION en las dos capturas de referencia. */
+  /** NETO A PAGAR es la unica fila de esta columna en negrita: se distingue del resto de las
+   *  etiquetas de LIQUIDACION en las dos capturas de referencia. */
   const liquidationRow = (label: string, value: string, bold = false): Content[] => [
-    { text: label, ...LABEL_CELL, ...(bold ? { color: 'black', bold: true } : {}) },
+    { text: label, ...LABEL_CELL, bold },
     { text: value, ...CELL, alignment: 'right', bold },
   ];
 
@@ -255,67 +258,67 @@ export function dryCoffeeMainTable(
           {},
         ],
         [
-          ...dataRow('Sacos', money(purchase.bagsCount)),
-          ...liquidationRow('VALOR BRUTO $', money(purchase.grossValue)),
+          ...dataRow('Sacos', formatKilos(purchase.bagsCount)),
+          ...liquidationRow('VALOR BRUTO $', formatMoney(purchase.grossValue)),
         ],
         [
-          ...dataRow('Kilos Brutos', money(purchase.grossKg)),
-          ...liquidationRow('Aporte Socio', money(purchase.associateContribution)),
+          ...dataRow('Kilos Brutos', formatKilos(purchase.grossKg)),
+          ...liquidationRow('Aporte Socio', formatMoney(purchase.associateContribution)),
         ],
         [
-          ...dataRow('Destare', money(purchase.tareKg)),
-          ...liquidationRow('Descuento Cooperativo', money(purchase.cooperativeDiscount)),
+          ...dataRow('Destare', formatKilos(purchase.tareKg)),
+          ...liquidationRow('Descuento Cooperativo', formatMoney(purchase.cooperativeDiscount)),
         ],
-        ...(greenKg == null ? [] : [[...dataRow('Kilos Verdes', money(greenKg)), { text: '', ...CELL }, { text: '', ...CELL }]]),
+        ...(greenKg == null ? [] : [[...dataRow('Kilos Verdes', formatKilos(greenKg)), { text: '', ...CELL }, { text: '', ...CELL }]]),
         [
-          ...dataRow('Kilos Netos Pergamino', money(purchase.netKg)),
-          ...liquidationRow('Retención en la Fuente', money(purchase.withholding)),
+          ...dataRow('Kilos Netos Pergamino', formatKilos(purchase.netKg)),
+          ...liquidationRow('Retención en la Fuente', formatMoney(purchase.withholding)),
         ],
         [
-          ...dataRow('Precio Carga Pergamino Seco $:', wholePeso(purchase.basePriceLoad)),
-          ...liquidationRow('Descuento Financiero', money(purchase.freightDiscount)),
+          ...dataRow('Precio Carga Pergamino Seco $:', formatMoney(purchase.basePriceLoad)),
+          ...liquidationRow('Descuento Financiero', formatMoney(purchase.freightDiscount)),
         ],
         [
           ...dataRow(
             'Peso Total Almendra/Porc Merma',
             '',
-            money(purchase.totalStoredWeight),
-            money(purchase.wastePercentage),
+            formatTyped(purchase.totalStoredWeight),
+            formatTyped(purchase.wastePercentage),
           ),
-          ...liquidationRow('Otros Descuentos', money(purchase.otherDiscounts)),
+          ...liquidationRow('Otros Descuentos', formatMoney(purchase.otherDiscounts)),
         ],
         [
           ...dataRow(
             'Precio de Sustentación $:',
-            wholePeso(purchase.healthyUnitPrice),
-            money(purchase.healthyStoredWeight),
+            formatMoney(purchase.healthyUnitPrice),
+            formatTyped(purchase.healthyStoredWeight),
             '',
-            money(purchase.healthyPercentage),
+            formatTyped(purchase.healthyPercentage),
           ),
-          ...liquidationRow('NETO A PAGAR  $', money(purchase.netToPay), true),
+          ...liquidationRow('NETO A PAGAR  $', formatMoney(purchase.netToPay), true),
         ],
         [
           ...dataRow(
             'Precio Pasilla $:',
-            wholePeso(purchase.defectiveUnitPrice),
-            money(purchase.defectiveStoredWeight),
-            money(purchase.defectivePercentage),
+            formatMoney(purchase.defectiveUnitPrice),
+            formatTyped(purchase.defectiveStoredWeight),
+            formatTyped(purchase.defectivePercentage),
           ),
           { text: 'FORMAS\nDE\nPAGO', rowSpan: 4, ...CELL, bold: true, alignment: 'center' },
           cashRow,
         ],
         [
-          ...dataRow('Sobrepr Cafés Esp por Kg $:', wholePeso(purchase.bonus)),
+          ...dataRow('Sobrepr Cafés Esp por Kg $:', formatMoney(purchase.bonus)),
           {},
           checkRow,
         ],
         [
-          ...dataRow('Merma por defecto en tasa $:', wholePeso(purchase.penalty)),
+          ...dataRow('Merma por defecto en tasa $:', formatMoney(purchase.penalty)),
           {},
           transferRow,
         ],
         [
-          ...dataRow('VALOR KILO PERGAMINO $:', wholePeso(purchase.unitPrice)),
+          ...dataRow('VALOR KILO PERGAMINO $:', formatMoney(purchase.unitPrice)),
           {},
           cardTerminalRow,
         ],
