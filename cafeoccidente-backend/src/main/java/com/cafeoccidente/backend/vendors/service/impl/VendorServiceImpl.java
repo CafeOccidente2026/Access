@@ -98,7 +98,7 @@ public class VendorServiceImpl implements VendorService {
 
     @Override
     public AssociatePage associateAt(long position) {
-        Page<Grower> page = growerRepository.findAll(PageRequest.of((int) Math.max(0, position), 1, Sort.by("id")));
+        Page<Grower> page = growerRepository.findAll(PageRequest.of((int) Math.max(0, position), 1, Sort.by(Grower::getId)));
         if (page.isEmpty()) {
             throw new ResourceNotFoundException("No hay asociados en esa posicion");
         }

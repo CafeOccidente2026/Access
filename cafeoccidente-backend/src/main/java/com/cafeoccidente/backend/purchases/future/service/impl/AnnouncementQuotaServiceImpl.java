@@ -7,7 +7,6 @@ import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaResponse;
-import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.QuotaBalanceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.QuotaCandidateResponse;
 import com.cafeoccidente.backend.purchases.future.entity.AgencyAnnouncementNumber;

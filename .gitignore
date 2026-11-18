@@ -54,7 +54,6 @@ target/
 docs/
 .env 
 .idea/ 
-.vscode/
 requerimientos_del_sistema
 __pycache__/
 
