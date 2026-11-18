@@ -72,6 +72,18 @@ describe('AnnouncementUpdateHuskComponent - validación numérica en vivo', () =
 
     expect(component.error()).toBe('El precio no puede ser negativo');
   });
+  it('typing in the middle of a price keeps the cursor next to the same digit', () => {
+    setup();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.value = '4.5690';
+    input.setSelectionRange(4, 4);
+    component.onNumericInput('pointPrice', input.value, input);
+    expect(component.numeric.pointPrice).toBe('45.690');
+    expect(input.value).toBe('45.690');
+    expect(input.selectionStart).toBe(4);
+    input.remove();
+  });
 });
 
 describe('AnnouncementUpdateHuskComponent (HU-12)', () => {
