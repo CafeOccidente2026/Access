@@ -197,6 +197,12 @@ export class UserManagementComponent {
     this.editPassword = '';
     this.editIdNumber = '';
     this.editing.set(user);
+    // Pedido del 18-nov: el cuadro sale arriba; la pantalla sube a el y el cursor queda en su primer campo.
+    setTimeout(() => {
+      const box = this.elementRef.nativeElement.querySelector('[data-testid="edit-user"]') as HTMLElement | null;
+      box?.scrollIntoView({ block: 'start' });
+      (box?.querySelector('[data-edit-first], [data-edit-role]') as HTMLElement | null)?.focus();
+    });
   }
 
   cancelEdit(): void {

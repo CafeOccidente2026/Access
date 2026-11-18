@@ -244,6 +244,50 @@ describe('UserManagementComponent', () => {
     fixture.nativeElement.remove();
   });
 
+  it('pedido del 18-nov: Editar opens above the list instead of Crear usuario, scrolls to it and focuses its first field', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    fixture.componentInstance.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    const box = el.querySelector('[data-testid="edit-user"]')!;
+    const list = el.querySelector('[data-testid="users"]')!;
+    expect(box.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(el.querySelector('[data-create-user]')).toBeNull();
+    expect(scroll).toHaveBeenCalled();
+    expect(document.activeElement?.hasAttribute('data-edit-role')).toBe(true);
+
+    // Sin cedula, el primer campo es la Cedula.
+    fixture.componentInstance.startEdit({ id: 1, username: 'admin', idNumber: null, active: true, roleId: 1, roleName: 'ADMINISTRADOR', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(document.activeElement?.hasAttribute('data-edit-first')).toBe(true);
+
+    fixture.componentInstance.cancelEdit();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="edit-user"]')).toBeNull();
+    expect(el.querySelector('[data-create-user]')).not.toBeNull();
+    fixture.nativeElement.remove();
+  });
+
+  it('pedido del 18-nov: the browser and password managers do not autofill Usuario or the passwords', () => {
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-field-key="username"]')?.getAttribute('autocomplete')).toBe('off');
+    expect(el.querySelector('[data-field-key="password"]')?.getAttribute('autocomplete')).toBe('new-password');
+
+    fixture.componentInstance.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="edit-user"] input[type="password"]')?.getAttribute('autocomplete')).toBe('new-password');
+  });
+
   it('creating an agency is optional: an empty name does nothing', () => {
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
     component.createAgency();

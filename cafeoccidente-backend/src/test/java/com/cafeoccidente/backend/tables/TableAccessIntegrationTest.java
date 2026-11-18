@@ -166,6 +166,10 @@ class TableAccessIntegrationTest {
                 .containsExactlyInAnyOrder("HU04-B1", "HU04-B2");
         assertThat(empaquesOf(sheet(auth, get("/api/tables/empaques").param("agency", "4")))).doesNotContain("HU04-TAMBO");
         mockMvc.perform(get("/api/tables/usuarios").header("Authorization", auth)).andExpect(status().isNotFound());
+        // Pedido del 18-nov: Formas de Pago no tiene agencia (es "Comun a todas"), asi que el Usuario no la ve.
+        assertThat(names(tables(auth))).doesNotContain("formas_pago_compras");
+        mockMvc.perform(get("/api/tables/formas_pago_compras").header("Authorization", auth))
+                .andExpect(status().isNotFound());
     }
 
     @Test
