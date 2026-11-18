@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { settlementLabel, settlementValues } from './settlement';
+import { growerTypeOf, settlementLabel, settlementValues } from './settlement';
 
 describe('settlement', () => {
   const calc = { grossValue: 3976000, associateContribution: 79520, cooperativeDiscount: 39760, netToPay: 3896480 };
@@ -20,5 +20,12 @@ describe('settlement', () => {
     expect(settlementLabel(contribution, 'C')).toBe('Aporte Socio');
     expect(settlementLabel(contribution, 'S', 'Descuento Coop')).toBe('Aporte Socio');
     expect(settlementLabel({ ...contribution, key: 'grossValue', label: 'Vr. Bruto' }, 'C', 'Descuento Coop')).toBe('Vr. Bruto');
+  });
+});
+
+describe('growerTypeOf', () => {
+  it('reads S or C from the Tipo field, empty before the cédula is looked up', () => {
+    expect(growerTypeOf(' c ')).toBe('C');
+    expect(growerTypeOf(undefined)).toBe('');
   });
 });
