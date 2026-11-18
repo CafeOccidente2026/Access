@@ -59,8 +59,11 @@
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
     { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]", "display": "money" },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true, "inputWidthClass": "max-w-[110px]", "display": "money" },
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "inputWidthClass": "max-w-[110px]", "display": "money" },
     { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money" }
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "inputWidthClass": "max-w-[110px]", "display": "money" }
   ],
   "compactFields": true,
   "messages": {
@@ -78,6 +81,7 @@
     "priceChangedWarning": "El precio de este tipo de café se actualizó. Si sale, la próxima compra tomará el precio nuevo. ¿Está seguro?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario",
-    "cellphoneMissing": "Este vendedor no tiene celular registrado. Digítelo para continuar."
+    "cellphoneMissing": "Este vendedor no tiene celular registrado. Digítelo para continuar.",
+    "cooperativeDiscountLabel": "Descuento Coop"
   }
 }
