@@ -40,7 +40,7 @@
         <app-button *ngIf="canUnmark()" [label]="c.unmarkLabel" [disabled]="unmarking()" (pressed)="askUnmark()"></app-button>
       </div>
 
-      <p *ngIf="message() as m" data-testid="message" class="font-semibold text-blue-900">{{ m }}</p>
+      <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="message.set(null)"></app-confirm-dialog>
 
       <!-- Genera Plano: facturas pendientes, una casilla por factura. -->
       <div class="min-h-0 flex-1 overflow-auto rounded border border-slate-400 bg-white">
