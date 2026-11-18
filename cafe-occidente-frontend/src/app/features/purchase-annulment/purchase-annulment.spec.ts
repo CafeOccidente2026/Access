@@ -105,6 +105,10 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     expect(component.message()).toBe(data.messages.error);
   });
 
+  /** Botones del mensaje compartido (app-confirm-dialog): Cancelar va primero, Aceptar al final. */
+  const dialogButton = (el: HTMLElement, label: string) =>
+    [...el.querySelectorAll<HTMLButtonElement>('app-confirm-dialog button')].find((b) => b.textContent?.trim() === label);
+
   it('CA-1: finds the purchase by invoice number', () => {
     const { component } = render();
     component.search(new Event('submit'), 'SDTA 43388');
@@ -117,7 +121,7 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     showFirst(component);
     askToAnnul(fixture, el);
 
-    (el.querySelector('[data-testid="accept"]') as HTMLButtonElement).click();
+    dialogButton(el, data.yesLabel)!.click();
     http.expectOne({ method: 'POST', url: `${URL}/DRY/1` }).flush(annulled);
     fixture.detectChanges();
 
@@ -131,7 +135,7 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     showFirst(component);
     askToAnnul(fixture, el);
 
-    (el.querySelector('[data-testid="cancel"]') as HTMLButtonElement).click();
+    dialogButton(el, data.noLabel)!.click();
     fixture.detectChanges();
 
     http.expectNone({ method: 'POST' });
@@ -146,7 +150,7 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     fixture.detectChanges();
 
     expect(el.textContent).toContain(data.lockedMessage);
-    expect(el.querySelector('[data-testid="accept"]')).toBeNull();
+    expect(dialogButton(el, data.noLabel)).toBeUndefined();
     http.expectNone({ method: 'POST' });
   });
 
@@ -167,18 +171,17 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     const { fixture, component, el } = render();
     showFirst(component);
     askToAnnul(fixture, el);
-    const accept = el.querySelector('[data-testid="accept"]') as HTMLButtonElement;
 
     component.confirm();
     component.confirm();
     fixture.detectChanges();
 
-    expect(accept.disabled).toBe(true);
+    expect(dialogButton(el, data.yesLabel)!.disabled).toBe(true);
     http.expectOne({ method: 'POST', url: `${URL}/DRY/1` }).flush(annulled);
     expect(component.saving()).toBe(false);
   });
 
-  it('prueba del 10-nov: only with the keyboard, the found purchase puts the focus on Anular and then on Aceptar', () => {
+  it('only with the keyboard: Anular gets the focus and the question opens on Cancelar, since it cannot be undone (18-nov)', () => {
     vi.useFakeTimers();
     const { fixture, component, el } = render();
     document.body.appendChild(el);
@@ -190,7 +193,12 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
 
     askToAnnul(fixture, el);
     vi.runAllTimers();
-    expect(document.activeElement).toBe(el.querySelector('[data-testid="accept"]'));
+    expect(document.activeElement).toBe(dialogButton(el, data.noLabel));
+    // Esc es Cancelar: la compra queda igual.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(component.prompt()).toBeNull();
+    http.expectNone({ method: 'POST' });
     vi.useRealTimers();
     el.remove();
   });
