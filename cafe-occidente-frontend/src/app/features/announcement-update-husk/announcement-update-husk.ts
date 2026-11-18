@@ -7,7 +7,8 @@ import { finalize } from 'rxjs';
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { ContentService } from '../../core/services/content.service';
 import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
-import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
+import { validateWholeNumberField } from '../../shared/utils/number-format';
+import { formatTypedMoney, skipThousandsSeparator } from '../../shared/utils/live-thousands';
 import { AnnouncementUpdateHuskContent } from './announcement-update-husk.model';
 import { serverError } from '../../shared/utils/server-error';
 
@@ -58,16 +59,14 @@ export class AnnouncementUpdateHuskComponent {
 
   /** Valida en vivo mientras se escribe; si hay error deja ver lo tipeado tal cual, si no formatea
    *  con puntos de miles como antes. */
-  onNumericInput(field: NumericField, value: string): void {
+  onNumericInput(field: NumericField, value: string, input?: HTMLInputElement): void {
     const error = validateWholeNumberField(value);
     this.fieldErrors[field] = error;
-    if (error) {
-      this.numeric[field] = value;
-      return;
-    }
-    const digits = value.replace(/\D/g, '');
-    this.numeric[field] = formatThousands(digits);
+    this.numeric[field] = error ? value : formatTypedMoney(value, input);
   }
+
+  /** Backspace o Supr junto a un punto de miles borran el digito. */
+  readonly skipThousandsSeparator = skipThousandsSeparator;
 
   /** RN-09.1: Enter avanza al siguiente campo si el actual esta diligenciado; en el ultimo (Pr Por Punto)
    *  dispara la actualizacion. */
