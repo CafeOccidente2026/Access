@@ -276,6 +276,18 @@ describe('UserManagementComponent', () => {
     fixture.nativeElement.remove();
   });
 
+  it('pedido del 18-nov: the browser and password managers do not autofill Usuario or the passwords', () => {
+    const fixture = TestBed.createComponent(UserManagementComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-field-key="username"]')?.getAttribute('autocomplete')).toBe('off');
+    expect(el.querySelector('[data-field-key="password"]')?.getAttribute('autocomplete')).toBe('new-password');
+
+    fixture.componentInstance.startEdit({ id: 7, username: 'ana', idNumber: '55', active: true, roleId: 1, roleName: 'USUARIO', agencyId: 1, agencyName: 'Buesaco' });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="edit-user"] input[type="password"]')?.getAttribute('autocomplete')).toBe('new-password');
+  });
+
   it('creating an agency is optional: an empty name does nothing', () => {
     const component = TestBed.createComponent(UserManagementComponent).componentInstance;
     component.createAgency();
