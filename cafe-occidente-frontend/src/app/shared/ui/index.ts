@@ -15,3 +15,4 @@ export * from './success-overlay/success-overlay';
 export * from './invoice-navigator/invoice-navigator';
 export * from './pdf-generating/pdf-generating';
 export * from './resolution-alert/resolution-alert';
+export * from './live-thousands/live-thousands.directive';
