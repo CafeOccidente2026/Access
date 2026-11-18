@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      <p *ngIf="message() as m" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
+      <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="message.set(null)"></app-confirm-dialog>
     </div>
   </app-access-window>
 
