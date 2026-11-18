@@ -5,7 +5,6 @@ import com.cafeoccidente.backend.purchases.future.entity.FuturePurchase;
 import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
