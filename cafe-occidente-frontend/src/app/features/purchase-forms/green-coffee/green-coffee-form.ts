@@ -16,12 +16,11 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
-import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
-import { settlementLabel, settlementValues } from '../settlement';
+import { fieldRows } from '../field-state';
 import { askCellphoneOr } from '../seller-cellphone';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
 import { WeightMessages } from '../weight-check';
@@ -362,7 +361,6 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     const info = this.announcementInfo();
     const inv = this.invoiceReservation();
     const c = this.calc();
-    const growerType = (this.model['idType'] ?? '').trim().toUpperCase();
 
     const computedValues: Record<string, string | number> = {
       agency: this.authService.agencyName() ?? '',
@@ -389,33 +387,18 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       netKg: c ? c.netKg : '',
       kgPrice: c?.unitPrice ?? '',
       withholding: c?.withholding ?? '',
-      ...settlementValues(c, growerType),
     };
 
-    const field = (key: string): FormFieldDefinition => {
-      const b = bmap.get(key)!;
-      const patch: { readonly?: boolean; value?: string | number; label?: string } = {
-        label: settlementLabel(b, growerType, this.messages()?.cooperativeDiscountLabel),
-      };
-      if (READONLY.includes(key)) {
-        patch.readonly = true;
-        patch.value = computedValues[key] ?? this.model[key] ?? '';
-      } else if (this.locked.has(key)) {
-        patch.readonly = true;
-        patch.value = this.model[key] ?? '';
-      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
-        patch.readonly = true;
-      }
-      const next: FormFieldDefinition = { ...b, ...patch };
-      const prev = this.fieldCache.get(key);
-      if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.label === next.label) {
-        return prev;
-      }
-      this.fieldCache.set(key, next);
-      return next;
-    };
-
-    const row = (fields?: FormFieldDefinition[]) => fields?.map((f) => field(f.key));
+    const { field, row } = fieldRows(bmap, {
+      readonlyKeys: READONLY,
+      focusOrder: FOCUS_ORDER,
+      locked: this.locked,
+      model: this.model,
+      computed: computedValues,
+      cache: this.fieldCache,
+      calc: c,
+      cooperativeLabel: this.messages()?.cooperativeDiscountLabel,
+    });
 
     return {
       ...base,
