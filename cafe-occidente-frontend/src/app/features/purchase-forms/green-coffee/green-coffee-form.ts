@@ -112,9 +112,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   private readonly tick = signal(0);
 
   override model: FormModel = {};
-  private readonly locked = new Set<string>();
+  readonly locked = new Set<string>();
   private readonly today = localToday();
-  private readonly fieldCache = new Map<string, FormFieldDefinition>();
+  readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
@@ -385,20 +385,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       factor: info?.sample?.factor ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
-      kgPrice: c?.unitPrice ?? '',
-      withholding: c?.withholding ?? '',
     };
 
-    const { field, row } = fieldRows(bmap, {
-      readonlyKeys: READONLY,
-      focusOrder: FOCUS_ORDER,
-      locked: this.locked,
-      model: this.model,
-      computed: computedValues,
-      cache: this.fieldCache,
-      calc: c,
-      cooperativeLabel: this.messages()?.cooperativeDiscountLabel,
-    });
+    const { field, row } = fieldRows(bmap, READONLY, FOCUS_ORDER, this, computedValues, c);
 
     return {
       ...base,

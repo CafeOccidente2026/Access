@@ -2,47 +2,51 @@ import { FormFieldDefinition } from '../../core/models';
 import { isSequentialFieldEnabled } from '../../shared/utils/sequential-gate';
 import { SettlementCalc, growerTypeOf, settlementLabel, settlementValues } from './settlement';
 
-/** Lo que necesita un formulario de compra (Verde, Pasilla) para armar sus campos. */
-export interface FieldStateContext {
-  readonly readonlyKeys: readonly string[];
-  readonly focusOrder: readonly string[];
-  readonly locked: ReadonlySet<string>;
+/** Lo que el armado de campos lee del formulario de compra (Verde, Pasilla). */
+export interface PurchaseFieldForm {
   readonly model: Record<string, string>;
-  readonly computed: Record<string, string | number>;
+  readonly locked: ReadonlySet<string>;
   /** Se reusa el campo anterior si no cambió, para no repintar el control. */
-  readonly cache: Map<string, FormFieldDefinition>;
-  /** Cálculo del servidor: llena Vr. Bruto, Aporte Socio / Descuento Coop y Neto a Pagar. */
-  readonly calc: SettlementCalc | null;
-  readonly cooperativeLabel?: string;
+  readonly fieldCache: Map<string, FormFieldDefinition>;
+  messages(): { readonly cooperativeDiscountLabel?: string } | undefined;
 }
 
 /**
- * Arma cada campo por su key. Calculado: valor del servidor y de solo lectura; confirmado: bloqueado con lo digitado;
- * campo al que todavía no le toca su turno (focusOrder): bloqueado.
+ * Arma cada campo por su key. Calculado (readonlyKeys): valor del servidor y de solo lectura, con la liquidación
+ * (Vr. Kilo, Vr. Bruto, Aporte Socio / Descuento Coop, Retefuente y Neto a Pagar); confirmado: bloqueado con lo
+ * digitado; campo al que todavía no le toca su turno (focusOrder): bloqueado.
  */
-export function fieldRows(bases: ReadonlyMap<string, FormFieldDefinition>, ctx: FieldStateContext) {
-  const growerType = growerTypeOf(ctx.model['idType']);
-  const computed = { ...ctx.computed, ...settlementValues(ctx.calc, growerType) };
+export function fieldRows(
+  bases: ReadonlyMap<string, FormFieldDefinition>,
+  readonlyKeys: readonly string[],
+  focusOrder: readonly string[],
+  form: PurchaseFieldForm,
+  values: Record<string, string | number>,
+  calc: SettlementCalc | null,
+) {
+  const growerType = growerTypeOf(form.model['idType']);
+  const computed = { ...values, ...settlementValues(calc, growerType) };
+  const cooperativeLabel = form.messages()?.cooperativeDiscountLabel;
   const field = (key: string): FormFieldDefinition => {
     const base = bases.get(key)!;
     const patch: { readonly?: boolean; value?: string | number; label: string } = {
-      label: settlementLabel(base, growerType, ctx.cooperativeLabel),
+      label: settlementLabel(base, growerType, cooperativeLabel),
     };
-    if (ctx.readonlyKeys.includes(key)) {
+    if (readonlyKeys.includes(key)) {
       patch.readonly = true;
-      patch.value = computed[key] ?? ctx.model[key] ?? '';
-    } else if (ctx.locked.has(key)) {
+      patch.value = computed[key] ?? form.model[key] ?? '';
+    } else if (form.locked.has(key)) {
       patch.readonly = true;
-      patch.value = ctx.model[key] ?? '';
-    } else if (!isSequentialFieldEnabled(key, ctx.focusOrder, ctx.locked)) {
+      patch.value = form.model[key] ?? '';
+    } else if (!isSequentialFieldEnabled(key, focusOrder, form.locked)) {
       patch.readonly = true;
     }
     const next: FormFieldDefinition = { ...base, ...patch };
-    const prev = ctx.cache.get(key);
+    const prev = form.fieldCache.get(key);
     if (prev && prev.value === next.value && prev.readonly === next.readonly && prev.label === next.label) {
       return prev;
     }
-    ctx.cache.set(key, next);
+    form.fieldCache.set(key, next);
     return next;
   };
   return { field, row: (fields?: FormFieldDefinition[]) => fields?.map((f) => field(f.key)) };
