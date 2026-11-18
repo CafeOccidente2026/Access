@@ -51,10 +51,10 @@
     { "key": "netKg", "label": "Kilos_Netos", "type": "count", "display": "kilos" }
   ],
   "priceFields": [
-    { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency", "display": "money" },
-    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true, "negativeOnly": true, "display": "money" }
+    { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency", "display": "money", "liveThousands": true },
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true, "negativeOnly": true, "display": "money", "liveThousands": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true, "display": "money" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true, "display": "money", "liveThousands": true },
   "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
@@ -62,7 +62,7 @@
     { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true, "inputWidthClass": "max-w-[110px]", "display": "money" },
     { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "inputWidthClass": "max-w-[110px]", "display": "money" },
     { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money" },
+    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money", "liveThousands": true },
     { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "inputWidthClass": "max-w-[110px]", "display": "money" }
   ],
   "compactFields": true,
