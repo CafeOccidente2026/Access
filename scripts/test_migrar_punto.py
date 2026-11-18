@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    announcement_number,
     cheque_text,
     control_record_differences,
     husk_purchase,
@@ -90,6 +91,15 @@ def check_quotas():
     assert [r["anuncio"] for r in quota_announcements(rows)] == ["3458"]
 
 
+def check_announcement_number():
+    # Decision (a) del 18-nov: como la web (AnnouncementServiceImpl), el anuncio va con el prefijo del punto.
+    assert announcement_number("SDTA", "3490") == "SDTA-3490"
+    assert announcement_number("SDTA", " 3490.0 ") == "SDTA-3490"
+    # Ya con prefijo (una segunda corrida) o vacio: se deja como esta.
+    assert announcement_number("SDTA", "SDTA-3490") == "SDTA-3490"
+    assert announcement_number("SDTA", "") == ""
+
+
 def check_consecutives():
     # Factura: la mayor de COMPRAS, tambien las anuladas.
     assert max_invoice([purchase("43902"), purchase("43903", estado="ANULADA"), purchase("43001")]) == 43903
@@ -113,6 +123,7 @@ def main():
     check_out_of_range()
     check_future_purchases()
     check_quotas()
+    check_announcement_number()
     check_consecutives()
     print("OK")
 

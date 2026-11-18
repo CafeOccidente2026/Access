@@ -15,8 +15,9 @@ empaques, formas de pago, compras a futuro y consecutivos. Idempotente: no dupli
 - Terceros: inserta los nuevos y no sobrescribe los que ya estan; las diferencias van a diferencias_terceros.csv.
 - Con --desde se cargan igual las compras sin remesar, todos los anuncios, las compras a futuro vigentes y el
   Registro de Control, para que los saldos cuadren.
-- Compras a futuro: solo las de saldo > 0 y entrega no vencida; las vencidas se listan. Cupos de anuncio: no se
-  cargan (P8), se listan.
+- Compras a futuro: solo las de saldo > 0 y entrega no vencida; las vencidas se listan.
+- Anuncio de compras y compras a futuro con el prefijo del punto ("SDTA-3490"), como la web (decision del 18-nov).
+- Cupos de anuncio: no se cargan (P8), se listan.
 - Consecutivos de factura y remision: el siguiente de la web es el ultimo de Access + 1 (nunca se bajan).
 
 Parte B (solo con --ness): cupos_ness con la tabla NESS de Access. Se vacia y se recarga, y borra la NESS que se
@@ -49,6 +50,12 @@ DISCARDED = {}
 
 def note_discard(reason, detail):
     DISCARDED.setdefault(reason, []).append(detail)
+
+
+def agency_prefix(cur, agency_id):
+    """Prefijo del Registro de Control activo de la agencia (SDTA), el mismo con que la web arma el anuncio."""
+    cur.execute("SELECT prefijo FROM registros_control WHERE agencia_id = %s AND activo", (agency_id,))
+    return cur.fetchone()[0]
 
 
 # ---------- helpers ----------
@@ -167,6 +174,15 @@ def keeps_purchase(row, desde):
     if desde is None or bought is None or bought >= desde:
         return True
     return s(row, "plano") != "t" and s(row, "forma_de_pago") != "ANULADA"
+
+
+def announcement_number(prefix, number):
+    """Decision (a) del 18-nov: el anuncio como lo guarda la web, con el prefijo del punto ("SDTA-3490",
+    AnnouncementServiceImpl.toResponse). Uno que ya trae prefijo (segunda corrida) o vacio se deja igual."""
+    text = (number or "").strip()
+    if not text or "-" in text:
+        return text
+    return f"{prefix}-{parse_int(text)}"
 
 
 def husk_purchase(row):
@@ -549,13 +565,14 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
     cur.execute(" UNION ALL ".join(f"SELECT numero_factura FROM {t} WHERE agencia_id = %(a)s"
                                    for t in PURCHASE_TABLES), {"a": agency_id})
     existing_invoices = {r[0] for r in cur.fetchall()}
+    prefix = agency_prefix(cur, agency_id)
 
     def common_values(row, invoice_number, grower):
         first_name, last_name, address, phone, grower_type = grower
         payment_method, check_number = payment_of(row)
         return (
             parse_date(row["fecha_compra"]), invoice_number, agency_id, fund_by_code[s(row, "fondo")],
-            s(row, "especial"), product_by_code[s(row, "cod_prod")], s(row, "anuncio"),
+            s(row, "especial"), product_by_code[s(row, "cod_prod")], announcement_number(prefix, s(row, "anuncio")),
             parse_date(row["fecha_anuncio"]), parse_decimal(row["pr_base_pc"]),
             s(row, "cedula"), first_name, last_name, grower_type, address, phone, parse_int(row["sacos"]),
             parse_decimal(row["kilos_brutos"]), parse_decimal(row["destare"]), parse_decimal(row["kilos_netos"]),
@@ -874,8 +891,10 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
     cur.execute("SELECT identificacion, primer_nombre, primer_apellido, tipo, direccion FROM terceros"
                 " WHERE identificacion = ANY(%s)", ([s(r, "cedula") for r in load],))
     growers = {r[0]: r[1:] for r in cur.fetchall()}
+    prefix = agency_prefix(cur, agency_id)
     inserted = 0
     for row in load:
+        number = announcement_number(prefix, s(row, "anuncio"))
         grower = growers.get(s(row, "cedula"))
         if grower is None:
             note_discard("compra_a_futuro_sin_tercero", (s(row, "anuncio"), s(row, "cedula")))
@@ -887,13 +906,13 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
             " SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
             " WHERE NOT EXISTS (SELECT 1 FROM compras_anunciadas WHERE agencia_id = %s AND numero_anuncio = %s"
             " AND cedula = %s)",
-            (parse_timestamp(row["fecha_anuncio"]), agency_id, s(row, "anuncio"), parse_date(row["fecha_anuncio"]),
+            (parse_timestamp(row["fecha_anuncio"]), agency_id, number, parse_date(row["fecha_anuncio"]),
              s(row, "cedula"), grower[0], grower[1], grower[2] or "C", grower[3] or "", s(row, "especial"),
              parse_decimal(row["kilos_anunciados"]), parse_decimal(row["saldo_kilos"]),
              parse_date(row["fecha_entrega"]), s(row, "finca") or None, s(row, "mpio") or None,
              s(row, "vereda") or None, parse_decimal(row["pr_almsana"]), parse_decimal(row["pr_almdefec"]),
              parse_decimal(row["bonificación"]), parse_decimal(row["costos"]), parse_decimal(row["vrinccalidad"]),
-             parse_decimal(row["prbcps"]), admin_user_id, agency_id, s(row, "anuncio"), s(row, "cedula")),
+             parse_decimal(row["prbcps"]), admin_user_id, agency_id, number, s(row, "cedula")),
         )
         inserted += cur.rowcount
     print(f"  compras a futuro: {inserted} cargadas (saldo y entrega vigente); {len(expired)} vencidas no se cargan.")
@@ -988,9 +1007,9 @@ def ensure_admin_eltambo(cur, agency_id):
 
 # ---------- main ----------
 
-def backup(base):
+def backup(base, label="migrar_punto"):
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    target = ROOT / "docs" / "respaldos-bd" / f"{base}_antes_migrar_punto_{stamp}.dump"
+    target = ROOT / "docs" / "respaldos-bd" / f"{base}_antes_{label}_{stamp}.dump"
     with target.open("wb") as out:
         subprocess.run(["docker", "exec", "cafeoccidente-postgres", "pg_dump", "-U", "postgres", "-Fc", base],
                        check=True, stdout=out)
