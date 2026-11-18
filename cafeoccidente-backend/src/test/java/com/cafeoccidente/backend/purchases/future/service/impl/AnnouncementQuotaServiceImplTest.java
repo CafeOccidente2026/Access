@@ -83,7 +83,7 @@ class AnnouncementQuotaServiceImplTest {
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberId(numbering.getId())).thenReturn(quota);
         when(controlRecordService.getActive(1L)).thenReturn(controlRecord());
         // Busca por el numero de MUESTRA (prefijo + numero), no por el id interno.
-        when(dryCoffeePurchaseRepository.sumNetKgByAgencyAndAnnouncementNumber(
+        when(dryCoffeePurchaseRepository.sumQuotaNetKgByAgencyAndAnnouncementNumber(
                 1L, "SDBU-" + numbering.getAnnouncementNumber())).thenReturn(new BigDecimal(delivered));
         when(announcementQuotaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -98,7 +98,7 @@ class AnnouncementQuotaServiceImplTest {
                 announcement("SDBU-37", "PASILLA")));
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberAgencyId(1L))
                 .thenReturn(List.of(quota(numbering(39, "NESPRESSO - FTUSA"), "500")));
-        when(dryCoffeePurchaseRepository.sumNetKgByAnnouncementNumber(1L))
+        when(dryCoffeePurchaseRepository.sumQuotaNetKgByAnnouncementNumber(1L))
                 .thenReturn(List.<Object[]>of(new Object[] {"SDBU-39", new BigDecimal("80")}));
 
         List<QuotaCandidateResponse> candidates = service.available(1L);
@@ -112,7 +112,7 @@ class AnnouncementQuotaServiceImplTest {
         when(announcementService.history()).thenReturn(List.of(
                 announcement("SDBU-40", "RN"), announcement("SDBU-41", "REGIONAL NARIÑO 4C")));
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberAgencyId(1L)).thenReturn(List.of());
-        when(dryCoffeePurchaseRepository.sumNetKgByAnnouncementNumber(1L))
+        when(dryCoffeePurchaseRepository.sumQuotaNetKgByAnnouncementNumber(1L))
                 .thenReturn(List.<Object[]>of(new Object[] {"SDBU-40", new BigDecimal("150.50")}));
 
         List<QuotaCandidateResponse> candidates = service.available(1L);
@@ -133,7 +133,7 @@ class AnnouncementQuotaServiceImplTest {
         // El ultimo NESPRESSO ya tiene cupo: de ese tipo no sale ninguno (tampoco el viejo).
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberAgencyId(1L))
                 .thenReturn(List.of(quota(numbering(49, "NESPRESSO - FTUSA"), "500")));
-        when(dryCoffeePurchaseRepository.sumNetKgByAnnouncementNumber(1L)).thenReturn(List.of());
+        when(dryCoffeePurchaseRepository.sumQuotaNetKgByAnnouncementNumber(1L)).thenReturn(List.of());
 
         assertThat(service.available(1L)).extracting(c -> c.announcement().announcementNumber()).containsExactly("SDBU-50");
     }

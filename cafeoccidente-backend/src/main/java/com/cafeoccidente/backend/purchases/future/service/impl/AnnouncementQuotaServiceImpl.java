@@ -105,7 +105,7 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
             return;
         }
         BigDecimal balance = quota.getAssignedQuota().subtract(
-                dryCoffeePurchaseRepository.sumNetKgByAgencyAndAnnouncementNumber(agencyId, displayNumber));
+                dryCoffeePurchaseRepository.sumQuotaNetKgByAgencyAndAnnouncementNumber(agencyId, displayNumber));
         DeliveryRule.check(balance, deliveryKg, netKg, "del cupo del anuncio " + number);
     }
 
@@ -169,7 +169,7 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
     }
 
     private Map<String, BigDecimal> deliveredByDisplayNumber(Long agencyId) {
-        return dryCoffeePurchaseRepository.sumNetKgByAnnouncementNumber(agencyId).stream()
+        return dryCoffeePurchaseRepository.sumQuotaNetKgByAnnouncementNumber(agencyId).stream()
                 .collect(Collectors.toMap(row -> (String) row[0], row -> (BigDecimal) row[1]));
     }
 
@@ -178,9 +178,9 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
         return controlRecord.getPrefix() + "-" + numbering.getAnnouncementNumber();
     }
 
-    /** RN-21.1.6: kilos netos de las compras con ese anuncio; las anuladas ya estan en 0. */
+    /** Kilos netos de las compras de cupo con ese anuncio (regla del area, 18-nov); las anuladas ya estan en 0. */
     private BigDecimal deliveredKg(AgencyAnnouncementNumber numbering, ControlRecord controlRecord) {
-        return dryCoffeePurchaseRepository.sumNetKgByAgencyAndAnnouncementNumber(
+        return dryCoffeePurchaseRepository.sumQuotaNetKgByAgencyAndAnnouncementNumber(
                 numbering.getAgency().getId(), displayNumber(controlRecord, numbering));
     }
 }

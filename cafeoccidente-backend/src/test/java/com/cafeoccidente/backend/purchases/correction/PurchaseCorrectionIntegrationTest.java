@@ -154,7 +154,7 @@ class PurchaseCorrectionIntegrationTest {
 
     @Test
     void correctsKilosAndPaymentKeepingTheSameInvoice() {
-        DryCoffeePurchaseResponse p = dryPurchase();
+        DryCoffeePurchaseResponse p = quotaPurchase();
         BigDecimal card = new BigDecimal("50000");
         assertThat(query.detail(AnnulmentModule.DRY, p.id()).corrected()).isFalse();
 
@@ -289,11 +289,29 @@ class PurchaseCorrectionIntegrationTest {
         assertThat(receivables("DRY", p.id())).isEmpty();
     }
 
+    /** Una compra hecha por Facturar con Cupos (aca se marca a mano: la prueba la crea desde Compras Cafe Seco). */
+    private DryCoffeePurchaseResponse quotaPurchase() {
+        DryCoffeePurchaseResponse p = dryPurchase();
+        jdbc.update("UPDATE compras_cafe_seco SET con_cupo = true WHERE id = ?", p.id());
+        entityManager.clear();
+        return p;
+    }
+
     @Test
     void cannotGoOverTheQuotaOfTheAnnouncement() {
-        DryCoffeePurchaseResponse p = dryPurchase();
+        DryCoffeePurchaseResponse p = quotaPurchase();
 
         assertThatThrownBy(() -> correctDry(p, "6000", CARD)).isInstanceOf(BusinessRuleException.class);
+    }
+
+    /** Regla del area (18-nov): una compra normal con el anuncio del cupo no descuenta ni la frena el cupo. */
+    @Test
+    void aNormalPurchaseIsCorrectedWithoutLookingAtTheQuota() {
+        DryCoffeePurchaseResponse p = dryPurchase();
+
+        correctDry(p, "6000", CARD);
+
+        assertThat(quotas.get(AGENCY, announcementNumber).balance()).isEqualByComparingTo(QUOTA);
     }
 
     @Test

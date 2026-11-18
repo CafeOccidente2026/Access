@@ -180,6 +180,14 @@ def keeps_purchase(row, desde, quota_announcements_kept=frozenset()):
     return s(row, "plano") != "t" and s(row, "forma_de_pago") != "ANULADA"
 
 
+def quota_purchase(row, quota_announcements_kept):
+    """Regla del 18-nov: el saldo del cupo solo baja con las compras de cupo (compras_cafe_seco.con_cupo, V29). Access
+    guardaba las de "Compras Cupos" en COMPRAS sin marca: las validas de un anuncio cuyo cupo se carga cuentan como de
+    cupo, las mismas que resta pending_quotas, asi el saldo de la web es el del corte."""
+    return (s(row, "forma_de_pago") != "ANULADA"
+            and str(parse_int(s(row, "anuncio"))) in quota_announcements_kept)
+
+
 def announcement_number(prefix, number):
     """Decision (a) del 18-nov: el anuncio como lo guarda la web, con el prefijo del punto ("SDTA-3490",
     AnnouncementServiceImpl.toResponse). Uno que ya trae prefijo (segunda corrida) o vacio se deja igual."""
@@ -640,12 +648,12 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
                 parse_decimal(row["w_totalm"]), parse_decimal(row["porcmerma"]), parse_decimal(row["w_almdefec"]),
                 parse_decimal(row["porcalmdefec"]), parse_decimal(row["w_almsana"]), parse_decimal(row["porcalmsana"]),
                 parse_decimal(row["pr_almsana"]), parse_decimal(row["pr_almdefec"]), parse_decimal(row["bonificación"]),
-                parse_decimal(row["castigo"])))
+                parse_decimal(row["castigo"]), quota_purchase(row, QUOTA_ANNOUNCEMENTS_KEPT)))
 
     psycopg2.extras.execute_values(
         cur,
         f"INSERT INTO compras_cafe_seco ({COMMON_COLUMNS}, peso_tot_alm, porc_merma, peso_tot_pasilla,"
-        " porc_kg_pasilla, peso_alm_sana, factor, pr_alm_sana, pr_alm_defec, bonificacion, castigo) VALUES %s",
+        " porc_kg_pasilla, peso_alm_sana, factor, pr_alm_sana, pr_alm_defec, bonificacion, castigo, con_cupo) VALUES %s",
         dry,
     )
     psycopg2.extras.execute_values(
@@ -953,7 +961,8 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
 def load_quota_announcements(cur, agency_id):
     """
     Decision (b) del 18-nov: a cupos_anuncios solo los cupos con saldo el dia del corte (pending_quotas). Se guarda el
-    Cupo; Entregados y Saldo los calcula la web con las compras. Los que ya no tienen saldo se listan y no se cargan.
+    Cupo; Entregados y Saldo los calcula la web con las compras de cupo (con_cupo, quota_purchase). Los que ya no
+    tienen saldo se listan y no se cargan.
     Idempotente (uq_cupos_anuncios_anuncio_agencia_id).
     """
     announcements = read_csv("anuncios_migrar.csv")

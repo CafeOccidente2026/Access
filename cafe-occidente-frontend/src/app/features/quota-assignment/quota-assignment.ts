@@ -19,9 +19,12 @@ function optionLabel(candidate: QuotaCandidate): string {
   return `${announcementDisplay(a.announcementNumber)} · ${a.specialType} · ${formatMoney(a.basePriceLoad)}`;
 }
 
-/** Saldo = Cupo - Kilos Entregados; vacío mientras no hay Cupo. El servidor lo vuelve a calcular al guardar. */
-export function liveBalance(quota: string, deliveredKg: number): string {
-  return quota.trim() === '' ? '' : String(parseDisplayNumber(quota) - deliveredKg);
+/**
+ * Regla del area (18-nov): al asignar, el Saldo es el Cupo; las compras normales hechas antes con ese anuncio no se
+ * descuentan (solo las de Facturar con Cupos). Vacío mientras no hay Cupo.
+ */
+export function liveBalance(quota: string): string {
+  return quota.trim() === '' ? '' : String(parseDisplayNumber(quota));
 }
 
 /**
@@ -78,8 +81,8 @@ export class QuotaAssignmentComponent {
       costs: String(a.costs),
       deliveredKg: String(saved?.deliveredKg ?? selected.deliveredKg),
       quota: saved ? String(saved.assignedQuota) : this.quota(),
-      // R2 (17-nov): RN-21.1.8, el Saldo (Cupo - Kilos Entregados) se ve mientras se digita el Cupo.
-      balance: saved ? String(saved.balance) : liveBalance(this.quota(), selected.deliveredKg),
+      // R2 (17-nov): el Saldo se ve mientras se digita el Cupo; regla del 18-nov: es igual al Cupo.
+      balance: saved ? String(saved.balance) : liveBalance(this.quota()),
     };
   });
 

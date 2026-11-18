@@ -98,7 +98,7 @@ public class PurchaseCorrectionServiceImpl implements PurchaseCorrectionService 
         if (correction.module() == AnnulmentModule.DRY) {
             BigDecimal extraKg = netKg.subtract(purchase.netKg());
             // El cupo se suma de las compras guardadas (esta, aun con los kilos viejos): solo se revisa lo que crece.
-            if (extraKg.signum() > 0) {
+            if (extraKg.signum() > 0 && repository.isQuotaPurchase(correction.id())) {
                 announcementQuotaService.reserve(purchase.agencyId(), purchase.announcementNumber(), extraKg, null);
             }
             if (!repository.adjustFuturePurchase(correction.id(), purchase.netKg(), netKg)) {

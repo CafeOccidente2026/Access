@@ -176,6 +176,8 @@ class PurchaseAnnulmentIntegrationTest {
     @Test
     void ca3GivesTheKilosBackToTheQuotaOfTheAnnouncement() {
         DryCoffeePurchaseResponse p = purchase();
+        // Solo las compras de Facturar con Cupos gastan el cupo (regla del area, 18-nov); aca se marca a mano.
+        jdbc.update("UPDATE compras_cafe_seco SET con_cupo = true WHERE id = ?", p.id());
         BigDecimal kg = p.netKg();
         assertThat(quotas.get(AGENCY, announcementNumber).balance()).isEqualByComparingTo(QUOTA.subtract(kg));
 

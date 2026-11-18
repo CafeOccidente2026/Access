@@ -179,4 +179,8 @@ public class DryCoffeePurchase {
     /** Compra anunciada que factura (RF-21.5, V17): la anulacion le devuelve los kilos por aqui. */
     @Column(name = "compra_anunciada_id")
     private Long futurePurchaseId;
+
+    /** Hecha por Facturar Anuncios con Cupos (V29): solo estas bajan el saldo del cupo del anuncio. */
+    @Column(name = "con_cupo", nullable = false)
+    private boolean quotaPurchase;
 }
