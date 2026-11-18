@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { applyLiveThousands, formatMoneyInput, moneyDigits, skipThousandsSeparator } from './live-thousands';
 
@@ -11,6 +11,8 @@ function typed(value: string, caret = value.length): HTMLInputElement {
 }
 
 describe('live thousands', () => {
+  afterEach(() => document.body.querySelectorAll('input').forEach((i) => i.remove()));
+
   it('shows the thousands while typing and gives back the clean number', () => {
     const input = typed('45690');
     expect(applyLiveThousands(input)).toBe('45690');
