@@ -9,6 +9,7 @@ import { AccessWindowComponent, AppButtonComponent } from '../../shared/ui';
 import { formatDisplayNumber } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 type Count = 'added' | 'changed' | 'unchanged' | 'removed' | 'rows';
 
@@ -38,7 +39,7 @@ export interface NessQuotaUploadContent {
 @Component({
   selector: 'app-ness-quota-upload',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AppButtonComponent],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, AppButtonComponent],
   templateUrl: './ness-quota-upload.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

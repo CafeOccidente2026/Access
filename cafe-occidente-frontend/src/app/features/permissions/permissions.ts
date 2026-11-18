@@ -11,6 +11,7 @@ import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { PermissionsContent } from './permissions.model';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /**
  * Pantalla "Permisos" (Acceso Principal, solo Administrador; RF-02, formulario PermisosSA de Access):
@@ -20,7 +21,7 @@ import { serverError } from '../../shared/utils/server-error';
 @Component({
   selector: 'app-permissions',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AppButtonComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, AppButtonComponent, FormFlowDirective],
   templateUrl: './permissions.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
