@@ -117,9 +117,13 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
                 chosenAnnouncement(request, future), request.idNumber(), request.address(), request.cellphone());
         AnnouncementResponse announcement = context.announcement();
         DryCoffeePurchaseCalculation calculation = runCalculation(request, context);
-        // HU-29 CA-4 y RF-21.2: el saldo del cupo se lee y se gasta con la fila del cupo bloqueada.
-        announcementQuotaService.reserve(context.agency().getId(), announcement.announcementNumber(),
-                calculation.netKg(), request.quotaAnnouncementNumber() == null ? null : request.deliveryKg());
+        // HU-29 CA-4 y RF-21.2: el saldo del cupo se lee y se gasta con la fila del cupo bloqueada. Solo Facturar con
+        // Cupos lo gasta: una compra normal con el mismo anuncio no toca el cupo (regla del area, 18-nov).
+        boolean quotaPurchase = request.quotaAnnouncementNumber() != null;
+        if (quotaPurchase) {
+            announcementQuotaService.reserve(context.agency().getId(), announcement.announcementNumber(),
+                    calculation.netKg(), request.deliveryKg());
+        }
         if (future != null) {
             futurePurchaseService.deliver(future, request.deliveryKg(), calculation.netKg());
         }
@@ -134,6 +138,7 @@ public class DryCoffeePurchaseServiceImpl implements DryCoffeePurchaseService {
         purchase.setCreatedByUserId(currentUserId);
         purchase.setCreatedAt(Instant.now());
         purchase.setFuturePurchaseId(future == null ? null : future.getId());
+        purchase.setQuotaPurchase(quotaPurchase);
 
         DryCoffeePurchase savedPurchase = dryCoffeePurchaseRepository.save(purchase);
         purchasePaymentService.record(
