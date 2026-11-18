@@ -1,6 +1,60 @@
 <app-access-window *ngIf="page() as p" [title]="p.windowTitle" closeRoute="/menu-principal">
   <div class="flex flex-col gap-8 p-6">
-    <section class="flex flex-col gap-3">
+    <!-- Pedido del 18-nov: el cuadro de Editar va arriba, en lugar de Crear usuario, para no bajar a buscarlo. -->
+    <section *ngIf="editing() as user" class="flex flex-col gap-3 rounded border border-slate-300 p-3" data-testid="edit-user">
+      <h3 class="text-sm font-semibold text-slate-700">{{ p.editButton }}: {{ user.username }}</h3>
+      <label *ngIf="!user.idNumber" class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.idNumberLabel }}:</span>
+        <input
+          data-edit-first
+          inputmode="numeric"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [value]="editIdNumber"
+          (input)="editIdNumber = digitsOnly($any($event.target))"
+        />
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.roleLabel }}:</span>
+        <select
+          data-edit-role
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="editRoleId"
+        >
+          <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.agencyLabel }}:</span>
+        <select
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="editAgencyId"
+        >
+          <option *ngFor="let agency of agencies()" [ngValue]="agency.id">{{ agency.name }}</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.activeLabel }}:</span>
+        <input type="checkbox" [(ngModel)]="editActive" />
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.newPasswordLabel }}:</span>
+        <input
+          type="password"
+          class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
+          [(ngModel)]="editPassword"
+        />
+      </label>
+      <p class="-mt-2 ml-[8.5rem] text-xs text-slate-500">{{ p.newPasswordHint }}</p>
+      <p *ngIf="editError()" class="text-sm text-red-600">{{ editError() }}</p>
+      <div class="flex justify-end gap-2">
+        <app-button [label]="p.unlockButton" variant="access" [disabled]="saving()" (pressed)="unlock()"></app-button>
+        <app-button [label]="p.cancelButton" variant="access" (pressed)="cancelEdit()"></app-button>
+        <app-button [label]="p.saveButton" variant="access" [disabled]="saving()" (pressed)="saveEdit()"></app-button>
+      </div>
+    </section>
+
+    <section *ngIf="!editing()" class="flex flex-col gap-3">
+      <p *ngIf="editNotice()" class="text-sm text-green-700">{{ editNotice() }}</p>
       <h2 class="text-sm font-semibold text-slate-700">{{ p.userSectionTitle }}</h2>
 
       <label class="flex items-center gap-2 text-sm">
@@ -99,56 +153,6 @@
         </tbody>
       </table>
 
-      <div *ngIf="editing() as user" class="flex flex-col gap-3 rounded border border-slate-300 p-3" data-testid="edit-user">
-        <h3 class="text-sm font-semibold text-slate-700">{{ p.editButton }}: {{ user.username }}</h3>
-        <label *ngIf="!user.idNumber" class="flex items-center gap-2 text-sm">
-          <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.idNumberLabel }}:</span>
-          <input
-            inputmode="numeric"
-            class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-            [value]="editIdNumber"
-            (input)="editIdNumber = digitsOnly($any($event.target))"
-          />
-        </label>
-        <label class="flex items-center gap-2 text-sm">
-          <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.roleLabel }}:</span>
-          <select
-            class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-            [(ngModel)]="editRoleId"
-          >
-            <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
-          </select>
-        </label>
-        <label class="flex items-center gap-2 text-sm">
-          <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.agencyLabel }}:</span>
-          <select
-            class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-            [(ngModel)]="editAgencyId"
-          >
-            <option *ngFor="let agency of agencies()" [ngValue]="agency.id">{{ agency.name }}</option>
-          </select>
-        </label>
-        <label class="flex items-center gap-2 text-sm">
-          <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.activeLabel }}:</span>
-          <input type="checkbox" [(ngModel)]="editActive" />
-        </label>
-        <label class="flex items-center gap-2 text-sm">
-          <span class="w-32 shrink-0 font-medium text-slate-700">{{ p.newPasswordLabel }}:</span>
-          <input
-            type="password"
-            class="w-full min-w-[100px] rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none"
-            [(ngModel)]="editPassword"
-          />
-        </label>
-        <p class="-mt-2 ml-[8.5rem] text-xs text-slate-500">{{ p.newPasswordHint }}</p>
-        <p *ngIf="editError()" class="text-sm text-red-600">{{ editError() }}</p>
-        <div class="flex justify-end gap-2">
-          <app-button [label]="p.unlockButton" variant="access" [disabled]="saving()" (pressed)="unlock()"></app-button>
-          <app-button [label]="p.cancelButton" variant="access" (pressed)="cancelEdit()"></app-button>
-          <app-button [label]="p.saveButton" variant="access" [disabled]="saving()" (pressed)="saveEdit()"></app-button>
-        </div>
-      </div>
-      <p *ngIf="editNotice()" class="text-sm text-green-700">{{ editNotice() }}</p>
     </section>
 
     <section class="flex flex-col gap-3">
