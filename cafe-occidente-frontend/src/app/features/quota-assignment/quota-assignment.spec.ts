@@ -39,7 +39,7 @@ describe('QuotaAssignmentComponent', () => {
     deliveredKg: 200,
   };
   const label = 'BU-32 · RN · 1.200.000';
-  const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 200, balance: 376.7 };
+  const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 0, balance: 576.7 };
 
   let assignSpy: ReturnType<typeof vi.fn>;
   let component: QuotaAssignmentComponent;
@@ -86,14 +86,14 @@ describe('QuotaAssignmentComponent', () => {
     expect(field('deliveredKg')?.readonly).toBe(true);
   });
 
-  it('R2 (17-nov): typing the Cupo fills the Saldo (Cupo - Kilos Entregados) before saving', () => {
+  it('regla del 18-nov: typing the Cupo leaves the Saldo equal to the Cupo, even with earlier normal purchases', () => {
     setup();
     component.onAnnouncementChange(label);
     expect(field('balance')?.value).toBe('');
 
     component.onFieldValueChange({ key: 'quota', value: '13302' });
 
-    expect(field('balance')?.value).toBe('13102');
+    expect(field('balance')?.value).toBe('13302');
     expect(assignSpy).not.toHaveBeenCalled();
   });
 
@@ -119,7 +119,7 @@ describe('QuotaAssignmentComponent', () => {
     component.save();
 
     expect(assignSpy).toHaveBeenCalledWith(32, { assignedQuota: 576.7 });
-    expect(field('balance')?.value).toBe('376.7');
+    expect(field('balance')?.value).toBe('576.7');
     expect(field('quota')?.readonly).toBe(true);
     expect(component.announcementOptions()).toEqual([]);
     expect(component.savedMessage()).toBe('Cupo guardado correctamente.');
