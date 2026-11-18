@@ -15,8 +15,10 @@ empaques, formas de pago, compras a futuro y consecutivos. Idempotente: no dupli
 - Terceros: inserta los nuevos y no sobrescribe los que ya estan; las diferencias van a diferencias_terceros.csv.
 - Con --desde se cargan igual las compras sin remesar, todos los anuncios, las compras a futuro vigentes y el
   Registro de Control, para que los saldos cuadren.
-- Compras a futuro: solo las de saldo > 0 y entrega no vencida; las vencidas se listan. Cupos de anuncio: no se
-  cargan (P8), se listan.
+- Compras a futuro: solo las de saldo > 0 y entrega no vencida; las vencidas se listan.
+- Anuncio de compras y compras a futuro con el prefijo del punto ("SDTA-3490"), como la web (decision del 18-nov).
+- Cupos de anuncio (se revierte P8, 18-nov): solo los que tienen saldo al corte (cupo - kilos de las compras); sus
+  compras entran aunque sean de antes de --desde. Los que no tienen saldo se listan.
 - Consecutivos de factura y remision: el siguiente de la web es el ultimo de Access + 1 (nunca se bajan).
 
 Parte B (solo con --ness): cupos_ness con la tabla NESS de Access. Se vacia y se recarga, y borra la NESS que se
@@ -49,6 +51,12 @@ DISCARDED = {}
 
 def note_discard(reason, detail):
     DISCARDED.setdefault(reason, []).append(detail)
+
+
+def agency_prefix(cur, agency_id):
+    """Prefijo del Registro de Control activo de la agencia (SDTA), el mismo con que la web arma el anuncio."""
+    cur.execute("SELECT prefijo FROM registros_control WHERE agencia_id = %s AND activo", (agency_id,))
+    return cur.fetchone()[0]
 
 
 # ---------- helpers ----------
@@ -161,12 +169,24 @@ def control_record_differences(web, reg):
             if column in web and parse(reg.get(key)) != web[column]]
 
 
-def keeps_purchase(row, desde):
-    """Con fecha de corte entran las compras desde esa fecha y, de antes, las validas sin remesar (Plano = f)."""
+def keeps_purchase(row, desde, quota_announcements_kept=frozenset()):
+    """Con fecha de corte entran las compras desde esa fecha y, de antes, las validas sin remesar (Plano = f) y las de
+    un anuncio cuyo cupo se carga (la web suma Kilos Entregados con ellas, RN-21.1.6)."""
     bought = parse_date(row.get("fecha_compra"))
     if desde is None or bought is None or bought >= desde:
         return True
+    if str(parse_int(s(row, "anuncio"))) in quota_announcements_kept:
+        return True
     return s(row, "plano") != "t" and s(row, "forma_de_pago") != "ANULADA"
+
+
+def announcement_number(prefix, number):
+    """Decision (a) del 18-nov: el anuncio como lo guarda la web, con el prefijo del punto ("SDTA-3490",
+    AnnouncementServiceImpl.toResponse). Uno que ya trae prefijo (segunda corrida) o vacio se deja igual."""
+    text = (number or "").strip()
+    if not text or "-" in text:
+        return text
+    return f"{prefix}-{parse_int(text)}"
 
 
 def husk_purchase(row):
@@ -197,8 +217,28 @@ def split_future_purchases(rows, today):
 
 
 def quota_announcements(rows):
-    """Anuncios de Access con cupo: no se cargan (P8), se listan para que el Administrador decida."""
+    """Anuncios de Access con cupo (Cupo > 0)."""
     return [row for row in rows if parse_decimal(row.get("cupo")) > 0]
+
+
+def pending_quotas(announcements, purchases):
+    """
+    Decision (b) del 18-nov (se revierte P8): los cupos de anuncio con saldo el dia del corte, [(anuncio, saldo)].
+    Saldo = Cupo - kilos netos de las compras validas con ese anuncio, como lo calcula la web (RN-21.1.6); el
+    "Entregados" de Access no se usa (se actualizaba a mano con el macro "actualizar cupos").
+    """
+    delivered = {}
+    for row in purchases:
+        if s(row, "forma_de_pago") == "ANULADA":
+            continue
+        key = parse_int(s(row, "anuncio"))
+        delivered[key] = delivered.get(key, Decimal(0)) + parse_decimal(row.get("kilos_netos"))
+    pending = []
+    for row in quota_announcements(announcements):
+        balance = parse_decimal(row.get("cupo")) - delivered.get(parse_int(s(row, "anuncio")), Decimal(0))
+        if balance > 0:
+            pending.append((row, balance))
+    return pending
 
 
 def max_invoice(rows):
@@ -509,9 +549,14 @@ def insert_announcement(cur, row, special_type, rp_fund_id):
 PURCHASE_TABLES = ("compras_cafe_seco", "compras_cafe_verde", "compras_pasilla")
 
 
+# Anuncios (numero de Access) cuyo cupo se carga; sus compras entran aunque sean de antes del corte.
+QUOTA_ANNOUNCEMENTS_KEPT = set()
+
+
 def purchase_rows(desde):
     """Filas de COMPRAS que entran con la fecha de corte."""
-    return [row for row in read_csv("compras_migrar.csv") if keeps_purchase(row, desde)]
+    return [row for row in read_csv("compras_migrar.csv")
+            if keeps_purchase(row, desde, QUOTA_ANNOUNCEMENTS_KEPT)]
 
 
 def cheque_text(value):
@@ -549,13 +594,14 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
     cur.execute(" UNION ALL ".join(f"SELECT numero_factura FROM {t} WHERE agencia_id = %(a)s"
                                    for t in PURCHASE_TABLES), {"a": agency_id})
     existing_invoices = {r[0] for r in cur.fetchall()}
+    prefix = agency_prefix(cur, agency_id)
 
     def common_values(row, invoice_number, grower):
         first_name, last_name, address, phone, grower_type = grower
         payment_method, check_number = payment_of(row)
         return (
             parse_date(row["fecha_compra"]), invoice_number, agency_id, fund_by_code[s(row, "fondo")],
-            s(row, "especial"), product_by_code[s(row, "cod_prod")], s(row, "anuncio"),
+            s(row, "especial"), product_by_code[s(row, "cod_prod")], announcement_number(prefix, s(row, "anuncio")),
             parse_date(row["fecha_anuncio"]), parse_decimal(row["pr_base_pc"]),
             s(row, "cedula"), first_name, last_name, grower_type, address, phone, parse_int(row["sacos"]),
             parse_decimal(row["kilos_brutos"]), parse_decimal(row["destare"]), parse_decimal(row["kilos_netos"]),
@@ -874,8 +920,10 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
     cur.execute("SELECT identificacion, primer_nombre, primer_apellido, tipo, direccion FROM terceros"
                 " WHERE identificacion = ANY(%s)", ([s(r, "cedula") for r in load],))
     growers = {r[0]: r[1:] for r in cur.fetchall()}
+    prefix = agency_prefix(cur, agency_id)
     inserted = 0
     for row in load:
+        number = announcement_number(prefix, s(row, "anuncio"))
         grower = growers.get(s(row, "cedula"))
         if grower is None:
             note_discard("compra_a_futuro_sin_tercero", (s(row, "anuncio"), s(row, "cedula")))
@@ -887,13 +935,13 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
             " SELECT %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
             " WHERE NOT EXISTS (SELECT 1 FROM compras_anunciadas WHERE agencia_id = %s AND numero_anuncio = %s"
             " AND cedula = %s)",
-            (parse_timestamp(row["fecha_anuncio"]), agency_id, s(row, "anuncio"), parse_date(row["fecha_anuncio"]),
+            (parse_timestamp(row["fecha_anuncio"]), agency_id, number, parse_date(row["fecha_anuncio"]),
              s(row, "cedula"), grower[0], grower[1], grower[2] or "C", grower[3] or "", s(row, "especial"),
              parse_decimal(row["kilos_anunciados"]), parse_decimal(row["saldo_kilos"]),
              parse_date(row["fecha_entrega"]), s(row, "finca") or None, s(row, "mpio") or None,
              s(row, "vereda") or None, parse_decimal(row["pr_almsana"]), parse_decimal(row["pr_almdefec"]),
              parse_decimal(row["bonificación"]), parse_decimal(row["costos"]), parse_decimal(row["vrinccalidad"]),
-             parse_decimal(row["prbcps"]), admin_user_id, agency_id, s(row, "anuncio"), s(row, "cedula")),
+             parse_decimal(row["prbcps"]), admin_user_id, agency_id, number, s(row, "cedula")),
         )
         inserted += cur.rowcount
     print(f"  compras a futuro: {inserted} cargadas (saldo y entrega vigente); {len(expired)} vencidas no se cargan.")
@@ -902,13 +950,32 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
               f" entrega {s(row, 'fecha_entrega')[:10]}")
 
 
-def list_quota_announcements():
-    """P8: los cupos de anuncio de Access no se cargan; el Administrador los asigna con Asignar Cupo."""
-    rows = quota_announcements(read_csv("anuncios_migrar.csv"))
-    print(f"  cupos de anuncio en Access (no se cargan, P8): {len(rows)}")
-    for row in rows:
-        print(f"    anuncio {s(row, 'anuncio')} ({s(row, 'especial')}): cupo {s(row, 'cupo')},"
-              f" entregados {s(row, 'entregados')}, saldo {s(row, 'saldo')}")
+def load_quota_announcements(cur, agency_id):
+    """
+    Decision (b) del 18-nov: a cupos_anuncios solo los cupos con saldo el dia del corte (pending_quotas). Se guarda el
+    Cupo; Entregados y Saldo los calcula la web con las compras. Los que ya no tienen saldo se listan y no se cargan.
+    Idempotente (uq_cupos_anuncios_anuncio_agencia_id).
+    """
+    announcements = read_csv("anuncios_migrar.csv")
+    pending = pending_quotas(announcements, read_csv("compras_migrar.csv"))
+    pending_numbers = {parse_int(s(r, "anuncio")) for r, _ in pending}
+    inserted = 0
+    for row, balance in pending:
+        number = parse_int(s(row, "anuncio"))
+        cur.execute("SELECT id FROM anuncios_agencias WHERE agencia_id = %s AND numero_anuncio = %s", (agency_id, number))
+        found = cur.fetchone()
+        if not found:
+            note_discard("cupo de un anuncio que no se cargo", (number, s(row, "cupo")))
+            continue
+        QUOTA_ANNOUNCEMENTS_KEPT.add(str(number))
+        cur.execute("INSERT INTO cupos_anuncios (anuncio_agencia_id, cupo) VALUES (%s, %s)"
+                    " ON CONFLICT (anuncio_agencia_id) DO NOTHING", (found[0], parse_decimal(s(row, "cupo"))))
+        inserted += cur.rowcount
+        print(f"    anuncio {number} ({s(row, 'especial')}): cupo {s(row, 'cupo')}, saldo {balance}")
+    print(f"  cupos de anuncio: {inserted} cargados (con saldo al corte).")
+    for row in quota_announcements(announcements):
+        if parse_int(s(row, "anuncio")) not in pending_numbers:
+            print(f"    sin saldo, no se carga: anuncio {s(row, 'anuncio')} ({s(row, 'especial')}), cupo {s(row, 'cupo')}")
 
 
 def set_consecutives(cur, agency_id):
@@ -988,9 +1055,9 @@ def ensure_admin_eltambo(cur, agency_id):
 
 # ---------- main ----------
 
-def backup(base):
+def backup(base, label="migrar_punto"):
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    target = ROOT / "docs" / "respaldos-bd" / f"{base}_antes_migrar_punto_{stamp}.dump"
+    target = ROOT / "docs" / "respaldos-bd" / f"{base}_antes_{label}_{stamp}.dump"
     with target.open("wb") as out:
         subprocess.run(["docker", "exec", "cafeoccidente-postgres", "pg_dump", "-U", "postgres", "-Fc", base],
                        check=True, stdout=out)
@@ -1025,7 +1092,7 @@ def main():
             cur.execute("SELECT id FROM fondos WHERE codigo = 'RP'")
             rp_fund_id = cur.fetchone()[0]
             load_announcements(cur, agency_id, rp_fund_id)
-            list_quota_announcements()
+            load_quota_announcements(cur, agency_id)
             cur.execute("SELECT id FROM usuarios WHERE usuario = 'admin'")
             admin_user_id = cur.fetchone()[0]
             load_purchases(cur, agency_id, admin_user_id, args.desde)
