@@ -16,6 +16,7 @@ import { saveOnce } from '../../shared/utils/save-once';
 import { buildLoanReceiptDoc } from './loan-receipt-pdf';
 import { buildRequest, idSource, initialValues, invalidField } from './supplies-entry-request';
 import { SuppliesEntryContent, SuppliesField } from './supplies-entry.model';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /**
  * Altas de "MENUS SUMINISTROS" (Caja suministros, Ajustes Caja, Caja Menor Suministros, Gastos,
@@ -25,7 +26,7 @@ import { SuppliesEntryContent, SuppliesField } from './supplies-entry.model';
 @Component({
   selector: 'app-supplies-entry',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFieldComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './supplies-entry.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
