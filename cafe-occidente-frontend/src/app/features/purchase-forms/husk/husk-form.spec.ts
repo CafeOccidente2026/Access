@@ -12,6 +12,7 @@ import { HuskPurchaseService } from '../../../core/services/husk-purchase.servic
 import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 import { HUSK } from '../../purchase-query/purchase-query.testing';
+import huskContent from '../../../../../public/assets/data/purchase-form-husk.json';
 
 /**
  * Husk (Pasilla) usa el mismo gate que Café Seco: buildRequest() exige los campos REQUIRED, asi el
@@ -195,6 +196,31 @@ describe('HuskFormComponent - gates de captura', () => {
     expect(component.calc()).toEqual(calculation);
   });
 
+  it('shows Vr. Bruto, Aporte Socio (type S) and Neto a Pagar as soon as the server calculates', () => {
+    const editable = content as { settlementFields?: PurchaseFormContent['settlementFields'] };
+    editable.settlementFields = [
+      { key: 'kgPrice', label: 'Vr. Kilo', type: 'currency' },
+      { key: 'grossValue', label: 'Vr. Bruto', type: 'currency' },
+      { key: 'contribution', label: 'Aporte Socio', type: 'currency' },
+      { key: 'withholding', label: 'Retefuente', type: 'currency' },
+      { key: 'netToPay', label: 'Neto a Pagar', type: 'currency' },
+    ];
+    try {
+      const associate = { ...growerWithPhone, growerType: 'S' };
+      setup(associate);
+      previewSpy.mockReturnValue(of({ ...calculation, associateContribution: 1351656, cooperativeDiscount: 0 }));
+      component.model['idPart1'] = associate.idNumber;
+      component.onFieldCommitted('idPart1');
+      fillEverythingAfterGrower();
+      const shown = (key: string) => component.viewContent()!.settlementFields!.find((f) => f.key === key)!;
+      expect(shown('grossValue')).toMatchObject({ value: 67582800, readonly: true });
+      expect(shown('contribution')).toMatchObject({ value: 1351656, readonly: true, label: 'Aporte Socio' });
+      expect(shown('netToPay')).toMatchObject({ value: 67042138, readonly: true });
+    } finally {
+      editable.settlementFields = undefined;
+    }
+  });
+
   it('blocks the whole form when the grower is deceased', () => {
     setup({ ...growerWithPhone, deceased: true });
     component.model['idPart1'] = growerWithPhone.idNumber;
@@ -305,5 +331,14 @@ describe('HuskFormComponent - gates de captura', () => {
     (component as any).focusField = focus;
     component.reset();
     expect(focus).toHaveBeenLastCalledWith('idPart1');
+  });
+});
+
+describe('purchase-form-husk.json', () => {
+  it('the settlement shows Vr. Bruto, Aporte Socio and Neto a Pagar in whole pesos, read only', () => {
+    for (const key of ['grossValue', 'contribution', 'netToPay']) {
+      expect(huskContent.settlementFields.find((f) => f.key === key)).toMatchObject({ display: 'money', integer: true });
+    }
+    expect(huskContent.messages.cooperativeDiscountLabel).toBe('Descuento Coop');
   });
 });
