@@ -16,6 +16,7 @@ import { PermissionsComponent } from './permissions/permissions';
 import { PurchaseAnnulmentComponent } from './purchase-annulment/purchase-annulment';
 import { PurchaseCorrectionComponent } from './purchase-correction/purchase-correction';
 import { QuotaAssignmentComponent } from './quota-assignment/quota-assignment';
+import { RemissionFormComponent } from './remission-form/remission-form';
 import { RemittanceComponent } from './remittance/remittance';
 import { SuppliesEntryComponent } from './supplies-entry/supplies-entry';
 import { UserManagementComponent } from './user-management/user-management';
@@ -29,6 +30,7 @@ import purchaseAnnulment from '../../../public/assets/data/purchase-annulment.js
 import purchaseCorrection from '../../../public/assets/data/purchase-correction.json';
 import purchaseQuery from '../../../public/assets/data/purchase-query.json';
 import quotaAssignment from '../../../public/assets/data/quota-assignment.json';
+import remissionForm from '../../../public/assets/data/remission-form.json';
 import remittance from '../../../public/assets/data/remittance.json';
 import suppliesEntry from '../../../public/assets/data/supplies-entry.json';
 import userManagement from '../../../public/assets/data/user-management.json';
@@ -44,6 +46,7 @@ const CONTENT: Record<string, unknown> = {
   'purchase-correction': purchaseCorrection,
   'purchase-query': purchaseQuery,
   'quota-assignment': quotaAssignment,
+  'remission-form': remissionForm,
   remittance,
   'supplies-entry': suppliesEntry,
   'user-management': userManagement,
@@ -57,6 +60,7 @@ const SCREENS: [string, Type<unknown>, string][] = [
   ['Corregir Compra', PurchaseCorrectionComponent, 'savedNotice'],
   ['Anular', PurchaseAnnulmentComponent, 'message'],
   ['Genera Remesa', RemittanceComponent, 'message'],
+  ['Registrar Salidas (error)', RemissionFormComponent, 'errorMessage'],
   ['Ingresar Conductores', ConductorFormComponent, 'message'],
   ['Ingresar Conductores (error)', ConductorFormComponent, 'error'],
   ['Suministros, Caja Menor y Préstamo Empaques', SuppliesEntryComponent, 'message'],
