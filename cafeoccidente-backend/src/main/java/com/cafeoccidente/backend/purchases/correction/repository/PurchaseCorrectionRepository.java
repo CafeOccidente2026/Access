@@ -120,6 +120,12 @@ public class PurchaseCorrectionRepository {
                 + " FROM compras_cafe_seco WHERE id = :id", params, Boolean.class));
     }
 
+    /** Hecha por Facturar Anuncios con Cupos: solo esas gastan el cupo del anuncio (regla del area, 18-nov). */
+    public boolean isQuotaPurchase(Long dryPurchaseId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT con_cupo FROM compras_cafe_seco WHERE id = :id",
+                new MapSqlParameterSource("id", dryPurchaseId), Boolean.class));
+    }
+
     public void markCorrected(AnnulmentModule module, Long id, Long userId) {
         jdbc.update(MARK.get(module), new MapSqlParameterSource().addValue("id", id).addValue("userId", userId));
     }
