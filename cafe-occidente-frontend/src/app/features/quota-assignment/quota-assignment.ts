@@ -12,6 +12,7 @@ import { AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowD
 import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /** Texto de cada anuncio en la lista: número, especial y Pr Base Carg Perg Seco, para buscar por cualquiera (RN-21.1.2, RN-21.1.3). */
 function optionLabel(candidate: QuotaCandidate): string {
@@ -35,7 +36,7 @@ export function liveBalance(quota: string): string {
 @Component({
   selector: 'app-quota-assignment',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './quota-assignment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

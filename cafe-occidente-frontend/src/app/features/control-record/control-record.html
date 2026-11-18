@@ -50,8 +50,8 @@
         </div>
       </div>
 
-      <p *ngIf="savedMessage()" class="text-sm text-green-700">{{ savedMessage() }}</p>
-      <p *ngIf="errorMessage()" class="text-sm text-red-600">{{ errorMessage() }}</p>
+      <app-confirm-dialog *ngIf="savedMessage() as m" [message]="m" (confirmed)="savedMessage.set(null)"></app-confirm-dialog>
+      <app-confirm-dialog *ngIf="errorMessage() as m" [message]="m" (confirmed)="errorMessage.set(null)"></app-confirm-dialog>
 
       <div class="flex justify-end gap-3">
         <button
