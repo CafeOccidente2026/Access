@@ -19,9 +19,9 @@
       { "key": "bagsCount", "label": "Sacos" },
       { "key": "grossKg", "label": "Kilos Brutos" },
       { "key": "tareKg", "label": "Destare" },
-      { "key": "penalty", "label": "Castigo" },
-      { "key": "freightDiscount", "label": "Descuento Fro" },
-      { "key": "otherDiscounts", "label": "Otros Desctos" },
+      { "key": "penalty", "label": "Castigo", "money": true, "negative": true },
+      { "key": "freightDiscount", "label": "Descuento Fro", "money": true },
+      { "key": "otherDiscounts", "label": "Otros Desctos", "money": true },
       { "key": "address", "label": "Dirección", "text": true },
       { "key": "cellphone", "label": "Celular", "text": true }
     ],
@@ -29,9 +29,9 @@
       { "key": "bagsCount", "label": "Sacos" },
       { "key": "grossKg", "label": "Kilos Brutos" },
       { "key": "tareKg", "label": "Destare" },
-      { "key": "penalty", "label": "Castigo" },
-      { "key": "shrinkageDiscount", "label": "Descuento Fro" },
-      { "key": "otherDiscounts", "label": "Otros Dscts" },
+      { "key": "penalty", "label": "Castigo", "money": true, "negative": true },
+      { "key": "shrinkageDiscount", "label": "Descuento Fro", "money": true },
+      { "key": "otherDiscounts", "label": "Otros Dscts", "money": true },
       { "key": "address", "label": "Dirección", "text": true },
       { "key": "cellphone", "label": "Cel", "text": true }
     ],
@@ -40,18 +40,18 @@
       { "key": "bagsCount", "label": "Sacos" },
       { "key": "grossKg", "label": "Kilos Brutos" },
       { "key": "tareKg", "label": "Destare" },
-      { "key": "shrinkageDiscount", "label": "Descuento Fro" },
-      { "key": "otherDiscounts", "label": "Otros Dscts" },
+      { "key": "shrinkageDiscount", "label": "Descuento Fro", "money": true },
+      { "key": "otherDiscounts", "label": "Otros Dscts", "money": true },
       { "key": "address", "label": "Dirección", "text": true },
       { "key": "cellphone", "label": "Cel", "text": true }
     ]
   },
   "paymentFields": [
-    { "key": "cashAmount", "label": "Efectivo" },
-    { "key": "checkAmount", "label": "Cheque" },
+    { "key": "cashAmount", "label": "Efectivo", "money": true },
+    { "key": "checkAmount", "label": "Cheque", "money": true },
     { "key": "checkNumber", "label": "N° Cheque", "text": true },
-    { "key": "transferAmount", "label": "Transferencia" },
-    { "key": "cardAmount", "label": "Datáfono" }
+    { "key": "transferAmount", "label": "Transferencia", "money": true },
+    { "key": "cardAmount", "label": "Datáfono", "money": true }
   ],
   "results": [
     { "key": "netKg", "label": "Kilos Netos" },
