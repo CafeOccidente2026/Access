@@ -17,10 +17,10 @@ import greenContent from '../../../../../public/assets/data/purchase-form-green.
 
 describe('purchase-form-green.json', () => {
   it('the settlement shows Vr. Bruto, Aporte Socio and Neto a Pagar in whole pesos, read only', () => {
-    const keys = greenContent.settlementFields.map((f) => f.key);
-    expect(keys).toEqual(expect.arrayContaining(['grossValue', 'contribution', 'netToPay']));
+    const fields = [...greenContent.settlementFields, ...greenContent.additionalDiscountFields];
+    expect(fields.map((f) => f.key)).toEqual(expect.arrayContaining(['grossValue', 'contribution', 'netToPay']));
     for (const key of ['grossValue', 'contribution', 'netToPay']) {
-      expect(greenContent.settlementFields.find((f) => f.key === key)).toMatchObject({ display: 'money', integer: true });
+      expect(fields.find((f) => f.key === key)).toMatchObject({ display: 'money', integer: true });
     }
     expect(greenContent.messages.cooperativeDiscountLabel).toBe('Descuento Coop');
   });

@@ -95,6 +95,38 @@ describe('ConfirmDialogComponent con el teclado (18-nov)', () => {
     close();
   });
 
+  it('prueba del 19-nov: printing leaves the focus in the invoice frame; the dialog takes it back so Enter closes it', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    const { events, close } = open({ message: 'Compra registrada. Documento soporte generado.' });
+    // En Chrome el foco entra al marco de impresión sin focusin en la página: solo llega blur a la ventana.
+    (document.activeElement as HTMLElement).blur();
+    const inFrame = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(frame);
+    window.dispatchEvent(new Event('blur'));
+    inFrame.mockRestore();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(focused()).toBe('Aceptar');
+    (document.activeElement as HTMLButtonElement).click();
+    expect(events).toEqual(['confirmed']);
+    close();
+    frame.remove();
+  });
+
+  it('a blur to another window (not a frame of the page) does not move the focus', async () => {
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    const { close } = open({ message: 'Compra registrada.' });
+    const spy = vi.spyOn(HTMLElement.prototype, 'focus');
+    window.dispatchEvent(new Event('blur'));
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    close();
+    field.remove();
+  });
+
   it('with Si/No, Esc is No and the screen behind does not get that Esc', () => {
     const behind = vi.fn();
     document.addEventListener('keydown', behind);

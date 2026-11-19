@@ -32,7 +32,6 @@ export interface PurchaseFormContent {
   /** Ausente cuando la pantalla no liquida una compra (ej. Compras a Futuro: solo anuncia, no calcula Vr. Kilo). */
   readonly settlementHeading?: string;
   readonly settlementFields?: FormFieldDefinition[];
-  readonly settlementSecondaryFields?: FormFieldDefinition[];
   readonly netToPayField?: FormFieldDefinition;
   readonly statusField?: FormFieldDefinition;
   readonly additionalDiscountFields?: FormFieldDefinition[];

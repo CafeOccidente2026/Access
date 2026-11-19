@@ -77,6 +77,17 @@ export class ConfirmDialogComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Prueba del 19-nov: Imprimir pone el foco en el marco oculto de la factura y, al cerrar la ventana de impresión,
+   * Chrome lo devuelve a ese marco (la página no recibe focus). Enter le llegaba al visor de PDF y no a Aceptar.
+   */
+  @HostListener('window:blur')
+  leavePrintFrame(): void {
+    if (this.onTop() && document.activeElement instanceof HTMLIFrameElement) {
+      setTimeout(() => this.focusDefault());
+    }
+  }
+
   /** Al cerrar, el foco no se pierde: vuelve al campo de antes o, si ya no está, al primer campo de la pantalla. */
   ngOnDestroy(): void {
     openDialogs.splice(openDialogs.indexOf(this), 1);

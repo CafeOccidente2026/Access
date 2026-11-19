@@ -26,6 +26,8 @@ import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate'
 import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
 import { reserveInvoice } from '../invoice-reservation';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementRows } from '../settlement';
+import { purchaseFieldMap } from '../field-state';
 import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
@@ -551,23 +553,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
   }
 
   private buildContent(base: PurchaseFormContent): PurchaseFormContent {
-    const bmap = new Map<string, FormFieldDefinition>();
-    const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
-    collect(base.topFields);
-    collect(base.identificationFields);
-    collect(base.federationFields);
-    collect(base.contactFields);
-    collect(base.qualityFields);
-    collect(base.weightFields);
-    collect(base.netWeightFields);
-    collect(base.settlementFields);
-    collect(base.settlementSecondaryFields);
-    if (base.discountField) {
-      bmap.set(base.discountField.key, base.discountField);
-    }
-    if (base.additionalDiscountFields) {
-      base.additionalDiscountFields.forEach((f) => bmap.set(f.key, f));
-    }
+    const bmap = purchaseFieldMap(base);
 
     const info = this.specialInfo();
     const inv = this.invoiceReservation();
@@ -641,9 +627,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       qualityFields: row(base.qualityFields),
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
-      settlementFields: row(base.settlementFields),
-      settlementSecondaryFields: row(base.settlementSecondaryFields),
-      additionalDiscountFields: row(base.additionalDiscountFields),
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       paymentLocked: false,

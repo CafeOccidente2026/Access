@@ -39,8 +39,10 @@ describe('QuotaPurchaseFormComponent', () => {
       { key: 'tare', label: 'Destare', type: 'number' },
       { key: 'netKg', label: 'Kilos Netos', type: 'number' },
     ],
-    settlementSecondaryFields: [{ key: 'withholding', label: 'Retefuente', type: 'currency' }],
-    additionalDiscountFields: [{ key: 'contribution', label: 'Aporte Socio', type: 'currency' }],
+    additionalDiscountFields: [
+      { key: 'contribution', label: 'Aporte Socio', type: 'currency' },
+      { key: 'withholding', label: 'Retefuente', type: 'currency' },
+    ],
     messages,
     quotaPicker: {},
   } as unknown as PurchaseFormContent;
@@ -349,7 +351,7 @@ describe('QuotaPurchaseFormComponent', () => {
   it('RN-15.6: Retefuente is read-only and shows what the server calculated', () => {
     setup();
     previewSpy.mockReturnValue(of({ netKg: 1000, unitPrice: 7218, grossValue: 7218000, withholding: 6000, netToPay: 7100000 }));
-    const withholding = () => component.viewContent()!.settlementSecondaryFields!.find((f) => f.key === 'withholding')!;
+    const withholding = () => component.viewContent()!.additionalDiscountFields!.find((f) => f.key === 'withholding')!;
     expect(withholding().readonly).toBe(true);
 
     fillPurchase();

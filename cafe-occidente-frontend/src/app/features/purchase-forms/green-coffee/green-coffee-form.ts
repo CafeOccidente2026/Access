@@ -18,9 +18,10 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementRows } from '../settlement';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
-import { fieldRows } from '../field-state';
+import { fieldRows, purchaseFieldMap } from '../field-state';
 import { askCellphoneOr } from '../seller-cellphone';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
 import { WeightMessages } from '../weight-check';
@@ -343,20 +344,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   private buildContent(base: GreenCoffeeContent): PurchaseFormContent {
-    const bmap = new Map<string, FormFieldDefinition>();
-    const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
-    collect(base.topFields);
-    collect(base.identificationFields);
-    collect(base.federationFields);
-    collect(base.contactFields);
-    collect(base.qualityFields);
-    collect(base.weightFields);
-    collect(base.netWeightFields);
-    collect(base.priceFields);
-    collect(base.settlementFields);
-    if (base.discountField) {
-      bmap.set(base.discountField.key, base.discountField);
-    }
+    const bmap = purchaseFieldMap(base);
 
     const info = this.announcementInfo();
     const inv = this.invoiceReservation();
@@ -399,7 +387,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
       priceFields: row(base.priceFields),
-      settlementFields: row(base.settlementFields)!,
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,

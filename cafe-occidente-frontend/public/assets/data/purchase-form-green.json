@@ -58,13 +58,15 @@
   "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]", "display": "money" },
-    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true, "inputWidthClass": "max-w-[110px]", "display": "money" },
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "inputWidthClass": "max-w-[110px]", "display": "money" },
-    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money", "liveThousands": true },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "inputWidthClass": "max-w-[110px]", "display": "money" }
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "display": "money" },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true, "display": "money" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "display": "money" }
   ],
+  "additionalDiscountFields": [
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "display": "money" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "display": "money" }
+  ],
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true, "display": "money", "liveThousands": true },
   "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",

@@ -1,6 +1,6 @@
-import { FormFieldDefinition } from '../../core/models';
+import { FormFieldDefinition, PurchaseFormContent } from '../../core/models';
 import { isSequentialFieldEnabled } from '../../shared/utils/sequential-gate';
-import { SettlementCalc, growerTypeOf, settlementLabel, settlementValues } from './settlement';
+import { SettlementCalc, growerTypeOf, settlementBases, settlementLabel, settlementValues } from './settlement';
 
 /** Lo que el armado de campos lee del formulario de compra (Verde, Pasilla). */
 export interface PurchaseFieldForm {
@@ -50,4 +50,25 @@ export function fieldRows(
     return next;
   };
   return { field, row: (fields?: FormFieldDefinition[]) => fields?.map((f) => field(f.key)) };
+}
+
+/** Filas de campos que puede traer el JSON de una compra (Seco, Verde, Pasilla, Anunciadas y Cupos). */
+const FIELD_GROUPS = [
+  'topFields',
+  'identificationFields',
+  'federationFields',
+  'contactFields',
+  'qualityFields',
+  'weightFields',
+  'netWeightFields',
+  'priceFields',
+] as const;
+
+/** Cada campo del JSON por su key, con la liquidación y Descuento Fro: de aquí arma cada pantalla sus filas. */
+export function purchaseFieldMap(base: PurchaseFormContent): Map<string, FormFieldDefinition> {
+  const fields = [...FIELD_GROUPS.flatMap((group) => base[group] ?? []), ...settlementBases(base)];
+  if (base.discountField) {
+    fields.push(base.discountField);
+  }
+  return new Map(fields.map((f) => [f.key, f]));
 }

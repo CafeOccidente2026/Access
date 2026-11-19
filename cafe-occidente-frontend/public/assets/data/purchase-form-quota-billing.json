@@ -53,12 +53,10 @@
     { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "display": "money" }
   ],
   "additionalDiscountFields": [
-    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "display": "money" }
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "display": "money" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "display": "money" }
   ],
-  "settlementSecondaryFields": [
-    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money", "liveThousands": true }
-  ],
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true, "display": "money", "liveThousands": true },
   "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",

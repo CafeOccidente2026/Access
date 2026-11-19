@@ -21,6 +21,8 @@ import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from
 import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildDryCoffeeInvoiceDocDefinition } from './dry-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementRows } from '../settlement';
+import { purchaseFieldMap } from '../field-state';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { askCellphoneOr } from '../seller-cellphone';
@@ -471,23 +473,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   private buildContent(base: DryCoffeeContent): PurchaseFormContent {
-    const bmap = new Map<string, FormFieldDefinition>();
-    const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
-    collect(base.topFields);
-    collect(base.identificationFields);
-    collect(base.federationFields);
-    collect(base.contactFields);
-    collect(base.qualityFields);
-    collect(base.weightFields);
-    collect(base.netWeightFields);
-    collect(base.settlementFields);
-    collect(base.additionalDiscountFields);
-    if (base.discountField) {
-      bmap.set(base.discountField.key, base.discountField);
-    }
-    if (base.netToPayField) {
-      bmap.set(base.netToPayField.key, base.netToPayField);
-    }
+    const bmap = purchaseFieldMap(base);
 
     const info = this.specialInfo();
     const inv = this.invoiceReservation();
@@ -573,9 +559,7 @@ export class DryCoffeeFormComponent extends UnsavedCloseForm {
       qualityFields: row(base.qualityFields),
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
-      settlementFields: row(base.settlementFields)!,
-      additionalDiscountFields: row(base.additionalDiscountFields),
-      netToPayField: base.netToPayField ? field(base.netToPayField.key) : undefined,
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,
