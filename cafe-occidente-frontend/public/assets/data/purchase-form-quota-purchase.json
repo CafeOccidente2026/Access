@@ -101,6 +101,7 @@
       "specialType": "Especial",
       "assignedQuota": "Cupo",
       "deliveredKg": "Kl_Entregados",
+      "quotaKg": "Kilos con Cupo",
       "balance": "Saldo"
     },
     "deliveryLabel": "Esta Entrega",

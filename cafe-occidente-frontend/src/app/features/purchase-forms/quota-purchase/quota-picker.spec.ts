@@ -12,7 +12,8 @@ describe('QuotaPickerComponent', () => {
       specialType: 'RN', qualityIncrement: 50,
     },
     assignedQuota: 2500,
-    deliveredKg: 2500 - balance,
+    deliveredKg: 2500 - balance + 700,
+    quotaKg: 2500 - balance,
     balance,
   });
 
@@ -39,6 +40,15 @@ describe('QuotaPickerComponent', () => {
     expect(picker.cell(r, 'agency')).toBe('Buesaco 1');
     expect(picker.cell(r, 'healthyUnitPrice')).toBe('8.901');
     expect(picker.cell(r, 'balance')).toBe('1.500');
+    expect(picker.cell(r, 'deliveredKg')).toBe('1.700');
+  });
+
+  it('prueba del 19-nov: con cupos muestra Kilos con Cupo (lo que descuenta el Saldo) antes del Saldo', () => {
+    const { picker } = setup([row('SDBU-12', 1500)]);
+    picker.content = { ...picker.content, columns: { quotaKg: 'Kilos con Cupo' } };
+
+    expect(picker.columns.slice(-3)).toEqual(['deliveredKg', 'quotaKg', 'balance']);
+    expect(picker.cell(picker.list[0], 'quotaKg')).toBe('1.000');
   });
 
   it('CA-2: a delivery within the balance closes the window with the chosen announcement', () => {
