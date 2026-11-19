@@ -81,6 +81,8 @@ export class QuotaAssignmentComponent {
       bonus: String(a.bonus),
       costs: String(a.costs),
       deliveredKg: String(saved?.deliveredKg ?? selected.deliveredKg),
+      // Prueba del 19-nov: lo comprado por Facturar con Cupos, lo único que descuenta el Saldo.
+      quotaKg: String(saved?.quotaKg ?? selected.quotaKg),
       quota: saved ? String(saved.assignedQuota) : this.quota(),
       // R2 (17-nov): el Saldo se ve mientras se digita el Cupo; regla del 18-nov: es igual al Cupo.
       balance: saved ? String(saved.balance) : liveBalance(this.quota()),

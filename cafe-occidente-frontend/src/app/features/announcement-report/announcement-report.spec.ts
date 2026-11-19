@@ -41,9 +41,12 @@ describe('AnnouncementReportComponent (HU-26)', () => {
     return { fixture, component: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
   }
 
-  it('starts on today and asks nothing until Generar', () => {
-    const { component } = render();
-    expect(component.date()).toBe(new Date().toLocaleDateString('en-CA'));
+  it('prueba del 19-nov: Desde and Hasta start on today and nothing is asked until Generar', () => {
+    const { component, el } = render();
+    const today = new Date().toLocaleDateString('en-CA');
+    expect([component.fromDate(), component.toDate()]).toEqual([today, today]);
+    expect(el.querySelector<HTMLInputElement>('[data-testid="from"]')?.value).toBe(today);
+    expect(el.querySelector<HTMLInputElement>('[data-testid="to"]')?.value).toBe(today);
     http.expectNone(() => true);
   });
 
@@ -53,18 +56,30 @@ describe('AnnouncementReportComponent (HU-26)', () => {
     TestBed.tick();
   }
 
-  it('CA-1: Generar asks the purchases of the chosen day and builds one document', async () => {
+  it('prueba del 19-nov: Generar asks the purchases of every day of the range and builds one document by range', async () => {
     const { component } = render();
-    const day = `${component.year}-05-09`;
-    component.date.set(day);
+    const from = `${component.year}-05-09`;
+    const to = `${component.year}-05-12`;
+    component.fromDate.set(from);
+    component.toDate.set(to);
     component.generate();
     TestBed.tick();
 
-    http.expectOne(`${URL}?from=${day}&to=${day}`).flush([ROW]);
+    http.expectOne(`${URL}?from=${from}&to=${to}`).flush([ROW]);
     await settle();
 
-    expect(component.doc()).not.toBeNull();
+    expect(component.doc()).toMatchObject({ kind: 'announcementRange', args: [[ROW], from, to, content.pdf] });
     expect(component.message()).toBeNull();
+  });
+
+  it('prueba del 19-nov: Desde after Hasta is not asked and says how to fix it', () => {
+    const { component } = render();
+    component.fromDate.set(`${component.year}-05-12`);
+    component.toDate.set(`${component.year}-05-09`);
+    component.generate();
+
+    expect(component.message()).toBe('Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)');
+    http.expectNone(() => true);
   });
 
   it('says so when the day has no purchases, and when the server fails', async () => {
@@ -73,7 +88,7 @@ describe('AnnouncementReportComponent (HU-26)', () => {
     TestBed.tick();
     http.expectOne(() => true).flush([]);
     await settle();
-    expect(component.message()).toBe(content.messages.empty);
+    expect(component.message()).toBe('No hay compras para esas fechas');
     expect(component.doc()).toBeNull();
 
     component.generate();
@@ -85,7 +100,7 @@ describe('AnnouncementReportComponent (HU-26)', () => {
 
   it('only accepts dates of the current year', () => {
     const { component } = render();
-    component.date.set(`${component.year - 1}-12-31`);
+    component.fromDate.set(`${component.year - 1}-12-31`);
     component.generate();
     expect(component.message()).toBe(content.messages.wrongYear.replace('{year}', String(component.year)));
     http.expectNone(() => true);

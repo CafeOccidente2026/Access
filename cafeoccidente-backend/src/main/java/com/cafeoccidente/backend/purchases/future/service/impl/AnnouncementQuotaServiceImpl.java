@@ -7,6 +7,7 @@ import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
 import com.cafeoccidente.backend.purchases.drycoffee.repository.DryCoffeePurchaseRepository;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaRequest;
 import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaResponse;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementResponse;
 import com.cafeoccidente.backend.purchases.future.dto.QuotaBalanceResponse;
 import com.cafeoccidente.backend.purchases.future.dto.QuotaCandidateResponse;
 import com.cafeoccidente.backend.purchases.future.entity.AgencyAnnouncementNumber;
@@ -64,14 +65,16 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
     public List<QuotaCandidateResponse> available(Long agencyId) {
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         Set<String> withQuota = quotasByDisplayNumber(agencyId, controlRecord).keySet();
-        Map<String, BigDecimal> delivered = deliveredByDisplayNumber(agencyId);
+        Map<String, BigDecimal> delivered = deliveredByAnnouncement(agencyId);
+        Map<String, BigDecimal> quotaKg = quotaKgByDisplayNumber(agencyId);
         // C6: solo el ultimo anuncio de cada fondo y especial (la historia viene del mas nuevo al mas viejo).
         Set<String> seenTypes = new HashSet<>();
         return announcementService.history().stream()
                 .filter(a -> seenTypes.add(a.fundId() + "|" + a.specialType()))
                 .filter(a -> !SPECIALS_WITHOUT_QUOTA.contains(a.specialType()))
                 .filter(a -> !withQuota.contains(a.announcementNumber()))
-                .map(a -> new QuotaCandidateResponse(a, delivered.getOrDefault(a.announcementNumber(), BigDecimal.ZERO)))
+                .map(a -> new QuotaCandidateResponse(a, delivered.getOrDefault(key(a), BigDecimal.ZERO),
+                        quotaKg.getOrDefault(a.announcementNumber(), BigDecimal.ZERO)))
                 .toList();
     }
 
@@ -79,14 +82,16 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
     public List<QuotaBalanceResponse> withBalance(Long agencyId, Long fundId, String specialType) {
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
         Map<String, BigDecimal> quotas = quotasByDisplayNumber(agencyId, controlRecord);
-        Map<String, BigDecimal> delivered = deliveredByDisplayNumber(agencyId);
+        Map<String, BigDecimal> delivered = deliveredByAnnouncement(agencyId);
+        Map<String, BigDecimal> quotaKg = quotaKgByDisplayNumber(agencyId);
         return announcementService.history().stream()
                 .filter(a -> a.fundId().equals(fundId) && a.specialType().equals(specialType))
                 .filter(a -> quotas.containsKey(a.announcementNumber()))
                 .map(a -> {
                     BigDecimal quota = quotas.get(a.announcementNumber());
-                    BigDecimal kg = delivered.getOrDefault(a.announcementNumber(), BigDecimal.ZERO);
-                    return new QuotaBalanceResponse(a, quota, kg, quota.subtract(kg));
+                    BigDecimal spent = quotaKg.getOrDefault(a.announcementNumber(), BigDecimal.ZERO);
+                    return new QuotaBalanceResponse(a, quota, delivered.getOrDefault(key(a), BigDecimal.ZERO), spent,
+                            quota.subtract(spent));
                 })
                 .filter(q -> q.balance().signum() > 0)
                 .toList();
@@ -130,10 +135,10 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
             throw new BusinessRuleException("Este anuncio ya tiene cupo; no se puede cambiar");
         }
         ControlRecord controlRecord = controlRecordService.getActive(agencyId);
-        BigDecimal delivered = deliveredKg(numbering, controlRecord);
-        if (request.assignedQuota().compareTo(delivered) < 0) {
+        BigDecimal spent = quotaKg(numbering, controlRecord);
+        if (request.assignedQuota().compareTo(spent) < 0) {
             throw new BusinessRuleException(
-                    "El cupo no puede ser menor que los kilos ya entregados (" + delivered.toPlainString() + ")");
+                    "El cupo no puede ser menor que los kilos con cupo (" + spent.toPlainString() + ")");
         }
         AnnouncementQuota quota = new AnnouncementQuota();
         quota.setAgencyAnnouncementNumber(numbering);
@@ -148,7 +153,7 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
 
     private AnnouncementQuotaResponse toResponse(AnnouncementQuota quota, ControlRecord controlRecord) {
         AgencyAnnouncementNumber numbering = quota.getAgencyAnnouncementNumber();
-        BigDecimal delivered = deliveredKg(numbering, controlRecord);
+        BigDecimal spent = quotaKg(numbering, controlRecord);
         return new AnnouncementQuotaResponse(
                 quota.getId(),
                 numbering.getAgency().getId(),
@@ -156,8 +161,10 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
                 numbering.getAssignedAt(),
                 numbering.getMasterAnnouncement().getSpecialType(),
                 quota.getAssignedQuota(),
-                delivered,
-                quota.getAssignedQuota().subtract(delivered),
+                dryCoffeePurchaseRepository.sumValidNetKgByAgencyAndAnnouncementNumber(numbering.getAgency().getId(),
+                        displayNumber(controlRecord, numbering), numbering.getMasterAnnouncement().getSpecialType()),
+                spent,
+                quota.getAssignedQuota().subtract(spent),
                 displayNumber(controlRecord, numbering));
     }
 
@@ -168,9 +175,20 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
                         AnnouncementQuota::getAssignedQuota));
     }
 
-    private Map<String, BigDecimal> deliveredByDisplayNumber(Long agencyId) {
+    /** Kilos con Cupo por numero de display: solo las compras de Facturar Anuncios con Cupos. */
+    private Map<String, BigDecimal> quotaKgByDisplayNumber(Long agencyId) {
         return dryCoffeePurchaseRepository.sumQuotaNetKgByAnnouncementNumber(agencyId).stream()
                 .collect(Collectors.toMap(row -> (String) row[0], row -> (BigDecimal) row[1]));
+    }
+
+    /** Kilos Entregados por anuncio y especial (key): todas las compras validas, normales y de cupo. */
+    private Map<String, BigDecimal> deliveredByAnnouncement(Long agencyId) {
+        return dryCoffeePurchaseRepository.sumValidNetKgByAnnouncementNumber(agencyId).stream()
+                .collect(Collectors.toMap(row -> row[0] + "|" + row[1], row -> (BigDecimal) row[2]));
+    }
+
+    private static String key(AnnouncementResponse announcement) {
+        return announcement.announcementNumber() + "|" + announcement.specialType();
     }
 
     /** Las compras guardan el numero de display del anuncio ("PREFIJO-numero"), no su id. */
@@ -178,8 +196,8 @@ public class AnnouncementQuotaServiceImpl implements AnnouncementQuotaService {
         return controlRecord.getPrefix() + "-" + numbering.getAnnouncementNumber();
     }
 
-    /** Kilos netos de las compras de cupo con ese anuncio (regla del area, 18-nov); las anuladas ya estan en 0. */
-    private BigDecimal deliveredKg(AgencyAnnouncementNumber numbering, ControlRecord controlRecord) {
+    /** Kilos con Cupo: compras de cupo con ese anuncio (regla del area, 18-nov); las anuladas ya estan en 0. */
+    private BigDecimal quotaKg(AgencyAnnouncementNumber numbering, ControlRecord controlRecord) {
         return dryCoffeePurchaseRepository.sumQuotaNetKgByAgencyAndAnnouncementNumber(
                 numbering.getAgency().getId(), displayNumber(controlRecord, numbering));
     }

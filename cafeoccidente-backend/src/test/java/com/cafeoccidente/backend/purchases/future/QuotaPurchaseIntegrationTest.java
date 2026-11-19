@@ -212,7 +212,9 @@ class QuotaPurchaseIntegrationTest {
         assertThat((String) jdbc.queryForObject("SELECT numero_anuncio FROM compras_cafe_seco WHERE id = ?", String.class,
                 normal.id())).endsWith("-" + quotaAnnouncement);
         assertThat(balance()).isEqualByComparingTo("500");
-        assertThat(quotas.get(AGENCY, quotaAnnouncement).deliveredKg()).isEqualByComparingTo("2000");
+        // Prueba del 19-nov: Kilos Entregados cuenta todas las compras; Kilos con Cupo, solo las de cupo.
+        assertThat(quotas.get(AGENCY, quotaAnnouncement).deliveredKg()).isEqualByComparingTo("3000");
+        assertThat(quotas.get(AGENCY, quotaAnnouncement).quotaKg()).isEqualByComparingTo("2000");
     }
 
     /** Regla del area (18-nov): al asignar el cupo el Saldo queda igual al Cupo, aunque ya haya compras normales. */
@@ -220,11 +222,15 @@ class QuotaPurchaseIntegrationTest {
     void assigningTheQuotaLeavesTheBalanceEqualToTheQuota() {
         buy(null, null);
         assertThat(quotas.available(AGENCY)).filteredOn(c -> c.announcement().announcementNumber().endsWith("-" + latestAnnouncement))
-                .singleElement().satisfies(c -> assertThat(c.deliveredKg()).isZero());
+                .singleElement().satisfies(c -> {
+                    assertThat(c.deliveredKg()).isEqualByComparingTo(KG);
+                    assertThat(c.quotaKg()).isZero();
+                });
 
         AnnouncementQuotaResponse assigned = quotas.assign(AGENCY, latestAnnouncement, new AnnouncementQuotaRequest(new BigDecimal("200")));
 
-        assertThat(assigned.deliveredKg()).isZero();
+        assertThat(assigned.deliveredKg()).isEqualByComparingTo(KG);
+        assertThat(assigned.quotaKg()).isZero();
         assertThat(assigned.balance()).isEqualByComparingTo("200");
         buy(latestAnnouncement, new BigDecimal("150"));
         assertThat(quotas.get(AGENCY, latestAnnouncement).balance()).isEqualByComparingTo("50");

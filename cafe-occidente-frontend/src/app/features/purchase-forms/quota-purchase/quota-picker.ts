@@ -23,7 +23,7 @@ export interface QuotaPick {
 /** Columnas de RN-21.2.4, en ese orden. */
 const COLUMNS: readonly string[] = [
   'announcement', 'agency', 'date', 'healthyUnitPrice', 'defectiveUnitPrice', 'bonus', 'costs', 'qualityIncrement',
-  'basePriceLoad', 'specialType', 'assignedQuota', 'deliveredKg', 'balance',
+  'basePriceLoad', 'specialType', 'assignedQuota', 'deliveredKg', 'quotaKg', 'balance',
 ];
 
 /**
@@ -32,7 +32,7 @@ const COLUMNS: readonly string[] = [
  * (CA-2); un valor mayor no se acepta (CA-3). El servidor vuelve a validar todo al guardar la compra.
  */
 /** Hallazgo #1: columnas en kilos; el resto de números son pesos. */
-const KILOS = ['assignedQuota', 'deliveredKg', 'balance'];
+const KILOS = ['assignedQuota', 'deliveredKg', 'quotaKg', 'balance'];
 
 @Component({
   selector: 'app-quota-picker',
@@ -51,7 +51,10 @@ export class QuotaPickerComponent {
   @Output() readonly picked = new EventEmitter<QuotaPick>();
   @Output() readonly cancelled = new EventEmitter<void>();
 
-  readonly columns = COLUMNS;
+  /** Kilos con Cupo (prueba del 19-nov) solo en Facturar con Cupos: Compras Anunciadas no la trae en su JSON. */
+  get columns(): readonly string[] {
+    return COLUMNS.filter((c) => c !== 'quotaKg' || 'quotaKg' in this.content.columns);
+  }
   list: readonly QuotaBalance[] = [];
   readonly selected = signal<QuotaBalance | null>(null);
   readonly delivery = signal('');
@@ -72,6 +75,7 @@ export class QuotaPickerComponent {
       specialType: a.specialType,
       assignedQuota: row.assignedQuota,
       deliveredKg: row.deliveredKg,
+      quotaKg: row.quotaKg,
       balance: row.balance,
     };
     const value = values[column];

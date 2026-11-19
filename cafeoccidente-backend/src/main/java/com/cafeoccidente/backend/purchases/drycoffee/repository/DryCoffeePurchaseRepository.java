@@ -32,6 +32,26 @@ public interface DryCoffeePurchaseRepository extends JpaRepository<DryCoffeePurc
             """)
     List<Object[]> sumQuotaNetKgByAnnouncementNumber(@Param("agencyId") Long agencyId);
 
+    /**
+     * Kilos Entregados del cupo (prueba del 19-nov): kilos netos de TODAS las compras validas (no anuladas) con ese
+     * anuncio y especial, normales y de cupo. Es informativo, como en Access; el saldo lo gastan solo las de cupo.
+     */
+    @Query(value = """
+            SELECT COALESCE(SUM(kilos_netos), 0) FROM compras_cafe_seco
+            WHERE agencia_id = :agencyId AND numero_anuncio = :displayAnnouncementNumber AND especial = :specialType
+              AND estado <> 'ANULADA'
+            """, nativeQuery = true)
+    BigDecimal sumValidNetKgByAgencyAndAnnouncementNumber(@Param("agencyId") Long agencyId,
+            @Param("displayAnnouncementNumber") String displayAnnouncementNumber, @Param("specialType") String specialType);
+
+    /** Lo mismo para todos los anuncios de la agencia: filas [numero de display, especial, kilos]. */
+    @Query(value = """
+            SELECT numero_anuncio, especial, COALESCE(SUM(kilos_netos), 0) FROM compras_cafe_seco
+            WHERE agencia_id = :agencyId AND estado <> 'ANULADA'
+            GROUP BY numero_anuncio, especial
+            """, nativeQuery = true)
+    List<Object[]> sumValidNetKgByAnnouncementNumber(@Param("agencyId") Long agencyId);
+
     /** Kilos netos entregados contra una compra anunciada, sin las anuladas (Restaurar Compras Anunciadas). */
     @Query(value = """
             SELECT COALESCE(SUM(kilos_netos), 0) FROM compras_cafe_seco

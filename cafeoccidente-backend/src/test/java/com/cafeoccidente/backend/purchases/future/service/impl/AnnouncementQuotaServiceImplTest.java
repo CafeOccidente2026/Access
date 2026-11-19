@@ -77,14 +77,18 @@ class AnnouncementQuotaServiceImplTest {
         return quota;
     }
 
-    private void givenAnnouncement(AgencyAnnouncementNumber numbering, Optional<AnnouncementQuota> quota, String delivered) {
+    /** quotaKg: Kilos con Cupo (lo que gasta el saldo). Kilos Entregados (todas las compras) son siempre 900. */
+    private void givenAnnouncement(AgencyAnnouncementNumber numbering, Optional<AnnouncementQuota> quota, String quotaKg) {
         when(agencyAnnouncementNumberRepository.findByAgencyIdAndAnnouncementNumber(1L, numbering.getAnnouncementNumber()))
                 .thenReturn(Optional.of(numbering));
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberId(numbering.getId())).thenReturn(quota);
         when(controlRecordService.getActive(1L)).thenReturn(controlRecord());
         // Busca por el numero de MUESTRA (prefijo + numero), no por el id interno.
         when(dryCoffeePurchaseRepository.sumQuotaNetKgByAgencyAndAnnouncementNumber(
-                1L, "SDBU-" + numbering.getAnnouncementNumber())).thenReturn(new BigDecimal(delivered));
+                1L, "SDBU-" + numbering.getAnnouncementNumber())).thenReturn(new BigDecimal(quotaKg));
+        when(dryCoffeePurchaseRepository.sumValidNetKgByAgencyAndAnnouncementNumber(1L,
+                "SDBU-" + numbering.getAnnouncementNumber(), numbering.getMasterAnnouncement().getSpecialType()))
+                .thenReturn(new BigDecimal("900.00"));
         when(announcementQuotaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -107,18 +111,24 @@ class AnnouncementQuotaServiceImplTest {
     }
 
     @Test
-    void ca2KilosEntregadosIsTheSumOfThePurchasesWithThatAnnouncement() {
+    void ca2KilosEntregadosIsEveryValidPurchaseOfTheAnnouncementAndSpecialAndKilosConCupoOnlyTheQuotaOnes() {
         when(controlRecordService.getActive(1L)).thenReturn(controlRecord());
         when(announcementService.history()).thenReturn(List.of(
                 announcement("SDBU-40", "RN"), announcement("SDBU-41", "REGIONAL NARIÑO 4C")));
         when(announcementQuotaRepository.findByAgencyAnnouncementNumberAgencyId(1L)).thenReturn(List.of());
         when(dryCoffeePurchaseRepository.sumQuotaNetKgByAnnouncementNumber(1L))
-                .thenReturn(List.<Object[]>of(new Object[] {"SDBU-40", new BigDecimal("150.50")}));
+                .thenReturn(List.<Object[]>of(new Object[] {"SDBU-40", new BigDecimal("20")}));
+        // Prueba del 19-nov: el mismo numero con otro especial no cuenta.
+        when(dryCoffeePurchaseRepository.sumValidNetKgByAnnouncementNumber(1L)).thenReturn(List.<Object[]>of(
+                new Object[] {"SDBU-40", "RN", new BigDecimal("150.50")},
+                new Object[] {"SDBU-41", "RN", new BigDecimal("75")}));
 
         List<QuotaCandidateResponse> candidates = service.available(1L);
 
         assertThat(candidates.get(0).deliveredKg()).isEqualByComparingTo("150.50");
+        assertThat(candidates.get(0).quotaKg()).isEqualByComparingTo("20");
         assertThat(candidates.get(1).deliveredKg()).isEqualByComparingTo("0");
+        assertThat(candidates.get(1).quotaKg()).isEqualByComparingTo("0");
     }
 
     /** C6 (prueba del 11-nov, punto 12): solo el ultimo anuncio de cada tipo; los viejos ya no se mezclan. */
@@ -139,13 +149,14 @@ class AnnouncementQuotaServiceImplTest {
     }
 
     @Test
-    void ca3SaldoIsQuotaMinusDelivered() {
+    void ca3SaldoIsQuotaMinusKilosConCupo() {
         givenAnnouncement(numbering(32, "RN"), Optional.empty(), "200.00");
 
         AnnouncementQuotaResponse response = service.assign(1L, 32, new AnnouncementQuotaRequest(new BigDecimal("576.70")));
 
         assertThat(response.assignedQuota()).isEqualByComparingTo("576.70");
-        assertThat(response.deliveredKg()).isEqualByComparingTo("200.00");
+        assertThat(response.deliveredKg()).isEqualByComparingTo("900.00");
+        assertThat(response.quotaKg()).isEqualByComparingTo("200.00");
         assertThat(response.balance()).isEqualByComparingTo("376.70");
         // R4 (17-nov): con el prefijo del punto, para que Restaurar Anuncios con Cupos lo muestre como las demas.
         assertThat(response.displayNumber()).isEqualTo("SDBU-32");
@@ -158,7 +169,8 @@ class AnnouncementQuotaServiceImplTest {
 
         AnnouncementQuotaResponse response = service.get(1L, 32);
 
-        assertThat(response.deliveredKg()).isEqualByComparingTo("200.00");
+        assertThat(response.deliveredKg()).isEqualByComparingTo("900.00");
+        assertThat(response.quotaKg()).isEqualByComparingTo("200.00");
         assertThat(response.balance()).isEqualByComparingTo("376.70");
     }
 
@@ -175,18 +187,18 @@ class AnnouncementQuotaServiceImplTest {
     }
 
     @Test
-    void quotaBelowTheKilosAlreadyDeliveredIsRejected() {
+    void quotaBelowTheKilosConCupoIsRejected() {
         givenAnnouncement(numbering(32, "RN"), Optional.empty(), "200.00");
 
         AnnouncementQuotaRequest request = new AnnouncementQuotaRequest(new BigDecimal("199.99"));
         assertThatThrownBy(() -> service.assign(1L, 32, request))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("menor que los kilos ya entregados");
+                .hasMessageContaining("menor que los kilos con cupo");
         verify(announcementQuotaRepository, never()).save(any());
     }
 
     @Test
-    void quotaEqualToTheKilosDeliveredLeavesSaldoInZero() {
+    void quotaEqualToTheKilosConCupoLeavesSaldoInZero() {
         givenAnnouncement(numbering(32, "RN"), Optional.empty(), "200.00");
 
         AnnouncementQuotaResponse response = service.assign(1L, 32, new AnnouncementQuotaRequest(new BigDecimal("200.00")));

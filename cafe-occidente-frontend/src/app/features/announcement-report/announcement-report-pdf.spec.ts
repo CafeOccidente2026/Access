@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import content from '../../../../public/assets/data/announcement-report.json';
-import { buildAnnouncementReportDoc, groupByAnnouncement, shortDate, weightedFactor } from './announcement-report-pdf';
+import { buildAnnouncementRangeDoc, buildAnnouncementReportDoc, groupByAnnouncement, shortDate, weightedFactor } from './announcement-report-pdf';
 
 const text = content.pdf;
 
@@ -82,5 +82,48 @@ describe('announcement report', () => {
   it('titles each Cod_Prod group with the code and its Nom, like Access', () => {
     expect(json([row({ productName: 'CAFÉ LFTO NESS - FTUSA' })])).toContain('"0110001000007 CAFÉ LFTO NESS - FTUSA"');
     expect(json([row({ productCode: '999', productName: null })])).toContain('"999"');
+  });
+});
+
+describe('announcement report by date range (prueba del 19-nov)', () => {
+  const rows = [
+    row({ invoiceNumber: 5, purchaseDate: '2026-05-10', announcementNumber: 'SDTA-3445', netToPay: 500 }),
+    row({ invoiceNumber: 1, purchaseDate: '2026-05-09', announcementNumber: 'SDTA-3443', netToPay: 100 }),
+    row({ invoiceNumber: 2, purchaseDate: '2026-05-09', announcementNumber: 'SDTA-3444', netToPay: 200 }),
+    row({ invoiceNumber: 3, purchaseDate: '2026-05-09', announcementNumber: 'SDTA-3443', netToPay: 40 }),
+  ];
+  const doc = buildAnnouncementRangeDoc(rows, '2026-05-09', '2026-05-10', text);
+  const all = JSON.stringify(doc.content);
+  const detail = all.slice(all.indexOf(`"text":"${text.detailTitle}"`));
+
+  it('says the range in the title of each page', () => {
+    expect(all).toContain('Desde 09/05/2026 hasta 10/05/2026');
+    expect(all.match(/Desde 09\/05\/2026 hasta 10\/05\/2026/g)).toHaveLength(4);
+  });
+
+  it('groups by date and then by announcement, a new page for each day', () => {
+    const order = [...detail.matchAll(/"text":"(Fecha: \d\d\/\d\d\/\d{4}|TA-\d+ NESPRESSO)"/g)].map((m) => m[1]);
+    expect(order).toEqual(['Fecha: 09/05/2026', 'TA-3443 NESPRESSO', 'TA-3444 NESPRESSO', 'Fecha: 10/05/2026', 'TA-3445 NESPRESSO']);
+    expect((doc.content as { pageBreak?: string }[]).filter((c) => c.pageBreak === 'before')).toHaveLength(3);
+  });
+
+  it('adds up each announcement, each day and the whole range', () => {
+    const total = (label: string) => {
+      const at = detail.indexOf(`"text":"${label}"`);
+      return at < 0 ? null : detail.slice(at).match(/"text":"(\d[\d.]*)","alignment":"right","bold":true\}(?=,""\])/)?.[1];
+    };
+    expect(total('Subtotal anuncio TA-3443')).toBe('140');
+    expect(total('Subtotal anuncio TA-3444')).toBe('200');
+    expect(total('Subtotal del día 09/05/2026')).toBe('340');
+    expect(total('Subtotal del día 10/05/2026')).toBe('500');
+    expect(total('Total del rango')).toBe('840');
+    expect(all.indexOf('Total del rango')).toBeGreaterThan(all.indexOf('Subtotal del día 10/05/2026'));
+  });
+
+  it('keeps the Access columns of RESUMEN ANUNCIO and ANUNCIO', () => {
+    const tables = (doc.content as { table?: { body: { text?: string }[][] } }[]).filter((c) => c.table?.body[0].length);
+    const heads = tables.map((t) => t.table!.body[0].map((c) => c.text));
+    expect(heads).toContainEqual(text.summaryColumns);
+    expect(heads).toContainEqual(text.detailColumns);
   });
 });

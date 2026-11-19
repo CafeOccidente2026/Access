@@ -23,7 +23,7 @@ describe('FutureRestoreComponent', () => {
   const pending = { announcementNumber: 'SDBU-4', announcementDate: '2026-11-02', specialType: 'NESPRESSO - FTUSA',
     healthyUnitPrice: 9100, announcedKg: 1500, remainingKg: 1200, growers: 2 };
   const quota = { id: 9, agencyId: 1, announcementNumber: 4, announcementDate: '2026-11-02', specialType: 'RN',
-    assignedQuota: 2500, deliveredKg: 1000, balance: 1500, displayNumber: 'SDBU-4' };
+    assignedQuota: 2500, deliveredKg: 1800, quotaKg: 1000, balance: 1500, displayNumber: 'SDBU-4' };
 
   let previewSpy: ReturnType<typeof vi.fn>;
   let restoreSpy: ReturnType<typeof vi.fn>;
@@ -113,7 +113,8 @@ describe('FutureRestoreComponent', () => {
     const c = setup('quota');
 
     expect(listSpy).toHaveBeenCalledTimes(1);
-    expect(c.rows()).toEqual([['BU-4', '02/11/2026', 'RN', '2.500', '1.000', '1.500']]);
+    // Prueba del 19-nov: Kl_Entregados (todas las compras) y Kilos con Cupo, que es lo que descuenta el Saldo.
+    expect(c.rows()).toEqual([['BU-4', '02/11/2026', 'RN', '2.500', '1.800', '1.000', '1.500']]);
     expect(restoreSpy).not.toHaveBeenCalled();
   });
 

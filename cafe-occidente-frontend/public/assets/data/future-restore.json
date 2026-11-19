@@ -36,13 +36,14 @@
     "quota": {
       "windowTitle": "RESTAURAR CUPOS",
       "heading": "Restaurar Anuncios con Cupos",
-      "note": "El saldo de cada cupo ya se calcula en cada consulta (cupo menos los kilos netos de las compras no anuladas con ese anuncio), así que no hay nada que restaurar: esta pantalla solo lo muestra.",
+      "note": "El saldo de cada cupo ya se calcula en cada consulta: Saldo = Cupo − Kilos con Cupo (las compras no anuladas de Facturar Anuncios con Cupos). Kl_Entregados suma todas las compras válidas con ese anuncio, normales y de cupo; es informativo. No hay nada que restaurar: esta pantalla solo lo muestra.",
       "columns": [
         "Anuncio",
         "Fecha",
         "Especial",
         "Cupo",
         "Kl_Entregados",
+        "Kilos con Cupo",
         "Saldo"
       ]
     }

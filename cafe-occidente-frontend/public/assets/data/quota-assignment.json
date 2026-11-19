@@ -18,6 +18,7 @@
     { "key": "costs", "label": "Costos", "type": "currency", "display": "money" },
     { "key": "deliveredKg", "label": "Kilos Entregados", "type": "number", "display": "kilos" },
     { "key": "quota", "label": "Cupo", "type": "number", "liveThousands": true },
+    { "key": "quotaKg", "label": "Kilos con Cupo", "type": "number", "display": "kilos" },
     { "key": "balance", "label": "Saldo", "type": "number", "display": "kilos" }
   ]
 }

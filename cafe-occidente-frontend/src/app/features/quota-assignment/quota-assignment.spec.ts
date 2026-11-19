@@ -37,9 +37,10 @@ describe('QuotaAssignmentComponent', () => {
       specialType: 'RN',
     },
     deliveredKg: 200,
+    quotaKg: 0,
   };
   const label = 'BU-32 · RN · 1.200.000';
-  const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 0, balance: 576.7 };
+  const saved = { id: 9, agencyId: 1, announcementNumber: 32, announcementDate: '2026-09-23', specialType: 'RN', assignedQuota: 576.7, deliveredKg: 200, quotaKg: 0, balance: 576.7 };
 
   let assignSpy: ReturnType<typeof vi.fn>;
   let component: QuotaAssignmentComponent;
@@ -84,6 +85,15 @@ describe('QuotaAssignmentComponent', () => {
     expect(field('deliveredKg')?.value).toBe('200');
     expect(field('quota')?.readonly).toBe(false);
     expect(field('deliveredKg')?.readonly).toBe(true);
+  });
+
+  it('prueba del 19-nov: Kilos con Cupo is read only and explains the Saldo (Cupo - Kilos con Cupo)', () => {
+    setup();
+    component.onAnnouncementChange(label);
+
+    expect(field('quotaKg')?.value).toBe('0');
+    expect(field('quotaKg')?.readonly).toBe(true);
+    expect(field('quotaKg')?.label).toBe('Kilos con Cupo');
   });
 
   it('regla del 18-nov: typing the Cupo leaves the Saldo equal to the Cupo, even with earlier normal purchases', () => {
