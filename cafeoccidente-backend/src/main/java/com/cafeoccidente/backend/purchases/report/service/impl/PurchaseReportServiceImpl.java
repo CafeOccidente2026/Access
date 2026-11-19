@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 public class PurchaseReportServiceImpl implements PurchaseReportService {
 
     static final String FROM_AFTER_TO = "La fecha Desde no puede ser posterior a la fecha Hasta";
+    /** Generar Reporte Anuncio (prueba del 19-nov): sin anuncio hacen falta las dos fechas. */
+    static final String ANNOUNCEMENT_RANGE = "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)";
 
     private final PurchaseReportRepository repository;
     private final CurrentAgencyProvider currentAgencyProvider;
@@ -42,6 +44,17 @@ public class PurchaseReportServiceImpl implements PurchaseReportService {
         }
         Long agencyId = currentAgencyProvider.currentAgencyId();
         return repository.futureAnnouncement(agencyId, displayNumber(agencyId, announcementNumber), from, to);
+    }
+
+    @Override
+    public List<PurchaseReportRow> announcement(Integer announcementNumber, LocalDate from, LocalDate to) {
+        boolean noRange = announcementNumber == null && (from == null || to == null);
+        if (noRange || (from != null && to != null && from.isAfter(to))) {
+            throw new BusinessRuleException(ANNOUNCEMENT_RANGE);
+        }
+        Long agencyId = currentAgencyProvider.currentAgencyId();
+        String announcement = announcementNumber == null ? null : displayNumber(agencyId, announcementNumber);
+        return repository.announcement(agencyId, announcement, from, to);
     }
 
     @Override
