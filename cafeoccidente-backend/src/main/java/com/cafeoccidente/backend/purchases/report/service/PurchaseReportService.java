@@ -18,5 +18,8 @@ public interface PurchaseReportService {
     List<PurchaseReportRow> futureAnnouncement(int announcementNumber, LocalDate from, LocalDate to);
 
     /** Informe Saldo Anuncios (HU-35): las compras a futuro del anuncio digitado, con K Anun, K Entr y Saldo Kg. */
+    /** Generar Reporte Anuncio: un anuncio (cualquier fecha si no hay fechas) o todos los del rango (obligatorio). */
+    List<PurchaseReportRow> announcement(Integer announcementNumber, LocalDate from, LocalDate to);
+
     List<FutureBalanceRow> futureBalance(int announcementNumber);
 }

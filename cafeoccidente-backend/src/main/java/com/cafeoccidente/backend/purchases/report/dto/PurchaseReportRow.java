@@ -38,5 +38,10 @@ public record PurchaseReportRow(
         String paymentMethod,
         String status,
         /** Fecha del anuncio de la compra (encabezado "Fecha" del Informe Anuncios a Futuro, como Access). */
-        LocalDate announcementDate) {
+        LocalDate announcementDate,
+        /** Reporte Anuncio (prueba del 19-nov): 1er Nombre y 1er Apellido de Asociados, como Access; null sin tercero. */
+        String growerFirstName,
+        String growerFirstLastName,
+        /** Nombre del Fiel (cedula_fiel del Registro de Control); null si no esta en Asociados. */
+        String trustedName) {
 }

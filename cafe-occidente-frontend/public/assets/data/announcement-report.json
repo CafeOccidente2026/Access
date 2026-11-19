@@ -1,14 +1,20 @@
 {
   "windowTitle": "REPORTE ANUNCIO",
+  "announcementLabel": "Anuncio",
   "fromLabel": "Desde Fecha",
   "toLabel": "Hasta Fecha",
+  "kindLabel": "Tipo",
+  "kinds": { "both": "Ambos", "summary": "Resumen", "detail": "Detallado" },
   "generateLabel": "Generar reporte",
-  "printLabel": "Imprimir",
-  "pdfTitle": "REPORTE ANUNCIO",
+  "printSummaryLabel": "Imprimir resumen",
+  "printDetailLabel": "Imprimir detallado",
+  "summaryPdfTitle": "RESUMEN ANUNCIO",
+  "detailPdfTitle": "ANUNCIO",
   "messages": {
     "wrongYear": "La fecha debe ser del año {year}",
     "fromAfterTo": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)",
     "empty": "No hay compras para esas fechas",
+    "emptyAnnouncement": "No hay compras con el anuncio {announcement}",
     "error": "No se pudo generar el reporte"
   },
   "pdf": {
@@ -18,8 +24,9 @@
     "summaryTitle": "RESUMEN ANUNCIO",
     "agencyLabel": "Agencia:",
     "dateLabel": "Fecha:",
-    "detailColumns": ["Anun", "Factura", "Cedula", "Fecha", "Fondo", "Nombre", "Apellidos", "KV", "KN", "Factor", "Vr\nKilo", "Vr\nBruto", "Aporte\nSocio", "Dcto\nCoop", "Dcto\nFro", "Retefuente", "Otros\nDctos", "Neto a\nPagar", "FP"],
-    "summaryColumns": ["", "KV", "KN", "Porcent\nPonderado", "Vr\nBruto", "Aporte\nSocio", "Dcto\nCoop", "Dcto\nFro", "Retefuente", "Neto a\nPagar"],
+    "announcementColumn": false,
+    "detailColumns": ["Factura", "Cedula", "Fecha", "Fondo", "Nombre", "Apellidos", "KV", "KN", "Factor", "Vr\nKilo", "Vr\nBruto", "Aporte\nSocio", "Dcto\nCoop", "Dcto\nFro", "Retefuente", "Otros\nDctos", "Neto a\nPagar", "FP"],
+    "summaryColumns": ["", "KV", "KN", "Factor\nPonderado", "Vr\nBruto", "Aporte\nSocio", "Dcto\nCoop", "Dcto\nFro", "Retefuente", "Neto a\nPagar"],
     "groupSummary": "Resumir por 'Cod_Prod' =  {code} ({count} {records})",
     "oneRecord": "registro de detalle",
     "manyRecords": "registros de detalle",
@@ -28,10 +35,6 @@
     "summaryTotal": "SUMA TOTAL",
     "trusted": "Fiel: _____________________________________",
     "signatures": ["CONTABILIDAD", "OPERACIONES", "REVISORIA FISCAL"],
-    "page": "Página {page} de {pages}",
-    "range": "Desde {from} hasta {to}",
-    "announcementTotal": "Subtotal anuncio {announcement}",
-    "dayTotal": "Subtotal del día {date}",
-    "rangeTotal": "Total del rango"
+    "page": "Página {page} de {pages}"
   }
 }

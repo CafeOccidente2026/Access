@@ -41,7 +41,7 @@ describe('Informe Anuncios a Futuro (HU-34)', () => {
     const annulled = buildAnnouncementReportDoc(
       [purchase({ netKg: 0, factor: 0, status: 'ANULADA', paymentMethod: 'ANULADA', netToPay: 0, grossValue: 0 })],
       '9/05/2026 - 9/05/2026', announcementText);
-    expect(texts(tables(annulled)[0][2])[3]).toBe('0');
+    expect(texts(tables(annulled)[0][2])[3]).toBe('0,00');
     expect(JSON.stringify(annulled.content)).toContain('{"text":"ANULADA","bold":true}');
   });
 
