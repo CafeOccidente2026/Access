@@ -1,7 +1,18 @@
 <div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
   <app-access-window [title]="c.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
     <div class="flex flex-1 flex-col gap-3 p-4">
-      <div class="flex items-end gap-3" appFormFlow>
+      <div class="flex flex-wrap items-end gap-3" appFormFlow>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">{{ c.announcementLabel }}</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            data-testid="announcement"
+            class="w-28 rounded border border-slate-300 px-2 py-1"
+            [value]="announcement()"
+            (input)="announcement.set($any($event.target).value.replace(digitsOnly, ''))"
+          />
+        </label>
         <label class="flex flex-col gap-1 text-sm">
           <span class="font-medium text-blue-900">{{ c.fromLabel }}</span>
           <input
@@ -26,6 +37,12 @@
             (input)="toDate.set($any($event.target).value)"
           />
         </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">{{ c.kindLabel }}</span>
+          <select data-testid="kind" class="rounded border border-slate-300 px-2 py-1" (change)="kind.set($any($event.target).value)">
+            <option *ngFor="let k of kindOptions" [value]="k" [selected]="k === kind()">{{ c.kinds[k] }}</option>
+          </select>
+        </label>
         <button
           type="button"
           data-testid="generate"
@@ -36,22 +53,38 @@
           {{ c.generateLabel }}
         </button>
         <button
-          *ngIf="pdfUrl()"
+          *ngIf="summary.url()"
           type="button"
-          data-testid="print"
+          data-testid="print-summary"
           class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200"
-          (click)="print()"
+          (click)="print('summary')"
         >
-          {{ c.printLabel }}
+          {{ c.printSummaryLabel }}
+        </button>
+        <button
+          *ngIf="detail.url()"
+          type="button"
+          data-testid="print-detail"
+          class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200"
+          (click)="print('detail')"
+        >
+          {{ c.printDetailLabel }}
         </button>
         <p *ngIf="message() as m" class="pb-1.5 text-sm text-red-600">{{ m }}</p>
       </div>
 
       <app-pdf-generating [active]="generatingPdf()"></app-pdf-generating>
       <iframe
-        *ngIf="pdfUrl() as url"
-        #frame
-        [title]="c.pdfTitle"
+        *ngIf="summary.url() as url"
+        #summaryFrame
+        [title]="c.summaryPdfTitle"
+        class="min-h-[480px] w-full flex-1 border"
+        [src]="url"
+      ></iframe>
+      <iframe
+        *ngIf="detail.url() as url"
+        #detailFrame
+        [title]="c.detailPdfTitle"
         class="min-h-[480px] w-full flex-1 border"
         [src]="url"
       ></iframe>

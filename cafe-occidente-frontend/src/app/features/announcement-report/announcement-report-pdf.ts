@@ -2,14 +2,13 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { announcementDisplay, formatDate, formatKilos, formatMoney, formatThousands } from '../../shared/utils/number-format';
+import { announcementDisplay, formatDate, formatDisplayNumber, formatMoney, formatThousands } from '../../shared/utils/number-format';
 
 /**
  * Reportes "RESUMEN ANUNCIO" y "ANUNCIO" (detallado) de Access (macro "Imprimir Anuncio",
- * reports/RESUMEN ANUNCIO.txt y reports/ANUNCIO.txt) en un solo PDF: primero el resumen y luego el
- * detalle (RN-24.4). Access pedia un numero de anuncio; RF-24 pide todas las compras del dia (seco,
- * verde y pasilla), asi que sale un bloque por anuncio y tipo de cafe (RN-24.3), y el detalle trae la
- * columna Anun (RN-24.2). Lo que no aplica a un modulo (KV fuera del verde) queda vacio.
+ * reports/RESUMEN ANUNCIO.txt y reports/ANUNCIO.txt). Prueba del 19-nov (fotos del 3590 NESPRESSO en
+ * docs/referencia-reportes): Generar Reporte Anuncio da cada uno como documento aparte, un anuncio por hoja, sin la
+ * columna Anun. El Informe Anuncios a Futuro sigue con los dos en un PDF (buildAnnouncementReportDoc).
  */
 
 type Row = PurchaseReportRow;
@@ -39,17 +38,6 @@ export interface AnnouncementReportText {
   readonly announcementColumn?: boolean;
 }
 
-/** Textos del reporte por rango de fechas (prueba del 19-nov). */
-export interface AnnouncementRangeText {
-  /** "Desde {from} hasta {to}". */
-  readonly range: string;
-  /** "Subtotal anuncio {announcement}". */
-  readonly announcementTotal: string;
-  /** "Subtotal del día {date}". */
-  readonly dayTotal: string;
-  readonly rangeTotal: string;
-}
-
 /** Lo minimo que necesitan las firmas y el pie de pagina (tambien los usa el informe Saldo Anuncios). */
 export type ReportFooterText = Pick<AnnouncementReportText, 'trusted' | 'signatures' | 'page'>;
 
@@ -60,8 +48,13 @@ interface ProductGroup {
 
 interface AnnouncementBlock {
   readonly announcementNumber: string;
+  /** El numero sin prefijo, como el encabezado de Access ("3590"). */
+  readonly number: string;
   readonly specialType: string;
   readonly agencyName: string;
+  /** Fecha del anuncio (o de la compra si no la trae). */
+  readonly date: string;
+  readonly trustedName: string | null;
   readonly groups: ProductGroup[];
   readonly rows: Row[];
 }
@@ -74,9 +67,9 @@ const THIN = {
 
 /** Peso entero con punto de miles (Format=Standard, DecimalPlaces=0 en Access). */
 const peso = formatMoney;
-/** 2 decimales con coma (KN, KV y Factor, Format=Standard); vacio si no aplica. */
-const dec2 = (v: number | null): string =>
-  formatKilos(v);
+/** 2 decimales fijos con coma, cortando hacia cero (KN, KV y Factor, Format=Standard: "200,00", "89,29"); vacio si no
+ *  aplica. */
+const dec2 = (v: number | null): string => (v == null ? '' : formatDisplayNumber(v, 'currency'));
 /** "2026-05-09" -> "09/05/2026": dd/mm/aaaa en todos los reportes (hallazgo #1 del 16-nov). */
 export function shortDate(iso: string): string {
   return formatDate(iso);
@@ -85,10 +78,13 @@ const sum = (rows: Row[], f: (p: Row) => number): number => rows.reduce((acc, p)
 const fill = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ''));
 
-/** KV del grupo: la suma si alguna fila es de verde; vacio si ninguna lo es. */
-function greenKg(rows: Row[]): number | null {
-  return rows.some((p) => p.greenKg != null) ? sum(rows, (p) => p.greenKg ?? 0) : null;
+/** KV del grupo: la suma de Kilos Verdes; 0 fuera del verde, como Access (foto del 3590). */
+function greenKg(rows: Row[]): number {
+  return sum(rows, (p) => p.greenKg ?? 0);
 }
+
+/** KV de una compra: con decimales en el verde, 0 en los demas cafes (Access mostraba 0). */
+const kv = (v: number | null): string => (v == null ? '0' : dec2(v));
 
 /**
  * Porcent Ponderado = Sum(KN*Factor)/Sum(KN) de las filas con Factor. Sin Factor: null (vacio).
@@ -120,10 +116,14 @@ export function groupByAnnouncement(rows: Row[]): AnnouncementBlock[] {
     for (const p of blockRows) {
       groups.set(p.productCode, [...(groups.get(p.productCode) ?? []), p]);
     }
+    const first = blockRows[0];
     return {
-      announcementNumber: announcementDisplay(blockRows[0].announcementNumber),
-      specialType: blockRows[0].specialType,
-      agencyName: blockRows[0].agencyName,
+      announcementNumber: announcementDisplay(first.announcementNumber),
+      number: first.announcementNumber.slice(first.announcementNumber.lastIndexOf('-') + 1),
+      specialType: first.specialType,
+      agencyName: first.agencyName,
+      date: first.announcementDate ?? first.purchaseDate,
+      trustedName: first.trustedName ?? null,
       rows: blockRows,
       groups: [...groups.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -160,12 +160,14 @@ function pageHeader(title: string, heading: string, agencyName: string, date: st
   };
 }
 
-export function signatures(text: ReportFooterText): Content {
+/** Firmas de Access: "Fiel:" con su linea (y, debajo, el Fiel del Registro de Control) y las tres firmas. */
+export function signatures(text: ReportFooterText, trustedName?: string | null): Content {
   return {
     unbreakable: true,
     margin: [0, 18, 0, 0],
     stack: [
       { text: text.trusted, bold: true, fontSize: 9 },
+      ...(trustedName ? [{ text: trustedName, fontSize: 8, margin: [30, 1, 0, 0] as [number, number, number, number] }] : []),
       { margin: [0, 30, 0, 0], columns: text.signatures.map((s) => ({ text: s, bold: true, fontSize: 9 })) },
     ],
   };
@@ -183,7 +185,7 @@ function summaryTotalRow(label: string, rows: Row[]): TableCell[] {
 
 function summarySums(rows: Row[]): TableCell[] {
   return [
-    r(dec2(greenKg(rows))), r(peso(sum(rows, (p) => p.netKg))), r(dec2(weightedFactor(rows))),
+    r(peso(greenKg(rows))), r(peso(sum(rows, (p) => p.netKg))), r(dec2(weightedFactor(rows))),
     r(peso(sum(rows, (p) => p.grossValue))), r(peso(sum(rows, (p) => p.associateContribution))),
     r(peso(sum(rows, (p) => p.cooperativeDiscount))), r(peso(sum(rows, (p) => p.freightDiscount))),
     r(peso(sum(rows, (p) => p.withholding))), r(peso(sum(rows, (p) => p.netToPay))),
@@ -216,9 +218,9 @@ interface DetailLayout {
 }
 
 function detailLayout(text: AnnouncementReportText): DetailLayout {
-  // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt, con la
-  // columna Anun (RN-24.2) al frente. FP se ensancha (a costa de Nombre y Apellidos) porque guarda la
-  // forma de pago completa y "ANULADA" en negrilla tiene que caber en una linea.
+  // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt (con la columna Anun al
+  // frente si se pide). FP se ensancha porque "ANULADA" en negrilla tiene que caber en una linea; Access la cortaba
+  // ("VA" en la foto del 3590).
   const withAnnouncement = text.announcementColumn !== false;
   const twips = [600, 651, 1299, 1032, 561, 1371, 1350, 737, 885, 750, 840, 1020, 855, 900, 855, 900, 960, 1185, 1100]
     .slice(withAnnouncement ? 0 : 1);
@@ -230,7 +232,7 @@ function detailLayout(text: AnnouncementReportText): DetailLayout {
 /** Fila de totales del ANUNCIO: el rotulo ocupa las columnas de texto y luego las sumas en negrilla. */
 function detailTotalRow(label: string, rows: Row[], layout: DetailLayout): TableCell[] {
   const sums: TableCell[] = [
-    r(dec2(greenKg(rows)), b), r(peso(sum(rows, (p) => p.netKg)), b), '', '', r(peso(sum(rows, (p) => p.grossValue)), b),
+    r(peso(greenKg(rows)), b), r(peso(sum(rows, (p) => p.netKg)), b), '', '', r(peso(sum(rows, (p) => p.grossValue)), b),
     r(peso(sum(rows, (p) => p.associateContribution)), b), r(peso(sum(rows, (p) => p.cooperativeDiscount)), b),
     r(peso(sum(rows, (p) => p.freightDiscount)), b), r(peso(sum(rows, (p) => p.withholding)), b),
     r(peso(sum(rows, (p) => p.otherDiscounts)), b), r(peso(sum(rows, (p) => p.netToPay)), b), '',
@@ -253,10 +255,13 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText, tot
       const cells: TableCell[] = [
         r(String(p.invoiceNumber)),
         r(/^\d+$/.test(p.idNumber) ? formatThousands(p.idNumber) : p.idNumber), r(shortDate(p.purchaseDate)),
-        p.fundCode, p.firstName, p.lastName ?? '', r(dec2(p.greenKg)), r(dec2(p.netKg)), r(dec2(p.factor)),
+        // Access: 1er Nombre y 1er Apellido de Asociados; si la cedula ya no esta, lo guardado en la compra.
+        p.fundCode, p.growerFirstName ?? p.firstName, p.growerFirstLastName ?? p.lastName ?? '', r(kv(p.greenKg)),
+        r(dec2(p.netKg)), r(dec2(p.factor)),
         r(peso(p.unitPrice)), r(peso(p.grossValue)), r(peso(p.associateContribution)), r(peso(p.cooperativeDiscount)),
         r(peso(p.freightDiscount)), r(peso(p.withholding)), r(peso(p.otherDiscounts)), r(peso(p.netToPay)),
-        p.status === 'ANULADA' ? { text: p.paymentMethod, bold: true } : p.paymentMethod,
+        // FP de Access es COMPRAS.Forma_de_Pago, donde se guardaba el estado (VALIDA o ANULADA).
+        p.status === 'ANULADA' ? { text: p.status, bold: true } : p.status,
       ];
       body.push(withAnnouncement ? [announcementDisplay(p.announcementNumber), ...cells] : cells);
     }
@@ -313,56 +318,32 @@ export function buildAnnouncementReportDoc(rows: Row[], date: string, text: Anno
   };
 }
 
-interface DayBlocks {
-  readonly date: string;
-  readonly blocks: AnnouncementBlock[];
-  readonly rows: Row[];
-}
-
-/** Prueba del 19-nov: primero por fecha de compra (ascendente) y dentro de cada dia por anuncio. */
-function groupByDay(rows: Row[]): DayBlocks[] {
-  const days = new Map<string, Row[]>();
-  for (const p of [...rows].sort((a, c) => a.purchaseDate.localeCompare(c.purchaseDate))) {
-    days.set(p.purchaseDate, [...(days.get(p.purchaseDate) ?? []), p]);
-  }
-  return [...days.entries()].map(([date, dayRows]) => ({ date, rows: dayRows, blocks: groupByAnnouncement(dayRows) }));
-}
-
-/**
- * "Generar Reporte Anuncio" por rango (prueba del 19-nov): un solo PDF con RESUMEN ANUNCIO y despues ANUNCIO, con las
- * columnas de Access. Cada dia empieza pagina con el rango en el titulo; dentro, un bloque por anuncio con su subtotal,
- * el subtotal del dia y, al final, el total del rango y las firmas.
- */
-export function buildAnnouncementRangeDoc(rows: Row[], from: string, to: string,
-  text: AnnouncementReportText & AnnouncementRangeText): TDocumentDefinitions {
-  const days = groupByDay(rows);
-  const range = fill(text.range, { from: shortDate(from), to: shortDate(to) });
-  const agencyName = rows[0]?.agencyName ?? '';
-  const detail = detailLayout(text);
-  const section = (title: string, block: (b: AnnouncementBlock, label: string) => Content,
-    total: (label: string, totalRows: Row[]) => Content, offset: number): Content[] => [
-    ...days.flatMap((day, i): Content[] => [
-      pageHeader(title, range, agencyName, `${text.dateLabel} ${shortDate(day.date)}`, offset + i > 0, text),
-      ...day.blocks.flatMap((b): Content[] => [
-        { text: `${b.announcementNumber} ${b.specialType}`, bold: true, fontSize: 11, margin: [0, 6, 0, 2] },
-        block(b, fill(text.announcementTotal, { announcement: b.announcementNumber })),
-      ]),
-      total(fill(text.dayTotal, { date: shortDate(day.date) }), day.rows),
-    ]),
-    total(text.rangeTotal, rows),
-    signatures(text),
-  ];
+/** Hoja de Access: encabezado ANUNCIO con numero y especial, la tabla y las firmas con el Fiel. */
+function announcementSheets(rows: Row[], text: AnnouncementReportText,
+  table: (block: AnnouncementBlock) => Content): TDocumentDefinitions {
+  const blocks = groupByAnnouncement(rows).sort((a, c) =>
+    a.date.localeCompare(c.date) || Number(a.number) - Number(c.number) || a.specialType.localeCompare(c.specialType));
   return {
     pageSize: 'LETTER',
     pageOrientation: 'landscape',
     pageMargins: [20, 20, 20, 30],
-    content: [
-      ...section(text.summaryTitle, (b, label) => summaryTable(b, text, label),
-        (label, totalRows) => table(SUMMARY_WIDTHS, [summaryTotalRow(label, totalRows)], 0), 0),
-      ...section(text.detailTitle, (b, label) => detailTable(b, text, label),
-        (label, totalRows) => table(detail.widths, [detailTotalRow(label, totalRows, detail)], 0), days.length),
-    ],
+    content: blocks.flatMap((block, i): Content[] => [
+      pageHeader(text.detailTitle, `${block.number} ${block.specialType}`, block.agencyName.toUpperCase(),
+        [{ text: `${text.dateLabel}  `, bold: true }, shortDate(block.date)], i > 0, text),
+      table(block),
+      signatures(text, block.trustedName),
+    ]),
     footer: footer(text),
     defaultStyle: { font: 'Roboto', fontSize: FONT_SIZE },
   };
+}
+
+/** RESUMEN ANUNCIO de Access: una hoja por anuncio, una fila por Cod_Prod y SUMA TOTAL. */
+export function buildAnnouncementSummaryDoc(rows: Row[], text: AnnouncementReportText): TDocumentDefinitions {
+  return announcementSheets(rows, text, (block) => summaryTable(block, text));
+}
+
+/** ANUNCIO (detallado) de Access: una hoja por anuncio, una fila por compra, Suma por Cod_Prod y Suma total. */
+export function buildAnnouncementDetailDoc(rows: Row[], text: AnnouncementReportText): TDocumentDefinitions {
+  return announcementSheets(rows, text, (block) => detailTable(block, text));
 }

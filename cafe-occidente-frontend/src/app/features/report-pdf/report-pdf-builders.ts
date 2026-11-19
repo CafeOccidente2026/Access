@@ -1,6 +1,10 @@
 import type { TDocumentDefinitions } from 'pdfmake/interfaces';
 
-import { buildAnnouncementRangeDoc, buildAnnouncementReportDoc } from '../announcement-report/announcement-report-pdf';
+import {
+  buildAnnouncementDetailDoc,
+  buildAnnouncementReportDoc,
+  buildAnnouncementSummaryDoc,
+} from '../announcement-report/announcement-report-pdf';
 import { buildBeneficiaryDoc } from '../beneficiary-report/beneficiary-report-pdf';
 import { buildPurchasesByDateDoc } from '../date-range-dialog/purchases-by-date-pdf';
 import { buildFutureBalanceDoc } from '../future-report/future-balance-pdf';
@@ -14,7 +18,8 @@ import { buildSuppliesReportDoc } from '../supplies-report/supplies-report-pdf';
  */
 const BUILDERS = {
   announcement: buildAnnouncementReportDoc,
-  announcementRange: buildAnnouncementRangeDoc,
+  announcementSummary: buildAnnouncementSummaryDoc,
+  announcementDetail: buildAnnouncementDetailDoc,
   beneficiary: buildBeneficiaryDoc,
   purchasesByDate: buildPurchasesByDateDoc,
   futureBalance: buildFutureBalanceDoc,
