@@ -1,12 +1,14 @@
 {
   "windowTitle": "REPORTE ANUNCIO",
-  "dateLabel": "Fecha",
+  "fromLabel": "Desde Fecha",
+  "toLabel": "Hasta Fecha",
   "generateLabel": "Generar reporte",
   "printLabel": "Imprimir",
   "pdfTitle": "REPORTE ANUNCIO",
   "messages": {
     "wrongYear": "La fecha debe ser del año {year}",
-    "empty": "No hay compras para esa fecha",
+    "fromAfterTo": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)",
+    "empty": "No hay compras para esas fechas",
     "error": "No se pudo generar el reporte"
   },
   "pdf": {
@@ -26,6 +28,10 @@
     "summaryTotal": "SUMA TOTAL",
     "trusted": "Fiel: _____________________________________",
     "signatures": ["CONTABILIDAD", "OPERACIONES", "REVISORIA FISCAL"],
-    "page": "Página {page} de {pages}"
+    "page": "Página {page} de {pages}",
+    "range": "Desde {from} hasta {to}",
+    "announcementTotal": "Subtotal anuncio {announcement}",
+    "dayTotal": "Subtotal del día {date}",
+    "rangeTotal": "Total del rango"
   }
 }

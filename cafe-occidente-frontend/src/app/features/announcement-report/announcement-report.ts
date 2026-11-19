@@ -7,21 +7,22 @@ import { ContentService } from '../../core/services/content.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
 import { AccessWindowComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
 import { renderReportPdf } from '../report-pdf/report-pdf';
-import { AnnouncementReportText, shortDate } from './announcement-report-pdf';
+import { AnnouncementRangeText, AnnouncementReportText } from './announcement-report-pdf';
 
 export interface AnnouncementReportContent {
   readonly windowTitle: string;
-  readonly dateLabel: string;
+  readonly fromLabel: string;
+  readonly toLabel: string;
   readonly generateLabel: string;
   readonly printLabel: string;
   readonly pdfTitle: string;
-  readonly messages: Record<'wrongYear' | 'empty' | 'error', string>;
-  readonly pdf: AnnouncementReportText;
+  readonly messages: Record<'wrongYear' | 'fromAfterTo' | 'empty' | 'error', string>;
+  readonly pdf: AnnouncementReportText & AnnouncementRangeText;
 }
 
 /**
- * "Generar Reporte Anuncio" (RF-24; Form_MENUS COMPRAS.bas, Comando7 -> macro "Imprimir Anuncio"):
- * todas las compras del dia elegido (hoy por defecto) en la agencia de trabajo. RESUMEN y ANUNCIO van en
+ * "Generar Reporte Anuncio" (RF-24; Form_MENUS COMPRAS.bas, Comando7 -> macro "Imprimir Anuncio"): todas las
+ * compras de Desde a Hasta (prueba del 19-nov; los dos hoy por defecto) en la agencia de trabajo. RESUMEN y ANUNCIO van en
  * un solo PDF embebido (sin ventana emergente que el navegador pueda bloquear) e Imprimir los imprime
  * juntos (RN-24.4).
  */
@@ -40,14 +41,17 @@ export class AnnouncementReportComponent {
   readonly year = new Date().getFullYear();
   readonly minDate = `${this.year}-01-01`;
   readonly maxDate = `${this.year}-12-31`;
-  readonly date = signal(new Date().toLocaleDateString('en-CA'));
-  /** Fecha del reporte pedido; undefined = todavia no se ha generado. */
-  private readonly requested = signal<string | undefined>(undefined);
+  readonly fromDate = signal(new Date().toLocaleDateString('en-CA'));
+  readonly toDate = signal(new Date().toLocaleDateString('en-CA'));
+  /** Rango del reporte pedido; undefined = todavia no se ha generado. */
+  private readonly requested = signal<{ from: string; to: string } | undefined>(undefined);
   private readonly wrongYear = signal(false);
+  /** Desde posterior a Hasta (como Compras por Fecha): no se pide nada. */
+  private readonly fromAfterTo = signal(false);
 
   readonly report = rxResource({
     params: () => this.requested(),
-    stream: ({ params }) => this.service.byDate(params, params),
+    stream: ({ params }) => this.service.byDate(params.from, params.to),
   });
 
   /** Las compras del reporte; undefined mientras carga o si fallo. */
@@ -56,8 +60,9 @@ export class AnnouncementReportComponent {
   readonly doc = computed(() => {
     const rows = this.rows();
     const content = this.content();
-    const date = this.requested();
-    return rows?.length && content && date ? { kind: 'announcement' as const, args: [rows, shortDate(date), content.pdf] as [typeof rows, string, typeof content.pdf] }
+    const range = this.requested();
+    return rows?.length && content && range
+      ? { kind: 'announcementRange' as const, args: [rows, range.from, range.to, content.pdf] as [typeof rows, string, string, typeof content.pdf] }
       : null;
   });
 
@@ -68,6 +73,9 @@ export class AnnouncementReportComponent {
     }
     if (this.wrongYear()) {
       return m.wrongYear.replace('{year}', String(this.year));
+    }
+    if (this.fromAfterTo()) {
+      return m.fromAfterTo;
     }
     if (this.report.error()) {
       return m.error;
@@ -91,14 +99,16 @@ export class AnnouncementReportComponent {
   }
 
   generate(): void {
-    const date = this.date();
-    this.wrongYear.set(!date.startsWith(`${this.year}-`));
-    if (this.wrongYear()) {
+    const range = { from: this.fromDate(), to: this.toDate() };
+    this.wrongYear.set(![range.from, range.to].every((d) => d.startsWith(`${this.year}-`)));
+    this.fromAfterTo.set(range.from > range.to);
+    const current = this.requested();
+    if (this.wrongYear() || this.fromAfterTo()) {
       this.requested.set(undefined);
-    } else if (this.requested() === date) {
+    } else if (current?.from === range.from && current.to === range.to) {
       this.report.reload();
     } else {
-      this.requested.set(date);
+      this.requested.set(range);
     }
   }
 

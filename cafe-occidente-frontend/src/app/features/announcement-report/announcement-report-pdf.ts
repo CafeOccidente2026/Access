@@ -39,6 +39,17 @@ export interface AnnouncementReportText {
   readonly announcementColumn?: boolean;
 }
 
+/** Textos del reporte por rango de fechas (prueba del 19-nov). */
+export interface AnnouncementRangeText {
+  /** "Desde {from} hasta {to}". */
+  readonly range: string;
+  /** "Subtotal anuncio {announcement}". */
+  readonly announcementTotal: string;
+  /** "Subtotal del día {date}". */
+  readonly dayTotal: string;
+  readonly rangeTotal: string;
+}
+
 /** Lo minimo que necesitan las firmas y el pie de pagina (tambien los usa el informe Saldo Anuncios). */
 export type ReportFooterText = Pick<AnnouncementReportText, 'trusted' | 'signatures' | 'page'>;
 
@@ -122,6 +133,13 @@ export function groupByAnnouncement(rows: Row[]): AnnouncementBlock[] {
 }
 
 function reportHeader(title: string, block: AnnouncementBlock, date: string, pageBreak: boolean, text: AnnouncementReportText): Content {
+  return pageHeader(title, `${block.announcementNumber} ${block.specialType}`, block.agencyName,
+    [{ text: `${text.dateLabel}  `, bold: true }, date], pageBreak, text);
+}
+
+/** Encabezado de Access: linea, cooperativa, NIT, titulo, rotulo grande (anuncio o rango), agencia y fecha. */
+function pageHeader(title: string, heading: string, agencyName: string, date: string | Content[], pageBreak: boolean,
+  text: AnnouncementReportText): Content {
   return {
     pageBreak: pageBreak ? 'before' : undefined,
     margin: [0, 0, 0, 4],
@@ -133,9 +151,9 @@ function reportHeader(title: string, block: AnnouncementBlock, date: string, pag
       {
         columns: [
           { text: title, bold: true, fontSize: 16, width: 170 },
-          { text: `${block.announcementNumber} ${block.specialType}`, bold: true, fontSize: 14, width: '*' },
-          { text: [{ text: `${text.agencyLabel}  `, bold: true }, block.agencyName], fontSize: 8, width: 180, margin: [0, 5, 0, 0] },
-          { text: [{ text: `${text.dateLabel}  `, bold: true }, date], fontSize: 8, width: 110, margin: [0, 5, 0, 0] },
+          { text: heading, bold: true, fontSize: 14, width: '*' },
+          { text: [{ text: `${text.agencyLabel}  `, bold: true }, agencyName], fontSize: 8, width: 180, margin: [0, 5, 0, 0] },
+          { text: date, bold: typeof date === 'string', fontSize: 8, width: 110, margin: [0, 5, 0, 0] },
         ],
       },
     ],
@@ -156,32 +174,48 @@ export function signatures(text: ReportFooterText): Content {
 const r = (value: string, extra: object = {}): TableCell => ({ text: value, alignment: 'right', ...extra });
 const b = { bold: true };
 
-/** RESUMEN ANUNCIO de un bloque: una fila por Cod_Prod y "SUMA TOTAL". */
-function summaryTable(block: AnnouncementBlock, text: AnnouncementReportText): Content {
-  const head: TableCell[] = text.summaryColumns.map((t) => ({ text: t, bold: true, fontSize: 6, alignment: 'right' }));
-  const sums = (rows: Row[]): TableCell[] => [
+/** Fila de totales del RESUMEN: en Access el "SUMA TOTAL" no trae Porcent Ponderado (no hay control en esa posicion). */
+function summaryTotalRow(label: string, rows: Row[]): TableCell[] {
+  const total = summarySums(rows);
+  total[2] = '';
+  return [{ text: label, bold: true, fontSize: 6 }, ...total];
+}
+
+function summarySums(rows: Row[]): TableCell[] {
+  return [
     r(dec2(greenKg(rows))), r(peso(sum(rows, (p) => p.netKg))), r(dec2(weightedFactor(rows))),
     r(peso(sum(rows, (p) => p.grossValue))), r(peso(sum(rows, (p) => p.associateContribution))),
     r(peso(sum(rows, (p) => p.cooperativeDiscount))), r(peso(sum(rows, (p) => p.freightDiscount))),
     r(peso(sum(rows, (p) => p.withholding))), r(peso(sum(rows, (p) => p.netToPay))),
   ];
+}
+
+const SUMMARY_WIDTHS = [110, 40, 55, 60, 75, 65, 65, 55, 65, 75];
+
+function table(widths: number[], body: TableCell[][], headerRows = 1): Content {
+  return { table: { headerRows, widths, body }, layout: { ...THIN, hLineWidth: (row: number) => (row <= 1 ? 0.5 : 0) } };
+}
+
+/** RESUMEN ANUNCIO de un bloque: una fila por Cod_Prod y "SUMA TOTAL" (o el subtotal del anuncio, por rango). */
+function summaryTable(block: AnnouncementBlock, text: AnnouncementReportText, totalLabel = text.summaryTotal): Content {
+  const head: TableCell[] = text.summaryColumns.map((t) => ({ text: t, bold: true, fontSize: 6, alignment: 'right' }));
   const body: TableCell[][] = [head];
   for (const group of block.groups) {
     body.push([{ text: groupTitle(group), bold: true, fontSize: 9, colSpan: 10, margin: [0, 3, 0, 0] }, ...Array(9).fill('')]);
-    body.push(['', ...sums(group.rows)]);
+    body.push(['', ...summarySums(group.rows)]);
   }
-  // En Access el "SUMA TOTAL" no trae Porcent Ponderado (no hay control en esa posicion).
-  const total = sums(block.rows);
-  total[2] = '';
-  body.push([{ text: text.summaryTotal, bold: true, fontSize: 6 }, ...total]);
-  return {
-    table: { headerRows: 1, widths: [110, 40, 55, 60, 75, 65, 65, 55, 65, 75], body },
-    layout: { ...THIN, hLineWidth: (row: number) => (row <= 1 ? 0.5 : 0) },
-  };
+  body.push(summaryTotalRow(totalLabel, block.rows));
+  return table(SUMMARY_WIDTHS, body);
 }
 
-/** ANUNCIO de un bloque: una fila por compra, subtotales por Cod_Prod y "Suma total". */
-function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Content {
+interface DetailLayout {
+  readonly widths: number[];
+  readonly columns: number;
+  readonly firstNumber: number;
+  readonly withAnnouncement: boolean;
+}
+
+function detailLayout(text: AnnouncementReportText): DetailLayout {
   // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt, con la
   // columna Anun (RN-24.2) al frente. FP se ensancha (a costa de Nombre y Apellidos) porque guarda la
   // forma de pago completa y "ANULADA" en negrilla tiene que caber en una linea.
@@ -190,19 +224,27 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
     .slice(withAnnouncement ? 0 : 1);
   const total = twips.reduce((a, t) => a + t, 0);
   const widths = twips.map((t) => (t * 752) / total - 2);
-  const columns = twips.length;
-  const firstNumber = withAnnouncement ? 7 : 6;
-  const head: TableCell[] = text.detailColumns.map((t, i) => ({
-    text: t, bold: true, fontSize: 6, alignment: i >= firstNumber && i < columns - 1 ? 'right' : 'left',
-  }));
-  const sums = (rows: Row[]): TableCell[] => [
+  return { widths, columns: twips.length, firstNumber: withAnnouncement ? 7 : 6, withAnnouncement };
+}
+
+/** Fila de totales del ANUNCIO: el rotulo ocupa las columnas de texto y luego las sumas en negrilla. */
+function detailTotalRow(label: string, rows: Row[], layout: DetailLayout): TableCell[] {
+  const sums: TableCell[] = [
     r(dec2(greenKg(rows)), b), r(peso(sum(rows, (p) => p.netKg)), b), '', '', r(peso(sum(rows, (p) => p.grossValue)), b),
     r(peso(sum(rows, (p) => p.associateContribution)), b), r(peso(sum(rows, (p) => p.cooperativeDiscount)), b),
     r(peso(sum(rows, (p) => p.freightDiscount)), b), r(peso(sum(rows, (p) => p.withholding)), b),
     r(peso(sum(rows, (p) => p.otherDiscounts)), b), r(peso(sum(rows, (p) => p.netToPay)), b), '',
   ];
-  const span = firstNumber;
-  const label = (value: string): TableCell[] => [{ text: value, bold: true, colSpan: span }, ...Array(span - 1).fill('')];
+  return [{ text: label, bold: true, colSpan: layout.firstNumber }, ...Array(layout.firstNumber - 1).fill(''), ...sums];
+}
+
+/** ANUNCIO de un bloque: una fila por compra, subtotales por Cod_Prod y "Suma total" (o el subtotal del anuncio). */
+function detailTable(block: AnnouncementBlock, text: AnnouncementReportText, totalLabel = text.detailTotal): Content {
+  const layout = detailLayout(text);
+  const { columns, firstNumber, withAnnouncement } = layout;
+  const head: TableCell[] = text.detailColumns.map((t, i) => ({
+    text: t, bold: true, fontSize: 6, alignment: i >= firstNumber && i < columns - 1 ? 'right' : 'left',
+  }));
 
   const body: TableCell[][] = [head];
   for (const group of block.groups) {
@@ -226,13 +268,10 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
       },
       ...Array(columns - 1).fill(''),
     ]);
-    body.push([...label(text.sum), ...sums(group.rows)]);
+    body.push(detailTotalRow(text.sum, group.rows, layout));
   }
-  body.push([...label(text.detailTotal), ...sums(block.rows)]);
-  return {
-    table: { headerRows: 1, widths, body },
-    layout: { ...THIN, hLineWidth: (row: number) => (row <= 1 ? 0.5 : 0) },
-  };
+  body.push(detailTotalRow(totalLabel, block.rows, layout));
+  return table(layout.widths, body);
 }
 
 export function footer(text: ReportFooterText): TDocumentDefinitions['footer'] {
@@ -268,6 +307,60 @@ export function buildAnnouncementReportDoc(rows: Row[], date: string, text: Anno
     content: [
       ...section(text.summaryTitle, (block) => summaryTable(block, text), 0),
       ...section(text.detailTitle, (block) => detailTable(block, text), blocks.length),
+    ],
+    footer: footer(text),
+    defaultStyle: { font: 'Roboto', fontSize: FONT_SIZE },
+  };
+}
+
+interface DayBlocks {
+  readonly date: string;
+  readonly blocks: AnnouncementBlock[];
+  readonly rows: Row[];
+}
+
+/** Prueba del 19-nov: primero por fecha de compra (ascendente) y dentro de cada dia por anuncio. */
+function groupByDay(rows: Row[]): DayBlocks[] {
+  const days = new Map<string, Row[]>();
+  for (const p of [...rows].sort((a, c) => a.purchaseDate.localeCompare(c.purchaseDate))) {
+    days.set(p.purchaseDate, [...(days.get(p.purchaseDate) ?? []), p]);
+  }
+  return [...days.entries()].map(([date, dayRows]) => ({ date, rows: dayRows, blocks: groupByAnnouncement(dayRows) }));
+}
+
+/**
+ * "Generar Reporte Anuncio" por rango (prueba del 19-nov): un solo PDF con RESUMEN ANUNCIO y despues ANUNCIO, con las
+ * columnas de Access. Cada dia empieza pagina con el rango en el titulo; dentro, un bloque por anuncio con su subtotal,
+ * el subtotal del dia y, al final, el total del rango y las firmas.
+ */
+export function buildAnnouncementRangeDoc(rows: Row[], from: string, to: string,
+  text: AnnouncementReportText & AnnouncementRangeText): TDocumentDefinitions {
+  const days = groupByDay(rows);
+  const range = fill(text.range, { from: shortDate(from), to: shortDate(to) });
+  const agencyName = rows[0]?.agencyName ?? '';
+  const detail = detailLayout(text);
+  const section = (title: string, block: (b: AnnouncementBlock, label: string) => Content,
+    total: (label: string, totalRows: Row[]) => Content, offset: number): Content[] => [
+    ...days.flatMap((day, i): Content[] => [
+      pageHeader(title, range, agencyName, `${text.dateLabel} ${shortDate(day.date)}`, offset + i > 0, text),
+      ...day.blocks.flatMap((b): Content[] => [
+        { text: `${b.announcementNumber} ${b.specialType}`, bold: true, fontSize: 11, margin: [0, 6, 0, 2] },
+        block(b, fill(text.announcementTotal, { announcement: b.announcementNumber })),
+      ]),
+      total(fill(text.dayTotal, { date: shortDate(day.date) }), day.rows),
+    ]),
+    total(text.rangeTotal, rows),
+    signatures(text),
+  ];
+  return {
+    pageSize: 'LETTER',
+    pageOrientation: 'landscape',
+    pageMargins: [20, 20, 20, 30],
+    content: [
+      ...section(text.summaryTitle, (b, label) => summaryTable(b, text, label),
+        (label, totalRows) => table(SUMMARY_WIDTHS, [summaryTotalRow(label, totalRows)], 0), 0),
+      ...section(text.detailTitle, (b, label) => detailTable(b, text, label),
+        (label, totalRows) => table(detail.widths, [detailTotalRow(label, totalRows, detail)], 0), days.length),
     ],
     footer: footer(text),
     defaultStyle: { font: 'Roboto', fontSize: FONT_SIZE },

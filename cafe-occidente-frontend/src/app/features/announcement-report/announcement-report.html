@@ -3,15 +3,27 @@
     <div class="flex flex-1 flex-col gap-3 p-4">
       <div class="flex items-end gap-3" appFormFlow>
         <label class="flex flex-col gap-1 text-sm">
-          <span class="font-medium text-blue-900">{{ c.dateLabel }}</span>
+          <span class="font-medium text-blue-900">{{ c.fromLabel }}</span>
           <input
             type="date"
-            data-testid="date"
+            data-testid="from"
             class="rounded border border-slate-300 px-2 py-1"
             [min]="minDate"
             [max]="maxDate"
-            [value]="date()"
-            (input)="date.set($any($event.target).value)"
+            [value]="fromDate()"
+            (input)="fromDate.set($any($event.target).value)"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">{{ c.toLabel }}</span>
+          <input
+            type="date"
+            data-testid="to"
+            class="rounded border border-slate-300 px-2 py-1"
+            [min]="minDate"
+            [max]="maxDate"
+            [value]="toDate()"
+            (input)="toDate.set($any($event.target).value)"
           />
         </label>
         <button
