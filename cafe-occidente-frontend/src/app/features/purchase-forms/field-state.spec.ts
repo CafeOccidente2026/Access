@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { FormFieldDefinition } from '../../core/models';
-import { PurchaseFieldForm, fieldRows } from './field-state';
+import dry from '../../../../public/assets/data/purchase-form-dry.json';
+import green from '../../../../public/assets/data/purchase-form-green.json';
+import { FormFieldDefinition, PurchaseFormContent } from '../../core/models';
+import { PurchaseFieldForm, fieldRows, purchaseFieldMap } from './field-state';
 
 describe('fieldRows', () => {
   const defs: FormFieldDefinition[] = [
@@ -53,5 +55,23 @@ describe('fieldRows', () => {
     const first = build(f).field('grossValue');
     expect(build(f).field('grossValue')).toBe(first);
     expect(build(f, false).field('grossValue')).not.toBe(first);
+  });
+});
+
+describe('purchaseFieldMap', () => {
+  it('has every field of the screen JSON by key, with the settlement and Descuento Fro', () => {
+    const map = purchaseFieldMap(dry as PurchaseFormContent);
+    for (const key of ['fund', 'idNumber', 'grossKg', 'kgPrice', 'contribution', 'otherDiscounts', 'shrinkageDiscount']) {
+      expect(map.get(key)?.key).toBe(key);
+    }
+  });
+
+  it('includes the rows only some screens have (Vr. Kilo Comp of Café Verde)', () => {
+    expect(purchaseFieldMap(green as PurchaseFormContent).has('compKgPrice')).toBe(true);
+  });
+
+  it('works without optional rows', () => {
+    expect([...purchaseFieldMap({ topFields: [{ key: 'agency', label: 'Agencia', type: 'text' }] } as unknown as PurchaseFormContent).keys()])
+      .toEqual(['agency']);
   });
 });

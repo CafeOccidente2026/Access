@@ -18,10 +18,10 @@ import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { hasRequired, saveAndPrint } from '../purchase-print';
-import { settlementBases, settlementRows } from '../settlement';
+import { settlementRows } from '../settlement';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
-import { fieldRows } from '../field-state';
+import { fieldRows, purchaseFieldMap } from '../field-state';
 import { askCellphoneOr } from '../seller-cellphone';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
 import { WeightMessages } from '../weight-check';
@@ -326,17 +326,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
   }
 
   private buildContent(base: HuskContent): PurchaseFormContent {
-    const bmap = new Map<string, FormFieldDefinition>();
-    const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
-    collect(base.topFields);
-    collect(base.identificationFields);
-    collect(base.contactFields);
-    collect(base.qualityFields);
-    collect(base.netWeightFields);
-    collect(settlementBases(base));
-    if (base.discountField) {
-      bmap.set(base.discountField.key, base.discountField);
-    }
+    const bmap = purchaseFieldMap(base);
 
     const info = this.announcementInfo();
     const inv = this.invoiceReservation();
