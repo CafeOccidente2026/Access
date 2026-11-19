@@ -18,6 +18,7 @@ import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shar
 import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementBases, settlementRows } from '../settlement';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { fieldRows } from '../field-state';
@@ -353,7 +354,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
     collect(base.weightFields);
     collect(base.netWeightFields);
     collect(base.priceFields);
-    collect(base.settlementFields);
+    collect(settlementBases(base));
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
     }
@@ -399,7 +400,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
       priceFields: row(base.priceFields),
-      settlementFields: row(base.settlementFields)!,
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,

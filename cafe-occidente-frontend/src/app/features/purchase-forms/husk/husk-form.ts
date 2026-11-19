@@ -18,6 +18,7 @@ import { buildHuskInvoiceDocDefinition } from './husk-invoice';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementBases, settlementRows } from '../settlement';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
 import { fieldRows } from '../field-state';
@@ -332,7 +333,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
     collect(base.contactFields);
     collect(base.qualityFields);
     collect(base.netWeightFields);
-    collect(base.settlementFields);
+    collect(settlementBases(base));
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
     }
@@ -366,7 +367,7 @@ export class HuskFormComponent extends UnsavedCloseForm {
       contactFields: row(base.contactFields),
       qualityFields: row(base.qualityFields),
       netWeightFields: row(base.netWeightFields),
-      settlementFields: row(base.settlementFields)!,
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,

@@ -121,12 +121,6 @@
       (fieldValueChange)="fieldValueChange.emit($event)"
       (fieldCommitted)="fieldCommitted.emit($event)"
     ></app-field-row>
-    <app-field-row
-      *ngIf="content.settlementSecondaryFields"
-      [fields]="content.settlementSecondaryFields"
-      (fieldValueChange)="fieldValueChange.emit($event)"
-      (fieldCommitted)="fieldCommitted.emit($event)"
-    ></app-field-row>
 
     <div class="flex flex-wrap items-center justify-between gap-4">
       <app-field-row

@@ -26,6 +26,7 @@ import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate'
 import { buildDryCoffeeInvoiceDocDefinition } from '../dry-coffee/dry-coffee-invoice';
 import { reserveInvoice } from '../invoice-reservation';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementBases, settlementRows } from '../settlement';
 import { lockFilled } from '../seller-lookup';
 import { SampleWeightKey, clearSample, isOverThreshold, loadSampleQuality } from '../sample-quality';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
@@ -560,13 +561,9 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
     collect(base.qualityFields);
     collect(base.weightFields);
     collect(base.netWeightFields);
-    collect(base.settlementFields);
-    collect(base.settlementSecondaryFields);
+    collect(settlementBases(base));
     if (base.discountField) {
       bmap.set(base.discountField.key, base.discountField);
-    }
-    if (base.additionalDiscountFields) {
-      base.additionalDiscountFields.forEach((f) => bmap.set(f.key, f));
     }
 
     const info = this.specialInfo();
@@ -641,9 +638,7 @@ export class QuotaPurchaseFormComponent extends UnsavedCloseForm {
       qualityFields: row(base.qualityFields),
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
-      settlementFields: row(base.settlementFields),
-      settlementSecondaryFields: row(base.settlementSecondaryFields),
-      additionalDiscountFields: row(base.additionalDiscountFields),
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       paymentLocked: false,

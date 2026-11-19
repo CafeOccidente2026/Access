@@ -337,7 +337,7 @@ describe('HuskFormComponent - gates de captura', () => {
 describe('purchase-form-husk.json', () => {
   it('the settlement shows Vr. Bruto, Aporte Socio and Neto a Pagar in whole pesos, read only', () => {
     for (const key of ['grossValue', 'contribution', 'netToPay']) {
-      expect(huskContent.settlementFields.find((f) => f.key === key)).toMatchObject({ display: 'money', integer: true });
+      expect([...huskContent.settlementFields, ...huskContent.additionalDiscountFields].find((f) => f.key === key)).toMatchObject({ display: 'money', integer: true });
     }
     expect(huskContent.messages.cooperativeDiscountLabel).toBe('Descuento Coop');
   });
