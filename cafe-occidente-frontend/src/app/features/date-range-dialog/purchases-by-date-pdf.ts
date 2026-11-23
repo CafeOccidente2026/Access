@@ -1,6 +1,7 @@
 import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
+import { ExportCell, ExportRow, ExportTable } from '../../shared/utils/export-table';
 import { announcementDisplay, formatKilos, formatMoney, formatTyped } from '../../shared/utils/number-format';
 import { shortDate } from '../announcement-report/announcement-report-pdf';
 
@@ -126,4 +127,36 @@ export function buildPurchasesByDateDoc(
     }),
     defaultStyle: { font: 'Roboto', fontSize: 7 },
   };
+}
+
+/** Una compra para Exportar a Excel: los textos como en el PDF; kilos, Porc y pesos como numeros. */
+function exportLine(p: Row, text: PurchasesByDateText): ExportCell[] {
+  const kg = (value: number | null): ExportCell => (value == null ? null : { value, format: 'kg' });
+  return [
+    announcementDisplay(p.announcementNumber), shortDate(p.purchaseDate), p.fundCode, `${p.prefix ?? ''} ${p.invoiceNumber}`.trim(),
+    p.idNumber, kg(p.netKg), kg(p.factor), { value: p.unitPrice, format: 'money' },
+    ...MONEY.map((f): ExportCell => ({ value: p[f] as number, format: 'money' })),
+    p.status === 'ANULADA' ? `${p.specialType} ${text.annulled}` : p.specialType,
+  ];
+}
+
+function exportSums(label: string, rows: readonly Row[]): ExportRow {
+  return {
+    kind: 'total',
+    cells: [label, null, null, null, null, { value: sumKg(rows), format: 'kg' }, null, null,
+      ...MONEY.map((f): ExportCell => ({ value: sumPesos(rows, (p) => p[f] as number), format: 'money' })), null],
+  };
+}
+
+/** Demo del 23-nov: el informe para Exportar a Excel, con las columnas, grupos por agencia y sumas del PDF. */
+export function purchasesByDateTable(rows: readonly Row[], from: string, to: string, text: PurchasesByDateText): ExportTable {
+  const body: ExportRow[] = [];
+  for (const [agency, agencyRows] of byAgency(rows)) {
+    const n = agencyRows.length;
+    body.push({ kind: 'group', cells: [agency] }, ...agencyRows.map((p) => ({ cells: exportLine(p, text) })),
+      { kind: 'summary', cells: [fill(text.groupSummary, { agency, count: n, records: n === 1 ? text.oneRecord : text.manyRecords })] },
+      exportSums(text.sum, agencyRows));
+  }
+  body.push(exportSums(text.total, rows));
+  return { title: text.title, subtitle: fill(text.range, { from: shortDate(from), to: shortDate(to) }), columns: text.columns, rows: body };
 }
