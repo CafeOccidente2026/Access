@@ -22,7 +22,7 @@ describe('RemissionReprintComponent', () => {
         provideHttpClientTesting(),
         { provide: InventoryService, useValue: inventory },
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
-        { provide: AuthService, useValue: { canAccess: () => allowed } },
+        { provide: AuthService, useValue: { canAccess: () => allowed, isAdmin: () => allowed } },
       ],
     });
     const component = TestBed.createComponent(RemissionReprintComponent).componentInstance;
@@ -86,6 +86,7 @@ describe('RemissionReprintComponent', () => {
     const denied = setup({ findRemissionByNumber: () => of([REMISSION]) }, false);
     denied.search();
     expect(denied.canAnnul()).toBe(false);
+    expect(denied.isAdmin()).toBe(false);
 
     TestBed.resetTestingModule();
     const component = setup({

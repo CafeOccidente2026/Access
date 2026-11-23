@@ -21,6 +21,7 @@
         <app-remittance-files *ngIf="r.remittanceId && r.status === 'VIGENTE'" [remittanceId]="r.remittanceId"></app-remittance-files>
         <app-button *ngIf="canAnnul()" class="ml-auto" [label]="c.annulLabel" [disabled]="annulling()" (pressed)="confirmingAnnul.set(true)"></app-button>
       </div>
+      <app-remittance-unmark *ngIf="isAdmin()"></app-remittance-unmark>
       <iframe *ngIf="pdfUrl() as url" [title]="c.pdfTitle" class="h-full min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>
   </app-access-window>

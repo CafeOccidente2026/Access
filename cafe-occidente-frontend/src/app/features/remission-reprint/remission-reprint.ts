@@ -13,6 +13,7 @@ import { saveOnce } from '../../shared/utils/save-once';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from '../remission-form/remission-invoice';
 import { RemittanceFilesComponent } from '../remittance/remittance-files-panel';
+import { RemittanceUnmarkComponent } from '../remittance/remittance-unmark';
 import { serverError } from '../../shared/utils/server-error';
 
 /** Textos de la pantalla (public/assets/data/remission-reprint.json). */
@@ -35,13 +36,14 @@ const fill = (text: string, number: string) => text.replace('{number}', number);
 /**
  * "Reimprimir Remisión" (Form_MENUS INVENTARIOS.bas, Comando7 -> consulta "Remision", que pide el numero con un
  * InputBox): mismo PDF de 4 copias que al crear la remision. Respuestas del area (23-nov): tambien vuelve a bajar los
- * 4 archivos de su remesa y, al Administrador o a quien tenga el permiso, le deja anularla.
+ * 4 archivos de su remesa y, al Administrador o a quien tenga el permiso, le deja anularla. El Administrador tambien
+ * desmarca aca las remesas viejas sin remision.
  */
 @Component({
   selector: 'app-remission-reprint',
   standalone: true,
   imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, AppButtonComponent, ConfirmDialogComponent,
-    FormFlowDirective, RemittanceFilesComponent],
+    FormFlowDirective, RemittanceFilesComponent, RemittanceUnmarkComponent],
   templateUrl: './remission-reprint.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -58,6 +60,8 @@ export class RemissionReprintComponent {
   readonly found = signal<RemissionResponse | null>(null);
   readonly confirmingAnnul = signal(false);
   readonly annulling = signal(false);
+  /** Desmarcar remesa (remesas viejas sin remision): solo el Administrador. */
+  readonly isAdmin = computed(() => this.auth.isAdmin());
   readonly canAnnul = computed(() =>
     this.found()?.status === 'VIGENTE' && this.auth.canAccess(['ADMINISTRADOR'], ['ANULAR_REMISION']));
 
