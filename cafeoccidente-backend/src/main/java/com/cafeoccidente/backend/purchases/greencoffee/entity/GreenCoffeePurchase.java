@@ -1,12 +1,13 @@
 package com.cafeoccidente.backend.purchases.greencoffee.entity;
 
-import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
+import com.cafeoccidente.backend.common.persistence.SellerFields;
+import com.cafeoccidente.backend.common.persistence.SellerFieldsUpperCase;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,7 +32,8 @@ import lombok.Setter;
 @Table(name = "compras_cafe_verde")
 @Getter
 @Setter
-public class GreenCoffeePurchase {
+@EntityListeners(SellerFieldsUpperCase.class)
+public class GreenCoffeePurchase implements SellerFields {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,11 +75,9 @@ public class GreenCoffeePurchase {
     @Column(name = "cedula", nullable = false)
     private String idNumber;
 
-    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "nombres", nullable = false)
     private String firstName;
 
-    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "apellidos", nullable = false)
     private String lastName;
 
@@ -85,7 +85,6 @@ public class GreenCoffeePurchase {
     @Column(name = "tipo_vendedor", nullable = false)
     private String growerType;
 
-    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "direccion", nullable = false)
     private String address;
 

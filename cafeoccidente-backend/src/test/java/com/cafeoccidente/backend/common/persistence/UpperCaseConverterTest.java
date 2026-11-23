@@ -11,6 +11,8 @@ import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.supplies.entity.LedgerEntry;
 import com.cafeoccidente.backend.supplies.entity.PackagingEntry;
 import jakarta.persistence.Convert;
+import jakarta.persistence.EntityListeners;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -33,9 +35,6 @@ class UpperCaseConverterTest {
             LedgerEntry.class, new String[] {"detail"},
             PackagingEntry.class, new String[] {"detail"},
             FuturePurchase.class, new String[] {"firstName", "lastName", "address", "finca", "municipality", "vereda"},
-            DryCoffeePurchase.class, new String[] {"firstName", "lastName", "address"},
-            GreenCoffeePurchase.class, new String[] {"firstName", "lastName", "address"},
-            HuskPurchase.class, new String[] {"firstName", "lastName", "address"},
             Remission.class, new String[] {"destination"});
 
     @Test
@@ -48,5 +47,25 @@ class UpperCaseConverterTest {
                         .isEqualTo(UpperCaseConverter.class);
             }
         }
+    }
+
+    /** Seco, Verde y Pasilla guardan el vendedor con un solo listener (sin repetir @Convert en cada compra). */
+    @Test
+    void thePurchasesUpperCaseTheSellerWithTheSharedListener() {
+        for (Class<?> purchase : List.of(DryCoffeePurchase.class, GreenCoffeePurchase.class, HuskPurchase.class)) {
+            assertThat(SellerFields.class).as(purchase.getSimpleName()).isAssignableFrom(purchase);
+            assertThat(purchase.getAnnotation(EntityListeners.class).value()).as(purchase.getSimpleName())
+                    .contains(SellerFieldsUpperCase.class);
+        }
+        GreenCoffeePurchase purchase = new GreenCoffeePurchase();
+        purchase.setFirstName("ana maría");
+        purchase.setLastName(null);
+        purchase.setAddress("vereda el diviso");
+
+        new SellerFieldsUpperCase().upperCase(purchase);
+
+        assertThat(purchase.getFirstName()).isEqualTo("ANA MARÍA");
+        assertThat(purchase.getLastName()).isNull();
+        assertThat(purchase.getAddress()).isEqualTo("VEREDA EL DIVISO");
     }
 }
