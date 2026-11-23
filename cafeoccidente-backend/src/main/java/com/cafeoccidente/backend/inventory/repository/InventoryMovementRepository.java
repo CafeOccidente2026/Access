@@ -15,13 +15,14 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
 
     List<InventoryMovement> findByAgencyIdOrderByPurchaseDateDesc(Long agencyId);
 
-    /** Cedula y fondo de la compra de cada entrada de la agencia: [id, cedula, codigo del fondo]. */
+    /** Cedula, fondo y si ya esta en una remesa, de la compra de cada entrada de la agencia:
+     *  [id, cedula, codigo del fondo, remesada]. */
     @Query(value = """
-            SELECT i.id, c.cedula, f.codigo
+            SELECT i.id, c.cedula, f.codigo, c.remesa_id IS NOT NULL
             FROM inventarios i
-            JOIN (SELECT 'DRY_COFFEE' AS modulo, id, cedula, fondo_id FROM compras_cafe_seco
-                  UNION ALL SELECT 'GREEN_COFFEE', id, cedula, fondo_id FROM compras_cafe_verde
-                  UNION ALL SELECT 'HUSK', id, cedula, fondo_id FROM compras_pasilla) c
+            JOIN (SELECT 'DRY_COFFEE' AS modulo, id, cedula, fondo_id, remesa_id FROM compras_cafe_seco
+                  UNION ALL SELECT 'GREEN_COFFEE', id, cedula, fondo_id, remesa_id FROM compras_cafe_verde
+                  UNION ALL SELECT 'HUSK', id, cedula, fondo_id, remesa_id FROM compras_pasilla) c
               ON c.modulo = i.modulo_compra AND c.id = i.compra_id
             JOIN fondos f ON f.id = c.fondo_id
             WHERE i.agencia_id = :agencyId

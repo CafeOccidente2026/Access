@@ -16,4 +16,7 @@ public interface RemissionService {
     /** "Reimprimir Remision": busca por numero correlativo dentro de la agencia. */
     /** Por numero impreso: el nuevo (SDTA-RP-0001) o el de las remisiones viejas ("1", "2"...). */
     Optional<RemissionResponse> findByNumber(Long agencyId, String displayNumber);
+
+    /** Anular Remision: Administrador o con el permiso ANULAR_REMISION. */
+    RemissionResponse annul(Long id);
 }

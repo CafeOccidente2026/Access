@@ -116,15 +116,23 @@ public class RemittanceRepository {
                 (Integer) rs.getObject("numero_factura")));
     }
 
+    /** remissionId: la remision que la genero (null en Genera Remesa). */
     public Long insert(Long agencyId, Long fundId, int sequence, String number, String specialType,
-            int packagingQuantity, String packagingType, Long userId) {
+            int packagingQuantity, String packagingType, Long userId, Long remissionId) {
         return jdbc.queryForObject("INSERT INTO remesas (agencia_id, fondo_id, consecutivo, numero_remesa,"
-                + " especial_filtro, cantidad_empaques, tipo_empaque, creado_por_usuario_id, creado_en)"
-                + " VALUES (:agencyId, :fundId, :sequence, :number, :specialType, :quantity, :type, :userId, now())"
-                + " RETURNING id", new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("fundId", fundId)
-                        .addValue("sequence", sequence).addValue("number", number).addValue("specialType", specialType)
-                        .addValue("quantity", packagingQuantity).addValue("type", packagingType)
-                        .addValue("userId", userId), Long.class);
+                + " especial_filtro, cantidad_empaques, tipo_empaque, creado_por_usuario_id, creado_en, remision_id)"
+                + " VALUES (:agencyId, :fundId, :sequence, :number, :specialType, :quantity, :type, :userId, now(),"
+                + " :remissionId) RETURNING id", new MapSqlParameterSource().addValue("agencyId", agencyId)
+                        .addValue("fundId", fundId).addValue("sequence", sequence).addValue("number", number)
+                        .addValue("specialType", specialType).addValue("quantity", packagingQuantity)
+                        .addValue("type", packagingType).addValue("userId", userId)
+                        .addValue("remissionId", remissionId), Long.class);
+    }
+
+    /** La remesa vigente que genero la remision, si la tiene. */
+    public Optional<Long> idByRemission(Long remissionId) {
+        return jdbc.queryForList("SELECT id FROM remesas WHERE remision_id = :remissionId AND estado = 'VIGENTE'",
+                new MapSqlParameterSource("remissionId", remissionId), Long.class).stream().findFirst();
     }
 
     /** RN-11.6: las facturas quedan con la remesa y salen de pendientes. */

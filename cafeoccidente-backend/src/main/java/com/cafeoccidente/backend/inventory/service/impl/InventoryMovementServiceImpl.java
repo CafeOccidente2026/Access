@@ -94,7 +94,7 @@ public class InventoryMovementServiceImpl implements InventoryMovementService {
     }
 
     private static InventoryMovementResponse toResponse(InventoryMovement movement, Map<Long, Object[]> sellers) {
-        Object[] seller = sellers.getOrDefault(movement.getId(), new Object[3]);
+        Object[] seller = sellers.getOrDefault(movement.getId(), new Object[4]);
         return new InventoryMovementResponse(
                 movement.getId(),
                 movement.getPurchaseModule(),
@@ -112,6 +112,7 @@ public class InventoryMovementServiceImpl implements InventoryMovementService {
                 movement.getHealthyPercentage(),
                 movement.getInventoryValue(),
                 (String) seller[1],
-                (String) seller[2]);
+                (String) seller[2],
+                Boolean.TRUE.equals(seller[3]));
     }
 }

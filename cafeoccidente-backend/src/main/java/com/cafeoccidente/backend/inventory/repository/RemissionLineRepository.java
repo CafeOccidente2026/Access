@@ -22,7 +22,7 @@ public interface RemissionLineRepository extends JpaRepository<RemissionLine, Lo
             + "SUM(l.quantity * COALESCE(l.exitPercentage, l.inventoryMovement.healthyPercentage, 0))) "
             + "FROM RemissionLine l WHERE l.remission.agency.id = :agencyId "
             + "AND l.inventoryMovement.productCode.id = :productCodeId "
-            + "AND l.remission.remissionDate BETWEEN :from AND :to")
+            + "AND l.remission.remissionDate BETWEEN :from AND :to AND l.remission.status = 'VIGENTE'")
     CodeTotals sumExits(@Param("agencyId") Long agencyId, @Param("productCodeId") Long productCodeId,
             @Param("from") LocalDate from, @Param("to") LocalDate to);
 }

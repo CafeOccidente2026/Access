@@ -37,6 +37,12 @@ public class RemissionController {
         return remissionService.create(request);
     }
 
+    @PostMapping("/{id}/annul")
+    @PreAuthorize(Roles.ANNUL_REMISSION)
+    public RemissionResponse annul(@PathVariable Long id) {
+        return remissionService.annul(id);
+    }
+
     @GetMapping("/{id}")
     public RemissionResponse findById(@PathVariable Long id) {
         return remissionService.findById(id);

@@ -22,5 +22,7 @@ public record InventoryMovementResponse(
         BigDecimal inventoryValue,
         /** Cedula del vendedor y fondo de la compra (C7: columna Cedula y filtro por Fondo en Registrar Salidas). */
         String idNumber,
-        String fundCode) {
+        String fundCode,
+        /** La compra ya esta en una remesa (Genera Remesa, una remision o Access): no sale en Registrar Salidas. */
+        boolean remitted) {
 }

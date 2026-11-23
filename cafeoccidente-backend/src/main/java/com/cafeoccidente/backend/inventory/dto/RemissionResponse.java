@@ -17,5 +17,9 @@ public record RemissionResponse(
         boolean exported,
         List<RemissionLineResponse> lines,
         /** Numero impreso ({prefijo}-{LF|RP}-{0000}; en las viejas, remissionNumber tal cual). */
-        String displayNumber) {
+        String displayNumber,
+        /** VIGENTE o ANULADA. */
+        String status,
+        /** Su remesa (mismo numero); null en las remisiones anteriores a V31. */
+        Long remittanceId) {
 }
