@@ -1,10 +1,13 @@
 package com.cafeoccidente.backend.purchases.greencoffee.entity;
 
+import com.cafeoccidente.backend.common.persistence.SellerFields;
+import com.cafeoccidente.backend.common.persistence.SellerFieldsUpperCase;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,7 +32,8 @@ import lombok.Setter;
 @Table(name = "compras_cafe_verde")
 @Getter
 @Setter
-public class GreenCoffeePurchase {
+@EntityListeners(SellerFieldsUpperCase.class)
+public class GreenCoffeePurchase implements SellerFields {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

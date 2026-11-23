@@ -1,6 +1,8 @@
 package com.cafeoccidente.backend.purchases.shared.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -31,16 +33,20 @@ public class Grower {
     @Column(name = "identificacion", nullable = false, unique = true)
     private String idNumber;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "primer_nombre", nullable = false)
     private String firstName;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "segundo_nombre")
     private String secondName;
 
     /** Nulo en Access para asociaciones/fundaciones (todo el nombre va en firstName) - V34. */
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "primer_apellido")
     private String lastName;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "segundo_apellido")
     private String secondLastName;
 
@@ -52,6 +58,7 @@ public class Grower {
     @Column(name = "fecha_nacimiento")
     private LocalDate birthDate;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "direccion", nullable = false)
     private String address;
 
@@ -76,9 +83,11 @@ public class Grower {
 
     /** "Conductor" en el VBA (Form_Conductores.bas) es este mismo Asociado, no una entidad aparte -
      *  ver migración V26. Ambos nullable: la mayoría de los caficultores no son conductores. */
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "empresa_transporte")
     private String transportCompany;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "vehiculo")
     private String vehiclePlate;
 
@@ -106,6 +115,7 @@ public class Grower {
     @Column(name = "estado_civil")
     private String maritalStatus;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "lugar_nacimiento")
     private String birthPlace;
 
@@ -115,6 +125,7 @@ public class Grower {
     @Column(name = "acta")
     private String actNumber;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "observacion")
     private String observation;
 

@@ -5,6 +5,8 @@
   "conductorLabel": "Cédula Conductor (opcional)",
   "fundLabel": "Fondo",
   "funds": ["RP", "LF"],
+  "specialLabel": "Tipo de café",
+  "chooseSpecial": "Elija el tipo de café",
   "conductor": {
     "noCompany": "sin transportadora registrada",
     "plateLabel": "Placa",
@@ -33,6 +35,7 @@
   },
   "pickLabel": "Sacar la factura",
   "empty": "No hay entradas con saldo en este fondo.",
+  "pickSpecial": "Elija el tipo de café para ver sus facturas.",
   "totalsLabel": "Total marcado",
   "saveLabel": "Guardar Remisión",
   "result": {

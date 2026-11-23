@@ -1,8 +1,10 @@
 package com.cafeoccidente.backend.supplies.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -42,6 +44,7 @@ public abstract class LedgerEntry {
     @Column(name = "cedula", nullable = false)
     private String idNumber;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "detalle")
     private String detail;
 

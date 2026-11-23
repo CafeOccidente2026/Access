@@ -111,7 +111,7 @@ class UserIntegrationTest {
                 .andExpect(jsonPath("$.roleName").value(Roles.OPERACIONES));
         assertThat(jdbc.queryForObject("SELECT cedula FROM usuarios WHERE usuario = 'hu08_nuevo'", String.class))
                 .isEqualTo(NEW_ID);
-        assertThat(grower(NEW_ID)).containsEntry("primer_nombre", "hu08_nuevo").containsEntry("direccion", "-")
+        assertThat(grower(NEW_ID)).containsEntry("primer_nombre", "HU08_NUEVO").containsEntry("direccion", "-")
                 .containsEntry("telefono", "-").containsEntry("tipo", "C").containsEntry("agencia_id", 1L);
     }
 
@@ -207,7 +207,7 @@ class UserIntegrationTest {
         update(old.getId(), body(Roles.USUARIO, 1, true, null, NEW_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.idNumber").value(NEW_ID));
-        assertThat(grower(NEW_ID)).containsEntry("tipo", "C").containsEntry("primer_nombre", "hu08_antiguo");
+        assertThat(grower(NEW_ID)).containsEntry("tipo", "C").containsEntry("primer_nombre", "HU08_ANTIGUO");
 
         update(old.getId(), body(Roles.USUARIO, 1, true, null, "990000804"))
                 .andExpect(status().isBadRequest())

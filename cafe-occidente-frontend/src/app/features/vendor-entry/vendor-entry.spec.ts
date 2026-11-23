@@ -76,7 +76,7 @@ describe('VendorEntryComponent', () => {
     response.complete();
     expect(c.saving()).toBe(false);
     expect(c.values()).toEqual({});
-    expect(c.message()).toBe('Tercero 990723205 guardado. Puede ingresar el siguiente.');
+    expect(c.message()).toBe('Tercero 990723205 guardado.');
   });
 
   it('a duplicate NIT says so', () => {

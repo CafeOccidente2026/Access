@@ -1,7 +1,9 @@
 package com.cafeoccidente.backend.purchases.future.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -49,10 +51,12 @@ public class FuturePurchase {
     @Column(name = "cedula", nullable = false)
     private String idNumber;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "nombres", nullable = false)
     private String firstName;
 
     /** Copia de Asociados: nulo si el Asociado no tiene apellido (V34). */
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "apellidos")
     private String lastName;
 
@@ -60,6 +64,7 @@ public class FuturePurchase {
     @Column(name = "tipo", nullable = false)
     private String growerType;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "direccion", nullable = false)
     private String address;
 
@@ -79,12 +84,15 @@ public class FuturePurchase {
     @Column(name = "fecha_entrega", nullable = false)
     private LocalDate deliveryDate;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "finca")
     private String finca;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "municipio")
     private String municipality;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "vereda")
     private String vereda;
 

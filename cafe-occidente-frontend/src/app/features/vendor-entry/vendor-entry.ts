@@ -79,6 +79,15 @@ export class VendorEntryComponent {
     });
   }
 
+  /** Demo del 23-nov: Aceptar en el mensaje de guardado cierra la pantalla y vuelve a Vendedores; un error se queda. */
+  closeMessage(): void {
+    const saved = !this.error();
+    this.message.set(null);
+    if (saved) {
+      this.back();
+    }
+  }
+
   back(): void {
     this.navigation.goTo(this.content()?.backRoute);
   }

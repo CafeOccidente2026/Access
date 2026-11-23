@@ -22,6 +22,8 @@ describe('RemissionFormComponent', () => {
     { ...base, id: 10, invoiceNumber: 27867, sacos: 10, grossKg: 1250, netKg: 1200, remainingKg: 700, idNumber: '990514', fundCode: 'RP' },
     { ...base, id: 11, invoiceNumber: 27868, sacos: 5, grossKg: 520, netKg: 500, remainingKg: 0, idNumber: '990514', fundCode: 'RP' },
     { ...base, id: 12, invoiceNumber: 27869, sacos: 4, grossKg: 310, netKg: 300, remainingKg: 300, idNumber: '99197019', fundCode: 'LF' },
+    { ...base, id: 13, invoiceNumber: 27860, purchaseDate: '2026-09-20', sacos: 1, grossKg: 52, netKg: 50, remainingKg: 50, idNumber: '990514', fundCode: 'RP' },
+    { ...base, id: 14, invoiceNumber: 27870, specialType: 'ESTANDAR', sacos: 2, grossKg: 101, netKg: 100, remainingKg: 100, idNumber: '990514', fundCode: 'RP' },
   ];
   const saved: RemissionResponse = {
     id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central',
@@ -53,15 +55,37 @@ describe('RemissionFormComponent', () => {
 
   const row = (id: number) => movements.find((m) => m.id === id)!;
 
-  it('lists only the entries with balance of the chosen fund, with their cédula', () => {
+  it('demo del 23-nov: no list until the Tipo de café is chosen; then only that type, by date and invoice', () => {
     setup();
-    expect(component.rows().map((m) => [m.invoiceNumber, m.idNumber])).toEqual([[27867, '990514']]);
+    expect(component.rows()).toEqual([]);
+    expect(component.specials()).toEqual(['ESTANDAR', 'RN']);
 
+    component.setSpecial('RN');
+    expect(component.rows().map((m) => [m.invoiceNumber, m.idNumber])).toEqual([[27860, '990514'], [27867, '990514']]);
+  });
+
+  it('changing the Tipo de café reloads the list and clears what was checked', () => {
+    setup();
+    component.setSpecial('RN');
+    component.toggle(row(10));
+
+    component.setSpecial('ESTANDAR');
+    expect(component.rows().map((m) => m.invoiceNumber)).toEqual([27870]);
+    expect(component.isPicked(row(10))).toBe(false);
+  });
+
+  it('lists only the entries with balance of the chosen fund; changing the fund clears the marks and the type', () => {
+    setup();
+    component.setSpecial('RN');
     component.toggle(row(10));
     component.setFund('LF');
-    expect(component.rows().map((m) => m.invoiceNumber)).toEqual([27869]);
-    // Una remision es de un solo fondo: al cambiarlo se quitan las marcas.
+    // Una remision es de un solo fondo: al cambiarlo se quitan las marcas y se vuelve a elegir el tipo.
     expect(component.isPicked(row(10))).toBe(false);
+    expect(component.rows()).toEqual([]);
+    expect(component.specials()).toEqual(['RN']);
+
+    component.setSpecial('RN');
+    expect(component.rows().map((m) => m.invoiceNumber)).toEqual([27869]);
   });
 
   it('checking an entry takes its whole balance and the sacos and gross kilos of the purchase', () => {

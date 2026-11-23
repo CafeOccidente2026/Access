@@ -1,13 +1,15 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { Location } from '@angular/common';
 import { Type, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ContentService } from '../core/services/content.service';
+import { NavigationService } from '../core/services/navigation.service';
 import { ConfirmDialogComponent } from '../shared/ui/confirm-dialog/confirm-dialog';
 import { AnnouncementUpdateComponent } from './announcement-update/announcement-update';
 import { AnnouncementUpdateHuskComponent } from './announcement-update-husk/announcement-update-husk';
@@ -93,6 +95,8 @@ describe('every screen shows its messages in the shared dialog', () => {
           provideHttpClient(),
           provideHttpClientTesting(),
           { provide: ContentService, useValue: { loadJson: (n: string) => of(CONTENT[n]) } },
+          // Catalogar Terceros cierra al aceptar el guardado (demo del 23-nov): aca no se navega.
+          { provide: NavigationService, useValue: { goTo: () => undefined } },
         ],
       });
       const fixture = TestBed.createComponent(component);
@@ -119,36 +123,92 @@ describe('every screen shows its messages in the shared dialog', () => {
 
 /** 18-nov: tras guardar en Suministros (y Caja Menor, Prestamo Empaques) y Catalogar Terceros el cursor va al primer
  *  campo para el siguiente registro, como en las compras; tras un error vuelve al campo donde estaba. */
-describe('saved messages start the next record on the first field', () => {
-  for (const [name, component] of [['Suministros', SuppliesEntryComponent], ['Catalogar Terceros', VendorEntryComponent]] as const) {
-    it(`${name}: saved goes to the first field, an error goes back where it was`, async () => {
-      TestBed.configureTestingModule({
-        providers: [
-          provideRouter([]),
-          provideHttpClient(),
-          provideHttpClientTesting(),
-          { provide: ContentService, useValue: { loadJson: (n: string) => of(CONTENT[n]) } },
-        ],
-      });
-      const fixture = TestBed.createComponent(component as Type<unknown>);
+describe('saved messages: the next record on the first field, or close the screen (demo del 23-nov)', () => {
+  const navigation = { goTo: vi.fn() };
+  const location = { back: vi.fn() };
+
+  async function open(component: Type<unknown>, screenKey?: string) {
+    navigation.goTo.mockClear();
+    location.back.mockClear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ContentService, useValue: { loadJson: (n: string) => of(CONTENT[n]) } },
+        { provide: NavigationService, useValue: navigation },
+        { provide: Location, useValue: location },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: { screen: screenKey } }, queryParamMap: of(convertToParamMap({})) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(component);
+    fixture.detectChanges();
+    await Promise.resolve();
+    TestBed.tick();
+    const screen = fixture.componentInstance as Record<string, WritableSignal<unknown>>;
+    const dialog = () => fixture.debugElement.query(By.directive(ConfirmDialogComponent)).componentInstance as ConfirmDialogComponent;
+    return { fixture, screen, dialog };
+  }
+
+  it('Suministros (not Caja nor Empaque): saved goes to the first field, an error goes back where it was', async () => {
+    const { fixture, screen, dialog } = await open(SuppliesEntryComponent, 'supply');
+    screen['error'].set(false);
+    screen['message'].set('Guardado');
+    fixture.detectChanges();
+    expect(dialog().focusFirstFieldOnClose).toBe(true);
+    dialog().confirmed.emit();
+    expect(navigation.goTo).not.toHaveBeenCalled();
+
+    screen['error'].set(true);
+    screen['message'].set('No se pudo guardar');
+    fixture.detectChanges();
+    expect(dialog().focusFirstFieldOnClose).toBe(false);
+  });
+
+  for (const key of ['cash', 'packaging']) {
+    it(`Suministros ${key}: Aceptar on the saved message closes the screen back to its menu; an error stays`, async () => {
+      const { fixture, screen, dialog } = await open(SuppliesEntryComponent, key);
+      screen['error'].set(true);
+      screen['message'].set('No se pudo guardar');
       fixture.detectChanges();
-      await Promise.resolve();
-      TestBed.tick();
-      const screen = fixture.componentInstance as Record<string, WritableSignal<unknown>>;
-      const firstField = () =>
-        fixture.debugElement.query(By.directive(ConfirmDialogComponent)).componentInstance.focusFirstFieldOnClose;
+      dialog().confirmed.emit();
+      fixture.detectChanges();
+      expect(navigation.goTo).not.toHaveBeenCalled();
 
       screen['error'].set(false);
       screen['message'].set('Guardado');
       fixture.detectChanges();
-      expect(firstField()).toBe(true);
-
-      screen['message'].set(null);
-      fixture.detectChanges();
-      screen['error'].set(true);
-      screen['message'].set('No se pudo guardar');
-      fixture.detectChanges();
-      expect(firstField()).toBe(false);
+      dialog().confirmed.emit();
+      expect(navigation.goTo).toHaveBeenCalledWith('/suministros');
     });
   }
+
+  it('Catalogar Terceros: Aceptar on the saved message closes the screen back to its menu; an error stays', async () => {
+    const { fixture, screen, dialog } = await open(VendorEntryComponent);
+    screen['error'].set(true);
+    screen['message'].set('No se pudo guardar');
+    fixture.detectChanges();
+    dialog().confirmed.emit();
+    fixture.detectChanges();
+    expect(navigation.goTo).not.toHaveBeenCalled();
+
+    screen['error'].set(false);
+    screen['message'].set('Guardado');
+    fixture.detectChanges();
+    dialog().confirmed.emit();
+    expect(navigation.goTo).toHaveBeenCalledWith((vendorEntry as { backRoute: string }).backRoute);
+  });
+
+  it('Ingresar Conductores: Aceptar on the saved message goes back where it came from; an error stays', async () => {
+    const { fixture, screen, dialog } = await open(ConductorFormComponent);
+    screen['error'].set('Cédula, Nombre y Apellidos son obligatorios');
+    fixture.detectChanges();
+    dialog().confirmed.emit();
+    expect(location.back).not.toHaveBeenCalled();
+
+    screen['message'].set('Conductor registrado');
+    fixture.detectChanges();
+    dialog().confirmed.emit();
+    expect(location.back).toHaveBeenCalledTimes(1);
+  });
 });
