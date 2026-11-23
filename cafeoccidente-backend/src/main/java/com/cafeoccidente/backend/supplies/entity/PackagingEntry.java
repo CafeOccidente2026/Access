@@ -1,7 +1,9 @@
 package com.cafeoccidente.backend.supplies.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -41,6 +43,7 @@ public class PackagingEntry {
     @Column(name = "cedula", nullable = false)
     private String idNumber;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "detalle")
     private String detail;
 

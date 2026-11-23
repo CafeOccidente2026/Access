@@ -1,9 +1,11 @@
 package com.cafeoccidente.backend.purchases.drycoffee.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -70,9 +72,11 @@ public class DryCoffeePurchase {
     @Column(name = "cedula", nullable = false)
     private String idNumber;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "nombres", nullable = false)
     private String firstName;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "apellidos", nullable = false)
     private String lastName;
 
@@ -80,6 +84,7 @@ public class DryCoffeePurchase {
     @Column(name = "tipo_vendedor", nullable = false)
     private String growerType;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "direccion", nullable = false)
     private String address;
 

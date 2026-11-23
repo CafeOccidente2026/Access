@@ -1,9 +1,11 @@
 package com.cafeoccidente.backend.inventory.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -41,6 +43,7 @@ public class Remission {
     @Column(name = "fecha_remision", nullable = false)
     private LocalDate remissionDate;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "destino")
     private String destination;
 
