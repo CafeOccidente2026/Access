@@ -22,7 +22,7 @@ describe('RemissionReprintComponent', () => {
         provideHttpClientTesting(),
         { provide: InventoryService, useValue: inventory },
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
-        { provide: AuthService, useValue: { canAccess: () => allowed, isAdmin: () => allowed } },
+        { provide: AuthService, useValue: { canAccess: () => allowed, isAdmin: () => allowed, agencyName: () => 'Buesaco 1' } },
       ],
     });
     const component = TestBed.createComponent(RemissionReprintComponent).componentInstance;
