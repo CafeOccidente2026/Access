@@ -6,7 +6,7 @@ import writeExcelFile from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
 import content from '../../../../public/assets/data/supplies-report.json';
-import { buildSuppliesReportDoc, groupByAgency, paymentMethodsSheet } from './supplies-report-pdf';
+import { buildSuppliesReportDoc, checksTable, groupByAgency, paymentMethodsSheet } from './supplies-report-pdf';
 import { SuppliesReportContent } from './supplies-report.model';
 
 const data = content as SuppliesReportContent;
@@ -135,4 +135,31 @@ describe('supplies reports', () => {
       expect(size, report.windowTitle).toBeGreaterThan(1000);
     }
   }, 20_000); // genera un PDF por informe: con cobertura pasa de los 5 s por defecto
+});
+
+/** Demo del 23-nov: Relacion Cheques y Relacion Cheques Especial a Excel y Word, con las columnas y totales del PDF. */
+describe('Relacion Cheques para exportar', () => {
+  const exported = checksTable(data.reports['checks'], data.text, rows);
+
+  it('has the title, the cooperative with its NIT and the 7 columns of the PDF', () => {
+    expect(exported.title).toBe('RELACION CHEQUES');
+    expect(exported.subtitle).toContain('NIT. 891.200.986-8');
+    expect(exported.columns).toEqual(['Fecha', 'Cédula', 'Nombre', 'Apellidos', 'Cheque', 'Por Sum', 'Por Comp']);
+  });
+
+  it('groups by agency with its summary and Suma, and ends with the Suma total', () => {
+    expect(exported.rows.map((r) => [r.kind ?? 'line', typeof r.cells[0] === 'string' ? r.cells[0] : ''])).toEqual([
+      ['group', 'Agencia:  EL TAMBO'], ['line', '14/06/2026'], ['line', '14/06/2026'],
+      ['summary', "Resumir por 'Agencia' = EL TAMBO (2 registros de detalle)"], ['total', 'Suma'],
+      ['group', 'Agencia:  SANDONA'], ['line', '14/06/2026'],
+      ['summary', "Resumir por 'Agencia' = SANDONA (1 registros de detalle)"], ['total', 'Suma'],
+      ['total', 'Suma total'],
+    ]);
+  });
+
+  it('keeps the cheque and the values; Por Sum and Por Comp as numbers with their totals', () => {
+    expect(exported.rows[1].cells).toEqual(['14/06/2026', '99.304.051', 'CAFICULTOR', 'PRUEBA', '5320',
+      { value: 0, format: 'money' }, { value: 6016407.5, format: 'money' }]);
+    expect(exported.rows.at(-1)!.cells.slice(5)).toEqual([{ value: 100, format: 'money' }, { value: 6016457.5, format: 'money' }]);
+  });
 });

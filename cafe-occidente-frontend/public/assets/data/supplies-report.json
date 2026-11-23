@@ -2,6 +2,8 @@
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
   "downloadLabel": "Descargar Excel",
+  "exportExcelLabel": "Exportar a Excel",
+  "exportWordLabel": "Exportar a Word",
   "agencyLabel": "Pto Compra",
   "messages": {
     "empty": "No hay movimientos para mostrar",
@@ -81,6 +83,7 @@
     },
     "checks": {
       "windowTitle": "Relación Cheques",
+      "exportFileName": "relacion cheques",
       "endpoint": "checks",
       "post": true,
       "layout": "checks",
@@ -90,6 +93,7 @@
     },
     "checksSpecial": {
       "windowTitle": "Cheq Dialog",
+      "exportFileName": "relacion cheques especial",
       "endpoint": "checks",
       "post": true,
       "layout": "checks",

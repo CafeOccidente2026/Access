@@ -6,6 +6,8 @@ export interface DateRangeDialogContent {
   readonly toLabel: string;
   readonly acceptLabel: string;
   readonly cancelLabel: string;
+  readonly exportExcelLabel: string;
+  readonly exportFileName: string;
   readonly pdfTitle: string;
   readonly messages: Record<'fromAfterTo' | 'empty' | 'error', string>;
   readonly pdf: PurchasesByDateText;
