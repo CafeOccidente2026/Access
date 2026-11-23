@@ -19,8 +19,7 @@
     "balances": {
       "windowTitle": "NESSYRAINSALDO",
       "heading": "CONSULTA SALDOS CUPOS NESS Y RAIN",
-      "columns": ["CEDULA", "NOMBRES", "PROGRAMA", "CUPO", "FACTURADOS", "SALDO"],
-      "note": "Igual que en Access, solo cuenta compras cuyo Especial es exactamente NESPRESSO, RAINFOREST, NESPRESSO LATE HARVEST o REGIONAL NARIÑO 4C; variantes como \"NESPRESSO - FTUSA\" o \"CON TAZA\" no aparecen. Facturados suma todas esas compras de la cédula y se repite en cada programa de la cédula (consulta NESSYRAINSALDO)."
+      "columns": ["CEDULA", "NOMBRES", "PROGRAMA", "CUPO", "FACTURADOS", "SALDO"]
     }
   }
 }

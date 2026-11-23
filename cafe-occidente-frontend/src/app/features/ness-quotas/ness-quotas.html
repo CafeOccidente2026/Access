@@ -23,7 +23,7 @@
           <input type="checkbox" [checked]="allAgencies()" (change)="allAgencies.set($any($event.target).checked)" />
           {{ c.allAgenciesLabel }}
         </label>
-        <p class="max-w-4xl text-xs text-amber-800">{{ v.note }}</p>
+        <p *ngIf="v.note" class="max-w-4xl text-xs text-amber-800">{{ v.note }}</p>
       </div>
 
       <div class="flex-1 overflow-auto">
