@@ -18,6 +18,8 @@ export interface SuppliesReport {
   readonly filters: SuppliesReportFilter[];
   readonly columns: string[];
   readonly excel?: { readonly fileName: string; readonly columns: string[] };
+  /** Demo del 23-nov: Relacion Cheques y la Especial se exportan a Excel y Word con este nombre de archivo. */
+  readonly exportFileName?: string;
   readonly backRoute: string;
 }
 
@@ -40,6 +42,8 @@ export interface SuppliesReportContent {
   readonly acceptLabel: string;
   readonly cancelLabel: string;
   readonly downloadLabel: string;
+  readonly exportExcelLabel: string;
+  readonly exportWordLabel: string;
   readonly agencyLabel: string;
   readonly messages: Record<'empty' | 'error' | 'required', string>;
   readonly text: SuppliesReportText;
