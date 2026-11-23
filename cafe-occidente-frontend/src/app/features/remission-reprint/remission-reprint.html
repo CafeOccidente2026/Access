@@ -1,21 +1,37 @@
-<div class="flex h-screen flex-col bg-white p-3">
-  <app-access-window title="REIMPRIMIR REMISIÓN" bodyClass="bg-white flex-1 flex flex-col">
+<div class="flex h-screen flex-col bg-white p-3" *ngIf="content() as c">
+  <app-access-window [title]="c.windowTitle" bodyClass="bg-white flex-1 flex flex-col">
     <div class="flex flex-1 flex-col gap-3 p-4">
       <div class="flex items-end gap-3" appFormFlow>
         <div class="flex w-56 flex-col gap-1 text-sm">
-          <span class="font-medium text-blue-900">Pto Compra</span>
-          <app-agency-picker [ariaLabel]="'Pto Compra'"></app-agency-picker>
+          <span class="font-medium text-blue-900">{{ c.agencyLabel }}</span>
+          <app-agency-picker [ariaLabel]="c.agencyLabel"></app-agency-picker>
         </div>
         <label class="flex flex-col gap-1 text-sm">
-          <span class="font-medium text-blue-900">N° de Remisión</span>
-          <input type="text" class="rounded border border-slate-300 px-2 py-1" [value]="remissionNumber()" (input)="remissionNumber.set($any($event.target).value)" />
+          <span class="font-medium text-blue-900">{{ c.numberLabel }}</span>
+          <input type="text" class="rounded border border-slate-300 px-2 py-1 uppercase" [value]="remissionNumber()" (input)="remissionNumber.set($any($event.target).value)" />
         </label>
         <button type="button" data-flow-submit class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="search()">
-          Aceptar
+          {{ c.acceptLabel }}
         </button>
         <p *ngIf="message() as m" class="pb-1.5 text-sm text-red-600">{{ m }}</p>
       </div>
-      <iframe *ngIf="pdfUrl() as url" title="REMISIÓN" class="h-full min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
+      <div *ngIf="found() as r" class="flex flex-wrap items-center gap-3">
+        <span class="font-semibold">{{ r.displayNumber }}</span>
+        <span *ngIf="r.status === 'ANULADA'" data-testid="annulled" class="font-semibold text-red-700">{{ c.annulledLabel }}</span>
+        <app-remittance-files *ngIf="r.remittanceId && r.status === 'VIGENTE'" [remittanceId]="r.remittanceId"></app-remittance-files>
+        <app-button *ngIf="canAnnul()" class="ml-auto" [label]="c.annulLabel" [disabled]="annulling()" (pressed)="confirmingAnnul.set(true)"></app-button>
+      </div>
+      <iframe *ngIf="pdfUrl() as url" [title]="c.pdfTitle" class="h-full min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>
   </app-access-window>
+
+  <app-confirm-dialog
+    *ngIf="confirmingAnnul()"
+    [message]="confirmText(c)"
+    [confirmLabel]="c.yesLabel"
+    [cancelLabel]="c.noLabel"
+    [safeFocus]="true"
+    (confirmed)="annul()"
+    (cancelled)="confirmingAnnul.set(false)"
+  ></app-confirm-dialog>
 </div>
