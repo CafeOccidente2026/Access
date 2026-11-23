@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Associate } from '../../core/models/vendor.model';
 import associatesContent from '../../../../public/assets/data/associates.json';
+import nessQuotas from '../../../../public/assets/data/ness-quotas.json';
 import menu from '../../../../public/assets/data/vendors-menu.json';
 import { AssociatesContent, displayValue } from '../associates/associates';
 import { quotaCells } from './ness-quotas';
@@ -20,10 +21,15 @@ describe('ness quotas', () => {
 });
 
 describe('vendors menu and associates', () => {
-  it('keeps the 8 Access buttons in order, with Actualizar Vendedores disabled (Actualiza Cupos NESS is HU-54)', () => {
-    const options = menu.columns[0];
-    expect(options).toHaveLength(8);
-    expect(options.filter((o) => 'disabled' in o && o.disabled).map((o) => o.label)).toEqual(['Actualizar Vendedores']);
+  it('demo del 23-nov: 7 buttons, without Actualizar Vendedores (it does not apply with a single database)', () => {
+    const options = menu.columns[0] as { label: string; disabled?: boolean; hint?: string }[];
+    expect(options).toHaveLength(7);
+    expect(options.map((o) => o.label)).not.toContain('Actualizar Vendedores');
+    expect(options.some((o) => o.disabled || o.hint)).toBe(false);
+  });
+
+  it('demo del 23-nov: Consulta Saldos Cupos Ness no longer shows the note about the Especial', () => {
+    expect('note' in nessQuotas.views.balances).toBe(false);
   });
 
   it('shows the 28 Access controls with True/False as Verdadero/Falso', () => {
