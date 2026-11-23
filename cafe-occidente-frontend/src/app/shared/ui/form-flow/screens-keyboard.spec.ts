@@ -19,7 +19,6 @@ const SCREENS: [string, number][] = [
   ['remission-reprint/remission-reprint.html', 1],
   ['conductor-form/conductor-form.html', 2],
   ['remission-form/remission-form.html', 1],
-  ['remittance/remittance.html', 2],
 ];
 
 const count = (text: string, part: string) => text.split(part).length - 1;

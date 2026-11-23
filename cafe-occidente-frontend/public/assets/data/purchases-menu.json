@@ -1,8 +1,6 @@
 {
   "windowTitle": "COMPRAS",
-  "sideOptions": [
-    { "label": "Genera Remesa", "route": "/compras/remesa", "roles": ["ADMINISTRADOR", "USUARIO"] }
-  ],
+  "sideOptions": [],
   "options": [
     { "label": "Compras Café Seco", "route": "/compras/cafe-seco", "emphasis": true, "roles": ["ADMINISTRADOR", "USUARIO"] },
     { "label": "Compras Café Verde", "route": "/compras/cafe-verde", "roles": ["ADMINISTRADOR", "USUARIO"] },

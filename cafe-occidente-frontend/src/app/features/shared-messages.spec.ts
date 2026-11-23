@@ -21,7 +21,6 @@ import { PurchaseAnnulmentComponent } from './purchase-annulment/purchase-annulm
 import { PurchaseCorrectionComponent } from './purchase-correction/purchase-correction';
 import { QuotaAssignmentComponent } from './quota-assignment/quota-assignment';
 import { RemissionFormComponent } from './remission-form/remission-form';
-import { RemittanceComponent } from './remittance/remittance';
 import { SuppliesEntryComponent } from './supplies-entry/supplies-entry';
 import { UserManagementComponent } from './user-management/user-management';
 import { VendorEntryComponent } from './vendor-entry/vendor-entry';
@@ -35,7 +34,6 @@ import purchaseCorrection from '../../../public/assets/data/purchase-correction.
 import purchaseQuery from '../../../public/assets/data/purchase-query.json';
 import quotaAssignment from '../../../public/assets/data/quota-assignment.json';
 import remissionForm from '../../../public/assets/data/remission-form.json';
-import remittance from '../../../public/assets/data/remittance.json';
 import suppliesEntry from '../../../public/assets/data/supplies-entry.json';
 import userManagement from '../../../public/assets/data/user-management.json';
 import vendorEntry from '../../../public/assets/data/vendor-entry.json';
@@ -51,7 +49,6 @@ const CONTENT: Record<string, unknown> = {
   'purchase-query': purchaseQuery,
   'quota-assignment': quotaAssignment,
   'remission-form': remissionForm,
-  remittance,
   'supplies-entry': suppliesEntry,
   'user-management': userManagement,
   'vendor-entry': vendorEntry,
@@ -63,7 +60,6 @@ const SCREENS: [string, Type<unknown>, string][] = [
   ['Asignar Cupo (error)', QuotaAssignmentComponent, 'errorMessage'],
   ['Corregir Compra', PurchaseCorrectionComponent, 'savedNotice'],
   ['Anular', PurchaseAnnulmentComponent, 'message'],
-  ['Genera Remesa', RemittanceComponent, 'message'],
   ['Registrar Salidas (error)', RemissionFormComponent, 'errorMessage'],
   ['Ingresar Conductores', ConductorFormComponent, 'message'],
   ['Ingresar Conductores (error)', ConductorFormComponent, 'error'],
