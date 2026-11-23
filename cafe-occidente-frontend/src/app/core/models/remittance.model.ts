@@ -1,3 +1,19 @@
+/** Una remesa (GET /api/remittances?number=...). */
+export interface Remittance {
+  readonly id: number;
+  readonly number: string;
+  readonly fundCode: string;
+  readonly specialType: string | null;
+  readonly packagingQuantity: number | null;
+  readonly packagingType: string | null;
+  readonly status: 'VIGENTE' | 'DESMARCADA';
+  readonly createdAt: string;
+  readonly purchases: number;
+  readonly netKg: number;
+  /** La genero una remision: se deshace con Anular Remision, no con Desmarcar. */
+  readonly fromRemission: boolean;
+}
+
 /** Una factura en los archivos, con los valores de las consultas de Access ya calculados en el servidor. */
 export interface RemittanceLine {
   readonly idNumber: string;
