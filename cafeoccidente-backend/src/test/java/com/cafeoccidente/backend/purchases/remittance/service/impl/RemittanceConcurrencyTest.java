@@ -96,15 +96,15 @@ class RemittanceConcurrencyTest {
     private void restoreConsecutives() {
         List<Integer> invoice = jdbc.queryForList("SELECT ultimo_numero FROM consecutivos_factura WHERE agencia_id = ?",
                 Integer.class, AGENCY);
-        List<Integer> remission = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision"
-                + " WHERE agencia_id = ? AND fondo_id = ?", Integer.class, AGENCY, rp);
+        List<Integer> remission = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
+                + " WHERE agencia_id = ?", Integer.class, AGENCY);
         cleanup.add(() -> {
             jdbc.update("DELETE FROM consecutivos_factura WHERE agencia_id = ?", AGENCY);
             invoice.forEach(last -> jdbc.update("INSERT INTO consecutivos_factura (agencia_id, ultimo_numero) VALUES (?, ?)",
                     AGENCY, last));
-            jdbc.update("DELETE FROM consecutivos_remision WHERE agencia_id = ? AND fondo_id = ?", AGENCY, rp);
-            remission.forEach(last -> jdbc.update("INSERT INTO consecutivos_remision (agencia_id, fondo_id,"
-                    + " ultimo_consecutivo) VALUES (?, ?, ?)", AGENCY, rp, last));
+            jdbc.update("DELETE FROM consecutivos_remision_agencia WHERE agencia_id = ?", AGENCY);
+            remission.forEach(last -> jdbc.update("INSERT INTO consecutivos_remision_agencia (agencia_id,"
+                    + " ultimo_consecutivo) VALUES (?, ?)", AGENCY, last));
         });
     }
 

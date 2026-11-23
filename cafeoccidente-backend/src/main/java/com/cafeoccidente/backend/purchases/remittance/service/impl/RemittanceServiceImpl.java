@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RemittanceServiceImpl implements RemittanceService {
 
-    private static final Set<String> PACKAGING_TYPES = Set.of("NUEVO", "USADO");
+    public static final Set<String> PACKAGING_TYPES = Set.of("NUEVO", "USADO");
     static final String VIGENTE = "VIGENTE";
 
     private final RemittanceRepository repository;
@@ -86,10 +86,10 @@ public class RemittanceServiceImpl implements RemittanceService {
                         Collectors.toList())));
         byModule.forEach((module, ids) -> check(repository.lock(module, ids), ids, agencyId, fund, specialType));
 
-        int sequence = consecutives.take(agencyId, fund.getId());
-        String number = RemissionServiceImpl.displayNumber(controlRecord.getPrefix(), fund.getCode(), sequence);
+        int sequence = consecutives.take(agencyId);
+        String number = RemissionServiceImpl.displayNumber(controlRecord.getPrefix(), sequence);
         Long id = repository.insert(agencyId, fund.getId(), sequence, number, specialType, request.packagingQuantity(),
-                packagingType, securityUtils.getCurrentUserId());
+                packagingType, securityUtils.getCurrentUserId(), null);
         byModule.forEach((module, ids) -> repository.assign(module, ids, id));
         repository.addPackagingExit(agencyId, number, packagingType, controlRecord.getTrustedId(),
                 request.packagingQuantity());
@@ -97,7 +97,7 @@ public class RemittanceServiceImpl implements RemittanceService {
     }
 
     /** RN-11.2 y RN-11.6: solo facturas de la agencia, del fondo y del Especial elegidos, validas y sin remesa. */
-    private static void check(List<LockedPurchase> locked, List<Long> ids, Long agencyId, Fund fund, String specialType) {
+    public static void check(List<LockedPurchase> locked, List<Long> ids, Long agencyId, Fund fund, String specialType) {
         if (locked.size() != ids.size() || locked.stream().anyMatch(p -> !p.agencyId().equals(agencyId))) {
             throw new ResourceNotFoundException("No existe esa compra en la agencia");
         }

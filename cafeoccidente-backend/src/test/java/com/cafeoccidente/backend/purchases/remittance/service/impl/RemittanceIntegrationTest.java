@@ -156,8 +156,8 @@ class RemittanceIntegrationTest {
     }
 
     private int lastConsecutive() {
-        List<Integer> last = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision"
-                + " WHERE agencia_id = ? AND fondo_id = ?", Integer.class, AGENCY, rp);
+        List<Integer> last = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
+                + " WHERE agencia_id = ?", Integer.class, AGENCY);
         return last.isEmpty() ? 0 : last.get(0);
     }
 
@@ -186,7 +186,7 @@ class RemittanceIntegrationTest {
 
         RemittanceResponse remittance = remit(null, List.of(d, g, h));
 
-        assertThat(remittance.number()).isEqualTo("SDBU-RP-%04d".formatted(next));
+        assertThat(remittance.number()).isEqualTo("SDBU-" + next);
         assertThat(remittance.purchases()).isEqualTo(3);
         assertThat(remittance.status()).isEqualTo("VIGENTE");
         assertThat(ours("RP", null)).isEmpty();

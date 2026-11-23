@@ -18,7 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 7a: el consecutivo de remision con transacciones reales (commit y rollback), que un test @Transactional
- * no puede ver. Deja la fila de consecutivos_remision de la agencia y el fondo como estaba.
+ * no puede ver. Deja la fila de consecutivos_remision_agencia de la agencia como estaba.
  */
 @SpringBootTest
 @SuppressWarnings("null")
@@ -33,25 +33,23 @@ class RemissionConsecutiveTransactionTest {
     @Autowired
     private TransactionTemplate transaction;
 
-    private Long rp;
     private List<Integer> original;
 
     @BeforeEach
     void rememberTheConsecutive() {
-        rp = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
-        original = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision"
-                + " WHERE agencia_id = ? AND fondo_id = ?", Integer.class, AGENCY, rp);
+        original = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
+                + " WHERE agencia_id = ?", Integer.class, AGENCY);
     }
 
     @AfterEach
     void restoreTheConsecutive() {
-        jdbc.update("DELETE FROM consecutivos_remision WHERE agencia_id = ? AND fondo_id = ?", AGENCY, rp);
-        original.forEach(last -> jdbc.update("INSERT INTO consecutivos_remision (agencia_id, fondo_id,"
-                + " ultimo_consecutivo) VALUES (?, ?, ?)", AGENCY, rp, last));
+        jdbc.update("DELETE FROM consecutivos_remision_agencia WHERE agencia_id = ?", AGENCY);
+        original.forEach(last -> jdbc.update("INSERT INTO consecutivos_remision_agencia (agencia_id,"
+                + " ultimo_consecutivo) VALUES (?, ?)", AGENCY, last));
     }
 
     private int takeAndCommit() {
-        return transaction.execute(status -> consecutives.take(AGENCY, rp));
+        return transaction.execute(status -> consecutives.take(AGENCY));
     }
 
     @Test
@@ -62,7 +60,7 @@ class RemissionConsecutiveTransactionTest {
 
         // El primero toma el numero y no termina; el segundo debe esperar su commit, no repetir el numero.
         CompletableFuture<Integer> first = CompletableFuture.supplyAsync(() -> transaction.execute(status -> {
-            int taken = consecutives.take(AGENCY, rp);
+            int taken = consecutives.take(AGENCY);
             firstTook.countDown();
             await(release);
             return taken;
@@ -80,7 +78,7 @@ class RemissionConsecutiveTransactionTest {
     @Test
     void aSaveThatFailsDoesNotConsumeItsNumber() {
         int taken = transaction.execute(status -> {
-            int number = consecutives.take(AGENCY, rp);
+            int number = consecutives.take(AGENCY);
             status.setRollbackOnly();
             return number;
         });
@@ -90,7 +88,7 @@ class RemissionConsecutiveTransactionTest {
 
     @Test
     void theNumberIsOnlyTakenInsideTheSaveTransaction() {
-        assertThatThrownBy(() -> consecutives.take(AGENCY, rp)).isInstanceOf(IllegalTransactionStateException.class);
+        assertThatThrownBy(() -> consecutives.take(AGENCY)).isInstanceOf(IllegalTransactionStateException.class);
     }
 
     private static void await(CountDownLatch latch) {
