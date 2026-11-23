@@ -27,6 +27,7 @@ export interface RemissionFormContent {
   readonly funds: string[];
   readonly specialLabel: string;
   readonly chooseSpecial: string;
+  readonly pickSpecial: string;
   readonly conductor: Record<string, string>;
   readonly columns: Record<string, string>;
   readonly pickLabel: string;

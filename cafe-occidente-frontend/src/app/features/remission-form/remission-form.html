@@ -110,7 +110,7 @@
               </td>
             </tr>
             <tr *ngIf="rows().length === 0">
-              <td colspan="9" class="p-3 text-center text-slate-500">{{ c.empty }}</td>
+              <td colspan="9" class="p-3 text-center text-slate-500">{{ special() || !specials().length ? c.empty : c.pickSpecial }}</td>
             </tr>
           </tbody>
           <tfoot class="sticky bottom-0 bg-slate-100 font-semibold">
