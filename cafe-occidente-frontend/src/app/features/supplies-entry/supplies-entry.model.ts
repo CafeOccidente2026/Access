@@ -15,6 +15,8 @@ export interface SuppliesScreen {
   readonly endpoint: string;
   readonly kind: 'ledger' | 'packaging';
   readonly backRoute: string;
+  /** Demo del 23-nov: al aceptar el mensaje de guardado la pantalla se cierra y vuelve a su menu (Caja y Empaque). */
+  readonly closeOnSaved?: boolean;
   /** Campo que decide el codigo del Id (fondo o tipo de empaque); sin el, el Id no depende de nada (Caja Menor). */
   readonly idFrom?: 'fundCode' | 'packagingType';
   readonly fields: SuppliesField[];

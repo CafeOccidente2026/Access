@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <app-confirm-dialog *ngIf="message() as m" [message]="m" [focusFirstFieldOnClose]="true" (confirmed)="message.set(null)"></app-confirm-dialog>
+      <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="closeSaved()"></app-confirm-dialog>
       <app-confirm-dialog *ngIf="error() as m" [message]="m" (confirmed)="error.set(null)"></app-confirm-dialog>
     </div>
   </app-access-window>

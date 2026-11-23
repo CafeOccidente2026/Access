@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
@@ -43,10 +43,17 @@ export function dateTime(instant: string | null): string {
 })
 export class ConductorFormComponent {
   private readonly growerService = inject(GrowerService);
+  private readonly location = inject(Location);
 
   readonly mode = signal<Mode>('choose');
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+
+  /** Demo del 23-nov: Aceptar en "Conductor registrado/actualizado" cierra la pantalla y vuelve de donde vino. */
+  closeSaved(): void {
+    this.message.set(null);
+    this.location.back();
+  }
   readonly shortDate = shortDate;
   readonly dateTime = dateTime;
 

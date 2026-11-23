@@ -50,4 +50,4 @@
     </div>
   </app-access-window>
 </div>
-<app-confirm-dialog *ngIf="message() as m" [message]="m" [focusFirstFieldOnClose]="!error()" (confirmed)="message.set(null)"></app-confirm-dialog>
+<app-confirm-dialog *ngIf="message() as m" [message]="m" [focusFirstFieldOnClose]="!error() && !screen()?.closeOnSaved" (confirmed)="closeMessage()"></app-confirm-dialog>

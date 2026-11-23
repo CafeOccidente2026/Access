@@ -160,6 +160,15 @@ export class SuppliesEntryComponent {
     this.flow?.restart();
   }
 
+  /** Aceptar en el mensaje: si fue el guardado y la pantalla lo pide, se cierra; si fue un error, se queda. */
+  closeMessage(): void {
+    const saved = !this.error();
+    this.message.set(null);
+    if (saved && this.screen()?.closeOnSaved) {
+      this.back();
+    }
+  }
+
   back(): void {
     this.navigation.goTo(this.screen()?.backRoute);
   }
