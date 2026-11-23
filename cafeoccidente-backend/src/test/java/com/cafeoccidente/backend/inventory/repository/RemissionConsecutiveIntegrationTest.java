@@ -3,6 +3,7 @@ package com.cafeoccidente.backend.inventory.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.inventory.dto.RemissionLineRequest;
@@ -33,9 +34,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 7a (RN-11.4, RN-11.5): las Salidas de inventario y las remesas toman el numero PREFIJO-FONDO-CONSECUTIVO
- * del mismo consecutivo por agencia y fondo, asi nunca se repite un numero entre los dos procesos. Sobre la
- * semilla (agencia 1). Transaccional: no deja nada.
+ * Demo del 23-nov (V31): la remision y su remesa tienen el mismo numero PREFIJO-CONSECUTIVO, de un solo consecutivo
+ * por agencia (sin fondo). Sobre la semilla (agencia 1). Transaccional: no deja nada.
  */
 @SpringBootTest
 @Transactional
@@ -63,7 +63,6 @@ class RemissionConsecutiveIntegrationTest {
     private JdbcTemplate jdbc;
 
     private Long rp;
-    private Long lf;
     private User user;
 
     @BeforeEach
@@ -78,7 +77,6 @@ class RemissionConsecutiveIntegrationTest {
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
 
         rp = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
-        lf = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'LF'", Long.class);
         Long announcement = jdbc.queryForObject("INSERT INTO anuncios (fecha_anuncio, pr_base_cps, pr_alm_defec,"
                 + " sobrepr_carga_esp, pr_inc_calidad, fondo_id, especial, activo) VALUES (CURRENT_DATE, 1546900, 6000,"
                 + " 80000, 50, ?, 'RN', true) RETURNING id", Long.class, rp);
@@ -109,23 +107,61 @@ class RemissionConsecutiveIntegrationTest {
                 new BigDecimal("200"), new BigDecimal("10"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, payment);
     }
 
-    private int last(Long agencyId, Long fundId) {
-        List<Integer> last = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision"
-                + " WHERE agencia_id = ? AND fondo_id = ?", Integer.class, agencyId, fundId);
+    private int last(Long agencyId) {
+        List<Integer> last = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
+                + " WHERE agencia_id = ?", Integer.class, agencyId);
         return last.isEmpty() ? 0 : last.get(0);
     }
 
     @Test
-    void aRemittanceTakesTheNumberThatFollowsTheLastInventoryExit() {
+    void theRemissionTakesPrefixAndTheNextConsecutiveOfTheAgency() {
         Long movement = dryPurchaseInventory();
+        int before = last(AGENCY);
 
         String exit = remissions.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
-                List.of(new RemissionLineRequest(movement, new BigDecimal("10.00"), 1, new BigDecimal("10.00")))))
-                .displayNumber();
-        int remittance = consecutives.take(AGENCY, rp);
+                List.of(new RemissionLineRequest(movement)), 5, "USADO")).displayNumber();
 
-        assertThat(exit).isEqualTo("SDBU-RP-%04d".formatted(remittance - 1));
-        assertThat(last(AGENCY, rp)).isEqualTo(remittance);
+        assertThat(exit).isEqualTo("SDBU-" + (before + 1));
+        assertThat(last(AGENCY)).isEqualTo(before + 1);
+    }
+
+    /** Respuestas del area (23-nov): la remision genera su remesa con el mismo numero, marca la compra, saca los
+     *  empaques y la factura ya no esta disponible; al anularla todo vuelve y queda en el Historial. */
+    @Test
+    void savingARemissionGeneratesItsRemittanceAndAnnullingItUndoesEverything() {
+        Long movement = dryPurchaseInventory();
+        Long purchase = jdbc.queryForObject("SELECT compra_id FROM inventarios WHERE id = ?", Long.class, movement);
+        BigDecimal balance = jdbc.queryForObject("SELECT saldo_kilos FROM inventarios WHERE id = ?", BigDecimal.class, movement);
+
+        var remission = remissions.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "nuevo"));
+
+        assertThat(remission.lines().get(0).quantity()).isEqualByComparingTo(balance);
+        assertThat(jdbc.queryForObject("SELECT numero_remesa FROM remesas WHERE id = ? AND remision_id = ?",
+                String.class, remission.remittanceId(), remission.id())).isEqualTo(remission.displayNumber());
+        assertThat(jdbc.queryForObject("SELECT remesa_id FROM compras_cafe_seco WHERE id = ?", Long.class, purchase))
+                .isEqualTo(remission.remittanceId());
+        assertThat(jdbc.queryForObject("SELECT salidas FROM empaques WHERE agencia_id = ? AND id_transaccion = ?"
+                + " AND tipo_empaque = 'NUEVO'", Integer.class, AGENCY, remission.displayNumber())).isEqualTo(5);
+        InventoryMovementResponse row = movements.listByAgency(AGENCY).stream()
+                .filter(m -> m.id().equals(movement)).findFirst().orElseThrow();
+        assertThat(row.remitted()).isTrue();
+        assertThat(row.remainingKg()).isZero();
+        RemissionRequest again = new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "USADO");
+        assertThatThrownBy(() -> remissions.create(again)).isInstanceOf(BusinessRuleException.class);
+
+        var annulled = remissions.annul(remission.id());
+
+        assertThat(annulled.status()).isEqualTo("ANULADA");
+        assertThat(jdbc.queryForObject("SELECT remesa_id FROM compras_cafe_seco WHERE id = ?", Long.class, purchase)).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM empaques WHERE agencia_id = ? AND id_transaccion = ?",
+                Integer.class, AGENCY, remission.displayNumber())).isZero();
+        assertThat(movements.findById(movement).remainingKg()).isEqualByComparingTo(balance);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios WHERE entidad = 'REMISION'"
+                + " AND entidad_id = ? AND accion = 'ANULAR'", Integer.class, remission.id())).isEqualTo(1);
+        assertThat(movements.findById(movement).remitted()).isFalse();
+        assertThatThrownBy(() -> remissions.annul(remission.id())).isInstanceOf(BusinessRuleException.class);
     }
 
     /** C7 (prueba del 11-nov, punto 7): la lista de Registrar Salidas muestra la cedula y filtra por el fondo. */
@@ -142,27 +178,26 @@ class RemissionConsecutiveIntegrationTest {
     }
 
     @Test
-    void eachAgencyAndFundHasItsOwnConsecutive() {
+    void eachAgencyHasItsOwnConsecutiveForBothFunds() {
         Long other = jdbc.queryForObject("SELECT min(id) FROM agencias WHERE id <> ?", Long.class, AGENCY);
-        int lfBefore = last(AGENCY, lf);
-        int otherBefore = last(other, rp);
+        int otherBefore = last(other);
 
-        int first = consecutives.take(AGENCY, rp);
-        int second = consecutives.take(AGENCY, rp);
+        int first = consecutives.take(AGENCY);
+        int second = consecutives.take(AGENCY);
 
         assertThat(second).isEqualTo(first + 1);
-        assertThat(last(AGENCY, lf)).isEqualTo(lfBefore);
-        assertThat(last(other, rp)).isEqualTo(otherBefore);
-        assertThat(consecutives.take(AGENCY, lf)).isEqualTo(lfBefore + 1);
-        assertThat(consecutives.take(other, rp)).isEqualTo(otherBefore + 1);
+        assertThat(last(other)).isEqualTo(otherBefore);
+        assertThat(consecutives.take(other)).isEqualTo(otherBefore + 1);
     }
 
     @Test
-    void theConsecutiveStartsAtTheHighestExitAlreadyNumbered() {
+    void theConsecutiveStartsAtTheHighestNumberAlreadyUsed() {
         Long behind = jdbc.queryForObject("""
-                SELECT count(*) FROM (SELECT agencia_id, fondo_id, max(consecutivo) AS usado FROM remisiones
-                                      WHERE fondo_id IS NOT NULL AND consecutivo IS NOT NULL GROUP BY 1, 2) u
-                LEFT JOIN consecutivos_remision c ON c.agencia_id = u.agencia_id AND c.fondo_id = u.fondo_id
+                SELECT count(*) FROM (SELECT agencia_id, max(consecutivo) AS usado FROM remisiones
+                                      WHERE consecutivo IS NOT NULL GROUP BY 1
+                                      UNION ALL SELECT agencia_id, max(consecutivo) FROM remesas
+                                      WHERE consecutivo IS NOT NULL GROUP BY 1) u
+                LEFT JOIN consecutivos_remision_agencia c ON c.agencia_id = u.agencia_id
                 WHERE c.ultimo_consecutivo IS NULL OR c.ultimo_consecutivo < u.usado""", Long.class);
         assertThat(behind).isZero();
     }

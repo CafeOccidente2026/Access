@@ -102,9 +102,9 @@ class EndpointAuthorizationTest {
     private static final Map<String, String> BODIES = Map.of(
             "/api/vendors", "{\"legalPerson\": false}");
 
-    /** Las 6 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
+    /** Las 7 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
     private static final List<String> SCREENS = List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS",
-            "REGISTRO_CONTROL", "HISTORIAL", "CORREGIR_COMPRA");
+            "REGISTRO_CONTROL", "HISTORIAL", "CORREGIR_COMPRA", "ANULAR_REMISION");
 
     private static void add(Set<String> roles, HttpMethod method, String pattern, String url) {
         MATRIX.add(new Endpoint(method, pattern, url, roles, null));
@@ -221,9 +221,6 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, put, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
 
         // Genera Remesa (RF-11, RF-12): Administrador y Usuario; desmarcar una remesa, solo el Administrador.
-        add(ADMIN_USER, get, "/api/remittances/pending", "/api/remittances/pending?fundCode=RP");
-        add(ADMIN_USER, get, "/api/remittances/specials", "/api/remittances/specials?fundCode=RP");
-        add(ADMIN_USER, post, "/api/remittances");
         add(ADMIN_USER, get, "/api/remittances", "/api/remittances?number=X");
         add(ADMIN_USER, get, "/api/remittances/{id}/files", "/api/remittances/1/files");
         add(ADMIN, post, "/api/remittances/{id}/unmark", "/api/remittances/1/unmark");
@@ -232,6 +229,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, post, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions/{id}", "/api/remissions/1");
+        add(ADMIN, "ANULAR_REMISION", post, "/api/remissions/{id}/annul", "/api/remissions/1/annul");
         add(ADMIN_USER, get, "/api/inventory-movements");
         add(ADMIN_USER, get, "/api/inventory-movements/{id}", "/api/inventory-movements/1");
         add(ADMIN_USER, get, "/api/inventory-report");

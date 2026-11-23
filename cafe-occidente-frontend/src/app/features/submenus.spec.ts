@@ -55,7 +55,7 @@ const ADMIN_USER = ['ADMINISTRADOR', 'USUARIO'];
 
 describe('submenus (HU-02)', () => {
   it('CA-1 Compras', () => {
-    expectInRfOrder(purchases, ['Genera Remesa', 'Compras Café Seco', 'Compras Café Verde', 'Compra Pasilla', 'Compras a Futuro',
+    expectInRfOrder(purchases, ['Compras Café Seco', 'Compras Café Verde', 'Compra Pasilla', 'Compras a Futuro',
       'Inventarios', 'Anular Documento', 'Generar Reporte Anuncio', 'Consulta compras por fecha', 'Consultar Compras']);
   });
 

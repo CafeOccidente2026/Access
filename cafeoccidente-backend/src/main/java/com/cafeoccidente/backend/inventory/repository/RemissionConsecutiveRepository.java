@@ -7,8 +7,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * RN-11.5: consecutivo PREFIJO-FONDO-CONSECUTIVO por agencia y fondo, compartido por las Salidas de
- * inventario y las remesas, asi un numero nunca se repite entre los dos procesos.
+ * Demo del 23-nov (V31): un consecutivo por agencia, el de la remision y su remesa (PREFIJO-CONSECUTIVO).
  */
 @Repository
 public class RemissionConsecutiveRepository {
@@ -25,13 +24,13 @@ public class RemissionConsecutiveRepository {
      * transaccion del guardado el numero se consumiria aunque el guardado fallara.
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public int take(Long agencyId, Long fundId) {
+    public int take(Long agencyId) {
         Integer taken = jdbc.queryForObject("""
-                INSERT INTO consecutivos_remision (agencia_id, fondo_id, ultimo_consecutivo) VALUES (:agencyId, :fundId, 1)
-                ON CONFLICT (agencia_id, fondo_id) DO UPDATE
-                    SET ultimo_consecutivo = consecutivos_remision.ultimo_consecutivo + 1
+                INSERT INTO consecutivos_remision_agencia (agencia_id, ultimo_consecutivo) VALUES (:agencyId, 1)
+                ON CONFLICT (agencia_id) DO UPDATE
+                    SET ultimo_consecutivo = consecutivos_remision_agencia.ultimo_consecutivo + 1
                 RETURNING ultimo_consecutivo""",
-                new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("fundId", fundId), Integer.class);
+                new MapSqlParameterSource().addValue("agencyId", agencyId), Integer.class);
         return taken == null ? 1 : taken;
     }
 }

@@ -25,6 +25,11 @@ export class InventoryService {
     return this.http.post<RemissionResponse>(`${API_BASE_URL}/remissions`, request);
   }
 
+  /** Anular Remision: queda ANULADA y sus facturas vuelven a estar disponibles. */
+  annulRemission(id: number): Observable<RemissionResponse> {
+    return this.http.post<RemissionResponse>(`${API_BASE_URL}/remissions/${id}/annul`, {});
+  }
+
   /** "Reimprimir Remision": busca por numero correlativo (0 o 1 resultado). */
   findRemissionByNumber(remissionNumber: string): Observable<RemissionResponse[]> {
     return this.http.get<RemissionResponse[]>(`${API_BASE_URL}/remissions`, {

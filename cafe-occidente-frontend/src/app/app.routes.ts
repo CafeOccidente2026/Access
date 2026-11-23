@@ -274,11 +274,6 @@ export const routes: Routes = [
           import('./features/remission-reprint/remission-reprint').then((m) => m.RemissionReprintComponent),
       },
       {
-        path: 'compras/remesa',
-        loadComponent: () =>
-          import('./features/remittance/remittance').then((m) => m.RemittanceComponent),
-      },
-      {
         path: 'compras/reporte-anuncio',
         data: { roles: ADMIN_USER },
         loadComponent: () =>

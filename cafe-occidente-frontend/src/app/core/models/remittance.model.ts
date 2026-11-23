@@ -1,27 +1,4 @@
-import { AnnulmentModule } from './purchase-annulment.model';
-
-/** Una factura pendiente de remesar (GET /api/remittances/pending). */
-export interface RemittancePurchase {
-  readonly module: AnnulmentModule;
-  readonly id: number;
-  readonly invoice: string;
-  readonly purchaseDate: string;
-  readonly specialType: string;
-  readonly idNumber: string;
-  readonly sellerName: string;
-  readonly netKg: number;
-  readonly grossValue: number;
-}
-
-export interface RemittanceRequest {
-  readonly fundCode: string;
-  /** null = "Todos". */
-  readonly specialType: string | null;
-  readonly purchases: { readonly module: AnnulmentModule; readonly id: number }[];
-  readonly packagingQuantity: number;
-  readonly packagingType: string;
-}
-
+/** Una remesa (GET /api/remittances?number=...). */
 export interface Remittance {
   readonly id: number;
   readonly number: string;
@@ -33,6 +10,8 @@ export interface Remittance {
   readonly createdAt: string;
   readonly purchases: number;
   readonly netKg: number;
+  /** La genero una remision: se deshace con Anular Remision, no con Desmarcar. */
+  readonly fromRemission: boolean;
 }
 
 /** Una factura en los archivos, con los valores de las consultas de Access ya calculados en el servidor. */

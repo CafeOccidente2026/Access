@@ -34,12 +34,15 @@
     "grossKg": "Kilos Brutos"
   },
   "pickLabel": "Sacar la factura",
-  "empty": "No hay entradas con saldo en este fondo.",
+  "empty": "No hay facturas disponibles en este fondo.",
   "pickSpecial": "Elija el tipo de café para ver sus facturas.",
   "totalsLabel": "Total marcado",
+  "packagingQuantityLabel": "Cantidad de empaques",
+  "packagingTypeLabel": "Tipo de empaque",
+  "packagingTypes": ["NUEVO", "USADO"],
   "saveLabel": "Guardar Remisión",
   "result": {
-    "saved": "Remisión N° {number} registrada correctamente.",
+    "saved": "Remisión N° {number} registrada correctamente. Su remesa tiene el mismo número.",
     "movement": "Movimiento",
     "quantity": "Cantidad",
     "unitValue": "Vr. Unitario",

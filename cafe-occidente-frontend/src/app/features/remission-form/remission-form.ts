@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { InventoryMovementResponse, RemissionResponse } from '../../core/models/inventory.model';
@@ -8,7 +8,7 @@ import { ContentService } from '../../core/services/content.service';
 import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent, FormFlowDirective } from '../../shared/ui';
-import { formatDate, formatKilos, formatMoney, parseDisplayNumber } from '../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { serverError } from '../../shared/utils/server-error';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
@@ -16,6 +16,7 @@ import { buildRemissionDocDefinition } from './remission-invoice';
 import { printPdf } from '../../shared/utils/pdf-preview';
 import { localToday } from '../../shared/utils/local-date';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
+import { RemittanceFilesComponent } from '../remittance/remittance-files-panel';
 
 /** Textos de la pantalla (public/assets/data/remission-form.json). */
 export interface RemissionFormContent {
@@ -33,25 +34,24 @@ export interface RemissionFormContent {
   readonly pickLabel: string;
   readonly empty: string;
   readonly totalsLabel: string;
+  readonly packagingQuantityLabel: string;
+  readonly packagingTypeLabel: string;
+  readonly packagingTypes: string[];
   readonly saveLabel: string;
   readonly result: Record<string, string>;
   readonly messages: { readonly saveError: string; readonly pdfError: string };
 }
 
-/** Lo que sale de una entrada marcada: por defecto todo su saldo, con los sacos y kilos de la compra. */
-type PickField = 'quantity' | 'sacos' | 'grossKg';
-type Pick = Record<PickField, string>;
-
 /**
- * "Registrar Salidas" (Form_EXITS.bas). C7 (prueba del 11-nov, punto 7): como Genera Remesa, una casilla por
- * entrada de inventario con saldo del fondo elegido. Al marcarla sale todo su saldo, con los sacos y kilos
- * brutos de la compra; los tres se pueden editar para una salida parcial. El servidor valida que no se pase
- * del saldo y muestra su motivo.
+ * "Registrar Salidas" (Form_EXITS.bas). Una casilla por factura con saldo del fondo y tipo elegidos que no este ya en
+ * una remesa. Respuestas del area (23-nov): la factura sale completa (sin salidas parciales), con sus sacos y kilos
+ * brutos; los empaques se registran aqui (sugeridos = suma de sacos, editables) y al guardar se genera la remesa con
+ * el mismo numero y sus 4 archivos.
  */
 @Component({
   selector: 'app-remission-form',
   standalone: true,
-  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, FormFlowDirective, RemittanceFilesComponent],
   templateUrl: './remission-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -65,20 +65,22 @@ export class RemissionFormComponent {
   readonly fund = signal('RP');
   /** Demo del 23-nov: el Tipo de cafe (Especial) que se va a despachar; vacio = todavia no se eligio. */
   readonly special = signal('');
-  /** Las entradas con saldo del fondo elegido: una remision es de un solo fondo (su consecutivo es por fondo). */
+  /** Las facturas con saldo del fondo elegido que no estan en una remesa: una remision es de un solo fondo. */
   private readonly withBalance = computed(() =>
-    this.movements().filter((m) => m.remainingKg > 0 && m.fundCode === this.fund()));
+    this.movements().filter((m) => m.remainingKg > 0 && !m.remitted && m.fundCode === this.fund()));
   /** Los tipos de cafe con saldo en el fondo, para elegir. */
   readonly specials = computed(() => [...new Set(this.withBalance().map((m) => m.specialType))].sort((a, b) => a.localeCompare(b)));
   /** Solo las facturas del tipo elegido, por fecha y factura; sin tipo no hay lista. */
   readonly rows = computed(() => this.withBalance()
     .filter((m) => m.specialType === this.special())
     .sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate) || a.invoiceNumber - b.invoiceNumber));
-  readonly picks = signal<ReadonlyMap<number, Pick>>(new Map());
-  readonly totals = computed(() => {
-    const sum = (field: PickField) => [...this.picks().values()].reduce((total, p) => total + parseDisplayNumber(p[field]), 0);
-    return { quantity: sum('quantity'), sacos: sum('sacos'), grossKg: sum('grossKg') };
-  });
+  readonly picks = signal<ReadonlySet<number>>(new Set());
+  readonly totals = computed(() => this.movements().filter((m) => this.picks().has(m.id)).reduce(
+    (t, m) => ({ quantity: t.quantity + m.remainingKg, sacos: t.sacos + m.sacos, grossKg: t.grossKg + m.grossKg }),
+    { quantity: 0, sacos: 0, grossKg: 0 }));
+  /** Empaques de la remision: la suma de sacos de lo marcado, que se puede cambiar. */
+  readonly packagingQuantity = linkedSignal(() => String(this.totals().sacos));
+  readonly packagingType = signal('');
 
   readonly remissionDate = signal(localToday());
   readonly destination = signal('');
@@ -110,13 +112,13 @@ export class RemissionFormComponent {
   setFund(code: string): void {
     this.fund.set(code);
     this.special.set('');
-    this.picks.set(new Map());
+    this.picks.set(new Set());
   }
 
   /** Cambiar el tipo de cafe vuelve a armar la lista y limpia lo marcado. */
   setSpecial(special: string): void {
     this.special.set(special);
-    this.picks.set(new Map());
+    this.picks.set(new Set());
   }
 
   isPicked(movement: InventoryMovementResponse): boolean {
@@ -124,26 +126,11 @@ export class RemissionFormComponent {
   }
 
   toggle(movement: InventoryMovementResponse): void {
-    const next = new Map(this.picks());
-    if (next.has(movement.id)) {
-      next.delete(movement.id);
-    } else {
-      // Sin separador de miles: parseDisplayNumber lee el punto como decimal.
-      next.set(movement.id, { quantity: String(movement.remainingKg), sacos: String(movement.sacos), grossKg: String(movement.grossKg) });
+    const next = new Set(this.picks());
+    if (!next.delete(movement.id)) {
+      next.add(movement.id);
     }
     this.picks.set(next);
-  }
-
-  pickValue(movement: InventoryMovementResponse, field: PickField): string {
-    return this.picks().get(movement.id)?.[field] ?? '';
-  }
-
-  setPick(movement: InventoryMovementResponse, field: PickField, value: string): void {
-    const current = this.picks().get(movement.id);
-    if (!current) {
-      return;
-    }
-    this.picks.set(new Map(this.picks()).set(movement.id, { ...current, [field]: value }));
   }
 
   kg(value: number): string {
@@ -224,7 +211,7 @@ export class RemissionFormComponent {
   }
 
   canSave(): boolean {
-    return !this.result() && this.picks().size > 0;
+    return !this.result() && this.picks().size > 0 && Number(this.packagingQuantity()) > 0 && this.packagingType() !== '';
   }
 
   save(): void {
@@ -232,17 +219,13 @@ export class RemissionFormComponent {
       return;
     }
     this.errorMessage.set(null);
-    const lines = [...this.picks()].map(([inventoryMovementId, p]) => ({
-      inventoryMovementId,
-      quantity: parseDisplayNumber(p.quantity),
-      sacos: parseDisplayNumber(p.sacos),
-      grossKg: parseDisplayNumber(p.grossKg),
-    }));
     saveOnce(this.saving, () => this.inventoryService.createRemission({
       remissionDate: this.remissionDate(),
       destination: this.destination() || null,
       conductorIdNumber: this.conductorIdNumber() || null,
-      lines,
+      lines: [...this.picks()].map((inventoryMovementId) => ({ inventoryMovementId })),
+      packagingQuantity: Number(this.packagingQuantity()),
+      packagingType: this.packagingType(),
     }), {
       next: (res) => this.result.set(res),
       error: (err) => this.errorMessage.set(serverError(err, this.content()?.messages.saveError)),
@@ -255,7 +238,8 @@ export class RemissionFormComponent {
     this.conductorIdNumber.set('');
     this.conductor.set(null);
     this.conductorNotFound.set(false);
-    this.picks.set(new Map());
+    this.picks.set(new Set());
+    this.packagingType.set('');
     this.result.set(null);
     this.errorMessage.set(null);
     this.loadMovements();

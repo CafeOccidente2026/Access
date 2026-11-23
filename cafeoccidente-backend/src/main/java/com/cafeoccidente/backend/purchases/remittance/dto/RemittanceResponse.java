@@ -3,7 +3,7 @@ package com.cafeoccidente.backend.purchases.remittance.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-/** Una remesa: su numero PREFIJO-FONDO-CONSECUTIVO, sus empaques y cuantas facturas y kilos lleva. */
+/** Una remesa: su numero (PREFIJO-CONSECUTIVO, el de su remision), sus empaques y cuantas facturas y kilos lleva. */
 public record RemittanceResponse(
         Long id,
         String number,
@@ -14,5 +14,7 @@ public record RemittanceResponse(
         String status,
         Instant createdAt,
         int purchases,
-        BigDecimal netKg) {
+        BigDecimal netKg,
+        /** La genero una remision (V31): se deshace con Anular Remision, no con Desmarca Remesa. */
+        boolean fromRemission) {
 }

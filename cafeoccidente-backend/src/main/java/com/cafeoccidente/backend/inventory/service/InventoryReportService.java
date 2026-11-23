@@ -4,6 +4,7 @@ import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.inventory.dto.InventoryReportRow;
 import com.cafeoccidente.backend.inventory.dto.ProductCodeOption;
 import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.entity.Remission;
 import com.cafeoccidente.backend.inventory.entity.RemissionLine;
 import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionLineRepository;
@@ -69,6 +70,7 @@ public class InventoryReportService {
                         m.getSpecialType(), m.getNetKg(), m.getHealthyPercentage(), m.getInventoryValue(),
                         null, null, null))));
         remissionLineRepository.findByRemissionAgencyIdAndRemissionRemissionDateBetween(agencyId, from, to).stream()
+                .filter(line -> Remission.VIGENTE.equals(line.getRemission().getStatus()))
                 .filter(line -> matches.test(line.getInventoryMovement()))
                 .forEach(line -> rows.add(exitRow(line)));
 

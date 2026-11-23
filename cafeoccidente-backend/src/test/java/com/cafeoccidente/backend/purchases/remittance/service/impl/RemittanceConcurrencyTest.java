@@ -8,9 +8,9 @@ import com.cafeoccidente.backend.common.security.SecurityUser;
 import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
-import com.cafeoccidente.backend.purchases.remittance.dto.RemittancePurchaseRef;
-import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceRequest;
-import com.cafeoccidente.backend.purchases.remittance.service.RemittanceService;
+import com.cafeoccidente.backend.inventory.dto.RemissionLineRequest;
+import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
+import com.cafeoccidente.backend.inventory.service.RemissionService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.users.entity.User;
@@ -18,6 +18,7 @@ import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -35,8 +36,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 7b, el riesgo mas importante: mandar una factura dos veces a Operaciones. Dos remesas al mismo tiempo con la
- * misma factura, con transacciones reales: la segunda espera el bloqueo de la primera y falla, y la factura
+ * 7b, el riesgo mas importante: mandar una factura dos veces a Operaciones. Dos remisiones (cada una genera su
+ * remesa) al mismo tiempo con la misma factura, con transacciones reales: la segunda espera el bloqueo de la primera y falla, y la factura
  * queda en una sola remesa. Al final borra lo que guardo y deja los consecutivos como estaban.
  */
 @SpringBootTest
@@ -47,7 +48,7 @@ class RemittanceConcurrencyTest {
     private static final long AGENCY = 1L;
 
     @Autowired
-    private RemittanceService remittances;
+    private RemissionService remissions;
     @Autowired
     private DryCoffeePurchaseService dry;
     @Autowired
@@ -96,15 +97,15 @@ class RemittanceConcurrencyTest {
     private void restoreConsecutives() {
         List<Integer> invoice = jdbc.queryForList("SELECT ultimo_numero FROM consecutivos_factura WHERE agencia_id = ?",
                 Integer.class, AGENCY);
-        List<Integer> remission = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision"
-                + " WHERE agencia_id = ? AND fondo_id = ?", Integer.class, AGENCY, rp);
+        List<Integer> remission = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
+                + " WHERE agencia_id = ?", Integer.class, AGENCY);
         cleanup.add(() -> {
             jdbc.update("DELETE FROM consecutivos_factura WHERE agencia_id = ?", AGENCY);
             invoice.forEach(last -> jdbc.update("INSERT INTO consecutivos_factura (agencia_id, ultimo_numero) VALUES (?, ?)",
                     AGENCY, last));
-            jdbc.update("DELETE FROM consecutivos_remision WHERE agencia_id = ? AND fondo_id = ?", AGENCY, rp);
-            remission.forEach(last -> jdbc.update("INSERT INTO consecutivos_remision (agencia_id, fondo_id,"
-                    + " ultimo_consecutivo) VALUES (?, ?, ?)", AGENCY, rp, last));
+            jdbc.update("DELETE FROM consecutivos_remision_agencia WHERE agencia_id = ?", AGENCY);
+            remission.forEach(last -> jdbc.update("INSERT INTO consecutivos_remision_agencia (agencia_id,"
+                    + " ultimo_consecutivo) VALUES (?, ?)", AGENCY, last));
         });
     }
 
@@ -136,9 +137,12 @@ class RemittanceConcurrencyTest {
                     + " AND remesa_id IS NOT NULL", Long.class, id);
             jdbc.update("UPDATE compras_cafe_seco SET remesa_id = NULL WHERE id = ?", id);
             for (Long remittance : remittanceIds) {
+                Long remission = jdbc.queryForObject("SELECT remision_id FROM remesas WHERE id = ?", Long.class, remittance);
                 jdbc.update("DELETE FROM empaques WHERE id_transaccion = (SELECT numero_remesa FROM remesas WHERE id = ?)"
                         + " AND agencia_id = ?", remittance, AGENCY);
                 jdbc.update("DELETE FROM remesas WHERE id = ?", remittance);
+                jdbc.update("DELETE FROM remisiones_detalle WHERE remision_id = ?", remission);
+                jdbc.update("DELETE FROM remisiones WHERE id = ?", remission);
             }
             jdbc.update("DELETE FROM formas_pago_compras WHERE origen = 'DRY' AND origen_id = ?", id);
             jdbc.update("DELETE FROM inventarios WHERE modulo_compra = 'DRY_COFFEE' AND compra_id = ?", id);
@@ -159,8 +163,11 @@ class RemittanceConcurrencyTest {
         });
     }
 
-    private RemittanceRequest request(Long purchase) {
-        return new RemittanceRequest("RP", "RN", List.of(new RemittancePurchaseRef(AnnulmentModule.DRY, purchase)), 10,
+    /** La remision (Registrar Salidas) de la factura, que marca su compra con la remesa. */
+    private RemissionRequest request(Long purchase) {
+        Long movement = jdbc.queryForObject("SELECT id FROM inventarios WHERE modulo_compra = 'DRY_COFFEE' AND compra_id = ?",
+                Long.class, purchase);
+        return new RemissionRequest(LocalDate.now(), "ALMACAFE", null, List.of(new RemissionLineRequest(movement)), 10,
                 "USADO");
     }
 
@@ -172,13 +179,13 @@ class RemittanceConcurrencyTest {
 
         // La primera marca la factura y no termina; la segunda debe esperar su commit y luego fallar.
         CompletableFuture<String> first = async(() -> transaction.execute(status -> {
-            String number = remittances.create(request(purchase)).number();
+            String number = remissions.create(request(purchase)).displayNumber();
             firstMarked.countDown();
             await(release);
             return number;
         }));
         assertThat(firstMarked.await(10, TimeUnit.SECONDS)).isTrue();
-        CompletableFuture<String> second = async(() -> remittances.create(request(purchase)).number());
+        CompletableFuture<String> second = async(() -> remissions.create(request(purchase)).displayNumber());
         Thread.sleep(300);
         assertThat(second).isNotDone();
         release.countDown();
@@ -192,7 +199,7 @@ class RemittanceConcurrencyTest {
                 Integer.class, AGENCY, principal.getUserId())).isEqualTo(1);
     }
 
-    /** HU-05 (6D1): una correccion que llega mientras la remesa marca la factura espera y despues se rechaza. */
+    /** HU-05 (6D1): una correccion que llega mientras la remision saca la factura espera y despues se rechaza. */
     @Test
     void aCorrectionWaitsForTheRemittanceAndThenIsRejected() throws Exception {
         Long purchase = dryPurchase();
@@ -200,7 +207,7 @@ class RemittanceConcurrencyTest {
         CountDownLatch release = new CountDownLatch(1);
 
         CompletableFuture<String> remittance = async(() -> transaction.execute(status -> {
-            String number = remittances.create(request(purchase)).number();
+            String number = remissions.create(request(purchase)).displayNumber();
             marked.countDown();
             await(release);
             return number;
@@ -216,9 +223,10 @@ class RemittanceConcurrencyTest {
         assertThat(correction).isNotDone();
         release.countDown();
 
-        String number = remittance.get(10, TimeUnit.SECONDS);
+        assertThat(remittance.get(10, TimeUnit.SECONDS)).isNotBlank();
+        // La remision ya saco la factura del inventario: la correccion se rechaza por eso.
         assertThat(correction).failsWithin(10, TimeUnit.SECONDS).withThrowableOfType(ExecutionException.class)
-                .withCauseInstanceOf(BusinessRuleException.class).withMessageContaining(number);
+                .withCauseInstanceOf(BusinessRuleException.class).withMessageContaining("salidas de inventario");
         assertThat(jdbc.queryForObject("SELECT corregida FROM compras_cafe_seco WHERE id = ?", Boolean.class, purchase))
                 .isFalse();
     }

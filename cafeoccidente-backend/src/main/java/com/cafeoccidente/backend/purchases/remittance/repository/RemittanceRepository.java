@@ -2,7 +2,6 @@ package com.cafeoccidente.backend.purchases.remittance.repository;
 
 import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
 import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceLine;
-import com.cafeoccidente.backend.purchases.remittance.dto.RemittancePurchase;
 import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceResponse;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -47,11 +46,9 @@ public class RemittanceRepository {
             + " LEFT JOIN registros_control rc ON rc.agencia_id = c.agencia_id AND rc.activo"
             + " LEFT JOIN LATERAL (SELECT * FROM terceros t WHERE t.identificacion = c.cedula"
             + " ORDER BY (t.agencia_id = c.agencia_id) DESC, t.id LIMIT 1) t ON true";
-    private static final String PENDING = " c.remesa_id IS NULL AND c.estado = 'VALIDA' AND c.kilos_netos > 0"
-            + " AND c.agencia_id = :agencyId AND f.codigo = :fundCode";
 
     private static final String RESPONSE = "SELECT r.id, r.numero_remesa, f.codigo, r.especial_filtro,"
-            + " r.cantidad_empaques, r.tipo_empaque, r.estado, r.creado_en,"
+            + " r.cantidad_empaques, r.tipo_empaque, r.estado, r.creado_en, r.remision_id IS NOT NULL AS from_remission,"
             + " COALESCE(x.n, 0) AS purchases, COALESCE(x.kg, 0) AS kg FROM remesas r JOIN fondos f ON f.id = r.fondo_id"
             + " LEFT JOIN (SELECT remesa_id, count(*) AS n, sum(kilos_netos) AS kg FROM (SELECT remesa_id, kilos_netos"
             + " FROM compras_cafe_seco UNION ALL SELECT remesa_id, kilos_netos FROM compras_cafe_verde"
@@ -89,25 +86,6 @@ public class RemittanceRepository {
         this.jdbc = jdbc;
     }
 
-    /** RN-11.1: los Especiales que tienen facturas pendientes en el fondo. */
-    public List<String> specials(Long agencyId, String fundCode) {
-        return jdbc.queryForList("SELECT DISTINCT c.especial FROM (" + PURCHASES + ") c" + JOINS + " WHERE" + PENDING
-                + " ORDER BY c.especial", params(agencyId, fundCode), String.class);
-    }
-
-    /** RN-11.2: facturas pendientes del fondo y del Especial elegido (null = "Todos"), por factura. */
-    public List<RemittancePurchase> pending(Long agencyId, String fundCode, String specialType) {
-        String sql = "SELECT c.module, c.id, rc.prefijo, c.numero_factura, c.fecha_compra, c.especial, c.cedula, "
-                + SELLER + ", c.kilos_netos, c.vr_bruto FROM (" + PURCHASES + ") c" + JOINS + " WHERE" + PENDING
-                + " AND (CAST(:specialType AS VARCHAR) IS NULL OR c.especial = :specialType)"
-                + " ORDER BY c.numero_factura, c.module";
-        return jdbc.query(sql, params(agencyId, fundCode).addValue("specialType", specialType), (rs, i) ->
-                new RemittancePurchase(AnnulmentModule.valueOf(rs.getString("module")), rs.getLong("id"),
-                        invoice(rs), rs.getObject("fecha_compra", LocalDate.class), rs.getString("especial"),
-                        rs.getString("cedula"), rs.getString("seller_name"), rs.getBigDecimal("kilos_netos"),
-                        rs.getBigDecimal("vr_bruto")));
-    }
-
     /** Las compras pedidas, bloqueadas hasta el fin de la transaccion: dos remesas a la vez no toman la misma. */
     public List<LockedPurchase> lock(AnnulmentModule module, List<Long> ids) {
         return jdbc.query(LOCK.get(module), new MapSqlParameterSource("ids", ids), (rs, i) -> new LockedPurchase(
@@ -116,15 +94,23 @@ public class RemittanceRepository {
                 (Integer) rs.getObject("numero_factura")));
     }
 
+    /** remissionId: la remision que la genero (null en Genera Remesa). */
     public Long insert(Long agencyId, Long fundId, int sequence, String number, String specialType,
-            int packagingQuantity, String packagingType, Long userId) {
+            int packagingQuantity, String packagingType, Long userId, Long remissionId) {
         return jdbc.queryForObject("INSERT INTO remesas (agencia_id, fondo_id, consecutivo, numero_remesa,"
-                + " especial_filtro, cantidad_empaques, tipo_empaque, creado_por_usuario_id, creado_en)"
-                + " VALUES (:agencyId, :fundId, :sequence, :number, :specialType, :quantity, :type, :userId, now())"
-                + " RETURNING id", new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("fundId", fundId)
-                        .addValue("sequence", sequence).addValue("number", number).addValue("specialType", specialType)
-                        .addValue("quantity", packagingQuantity).addValue("type", packagingType)
-                        .addValue("userId", userId), Long.class);
+                + " especial_filtro, cantidad_empaques, tipo_empaque, creado_por_usuario_id, creado_en, remision_id)"
+                + " VALUES (:agencyId, :fundId, :sequence, :number, :specialType, :quantity, :type, :userId, now(),"
+                + " :remissionId) RETURNING id", new MapSqlParameterSource().addValue("agencyId", agencyId)
+                        .addValue("fundId", fundId).addValue("sequence", sequence).addValue("number", number)
+                        .addValue("specialType", specialType).addValue("quantity", packagingQuantity)
+                        .addValue("type", packagingType).addValue("userId", userId)
+                        .addValue("remissionId", remissionId), Long.class);
+    }
+
+    /** La remesa vigente que genero la remision, si la tiene. */
+    public Optional<Long> idByRemission(Long remissionId) {
+        return jdbc.queryForList("SELECT id FROM remesas WHERE remision_id = :remissionId AND estado = 'VIGENTE'",
+                new MapSqlParameterSource("remissionId", remissionId), Long.class).stream().findFirst();
     }
 
     /** RN-11.6: las facturas quedan con la remesa y salen de pendientes. */
@@ -210,7 +196,7 @@ public class RemittanceRepository {
         return new RemittanceResponse(rs.getLong("id"), rs.getString("numero_remesa"), rs.getString("codigo"),
                 rs.getString("especial_filtro"), (Integer) rs.getObject("cantidad_empaques"),
                 rs.getString("tipo_empaque"), rs.getString("estado"), rs.getTimestamp("creado_en").toInstant(),
-                rs.getInt("purchases"), rs.getBigDecimal("kg"));
+                rs.getInt("purchases"), rs.getBigDecimal("kg"), rs.getBoolean("from_remission"));
     }
 
     /** Factura = [prefijo] & [factura], como Access. */
@@ -226,9 +212,5 @@ public class RemittanceRepository {
 
     private static LocalDateTime localDateTime(Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toLocalDateTime();
-    }
-
-    private static MapSqlParameterSource params(Long agencyId, String fundCode) {
-        return new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("fundCode", fundCode);
     }
 }

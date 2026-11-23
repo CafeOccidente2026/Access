@@ -70,7 +70,21 @@ public class Remission {
     @Column(name = "consecutivo")
     private Integer sequenceNumber;
 
-    /** Numero impreso: {prefijo}-{LF|RP}-{0000}; en las viejas, su remission_number tal cual. */
+    /** Numero impreso: {prefijo}-{consecutivo} desde V31 (el mismo de su remesa); antes {prefijo}-{LF|RP}-{0000}
+     *  y, en las de Access, su remission_number tal cual. */
     @Column(name = "numero_remision", nullable = false)
     private String displayNumber;
+
+    /** VIGENTE o ANULADA (V31): la anulada no se borra. */
+    @Column(name = "estado", nullable = false)
+    private String status = VIGENTE;
+
+    @Column(name = "anulada_por_usuario_id")
+    private Long annulledByUserId;
+
+    @Column(name = "anulada_en")
+    private Instant annulledAt;
+
+    public static final String VIGENTE = "VIGENTE";
+    public static final String ANULADA = "ANULADA";
 }
