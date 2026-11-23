@@ -15,11 +15,11 @@ import com.cafeoccidente.backend.purchases.greencoffee.dto.GreenCoffeePurchaseRe
 import com.cafeoccidente.backend.purchases.greencoffee.service.GreenCoffeePurchaseService;
 import com.cafeoccidente.backend.purchases.husk.dto.HuskPurchaseRequest;
 import com.cafeoccidente.backend.purchases.husk.service.HuskPurchaseService;
+import com.cafeoccidente.backend.inventory.dto.RemissionLineRequest;
+import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
+import com.cafeoccidente.backend.inventory.service.RemissionService;
 import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceFiles;
 import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceLine;
-import com.cafeoccidente.backend.purchases.remittance.dto.RemittancePurchase;
-import com.cafeoccidente.backend.purchases.remittance.dto.RemittancePurchaseRef;
-import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceRequest;
 import com.cafeoccidente.backend.purchases.remittance.dto.RemittanceResponse;
 import com.cafeoccidente.backend.purchases.remittance.service.RemittanceService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
@@ -60,6 +60,8 @@ class RemittanceIntegrationTest {
     @Autowired
     private PurchaseAnnulmentService annulment;
     @Autowired
+    private RemissionService remissions;
+    @Autowired
     private DryCoffeePurchaseService dry;
     @Autowired
     private GreenCoffeePurchaseService green;
@@ -75,7 +77,10 @@ class RemittanceIntegrationTest {
     private JdbcTemplate jdbc;
 
     private Long rp;
-    private Long lf;
+
+    /** Una compra de un modulo (las tres tablas de compras). */
+    private record Ref(AnnulmentModule module, Long id) {
+    }
 
     private SecurityUser signIn(String role) {
         User user = new User();
@@ -93,7 +98,6 @@ class RemittanceIntegrationTest {
     void pointWithAnnouncementsAndASeller() {
         signIn(Roles.USUARIO);
         rp = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'RP'", Long.class);
-        lf = jdbc.queryForObject("SELECT id FROM fondos WHERE codigo = 'LF'", Long.class);
         for (String special : new String[] {"RN", "CV", "PASILLA"}) {
             Long id = jdbc.queryForObject("INSERT INTO anuncios (fecha_anuncio, pr_base_cps, pr_alm_defec, sobrepr_carga_esp,"
                     + " pr_inc_calidad, fondo_id, especial, activo) VALUES (CURRENT_DATE, 1546900, 6000, 80000, 50, ?, ?, true)"
@@ -118,126 +122,57 @@ class RemittanceIntegrationTest {
         return new PurchasePaymentRequest(net, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
     }
 
-    private RemittancePurchaseRef dryPurchase() {
+    private Ref dryPurchase() {
         DryCoffeePurchaseRequest request = new DryCoffeePurchaseRequest(rp, "RN", SELLER, null, null, 5,
                 new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"), BigDecimal.ZERO,
                 BigDecimal.ZERO, BigDecimal.ZERO, null);
         BigDecimal net = dry.preview(request).netToPay();
-        return new RemittancePurchaseRef(AnnulmentModule.DRY, dry.create(new DryCoffeePurchaseRequest(rp, "RN", SELLER,
+        return new Ref(AnnulmentModule.DRY, dry.create(new DryCoffeePurchaseRequest(rp, "RN", SELLER,
                 null, null, 5, new BigDecimal("1000"), BigDecimal.ZERO, new BigDecimal("200"), new BigDecimal("10"),
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, cash(net))).id());
     }
 
-    private RemittancePurchaseRef greenPurchase() {
+    private Ref greenPurchase() {
         GreenCoffeePurchaseRequest request = new GreenCoffeePurchaseRequest(rp, SELLER, null, null, 5,
                 new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("12000"), BigDecimal.ZERO,
                 BigDecimal.ZERO, null);
         BigDecimal net = green.preview(request).netToPay();
-        return new RemittancePurchaseRef(AnnulmentModule.GREEN, green.create(new GreenCoffeePurchaseRequest(rp, SELLER,
+        return new Ref(AnnulmentModule.GREEN, green.create(new GreenCoffeePurchaseRequest(rp, SELLER,
                 null, null, 5, new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("12000"),
                 BigDecimal.ZERO, BigDecimal.ZERO, cash(net))).id());
     }
 
-    private RemittancePurchaseRef huskPurchase() {
+    private Ref huskPurchase() {
         HuskPurchaseRequest request = new HuskPurchaseRequest(rp, SELLER, null, null, new BigDecimal("200"), 5,
                 new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
         BigDecimal net = husk.preview(request).netToPay();
-        return new RemittancePurchaseRef(AnnulmentModule.HUSK, husk.create(new HuskPurchaseRequest(rp, SELLER, null,
+        return new Ref(AnnulmentModule.HUSK, husk.create(new HuskPurchaseRequest(rp, SELLER, null,
                 null, new BigDecimal("200"), 5, new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO,
                 BigDecimal.ZERO, cash(net))).id());
     }
 
-    private RemittanceResponse remit(String special, List<RemittancePurchaseRef> purchases) {
-        return remittances.create(new RemittanceRequest("RP", special, purchases, 15, "USADO"));
+    /** Una remesa vieja, sin remision (de Access o de Genera Remesa): la remesa, sus compras y su salida de empaques. */
+    private RemittanceResponse remit(String special, List<Ref> purchases) {
+        String number = "SDBU-RP-9" + purchases.get(0).id();
+        Long id = jdbc.queryForObject("INSERT INTO remesas (agencia_id, fondo_id, numero_remesa, especial_filtro,"
+                + " cantidad_empaques, tipo_empaque, estado, creado_por_usuario_id, creado_en) VALUES (?, ?, ?, ?, 15,"
+                + " 'USADO', 'VIGENTE', (SELECT id FROM usuarios WHERE usuario = 'prueba_7b_usuario'), now()) RETURNING id",
+                Long.class, AGENCY, rp, number, special);
+        purchases.forEach(p -> jdbc.update("UPDATE " + p.module().table() + " SET remesa_id = ? WHERE id = ?", id, p.id()));
+        jdbc.update("INSERT INTO empaques (id_transaccion, agencia_id, tipo_empaque, fecha, cedula, detalle, entradas,"
+                + " salidas, creado_en) VALUES (?, ?, 'USADO', CURRENT_DATE, '1', 'Remision', 0, 15, now())", number, AGENCY);
+        return remittances.findByNumber(number).get(0);
     }
 
-    private List<RemittancePurchase> ours(String fundCode, String special) {
-        return remittances.pending(fundCode, special).stream().filter(p -> SELLER.equals(p.idNumber())).toList();
-    }
-
-    private int lastConsecutive() {
-        List<Integer> last = jdbc.queryForList("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
-                + " WHERE agencia_id = ?", Integer.class, AGENCY);
-        return last.isEmpty() ? 0 : last.get(0);
-    }
-
-    @Test
-    void listsThePendingPurchasesOfTheFundAndTheChosenSpecial() {
-        RemittancePurchaseRef d = dryPurchase();
-        RemittancePurchaseRef g = greenPurchase();
-        RemittancePurchaseRef h = huskPurchase();
-        RemittancePurchaseRef annulled = dryPurchase();
-        annulment.annul(AGENCY, AnnulmentModule.DRY, annulled.id());
-
-        assertThat(ours("RP", null)).extracting(p -> new RemittancePurchaseRef(p.module(), p.id()))
-                .containsExactlyInAnyOrder(d, g, h);
-        assertThat(ours("RP", "RN")).extracting(RemittancePurchase::id).containsExactly(d.id());
-        assertThat(ours("LF", null)).isEmpty();
-        assertThat(remittances.specials("RP")).contains("RN", "CV", "PASILLA");
-        assertThat(ours("RP", "RN").get(0).invoice()).startsWith("SDBU");
-    }
-
-    @Test
-    void aRemittanceTakesTheNextNumberMarksItsPurchasesAndTakesOutThePackaging() {
-        RemittancePurchaseRef d = dryPurchase();
-        RemittancePurchaseRef g = greenPurchase();
-        RemittancePurchaseRef h = huskPurchase();
-        int next = lastConsecutive() + 1;
-
-        RemittanceResponse remittance = remit(null, List.of(d, g, h));
-
-        assertThat(remittance.number()).isEqualTo("SDBU-" + next);
-        assertThat(remittance.purchases()).isEqualTo(3);
-        assertThat(remittance.status()).isEqualTo("VIGENTE");
-        assertThat(ours("RP", null)).isEmpty();
-        for (RemittancePurchaseRef p : List.of(d, g, h)) {
-            assertThat(jdbc.queryForObject("SELECT remesa_id FROM " + p.module().table() + " WHERE id = ?", Long.class,
-                    p.id())).isEqualTo(remittance.id());
-        }
-        // RN-11.9: salida en EMPAQUES con el numero como transaccion y el detalle "Remision".
-        Map<String, Object> packaging = jdbc.queryForMap("SELECT tipo_empaque, salidas, entradas, detalle, cedula"
-                + " FROM empaques WHERE agencia_id = ? AND id_transaccion = ?", AGENCY, remittance.number());
-        String trusted = jdbc.queryForObject("SELECT cedula_fiel FROM registros_control WHERE agencia_id = ? AND activo",
-                String.class, AGENCY);
-        assertThat(packaging).containsEntry("tipo_empaque", "USADO").containsEntry("salidas", 15)
-                .containsEntry("entradas", 0).containsEntry("detalle", "Remision").containsEntry("cedula", trusted);
-        assertThat(remittances.findByNumber(remittance.number())).extracting(RemittanceResponse::id)
-                .containsExactly(remittance.id());
-    }
-
-    @Test
-    void aPurchaseGoesInOnlyOneRemittance() {
-        RemittancePurchaseRef d = dryPurchase();
-        remit("RN", List.of(d));
-
-        assertThatThrownBy(() -> remit("RN", List.of(d))).isInstanceOf(BusinessRuleException.class);
-    }
-
-    @Test
-    void anotherAgencysPurchaseIsNotFound() {
-        RemittancePurchaseRef d = dryPurchase();
-        jdbc.update("UPDATE compras_cafe_seco SET agencia_id = (SELECT min(id) FROM agencias WHERE id <> ?) WHERE id = ?",
-                AGENCY, d.id());
-
-        assertThatThrownBy(() -> remit(null, List.of(d))).isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void aPurchaseOfTheOtherFundOrSpecialIsRejected() {
-        RemittancePurchaseRef d = dryPurchase();
-        RemittancePurchaseRef g = greenPurchase();
-        jdbc.update("UPDATE compras_cafe_seco SET fondo_id = ? WHERE id = ?", lf, d.id());
-
-        assertThatThrownBy(() -> remit(null, List.of(d))).isInstanceOf(BusinessRuleException.class);
-        assertThatThrownBy(() -> remit("RN", List.of(g))).isInstanceOf(BusinessRuleException.class);
-        assertThatThrownBy(() -> remittances.create(new RemittanceRequest("RP", null, List.of(g), 15, "ROTO")))
-                .isInstanceOf(BusinessRuleException.class);
+    private Long remittanceOf(Ref purchase) {
+        return jdbc.queryForObject("SELECT remesa_id FROM " + purchase.module().table() + " WHERE id = ?", Long.class,
+                purchase.id());
     }
 
     @Test
     void theFilesCarryTheAccessColumnsOfEachPurchase() {
-        RemittancePurchaseRef d = dryPurchase();
-        RemittancePurchaseRef h = huskPurchase();
+        Ref d = dryPurchase();
+        Ref h = huskPurchase();
         RemittanceResponse remittance = remit(null, List.of(d, h));
 
         RemittanceFiles files = remittances.files(remittance.id());
@@ -287,26 +222,42 @@ class RemittanceIntegrationTest {
 
     @Test
     void unmarkingFreesThePurchasesReturnsThePackagingAndLeavesHistory() {
-        RemittancePurchaseRef d = dryPurchase();
+        Ref d = dryPurchase();
         RemittanceResponse remittance = remit("RN", List.of(d));
         signIn(Roles.ADMINISTRADOR);
 
         RemittanceResponse unmarked = remittances.unmark(remittance.id());
 
         assertThat(unmarked.status()).isEqualTo("DESMARCADA");
-        assertThat(ours("RP", "RN")).extracting(RemittancePurchase::id).containsExactly(d.id());
+        assertThat(unmarked.fromRemission()).isFalse();
+        assertThat(remittanceOf(d)).isNull();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM empaques WHERE agencia_id = ? AND id_transaccion = ?",
                 Integer.class, AGENCY, remittance.number())).isZero();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios WHERE entidad = 'REMESA'"
                 + " AND accion = 'DESMARCAR' AND entidad_id = ?", Integer.class, remittance.id())).isEqualTo(1);
         assertThatThrownBy(() -> remittances.unmark(remittance.id())).isInstanceOf(BusinessRuleException.class);
-        // El numero no se reutiliza: la siguiente remesa toma el que sigue.
-        assertThat(remit("RN", List.of(d)).number()).isNotEqualTo(remittance.number());
+    }
+
+    /** Demo del 23-nov: la remesa que genero una remision se deshace con Anular Remision, no con Desmarca Remesa. */
+    @Test
+    void aRemittanceOfARemissionIsNotUnmarked() {
+        Ref d = dryPurchase();
+        Long movement = jdbc.queryForObject("SELECT id FROM inventarios WHERE modulo_compra = 'DRY_COFFEE' AND compra_id = ?",
+                Long.class, d.id());
+        var remission = remissions.create(new RemissionRequest(java.time.LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "USADO"));
+        signIn(Roles.ADMINISTRADOR);
+
+        RemittanceResponse found = remittances.findByNumber(remission.displayNumber()).get(0);
+        assertThat(found.fromRemission()).isTrue();
+        assertThatThrownBy(() -> remittances.unmark(found.id())).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Anular Remisión");
+        assertThat(remittanceOf(d)).isEqualTo(found.id());
     }
 
     @Test
     void aPurchaseInARemittanceCannotBeAnnulled() {
-        RemittancePurchaseRef d = dryPurchase();
+        Ref d = dryPurchase();
         RemittanceResponse remittance = remit("RN", List.of(d));
 
         assertThatThrownBy(() -> annulment.annul(AGENCY, AnnulmentModule.DRY, d.id()))
