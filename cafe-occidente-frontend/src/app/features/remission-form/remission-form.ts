@@ -25,6 +25,8 @@ export interface RemissionFormContent {
   readonly conductorLabel: string;
   readonly fundLabel: string;
   readonly funds: string[];
+  readonly specialLabel: string;
+  readonly chooseSpecial: string;
   readonly conductor: Record<string, string>;
   readonly columns: Record<string, string>;
   readonly pickLabel: string;
@@ -60,8 +62,17 @@ export class RemissionFormComponent {
 
   readonly movements = signal<InventoryMovementResponse[]>([]);
   readonly fund = signal('RP');
+  /** Demo del 23-nov: el Tipo de cafe (Especial) que se va a despachar; vacio = todavia no se eligio. */
+  readonly special = signal('');
   /** Las entradas con saldo del fondo elegido: una remision es de un solo fondo (su consecutivo es por fondo). */
-  readonly rows = computed(() => this.movements().filter((m) => m.remainingKg > 0 && m.fundCode === this.fund()));
+  private readonly withBalance = computed(() =>
+    this.movements().filter((m) => m.remainingKg > 0 && m.fundCode === this.fund()));
+  /** Los tipos de cafe con saldo en el fondo, para elegir. */
+  readonly specials = computed(() => [...new Set(this.withBalance().map((m) => m.specialType))].sort((a, b) => a.localeCompare(b)));
+  /** Solo las facturas del tipo elegido, por fecha y factura; sin tipo no hay lista. */
+  readonly rows = computed(() => this.withBalance()
+    .filter((m) => m.specialType === this.special())
+    .sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate) || a.invoiceNumber - b.invoiceNumber));
   readonly picks = signal<ReadonlyMap<number, Pick>>(new Map());
   readonly totals = computed(() => {
     const sum = (field: PickField) => [...this.picks().values()].reduce((total, p) => total + parseDisplayNumber(p[field]), 0);
@@ -97,6 +108,13 @@ export class RemissionFormComponent {
 
   setFund(code: string): void {
     this.fund.set(code);
+    this.special.set('');
+    this.picks.set(new Map());
+  }
+
+  /** Cambiar el tipo de cafe vuelve a armar la lista y limpia lo marcado. */
+  setSpecial(special: string): void {
+    this.special.set(special);
     this.picks.set(new Map());
   }
 
