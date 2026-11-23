@@ -19,7 +19,8 @@ empaques, formas de pago, compras a futuro y consecutivos. Idempotente: no dupli
 - Anuncio de compras y compras a futuro con el prefijo del punto ("SDTA-3490"), como la web (decision del 18-nov).
 - Cupos de anuncio (se revierte P8, 18-nov): solo los que tienen saldo al corte (cupo - kilos de las compras); sus
   compras entran aunque sean de antes de --desde. Los que no tienen saldo se listan.
-- Consecutivos de factura y remision: el siguiente de la web es el ultimo de Access + 1 (nunca se bajan).
+- Consecutivos de factura y remision: el siguiente de la web es el ultimo de Access + 1 (nunca se bajan). La
+  remision/remesa lleva un solo contador por agencia (V31): con TA0968 en Access la siguiente es SDTA-969.
 
 Parte B (solo con --ness): cupos_ness con la tabla NESS de Access. Se vacia y se recarga, y borra la NESS que se
 sube con Actualiza Cupos NESS (HU-54): por eso no corre por defecto.
@@ -258,6 +259,16 @@ def max_remission(rows):
     """Mayor numero de remision de Access (TA0968 -> 968); 0 si no hay."""
     numbers = [int(m.group(1)) for row in rows if (m := re.search(r"(\d+)$", s(row, "remision")))]
     return max(numbers, default=0)
+
+
+def set_remission_counter(cur, agency_id, number):
+    """Contador de remision/remesa de la agencia (V31: uno por agencia) en al menos `number`; nunca lo baja.
+    Devuelve el contador que queda."""
+    cur.execute("INSERT INTO consecutivos_remision_agencia (agencia_id, ultimo_consecutivo) VALUES (%(a)s, %(n)s)"
+                " ON CONFLICT (agencia_id) DO UPDATE SET ultimo_consecutivo ="
+                " GREATEST(consecutivos_remision_agencia.ultimo_consecutivo, EXCLUDED.ultimo_consecutivo)"
+                " RETURNING ultimo_consecutivo", {"a": agency_id, "n": number})
+    return cur.fetchone()[0]
 
 
 def transaction_collisions(ids, prefix):
@@ -1008,21 +1019,11 @@ def set_consecutives(cur, agency_id):
                 {"a": agency_id, "n": access_invoice})
     rows.append(("factura", access_invoice, web, cur.fetchone()[0] + 1))
 
+    # Remision y remesa: un solo contador por agencia (V31) que sigue la serie de Access (TA0968 -> SDTA-969).
     access_remission = max_remission(compras)
-    for code in ("RP", "LF"):
-        cur.execute("SELECT r.ultimo_consecutivo FROM consecutivos_remision r JOIN fondos f ON f.id = r.fondo_id"
-                    " WHERE r.agencia_id = %s AND f.codigo = %s", (agency_id, code))
-        web = (cur.fetchone() or [None])[0]
-        if access_remission == 0:
-            rows.append((f"remision {code}", 0, web, (web or 0) + 1))
-            continue
-        # Access lleva una sola serie de remisiones por punto; la web una por punto y fondo (RN-11.5).
-        cur.execute("INSERT INTO consecutivos_remision (agencia_id, fondo_id, ultimo_consecutivo)"
-                    " SELECT %(a)s, id, %(n)s FROM fondos WHERE codigo = %(c)s"
-                    " ON CONFLICT (agencia_id, fondo_id) DO UPDATE SET ultimo_consecutivo ="
-                    " GREATEST(consecutivos_remision.ultimo_consecutivo, EXCLUDED.ultimo_consecutivo)"
-                    " RETURNING ultimo_consecutivo", {"a": agency_id, "n": access_remission, "c": code})
-        rows.append((f"remision {code}", access_remission, web, cur.fetchone()[0] + 1))
+    cur.execute("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia WHERE agencia_id = %s", (agency_id,))
+    web = (cur.fetchone() or [None])[0]
+    rows.append(("remision", access_remission, web, set_remission_counter(cur, agency_id, access_remission) + 1))
 
     access_announcement = max((parse_int(r.get("anuncio")) for r in read_csv("anuncios_migrar.csv")), default=0)
     cur.execute("SELECT max(numero_anuncio) FROM anuncios_agencias WHERE agencia_id = %s", (agency_id,))
