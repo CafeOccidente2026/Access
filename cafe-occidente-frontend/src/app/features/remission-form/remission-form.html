@@ -96,18 +96,10 @@
               <td class="px-2 py-0.5">{{ m.specialType }}</td>
               <td class="px-2 py-0.5">{{ m.idNumber }}</td>
               <td class="px-2 py-0.5 text-right">{{ kg(m.remainingKg) }}</td>
-              <td class="px-2 py-0.5 text-right">
-                <input *ngIf="isPicked(m)" type="text" class="w-24 rounded border border-slate-300 px-1 text-right" [attr.aria-label]="c.columns['quantity'] + ' ' + m.invoiceNumber"
-                  [value]="pickValue(m, 'quantity')" (input)="setPick(m, 'quantity', $any($event.target).value)" />
-              </td>
-              <td class="px-2 py-0.5 text-right">
-                <input *ngIf="isPicked(m)" type="text" class="w-16 rounded border border-slate-300 px-1 text-right" [attr.aria-label]="c.columns['sacos'] + ' ' + m.invoiceNumber"
-                  [value]="pickValue(m, 'sacos')" (input)="setPick(m, 'sacos', $any($event.target).value)" />
-              </td>
-              <td class="px-2 py-0.5 text-right">
-                <input *ngIf="isPicked(m)" type="text" class="w-24 rounded border border-slate-300 px-1 text-right" [attr.aria-label]="c.columns['grossKg'] + ' ' + m.invoiceNumber"
-                  [value]="pickValue(m, 'grossKg')" (input)="setPick(m, 'grossKg', $any($event.target).value)" />
-              </td>
+              <!-- Sin salidas parciales: sale todo el saldo, con los sacos y kilos brutos de la compra. -->
+              <td class="px-2 py-0.5 text-right">{{ isPicked(m) ? kg(m.remainingKg) : '' }}</td>
+              <td class="px-2 py-0.5 text-right">{{ isPicked(m) ? m.sacos : '' }}</td>
+              <td class="px-2 py-0.5 text-right">{{ isPicked(m) ? kg(m.grossKg) : '' }}</td>
             </tr>
             <tr *ngIf="rows().length === 0">
               <td colspan="9" class="p-3 text-center text-slate-500">{{ special() || !specials().length ? c.empty : c.pickSpecial }}</td>
@@ -125,7 +117,20 @@
       </div>
 
 
-      <div class="flex justify-end">
+      <div class="flex items-end justify-end gap-4">
+        <label class="flex flex-col gap-1 text-sm" for="remission-packaging-quantity">
+          <span class="font-medium text-blue-900">{{ c.packagingQuantityLabel }}</span>
+          <input id="remission-packaging-quantity" data-testid="packaging-quantity" inputmode="numeric" class="w-32 rounded border border-slate-300 px-2 py-1 text-right"
+            [value]="packagingQuantity()" (input)="packagingQuantity.set($any($event.target).value.replace(/\D/g, '')); $any($event.target).value = packagingQuantity()" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm" for="remission-packaging-type">
+          <span class="font-medium text-blue-900">{{ c.packagingTypeLabel }}</span>
+          <select id="remission-packaging-type" data-testid="packaging-type" class="rounded border border-slate-300 bg-white px-2 py-1" [value]="packagingType()"
+            (change)="packagingType.set($any($event.target).value)">
+            <option value=""></option>
+            <option *ngFor="let t of c.packagingTypes" [value]="t">{{ t }}</option>
+          </select>
+        </label>
         <button
           type="button"
           data-flow-submit
@@ -158,6 +163,7 @@
           </tr>
         </tbody>
       </table>
+      <app-remittance-files *ngIf="r.remittanceId" [remittanceId]="r.remittanceId"></app-remittance-files>
       <div class="flex justify-end gap-2">
         <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-medium hover:bg-slate-200" (click)="print()">
           {{ c.result['print'] }}

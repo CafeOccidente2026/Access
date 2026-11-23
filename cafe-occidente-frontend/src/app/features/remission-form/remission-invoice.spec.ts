@@ -16,7 +16,7 @@ describe('buildRemissionDocDefinition', () => {
   const remission: RemissionResponse = {
     id: 1, remissionNumber: 7, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-29',
     destination: 'ALMACAFE', conductorIdNumber: '1085', conductorName: 'Juan Perez',
-    transportCompany: 'TRANS NARIÑO', vehiclePlate: 'ABC123', exported: false, displayNumber: 'SDBU-RP-0007',
+    transportCompany: 'TRANS NARIÑO', vehiclePlate: 'ABC123', exported: false, displayNumber: 'SDBU-RP-0007', status: 'VIGENTE', remittanceId: null,
     lines: [
       { id: 1, inventoryMovementId: 10, quantity: 500, unitValue: 1255, outputValue: 627500,
         specialType: 'RN', healthyPercentage: 88, fundCode: 'RP', sacos: 9, grossKg: 507.5, exitPercentage: 93.37 },

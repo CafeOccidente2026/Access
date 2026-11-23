@@ -12,11 +12,12 @@ import { GrowerService } from '../../core/services/grower.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { InventoryMovementResponse, RemissionResponse } from '../../core/models/inventory.model';
 
-/** C7 (prueba del 11-nov, punto 7): Registrar Salidas con casillas, como Genera Remesa. */
+/** Registrar Salidas con casillas; respuestas del area (23-nov): cada factura sale completa y genera su remesa. */
 describe('RemissionFormComponent', () => {
   const base = {
     purchaseModule: 'DRY_COFFEE' as const, purchaseId: 1, agencyId: 1, agencyName: 'Buesaco',
     productCode: '0110002000002', specialType: 'RN', purchaseDate: '2026-09-23', healthyPercentage: 90, inventoryValue: 8661600,
+    remitted: false,
   };
   const movements: InventoryMovementResponse[] = [
     { ...base, id: 10, invoiceNumber: 27867, sacos: 10, grossKg: 1250, netKg: 1200, remainingKg: 700, idNumber: '990514', fundCode: 'RP' },
@@ -24,11 +25,13 @@ describe('RemissionFormComponent', () => {
     { ...base, id: 12, invoiceNumber: 27869, sacos: 4, grossKg: 310, netKg: 300, remainingKg: 300, idNumber: '99197019', fundCode: 'LF' },
     { ...base, id: 13, invoiceNumber: 27860, purchaseDate: '2026-09-20', sacos: 1, grossKg: 52, netKg: 50, remainingKg: 50, idNumber: '990514', fundCode: 'RP' },
     { ...base, id: 14, invoiceNumber: 27870, specialType: 'ESTANDAR', sacos: 2, grossKg: 101, netKg: 100, remainingKg: 100, idNumber: '990514', fundCode: 'RP' },
+    // Ya esta en una remesa (de Genera Remesa o de Access): no se puede volver a despachar.
+    { ...base, id: 15, invoiceNumber: 27850, sacos: 3, grossKg: 150, netKg: 145, remainingKg: 145, idNumber: '990514', fundCode: 'RP', remitted: true },
   ];
   const saved: RemissionResponse = {
     id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central',
     conductorIdNumber: null, conductorName: null, transportCompany: null, vehiclePlate: null, exported: false,
-    displayNumber: 'SDBU-RP-0001', lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }],
+    displayNumber: 'SDBU-125', status: 'VIGENTE', remittanceId: 9, lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }],
   } as unknown as RemissionResponse;
 
   let createSpy: ReturnType<typeof vi.fn>;
@@ -55,7 +58,7 @@ describe('RemissionFormComponent', () => {
 
   const row = (id: number) => movements.find((m) => m.id === id)!;
 
-  it('demo del 23-nov: no list until the Tipo de café is chosen; then only that type, by date and invoice', () => {
+  it('demo del 23-nov: no list until the Tipo de café is chosen; then only that type, by date and invoice, without the remitted ones', () => {
     setup();
     expect(component.rows()).toEqual([]);
     expect(component.specials()).toEqual(['ESTANDAR', 'RN']);
@@ -88,40 +91,50 @@ describe('RemissionFormComponent', () => {
     expect(component.rows().map((m) => m.invoiceNumber)).toEqual([27869]);
   });
 
-  it('checking an entry takes its whole balance and the sacos and gross kilos of the purchase', () => {
+  /** Marca facturas y elige el tipo de empaque: lo minimo para guardar. */
+  function pick(...ids: number[]) {
+    ids.forEach((id) => component.toggle(row(id)));
+    component.packagingType.set('USADO');
+  }
+
+  it('checking an invoice takes its whole balance with its sacos and gross kilos; the packaging suggests the sacos', () => {
     setup();
     component.toggle(row(10));
+    component.toggle(row(13));
 
-    expect(component.pickValue(row(10), 'quantity')).toBe('700');
-    expect(component.pickValue(row(10), 'sacos')).toBe('10');
-    expect(component.pickValue(row(10), 'grossKg')).toBe('1250');
-    expect(component.totals()).toEqual({ quantity: 700, sacos: 10, grossKg: 1250 });
+    expect(component.totals()).toEqual({ quantity: 750, sacos: 11, grossKg: 1302 });
+    expect(component.packagingQuantity()).toBe('11');
 
+    component.toggle(row(13));
+    expect(component.packagingQuantity()).toBe('10');
     component.toggle(row(10));
     expect(component.isPicked(row(10))).toBe(false);
     expect(component.canSave()).toBe(false);
   });
 
-  it('a partial exit edits the quantity, sacos and gross kilos, and the totals follow', () => {
+  it('saves the checked invoices with the packaging chosen; the quantity of packaging can be changed', () => {
     setup();
-    component.toggle(row(10));
-    component.setPick(row(10), 'quantity', '300');
-    component.setPick(row(10), 'sacos', '4');
-    component.setPick(row(10), 'grossKg', '305');
-
-    expect(component.totals()).toEqual({ quantity: 300, sacos: 4, grossKg: 305 });
+    pick(10, 13);
+    component.packagingQuantity.set('8');
 
     component.save();
-    expect(createSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ lines: [{ inventoryMovementId: 10, quantity: 300, sacos: 4, grossKg: 305 }] }),
-    );
-    expect(component.result()?.displayNumber).toBe('SDBU-RP-0001');
+
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      lines: [{ inventoryMovementId: 10 }, { inventoryMovementId: 13 }], packagingQuantity: 8, packagingType: 'USADO',
+    }));
+    expect(component.result()?.displayNumber).toBe('SDBU-125');
   });
 
-  it('cannot save without a checked entry', () => {
+  it('cannot save without a checked invoice, a quantity of packaging or its type', () => {
     setup();
     component.save();
+    component.toggle(row(10));
     expect(component.canSave()).toBe(false);
+    component.packagingType.set('NUEVO');
+    expect(component.canSave()).toBe(true);
+    component.packagingQuantity.set('0');
+    expect(component.canSave()).toBe(false);
+    component.save();
     expect(createSpy).not.toHaveBeenCalled();
   });
 
@@ -129,7 +142,7 @@ describe('RemissionFormComponent', () => {
     setup();
     const pending = new Subject<RemissionResponse>();
     createSpy.mockReturnValue(pending);
-    component.toggle(row(10));
+    pick(10);
 
     component.save();
     component.save();
@@ -143,13 +156,12 @@ describe('RemissionFormComponent', () => {
 
   it('shows the reason of the server (e.g. the balance was exceeded)', () => {
     setup();
-    createSpy.mockReturnValue(throwError(() => ({ error: { message: 'La salida no puede ser superior al saldo disponible' } })));
-    component.toggle(row(10));
-    component.setPick(row(10), 'quantity', '9999');
+    createSpy.mockReturnValue(throwError(() => ({ error: { message: 'La factura 27867 ya no está pendiente de remesar' } })));
+    pick(10);
 
     component.save();
 
-    expect(component.errorMessage()).toBe('La salida no puede ser superior al saldo disponible');
+    expect(component.errorMessage()).toBe('La factura 27867 ya no está pendiente de remesar');
   });
 
   it('print() says so when the PDF cannot be built, instead of leaving the promise unhandled', async () => {
@@ -157,7 +169,7 @@ describe('RemissionFormComponent', () => {
     const createPdf = vi.spyOn(pdfMake, 'createPdf').mockImplementation(() => {
       throw new Error('pdfmake');
     });
-    component.toggle(row(10));
+    pick(10);
     component.save();
 
     component.print();
@@ -166,15 +178,16 @@ describe('RemissionFormComponent', () => {
     createPdf.mockRestore();
   });
 
-  it('a new remission clears the marks and the result', () => {
+  it('a new remission clears the marks, the packaging and the result', () => {
     setup();
-    component.toggle(row(10));
+    pick(10);
     component.save();
 
     component.reset();
 
     expect(component.result()).toBeNull();
     expect(component.isPicked(row(10))).toBe(false);
+    expect(component.packagingType()).toBe('');
   });
 
   it('the conductor is looked up by cédula; an unknown one can be added from here', () => {
@@ -211,7 +224,7 @@ describe('RemissionFormComponent', () => {
   it('shows the date as day/month/year and the saved remission with its number', () => {
     setup();
     expect(component.date('2026-09-23')).toBe('23/09/2026');
-    expect(component.savedText(saved)).toBe('Remisión N° SDBU-RP-0001 registrada correctamente.');
+    expect(component.savedText(saved)).toBe('Remisión N° SDBU-125 registrada correctamente. Su remesa tiene el mismo número.');
     component.print();
     expect(component.errorMessage()).toBeNull();
   });

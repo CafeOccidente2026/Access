@@ -21,14 +21,13 @@ export interface InventoryMovementResponse {
   /** Cedula del vendedor y fondo de la compra (C7: columna Cedula y filtro por Fondo). */
   readonly idNumber: string | null;
   readonly fundCode: string | null;
+  /** La compra ya esta en una remesa: no sale en Registrar Salidas. */
+  readonly remitted: boolean;
 }
 
+/** Una factura que sale completa: el servidor toma su saldo, sacos y kilos brutos. */
 export interface RemissionLineRequest {
   readonly inventoryMovementId: number;
-  readonly quantity: number;
-  /** Sacos y Kilos Brutos que salen en este despacho (Form_EXITS). */
-  readonly sacos: number;
-  readonly grossKg: number;
 }
 
 export interface RemissionLineResponse {
@@ -53,6 +52,9 @@ export interface RemissionRequest {
   readonly destination: string | null;
   readonly conductorIdNumber: string | null;
   readonly lines: RemissionLineRequest[];
+  /** Empaques que salen con la remision y su tipo (NUEVO o USADO). */
+  readonly packagingQuantity: number;
+  readonly packagingType: string;
 }
 
 export interface RemissionResponse {
@@ -68,8 +70,11 @@ export interface RemissionResponse {
   readonly vehiclePlate: string | null;
   readonly exported: boolean;
   readonly lines: RemissionLineResponse[];
-  /** Numero impreso: {prefijo}-{LF|RP}-{0000}; en las remisiones viejas, su numero tal cual. */
+  /** Numero impreso: {prefijo}-{consecutivo}, el mismo de su remesa; en las viejas, el que tenian. */
   readonly displayNumber: string;
+  readonly status: 'VIGENTE' | 'ANULADA';
+  /** Su remesa; null en las remisiones anteriores a V31. */
+  readonly remittanceId: number | null;
 }
 
 /** Fila de los reportes de inventario: entrada (factura) o salida (remision); lo del otro tipo va en null. */
