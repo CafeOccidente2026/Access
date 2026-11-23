@@ -4,7 +4,7 @@
   "toLabel": "Hasta Fecha",
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
-  "exportExcelLabel": "Exportar a Excel",
+  "exportExcelLabel": "Excel",
   "exportFileName": "compras por fecha",
   "pdfTitle": "COMPRAS POR FECHA",
   "messages": {

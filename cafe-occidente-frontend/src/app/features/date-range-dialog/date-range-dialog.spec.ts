@@ -130,6 +130,8 @@ describe('DateRangeDialogComponent (HU-27)', () => {
     await settle();
     fixture.detectChanges();
 
+    // Demo del 23-nov: "Excel" a secas, para que el boton no se parta en dos lineas en el dialogo angosto.
+    expect(el.querySelector('[data-testid="export-excel"]')?.textContent?.trim()).toBe('Excel');
     (el.querySelector('[data-testid="export-excel"] button') as HTMLButtonElement).click();
 
     expect(exporter.xlsx).toHaveBeenCalledWith(
