@@ -9,7 +9,11 @@ from decimal import Decimal
 from migrar_punto import (
     STOPS,
     apply_corrections,
+    correct_rows,
     corrections_for,
+    fixed_by_agency,
+    fixed_remission,
+    grower_type,
     note_stop,
     pending_corrections,
     stop_if_problems,
@@ -144,6 +148,44 @@ def check_corrections():
     assert apply_corrections("caja_migrar.csv", rows, found) == (rows, [])
 
 
+def check_correction_actions():
+    # 25-nov: corregir un campo de un registro (Matituy Id 702: remision "MA0586," -> "MA0586") y fijar el contador
+    # de remision del punto (Samaniego: la ultima es 1934, la siguiente SA1935).
+    fix = correction(tabla="INVENTARIO", id_access="702", accion="corregir", campo="Remisión", valor="MA0586",
+                     motivo="misma remision MA0586 que el Id 693")
+    counter = correction(tabla="", id_access="", accion="fijar_remision", valor="1934", motivo="serie normal")
+    found = corrections_for([fix, counter], "PuntoPrueba")
+    assert set(found) == {("inventario", "702"), ("consecutivo_remision", "")}
+    assert fixed_remission(found) == 1934 and fixed_remission({}) is None
+    rows = [{"id_access": "701", "remisión": "MA0585"}, {"id_access": "702", "remisión": "MA0586,"}]
+    changes = correct_rows("inventario_migrar.csv", rows, found)
+    assert rows[1]["remisión"] == "MA0586" and rows[0]["remisión"] == "MA0585"
+    assert changes == [(("inventario", "702"), "remisión", "MA0586,", "MA0586")]
+    try:
+        correct_rows("inventario_migrar.csv", [{"id_access": "702", "cantidad": "1"}], found)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("un campo que no existe debe detener la carga")
+    for bad in (correction(accion="corregir", campo="", valor="x"), correction(accion="fijar_remision", valor="x")):
+        try:
+            corrections_for([bad], "PuntoPrueba")
+        except SystemExit:
+            continue
+        raise AssertionError(bad)
+    # El contador fijo se reconoce por agencia (nombre o nombre de Access), tambien para ajustar_consecutivo_remision.
+    agencies = [(9, "Samaniego", "SAMANIEGO"), (11, "Los Andes (Sotomayor)", "SOTOMAYOR")]
+    assert fixed_by_agency([dict(counter, punto="Samaniego")], agencies) == {9: 1934}
+    assert fixed_by_agency([dict(counter, punto="Sotomayor")], agencies) == {11: 1934}
+    assert fixed_by_agency([correction()], agencies) == {}
+
+
+def check_grower_type():
+    # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
+    assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
+    assert grower_type({"tipo": ""}) is None and grower_type({}) is None
+
+
 def check_stops():
     # 25-nov: lo que no se puede cargar tal cual no se descarta: se junta y la carga se detiene al final.
     STOPS.clear()
@@ -175,8 +217,10 @@ def check_date_cut():
 
 
 def check_cheque_text():
-    # V21: el cheque son los ultimos 4 digitos con sus ceros (0548). Asi se guarda y asi se reconoce lo ya cargado.
-    assert cheque_text("548") == "0548"
+    # 25-nov: el cheque de Access se carga tal cual, sin rellenar con ceros (la base acepta de 1 a 15 digitos, V34).
+    assert cheque_text("548") == "548"
+    assert cheque_text("52") == "52"
+    assert cheque_text("13324") == "13324"
     assert cheque_text("5249.0") == "5249"
     assert cheque_text("0") is None and cheque_text("") is None and cheque_text(None) is None
 
@@ -301,6 +345,8 @@ def main():
     check_ledger_fund()
     check_corrections()
     check_stops()
+    check_correction_actions()
+    check_grower_type()
     check_inventory()
     check_date_cut()
     check_cheque_text()
