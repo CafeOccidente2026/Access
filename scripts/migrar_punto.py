@@ -777,6 +777,132 @@ def purchases_by_invoice(cur, agency_id, column):
     return {inv: (value, pid, origin) for inv, value, pid, origin in cur.fetchall()}
 
 
+# ---------- inventario (24-nov) ----------
+
+def access_remission(row):
+    """Texto de la remision de una fila del INVENTARIO de Access (columna "remision" con tilde)."""
+    return next((s(row, key) for key in row if key.lower().startswith("remisi")), "")
+
+
+def inventory_rows(rows):
+    """(entradas, salidas) del INVENTARIO de Access: entrada = una factura con kilos; salida = una remision con
+    cantidad, por codigo de producto y sin factura. Las filas en cero no cuentan."""
+    entries = [row for row in rows if parse_decimal(row.get("kilos_netos")) > 0]
+    exits = [row for row in rows if parse_decimal(row.get("cantidad")) > 0]
+    return entries, exits
+
+
+def entry_balance(row, purchase):
+    """Saldo disponible del movimiento para Registrar Salidas: sus kilos si la compra sigue sin remesar (Plano = f) y
+    valida; 0 si ya salio en una remesa, si esta anulada o si no hay compra (saldo que viene del anio anterior)."""
+    if purchase is None or s(purchase, "plano") == "t" or s(purchase, "forma_de_pago") != "VALIDA":
+        return Decimal(0)
+    return parse_decimal(row.get("kilos_netos"))
+
+
+def opening_purchase_id(agency_id, invoice):
+    """compra_id del saldo que viene del anio anterior (factura 9911210226, sin compra): negativo y unico por agencia."""
+    return -(agency_id * 10 ** 12 + int(re.sub(r"\D", "", invoice) or 0))
+
+
+def exit_remissions(exits):
+    """{numero: {text, date, destino, lines}} de las salidas de Access, en orden de numero."""
+    grouped = {}
+    for row in exits:
+        text = access_remission(row)
+        match = re.search(r"(\d+)$", text)
+        if not match:
+            note_discard("Salida de INVENTARIO sin numero de remision", discard_detail(row, 0, row.get("cantidad")))
+            continue
+        remission = grouped.setdefault(int(match.group(1)),
+                                       {"text": text, "date": None, "destino": s(row, "destino"), "lines": []})
+        day = parse_date(row.get("fecha"))
+        if day and (remission["date"] is None or day > remission["date"]):
+            remission["date"] = day
+        remission["lines"].append(row)
+    return dict(sorted(grouped.items()))
+
+
+def exit_remission_rows(exits):
+    """Las salidas como filas de remision (texto y fecha), para el contador de remision."""
+    return [{"remision": access_remission(row), "fecha_compra": s(row, "fecha")} for row in exits]
+
+
+def load_inventory(cur, agency_id, user_id):
+    """
+    INVENTARIO de Access (24-nov): cada entrada a inventarios, unida a su compra por factura, con su saldo disponible
+    (entry_balance); cada salida a una remision historica VIGENTE (numero de Access, sin remesa) con una linea por fila.
+    Las salidas de Access no van por factura: cada linea apunta a la primera entrada de su codigo de producto, que
+    solo sirve para el codigo. Asi el saldo y el valor promedio por codigo quedan como en Access. Idempotente.
+    """
+    entries, exits = inventory_rows(read_csv("inventario_migrar.csv"))
+    access_purchases = {s(r, "factura"): r for r in read_csv("compras_migrar.csv")}
+    web_purchases = purchases_by_invoice(cur, agency_id, "kilos_netos")
+    cur.execute("SELECT codigo, id, fondo_id FROM productos")
+    products = {code: (pid, fund) for code, pid, fund in cur.fetchall()}
+    modules = {"DRY": "DRY_COFFEE", "HUSK": "HUSK"}
+
+    inserted = opening = 0
+    for row in entries:
+        code, invoice = s(row, "cod_prod"), s(row, "factura")
+        if code not in products:
+            note_discard("Entrada de INVENTARIO con codigo de producto inexistente",
+                         f"factura {invoice}, codigo {code}, kilos {s(row, 'kilos_netos')}")
+            continue
+        found = web_purchases.get(int(invoice)) if invoice.isdigit() and int(invoice) < 2 ** 31 else None
+        if found:
+            module, purchase_id, number = modules[found[2]], found[1], int(invoice)
+            purchase = access_purchases.get(invoice)
+        else:
+            module, purchase_id, number, purchase = "DRY_COFFEE", opening_purchase_id(agency_id, invoice), 0, None
+            opening += 1
+        cur.execute(
+            "INSERT INTO inventarios (modulo_compra, compra_id, agencia_id, producto_id, especial, numero_factura,"
+            " fecha_compra, sacos, kilos_brutos, kilos_netos, saldo_kilos, factor, vr_inventario, creado_en)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            " ON CONFLICT (modulo_compra, compra_id) DO NOTHING",
+            (module, purchase_id, agency_id, products[code][0], s(row, "especial"), number,
+             parse_date(row.get("fecha")), parse_int(row.get("sacos")), parse_decimal(row.get("kilos_brutos")),
+             parse_decimal(row.get("kilos_netos")), entry_balance(row, purchase), parse_decimal(row.get("porcalmsana")),
+             parse_decimal(row.get("vr_inventario")), parse_timestamp(s(row, "fecha"))))
+        inserted += cur.rowcount
+    print(f"  inventarios: {inserted} entradas de INVENTARIO ({opening} del saldo que viene del anio anterior).")
+
+    cur.execute("SELECT DISTINCT ON (producto_id) producto_id, id FROM inventarios WHERE agencia_id = %s"
+                " ORDER BY producto_id, fecha_compra, id", (agency_id,))
+    first_entry = dict(cur.fetchall())
+    cur.execute("SELECT numero_remision_anterior FROM remisiones WHERE agencia_id = %s", (agency_id,))
+    existing = {r[0] for r in cur.fetchall()}
+    remissions = lines = 0
+    for number, remission in exit_remissions(exits).items():
+        if number in existing:
+            continue
+        funds = {products[s(r, "cod_prod")][1] for r in remission["lines"] if s(r, "cod_prod") in products}
+        cur.execute(
+            "INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, destino, exportado,"
+            " creado_por_usuario_id, creado_en, fondo_id, consecutivo, numero_remision, estado)"
+            " VALUES (%s, %s, %s, %s, false, %s, %s, %s, %s, %s, 'VIGENTE') RETURNING id",
+            (number, agency_id, remission["date"], remission["destino"] or None, user_id,
+             parse_timestamp(s(remission["lines"][-1], "fecha")), funds.pop() if len(funds) == 1 else None, number,
+             remission["text"]))
+        remission_id = cur.fetchone()[0]
+        remissions += 1
+        for row in remission["lines"]:
+            product = products.get(s(row, "cod_prod"), (None,))[0]
+            if first_entry.get(product) is None:
+                note_discard("Salida de INVENTARIO de un codigo sin entradas", discard_detail(row, 0, row.get("cantidad")))
+                continue
+            cur.execute(
+                "INSERT INTO remisiones_detalle (remision_id, inventario_id, cantidad, valor_unitario, valor_salida,"
+                " sacos, kilos_brutos, factor_salida) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (remission_id, first_entry[product], parse_decimal(row.get("cantidad")),
+                 parse_decimal(row.get("valor unitario")), parse_decimal(row.get("vr_salida")),
+                 parse_int(row.get("sacos")), parse_decimal(row.get("kilos_brutos")),
+                 parse_decimal(row.get("porcalmsanasl"))))
+            lines += 1
+    print(f"  remisiones: {remissions} salidas de INVENTARIO de Access ({lines} lineas), sin remesa.")
+
+
 def before_cut(row, desde):
     """Movimiento de Caja, Suministros, Caja Menor o Empaque anterior a la fecha de corte."""
     moved = parse_date(row.get("fecha"))
@@ -1136,8 +1262,10 @@ def set_consecutives(cur, agency_id):
     rows.append(("factura", access_invoice, web, cur.fetchone()[0] + 1))
 
     # Remision y remesa: un solo contador por agencia (V31) que sigue la serie de Access (TA0968 -> SDTA-969).
-    access_remission = max_remission(compras)
-    summary = remission_summary(compras)
+    # Tambien las salidas de INVENTARIO: su numero de remision no puede volver a salir en la web.
+    remission_rows = compras + exit_remission_rows(inventory_rows(read_csv("inventario_migrar.csv"))[1])
+    access_remission = max_remission(remission_rows)
+    summary = remission_summary(remission_rows)
     if summary["by_number"]:
         print(f"  remision: ultima por numero {summary['by_number'][0]} ({summary['by_number'][1]}), ultima por fecha"
               f" {summary['by_date'][0]} ({summary['by_date'][1]}); la siguiente sale con {access_remission + 1}")
@@ -1229,6 +1357,7 @@ def main():
             load_announcements(cur, agency_id, rp_fund_id)
             load_quota_announcements(cur, agency_id)
             load_purchases(cur, agency_id, admin_user_id, args.desde)
+            load_inventory(cur, agency_id, admin_user_id)
             load_check_relation_marks(cur, agency_id)
             load_manual_cash_entries(cur, agency_id, args.desde)
             load_supplies_petty_cash_and_packaging(cur, agency_id, args.desde)
