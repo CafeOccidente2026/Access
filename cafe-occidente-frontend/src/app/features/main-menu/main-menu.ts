@@ -26,6 +26,12 @@ export class MainMenuComponent {
   readonly auth = inject(AuthService);
 
   readonly data = toSignal(this.content.loadJson<MainMenuContent>('main-menu'));
+  private readonly year = new Date().getFullYear();
+
+  /** "AÑO {year}": el año en curso, no uno fijo (cierre de año). */
+  heading(text: string): string {
+    return text.replace('{year}', String(this.year));
+  }
   /** Al abrir el menu se releen los permisos (RF-02): uno concedido o retirado se ve sin recargar. */
   readonly session = toSignal(this.auth.refreshSession());
   readonly isAdmin = this.auth.isAdmin();
