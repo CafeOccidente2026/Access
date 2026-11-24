@@ -82,8 +82,9 @@ public class InventoryMovementServiceImpl implements InventoryMovementService {
     }
 
     @Override
-    public InventoryMovementResponse findById(Long id) {
+    public InventoryMovementResponse findById(Long agencyId, Long id) {
         InventoryMovement movement = inventoryMovementRepository.findById(id)
+                .filter(m -> m.getAgency().getId().equals(agencyId))
                 .orElseThrow(() -> new ResourceNotFoundException("Movimiento de inventario no encontrado"));
         return toResponse(movement, sellerAndFund(movement.getAgency().getId()));
     }

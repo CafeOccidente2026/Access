@@ -28,5 +28,6 @@ public interface InventoryMovementService {
 
     List<InventoryMovementResponse> listByAgency(Long agencyId);
 
-    InventoryMovementResponse findById(Long id);
+    /** Un movimiento de la agencia de la sesion; uno de otra agencia no existe para ella (404). */
+    InventoryMovementResponse findById(Long agencyId, Long id);
 }

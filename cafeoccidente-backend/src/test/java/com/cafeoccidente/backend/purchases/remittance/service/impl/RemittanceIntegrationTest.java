@@ -282,5 +282,7 @@ class RemittanceIntegrationTest {
 
         assertThat(remittances.findByNumber(remittance.number())).isEmpty();
         assertThatThrownBy(() -> remittances.files(remittance.id())).isInstanceOf(ResourceNotFoundException.class);
+        // Revision del 24-nov: tampoco se puede desmarcar una remesa de otra agencia.
+        assertThatThrownBy(() -> remittances.unmark(remittance.id())).isInstanceOf(ResourceNotFoundException.class);
     }
 }

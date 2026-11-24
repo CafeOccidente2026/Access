@@ -9,6 +9,7 @@ import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
 import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepository;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
+import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.ProductCodeRepository;
 import java.math.BigDecimal;
@@ -44,4 +45,16 @@ class InventoryMovementServiceImplTest {
         verifyNoInteractions(inventoryMovementRepository);
     }
 
+    @Test
+    void aMovementOfAnotherAgencyIsNotFound() {
+        // Hallazgo 1 (24-nov): el movimiento 5 es de la agencia 2; quien trabaja en la 1 no lo ve (404).
+        Agency agency2 = new Agency();
+        agency2.setId(2L);
+        InventoryMovement movement = new InventoryMovement();
+        movement.setId(5L);
+        movement.setAgency(agency2);
+        when(inventoryMovementRepository.findById(5L)).thenReturn(Optional.of(movement));
+
+        assertThatThrownBy(() -> service.findById(1L, 5L)).isInstanceOf(ResourceNotFoundException.class);
+    }
 }

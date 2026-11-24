@@ -157,10 +157,10 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT remesa_id FROM compras_cafe_seco WHERE id = ?", Long.class, purchase)).isNull();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM empaques WHERE agencia_id = ? AND id_transaccion = ?",
                 Integer.class, AGENCY, remission.displayNumber())).isZero();
-        assertThat(movements.findById(movement).remainingKg()).isEqualByComparingTo(balance);
+        assertThat(movements.findById(AGENCY, movement).remainingKg()).isEqualByComparingTo(balance);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios WHERE entidad = 'REMISION'"
                 + " AND entidad_id = ? AND accion = 'ANULAR'", Integer.class, remission.id())).isEqualTo(1);
-        assertThat(movements.findById(movement).remitted()).isFalse();
+        assertThat(movements.findById(AGENCY, movement).remitted()).isFalse();
         assertThatThrownBy(() -> remissions.annul(remission.id())).isInstanceOf(BusinessRuleException.class);
     }
 
@@ -174,7 +174,7 @@ class RemissionConsecutiveIntegrationTest {
 
         assertThat(row.idNumber()).isEqualTo(SELLER);
         assertThat(row.fundCode()).isEqualTo("RP");
-        assertThat(movements.findById(movement).idNumber()).isEqualTo(SELLER);
+        assertThat(movements.findById(AGENCY, movement).idNumber()).isEqualTo(SELLER);
     }
 
     @Test

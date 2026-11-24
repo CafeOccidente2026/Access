@@ -72,7 +72,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 /**
  * Matriz rol x endpoint (RF-01, RN-01.1 a RN-01.3, RN-05.3). Cada endpoint se llama con los 3 roles:
  * 2xx si el rol esta permitido, 403 si no. Los servicios son mocks y la validacion de los body esta
- * apagada: @Valid corre antes que @PreAuthorize y un 400 taparia el 403.
+ * apagada para que los roles permitidos lleguen al 2xx con "{}". Sin permiso, el 403 sale antes de leer
+ * los datos ({@link AuthorizeBeforeBinding}).
  */
 @WebMvcTest
 @Import({SecurityConfig.class, CorsConfig.class, ClockConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
@@ -364,6 +365,33 @@ class EndpointAuthorizationTest {
         } else {
             assertThat(status).as("%s con %s", endpoint, profile).isEqualTo(403);
         }
+    }
+
+    /**
+     * Hallazgo 3 (ZAP, 24-nov): sin permiso responde 403 aunque la peticion venga incompleta (sin parametros y con un
+     * cuerpo que no se puede leer). El permiso se revisa antes de leer y validar los datos, asi un 400 no le cuenta
+     * a quien no tiene permiso como es la peticion.
+     */
+    @ParameterizedTest(name = "{1} {0}")
+    @MethodSource("matrix")
+    void withoutPermissionAnIncompleteRequestIsStill403(Endpoint endpoint, String profile) throws Exception {
+        String[] parts = profile.split("\\+");
+        String role = parts[0];
+        List<String> screens = parts.length > 1 ? List.of(parts[1].split(",")) : List.of();
+        if (endpoint.roles().contains(role) || endpoint.screen() != null && screens.contains(endpoint.screen())) {
+            return;
+        }
+        List<String> authorities = new ArrayList<>(List.of("ROLE_" + role));
+        screens.forEach(screen -> authorities.add("SCREEN_" + screen));
+
+        int status = mockMvc.perform(request(endpoint.method(), endpoint.url().replaceAll("\\?.*$", ""))
+                        .with(user("prueba").authorities(authorities.stream()
+                                .map(SimpleGrantedAuthority::new).toList()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).as("%s con %s", endpoint, profile).isEqualTo(403);
     }
 
     /** Un endpoint nuevo sin fila en la matriz hace fallar este test: nadie queda sin revisar. */
