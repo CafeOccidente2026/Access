@@ -202,7 +202,7 @@ public class RemissionServiceImpl implements RemissionService {
     }
 
     /** Sale todo el saldo de la factura, con sus sacos y kilos brutos. Cantidad_AfterUpdate: no mas que el saldo
-     *  del codigo en el año. */
+     *  del codigo. */
     private RemissionLine buildLine(Remission remission, InventoryMovement movement, Map<Long, CodeBalance> balances) {
         BigDecimal quantity = movement.getRemainingKg();
         if (quantity.signum() <= 0) {
@@ -210,15 +210,15 @@ public class RemissionServiceImpl implements RemissionService {
                     + " ya salió en otra remisión; vuelva a consultar");
         }
 
-        // Valor_unitario y % salida = VRUNIT y frpond de la consulta Sld3: promedio del Cod_Prod
-        // (entradas - salidas del año en curso de la agencia), no el costo de la entrada origen.
+        // Valor_unitario y % salida = VRUNIT y frpond de la consulta Sld3: promedio exacto del Cod_Prod
+        // (entradas - salidas de la agencia, toda la historia), no el costo de la entrada origen.
         CodeBalance balance = balances.computeIfAbsent(
                 movement.getProductCode().getId(),
                 productCodeId -> codeBalance(remission.getAgency().getId(), productCodeId, remission.getRemissionDate()));
         if (quantity.compareTo(balance.kg) > 0) {
             // Cantidad_AfterUpdate: If Cantidad > Saldo (saldokg de Sld3) Then MsgBox ...
             throw new BusinessRuleException("La salida no puede ser superior al saldo, vuelva a intentarlo (saldo del "
-                    + "código " + movement.getProductCode().getCode() + " en el año: " + balance.kg + " kg)");
+                    + "código " + movement.getProductCode().getCode() + ": " + balance.kg + " kg)");
         }
         BigDecimal unitValue = balance.value.divide(balance.kg, MathContext.DECIMAL64);
         BigDecimal exitPercentage = balance.kgFactor.divide(balance.kg, MathContext.DECIMAL64).setScale(6, RoundingMode.HALF_UP);
@@ -242,13 +242,11 @@ public class RemissionServiceImpl implements RemissionService {
         return line;
     }
 
-    /** Sld2/Sld3 del Cod_Prod: entradas - salidas del año de la remision (Access borraba el año
-     *  anterior con "eliminainventarioañoanterior", ver InventoryReportService). */
+    /** Sld2/Sld3 del Cod_Prod: entradas - salidas hasta la fecha de la remision, con toda la historia. Access
+     *  borraba el año anterior ("eliminainventarioañoanterior"); aca la base no se corta por año (24-nov). */
     private CodeBalance codeBalance(Long agencyId, Long productCodeId, LocalDate remissionDate) {
-        LocalDate from = remissionDate.withDayOfYear(1);
-        LocalDate to = remissionDate.withDayOfYear(remissionDate.lengthOfYear());
-        CodeTotals entries = inventoryMovementRepository.sumEntries(agencyId, productCodeId, from, to);
-        CodeTotals exits = remissionLineRepository.sumExits(agencyId, productCodeId, from, to);
+        CodeTotals entries = inventoryMovementRepository.sumEntries(agencyId, productCodeId, remissionDate);
+        CodeTotals exits = remissionLineRepository.sumExits(agencyId, productCodeId, remissionDate);
         CodeBalance balance = new CodeBalance();
         balance.kg = entries.kg().subtract(exits.kg());                // saldokg
         balance.value = entries.value().subtract(exits.value());       // SALVAL

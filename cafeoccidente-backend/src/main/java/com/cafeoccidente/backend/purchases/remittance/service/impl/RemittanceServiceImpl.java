@@ -70,7 +70,8 @@ public class RemittanceServiceImpl implements RemittanceService {
         RemittanceResponse remittance = repository.find(agency(), id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe esa remesa en la agencia"));
         RemittanceRepository.Header header = repository.header(id);
-        return new RemittanceFiles(remittance.number(), header.agencyName(), header.generatedAt(), repository.lines(id));
+        return new RemittanceFiles(remittance.number(), repository.coffeeType(id), header.agencyName(), header.generatedAt(),
+                repository.lines(id));
     }
 
     /** Solo las remesas sin remision: las que la tienen se deshacen con Anular Remision (demo del 23-nov). */

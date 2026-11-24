@@ -17,6 +17,7 @@ const line = (over: Partial<RemittanceLine>): RemittanceLine => ({
 
 const FILES: RemittanceFiles = {
   number: 'SDXX-LF-0007',
+  coffeeType: 'SECO',
   agencyName: 'PUNTO PRUEBA',
   generatedAt: '2026-10-06T09:19:28',
   lines: [
@@ -37,27 +38,25 @@ const byName = (name: string) => {
 const utc = (y: number, m: number, d: number, h = 0, mi = 0, s = 0) => new Date(Date.UTC(y, m - 1, d, h, mi, s));
 
 describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', () => {
-  it('produces the 4 files with the names Access gave them (other systems load them), each with its query sheet', () => {
+  it('names the files with the remittance and the coffee type, stuck together; Genera Plano is <remittance>.csv', () => {
     expect(remittanceWorkbooks(FILES).map((b) => [b.fileName, b.sheet])).toEqual([
-      ['ParaOperaciones.XLSX', 'ParaOperaciones'],
-      ['ParaOpen.XLSX', 'ParaOpen'],
-      ['GeneraPlano.XLSX', 'GeneraPlano'],
-      ['ParaAlmacafe.XLSX', 'ParaAlmacafe'],
+      ['ParaOperacionesSDXX-LF-0007SECO.xlsx', 'ParaOperaciones'],
+      ['ParaOpenSDXX-LF-0007SECO.xlsx', 'ParaOpen'],
+      ['SDXX-LF-0007.csv', 'GeneraPlano'],
+      ['ParaAlmacafeSDXX-LF-0007SECO.xlsx', 'ParaAlmacafe'],
     ]);
   });
 
   it('GeneraPlano: the 18 Access columns, PORC_AS = W_AlmSana / Muestra x 100 and the crossed price columns', () => {
-    const data = byName('GeneraPlano.XLSX').data;
-    expect(values(data[0])).toEqual(['Cedula', 'cantidad', 'ZUND', 'CODFINCA', 'CEDULA_VEND', 'Nombre_Vend', 'Fech',
-      'Factura', 'FACTOR', 'VrKgBase', 'PR_BASE_AS', 'SPR_NESPR', 'PORC_AS', 'PORC_AD', 'PR_BASE_TOT', 'VrSprTtl',
-      'SPR_NESS_TOT', 'PR_TOTAL']);
-    expect(values(data[1])).toEqual([900100200, 300, 'KG', 900100200, 900100200, 'ANA MARIA PRUEBA UNO', '20260515',
+    // Sin fila de encabezados (CSV del 24-nov): solo los datos, en el orden de las 18 columnas de Access.
+    const data = byName('SDXX-LF-0007.csv').data;
+    expect(values(data[0])).toEqual([900100200, 300, 'KG', 900100200, 900100200, 'ANA MARIA PRUEBA UNO', '20260515',
       'SDXX1001', 94, 10000, 12000, 500, 73.6, 8, 2450000, 150000, 1113500, 3000000]);
-    expect(data).toHaveLength(3);
+    expect(data).toHaveLength(2);
   });
 
   it('ParaOpen: Remision first, Porcmerma and fechaOrigEntr = when the remittance was generated', () => {
-    const data = byName('ParaOpen.XLSX').data;
+    const data = byName('ParaOpenSDXX-LF-0007SECO.xlsx').data;
     expect(values(data[0])).toEqual(['Remision', 'Cedula', 'cantidad', 'ZUND', 'CODFINCA', 'CEDULA_VEND', 'Nombre_Vend',
       'Fech', 'Factura', 'FACTOR', 'VrKgBase', 'PR_BASE_AS', 'SPR_NESPR', 'Porcmerma', 'PORC_AD', 'PR_BASE_TOT',
       'VrSprTtl', 'SPR_NESS_TOT', 'PR_TOTAL', 'fechaOrigEntr']);
@@ -68,7 +67,7 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
   });
 
   it('ParaAlmacafe: Cedula, Nombre_Vend, cantidad and Factura (XLSX, as the area receives it)', () => {
-    const data = byName('ParaAlmacafe.XLSX').data;
+    const data = byName('ParaAlmacafeSDXX-LF-0007SECO.xlsx').data;
     expect(data.map(values)).toEqual([
       ['Cedula', 'Nombre_Vend', 'cantidad', 'Factura'],
       [900100200, 'ANA MARIA PRUEBA UNO', 300, 'SDXX1001'],
@@ -77,7 +76,7 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
   });
 
   it('ParaOperaciones: KAS without /100, the sum row and FACTOR PONDERADO / VR KG PROM REMISION below', () => {
-    const data = byName('ParaOperaciones.XLSX').data;
+    const data = byName('ParaOperacionesSDXX-LF-0007SECO.xlsx').data;
     expect(values(data[0])).toEqual(['Cedula', 'Nombre_Vend', 'Agencia', 'Remision', 'Fecha_Compra', 'Factura', 'Fondo',
       'cantidad', 'PORC_AS', 'KAS', 'PR_TOTAL', 'Especial']);
     const first = data[1] as Cell[];
@@ -113,18 +112,46 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
   });
 
   it('builds real xlsx files', async () => {
-    for (const book of remittanceWorkbooks(FILES)) {
+    for (const book of remittanceWorkbooks(FILES).filter((b) => !b.csv)) {
       const blob = await writeExcelFile(book.data, { sheet: book.sheet }).toBlob();
       expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
     }
   });
 
   it('uses the Access export font (MS Sans Serif 11), as in the reference files', async () => {
-    const blobs = await workbookBlobs(remittanceWorkbooks(FILES));
-    for (const blob of blobs.values()) {
+    const books = remittanceWorkbooks(FILES).filter((b) => !b.csv);
+    const blobs = await workbookBlobs(books);
+    for (const blob of books.map((b) => blobs.get(b.fileName)!)) {
       const styles = new TextDecoder().decode(unzipSync(new Uint8Array(await blob.arrayBuffer()))['xl/styles.xml']);
       expect(styles).toContain('<sz val="11"/>');
       expect(styles).toContain('<name val="MS Sans Serif"/>');
     }
+  });
+
+  it('Genera Plano CSV: commas, no header, all the decimals, no thousands separator, quoted commas, Windows-1252', async () => {
+    const files: RemittanceFiles = { ...FILES, lines: [
+      line({ sellerName: 'MUÑOZ, JOSÉ', factor: 89.28571428571429, netKg: 1250 }),
+      line({ sellerName: 'LUIS "EL" PRUEBA', invoice: 'SDXX1002' }),
+    ] };
+    const book = remittanceWorkbooks(files).find((b) => b.csv)!;
+    const bytes = new Uint8Array(await (await workbookBlobs([book])).get(book.fileName)!.arrayBuffer());
+
+    expect(new TextDecoder('windows-1252').decode(bytes)).toBe(
+      '900100200,1250,KG,900100200,900100200,"MUÑOZ, JOSÉ",20260515,SDXX1001,89.28571428571429,10000,12000,500,73.6,8,'
+      + '2450000,150000,1113500,3000000\r\n'
+      + '900100200,300,KG,900100200,900100200,"LUIS ""EL"" PRUEBA",20260515,SDXX1002,94,10000,12000,500,73.6,8,'
+      + '2450000,150000,1113500,3000000\r\n');
+    // Ñ y É en un solo byte (ANSI), no en UTF-8.
+    expect(bytes).toContain(0xd1);
+    expect(bytes).toContain(0xc9);
+    expect(bytes).not.toContain(0xc3);
+  });
+
+  it('Windows-1252 keeps the euro-range characters and turns anything outside it into ?', async () => {
+    const files: RemittanceFiles = { ...FILES, lines: [line({ sellerName: 'A–B€ 漢' })] };
+    const book = remittanceWorkbooks(files).find((b) => b.csv)!;
+    const bytes = new Uint8Array(await (await workbookBlobs([book])).get(book.fileName)!.arrayBuffer());
+    const name = bytes.slice(37, 43);
+    expect(Array.from(name)).toEqual([0x41, 0x96, 0x42, 0x80, 0x20, 0x3f]);
   });
 });

@@ -41,6 +41,8 @@ export interface RemittanceLine {
 
 export interface RemittanceFiles {
   readonly number: string;
+  /** SECO, VERDE o PASILLA (los dos si una remesa vieja de Access los mezcla): va en el nombre de los archivos. */
+  readonly coffeeType: string;
   readonly agencyName: string;
   /** Fecha y hora en que se genero la remesa (fechaOrigEntr de ParaOpen). */
   readonly generatedAt: string;

@@ -170,6 +170,14 @@ class RemittanceIntegrationTest {
     }
 
     @Test
+    void theFilesNameTheCoffeeTypeOfThePurchases() {
+        // Nombres de archivo del 24-nov: <remision><SECO|VERDE|PASILLA>.
+        assertThat(remittances.files(remit(null, List.of(dryPurchase())).id()).coffeeType()).isEqualTo("SECO");
+        assertThat(remittances.files(remit(null, List.of(greenPurchase())).id()).coffeeType()).isEqualTo("VERDE");
+        assertThat(remittances.files(remit(null, List.of(huskPurchase())).id()).coffeeType()).isEqualTo("PASILLA");
+    }
+
+    @Test
     void theFilesCarryTheAccessColumnsOfEachPurchase() {
         Ref d = dryPurchase();
         Ref h = huskPurchase();
@@ -179,6 +187,8 @@ class RemittanceIntegrationTest {
 
         assertThat(files.number()).isEqualTo(remittance.number());
         assertThat(files.generatedAt()).isNotNull();
+        // Una remesa vieja de Access puede mezclar seco y pasilla: van los dos tipos.
+        assertThat(files.coffeeType()).isEqualTo("SECO-PASILLA");
         assertThat(files.lines()).hasSize(2);
         Map<String, Object> seco = jdbc.queryForMap("SELECT * FROM compras_cafe_seco WHERE id = ?", d.id());
         BigDecimal sample = jdbc.queryForObject("SELECT tamano_muestra FROM registros_control WHERE agencia_id = ?"

@@ -10,7 +10,7 @@ import { ContentService } from '../../core/services/content.service';
 import content from '../../../../public/assets/data/remittance-files.json';
 import { RemittanceFilesComponent } from './remittance-files-panel';
 
-const FILES: RemittanceFiles = { number: 'SDXX-125', agencyName: 'PUNTO', generatedAt: '2026-11-03T09:00:00', lines: [] };
+const FILES: RemittanceFiles = { number: 'SDXX-125', coffeeType: 'VERDE', agencyName: 'PUNTO', generatedAt: '2026-11-03T09:00:00', lines: [] };
 
 describe('RemittanceFilesComponent (los 4 archivos de la remesa)', () => {
   let http: HttpTestingController;
@@ -50,7 +50,7 @@ describe('RemittanceFilesComponent (los 4 archivos de la remesa)', () => {
 
     expect(saveFile).toHaveBeenCalledTimes(1);
     const [name, blob] = saveFile.mock.calls[0] as [string, Blob];
-    expect(name).toBe('ParaAlmacafe.XLSX');
+    expect(name).toBe('ParaAlmacafeSDXX-125VERDE.xlsx');
     expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
   });
 
@@ -64,7 +64,7 @@ describe('RemittanceFilesComponent (los 4 archivos de la remesa)', () => {
     component.downloadAll();
 
     expect(saveFile.mock.calls.map(([name]) => name)).toEqual([
-      'ParaOperaciones.XLSX', 'ParaOpen.XLSX', 'GeneraPlano.XLSX', 'ParaAlmacafe.XLSX',
+      'ParaOperacionesSDXX-125VERDE.xlsx', 'ParaOpenSDXX-125VERDE.xlsx', 'SDXX-125.csv', 'ParaAlmacafeSDXX-125VERDE.xlsx',
     ]);
     expect(component.message()).toBe(content.messages.downloadAllHint);
   });
