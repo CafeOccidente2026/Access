@@ -7,6 +7,12 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    STOPS,
+    apply_corrections,
+    corrections_for,
+    note_stop,
+    pending_corrections,
+    stop_if_problems,
     announcement_number,
     cheque_text,
     control_record_differences,
@@ -99,16 +105,55 @@ def check_inventory():
 
 
 def check_ledger_fund():
-    # 24-nov: fondos que Access escribio mal; los supuestos son explicitos por movimiento (j -> LF en El Tambo,
-    # RTP -> RP en Sotomayor). Uno que no se puede deducir se descarta (None) y se lista con su valor.
+    # 25-nov: regla fija de la migracion, nada se supone. Un fondo que no es RP ni LF no tiene fondo (None) y
+    # detiene la carga; solo correcciones.csv puede excluir ese registro.
     assert ledger_fund({"id_transaccion": "SUMPRUEBA", "fondo": "LF"}) == "LF"
-    assert ledger_fund({"id_transaccion": "280", "fondo": "RTP"}) == "RP"
-    assert ledger_fund({"id_transaccion": "sumlf60-29-05", "fondo": "j"}) == "LF"
-    assert ledger_fund({"id_transaccion": "999", "fondo": "RTP"}) is None
-    assert ledger_fund({"id_transaccion": "02", "fondo": "02"}) is None
-    row = {"fecha": "2026-03-18 00:00:00", "id_transaccion": "02", "detalle": "SUM PRUEBA", "fondo": "02"}
+    assert ledger_fund({"id_transaccion": "SUMPRUEBA", "fondo": "RP"}) == "RP"
+    assert ledger_fund({"id_transaccion": "sumlf60-29-05", "fondo": "j"}) is None
+    assert ledger_fund({"id_transaccion": "280", "fondo": "RTP"}) is None
+    row = {"id_access": "8", "fecha": "2026-03-18 00:00:00", "id_transaccion": "02", "detalle": "SUM PRUEBA",
+           "fondo": "02"}
     assert discard_detail(row, Decimal("1500000"), Decimal("0")) == (
-        "2026-03-18, 02, SUM PRUEBA, fondo 02, entradas 1500000, salidas 0")
+        "Id 8, 2026-03-18, 02, SUM PRUEBA, fondo 02, entradas 1500000, salidas 0")
+
+
+def correction(**extra):
+    row = {"punto": "Punto Prueba", "tabla": "Suministros", "id_access": "8", "accion": "excluir",
+           "motivo": "posible duplicado del Id 10", "confirmado_por": "PENDIENTE"}
+    row.update(extra)
+    return row
+
+
+def check_corrections():
+    # 25-nov: correcciones.csv (fuera del repo) es lo unico que puede excluir un registro de Access.
+    found = corrections_for([correction(), correction(punto="Otro", id_access="9")], "PuntoPrueba")
+    assert list(found) == [("suministros", "8")]
+    assert pending_corrections(found) == [("suministros", "8")]
+    assert pending_corrections(corrections_for([correction(confirmado_por="Jefe de area")], "puntoprueba")) == []
+    for bad in (correction(accion="corregir"), correction(motivo=""), correction(tabla="Nada"),
+                correction(id_access="x")):
+        try:
+            corrections_for([bad], "PuntoPrueba")
+        except SystemExit:
+            continue
+        raise AssertionError(bad)
+    rows = [{"id_access": "7", "fondo": "RP"}, {"id_access": "8", "fondo": "02"}]
+    kept, excluded = apply_corrections("suministros_migrar.csv", rows, found)
+    assert kept == [rows[0]] and excluded == [rows[1]]
+    assert apply_corrections("caja_migrar.csv", rows, found) == (rows, [])
+
+
+def check_stops():
+    # 25-nov: lo que no se puede cargar tal cual no se descarta: se junta y la carga se detiene al final.
+    STOPS.clear()
+    note_stop("Suministros con Fondo inexistente", "Id 8, ...")
+    try:
+        stop_if_problems()
+    except SystemExit:
+        STOPS.clear()
+    else:
+        raise AssertionError("la carga debia detenerse")
+    stop_if_problems()  # sin problemas no se detiene
 
 
 def check_seller_without_last_name():
@@ -253,6 +298,8 @@ def main():
     check_control_record()
     check_seller_without_last_name()
     check_ledger_fund()
+    check_corrections()
+    check_stops()
     check_inventory()
     check_date_cut()
     check_cheque_text()
