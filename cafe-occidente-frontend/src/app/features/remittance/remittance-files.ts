@@ -95,14 +95,17 @@ function operationsTotals(lastLineRow: number): Cell[][] {
   ];
 }
 
+/**
+ * Nombres fijos, los que dejaba TransferSpreadsheet de Access (D:\GeneraPlano -> GeneraPlano.XLSX): otros sistemas
+ * cargan estos archivos (decision del 23-nov, prevalece sobre los nombres con la remision de RN-12.1 a 12.3).
+ */
 export function remittanceWorkbooks(files: RemittanceFiles): RemittanceWorkbook[] {
-  const n = files.number;
   return [
-    { fileName: `ParaOperaciones_${n}.xlsx`, sheet: 'ParaOperaciones',
+    { fileName: 'ParaOperaciones.XLSX', sheet: 'ParaOperaciones',
       data: [...table(PARA_OPERACIONES, files), ...operationsTotals(files.lines.length + 1)] },
-    { fileName: `ParaOpen_${n}.xlsx`, sheet: 'ParaOpen', data: table(PARA_OPEN, files) },
-    { fileName: `${n}.xlsx`, sheet: 'GeneraPlano', data: table(GENERA_PLANO, files) },
-    { fileName: `ParaAlmacafe_${n}.xlsx`, sheet: 'ParaAlmacafe', data: table(PARA_ALMACAFE, files) },
+    { fileName: 'ParaOpen.XLSX', sheet: 'ParaOpen', data: table(PARA_OPEN, files) },
+    { fileName: 'GeneraPlano.XLSX', sheet: 'GeneraPlano', data: table(GENERA_PLANO, files) },
+    { fileName: 'ParaAlmacafe.XLSX', sheet: 'ParaAlmacafe', data: table(PARA_ALMACAFE, files) },
   ];
 }
 
