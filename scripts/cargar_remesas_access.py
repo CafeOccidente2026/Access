@@ -65,14 +65,23 @@ def plan_remittances(rows):
             raise ValueError(f"factura {invoice} anulada dentro de la remesa {number}")
         if float(r["kilos_netos"] or 0) <= 0:
             raise ValueError(f"factura {invoice} sin kilos dentro de la remesa {number}")
-        remittance = plan.setdefault(number, {"fondo": r["fondo"], "fecha": r["fecha_compra"], "facturas": []})
-        if remittance["fondo"] != r["fondo"]:
-            raise ValueError(f"la remesa {number} mezcla fondos")
+        remittance = plan.setdefault(number, {"fondo": r["fondo"], "fondos": {}, "fecha": r["fecha_compra"],
+                                              "facturas": []})
+        remittance["fondos"][r["fondo"]] = remittance["fondos"].get(r["fondo"], 0) + 1
         remittance["fecha"] = max(remittance["fecha"], r["fecha_compra"])
         remittance["facturas"].append(invoice)
     for remittance in plan.values():
         remittance["facturas"].sort()
+        # 24-nov: en Access una remesa puede juntar RP y LF; la web pide un fondo: el de la mayoria (empate: RP).
+        # Cada compra conserva su propio fondo, y los archivos de la remesa salen con el fondo de cada compra.
+        funds = remittance["fondos"]
+        remittance["fondo"] = max(funds, key=lambda fund: (funds[fund], fund == "RP"))
     return OrderedDict(sorted(plan.items())), sorted(pending)
+
+
+def mixed_remittances(plan):
+    """[(numero, {fondo: compras})] de las remesas de Access que juntan compras de dos fondos."""
+    return [(number, r["fondos"]) for number, r in plan.items() if len(r["fondos"]) > 1]
 
 
 def psql(base, sql):
@@ -105,7 +114,7 @@ def check_database(base, agency, plan):
             got = found.get(invoice)
             if got is None:
                 problems.append(f"{number}: factura {invoice} no esta en la base")
-            elif got != (r["fondo"], "VALIDA", True, True):
+            elif got[0] not in r["fondos"] or got[1:] != ("VALIDA", True, True):
                 problems.append(f"{number}: factura {invoice} no cuadra (fondo, estado, kilos, libre) = {got}")
     quoted = ",".join(f"'{n}'" for n in plan)
     existing = psql(base, f"SELECT numero_remesa FROM remesas WHERE agencia_id = {agency}"
@@ -164,6 +173,13 @@ def main():
     for fund in sorted({r["fondo"] for r in plan.values()}):
         numbers = [n for n, r in plan.items() if r["fondo"] == fund]
         print(f"  {fund}: {len(numbers)} remesas, {sum(len(plan[n]['facturas']) for n in numbers)} compras")
+    mixed = mixed_remittances(plan)
+    if mixed:
+        print(f"  Remesas con compras de dos fondos ({len(mixed)}): quedan con el fondo de la mayoria; cada compra"
+              " conserva el suyo.")
+        for number, funds in mixed:
+            counts = ", ".join(f"{fund} {count}" for fund, count in sorted(funds.items()))
+            print(f"    {number}: {counts} -> {plan[number]['fondo']}")
 
     problems = check_database(args.base, agency, plan)
     if problems:
