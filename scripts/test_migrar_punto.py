@@ -202,6 +202,8 @@ def check_stops():
     # 25-nov: lo que no se puede cargar tal cual no se descarta: se junta y la carga se detiene al final.
     STOPS.clear()
     note_stop("Suministros con Fondo inexistente", "Id 8, ...")
+    note_stop("Suministros con Fondo inexistente", "Id 8, ...")  # el mismo registro leido dos veces se lista una vez
+    assert STOPS == {"Suministros con Fondo inexistente": ["Id 8, ..."]}
     try:
         stop_if_problems()
     except SystemExit:
