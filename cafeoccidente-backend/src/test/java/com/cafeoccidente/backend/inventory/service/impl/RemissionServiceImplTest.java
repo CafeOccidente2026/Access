@@ -127,8 +127,8 @@ class RemissionServiceImplTest {
     }
 
     private void mockCodeTotals(CodeTotals entries, CodeTotals exits) {
-        when(inventoryMovementRepository.sumEntries(any(), any(), any(), any())).thenReturn(entries);
-        when(remissionLineRepository.sumExits(any(), any(), any(), any())).thenReturn(exits);
+        when(inventoryMovementRepository.sumEntries(any(), any(), any())).thenReturn(entries);
+        when(remissionLineRepository.sumExits(any(), any(), any())).thenReturn(exits);
         when(remissionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -301,8 +301,35 @@ class RemissionServiceImplTest {
     }
 
     @Test
-    void cannotDispatchMoreThanTheCodeBalanceOfTheYear() {
-        // El movimiento aun tiene saldo propio, pero el Cod_Prod solo tiene 100 kg en el año (Sld3 saldokg).
+    void theBalanceIsTheWholeHistoryOfTheCodeUpToTheRemissionDate() {
+        // Sin corte por año (decision del 24-nov): el 1 de enero el saldo no arranca en cero.
+        mockCommonSaves();
+        InventoryMovement movement = movement(10L, "100");
+        movement.getProductCode().setId(7L);
+
+        service.create(request(LocalDate.of(2027, 1, 2), null, 10L));
+
+        verify(inventoryMovementRepository).sumEntries(1L, 7L, LocalDate.of(2027, 1, 2));
+        verify(remissionLineRepository).sumExits(1L, 7L, LocalDate.of(2027, 1, 2));
+    }
+
+    @Test
+    void theExitUsesTheExactAverageAndRoundsOnlyTheResultToThePeso() {
+        // Ejemplo del 24-nov (datos inventados con las cifras del area): 5.424,50 kg y $97.898.409
+        // -> promedio 18.047,4715... -> 7 kg = 126.332,30 -> 126.332.
+        mockCommonSaves();
+        mockCodeTotals(new CodeTotals(new BigDecimal("5424.50"), new BigDecimal("97898409"), new BigDecimal("488205")),
+                new CodeTotals(null, null, null));
+
+        var line = dispatch("7").lines().get(0);
+
+        assertThat(line.outputValue()).isEqualByComparingTo("126332");
+        assertThat(line.unitValue()).isEqualByComparingTo("18047.47");
+    }
+
+    @Test
+    void cannotDispatchMoreThanTheCodeBalance() {
+        // El movimiento aun tiene saldo propio, pero el Cod_Prod solo tiene 100 kg de saldo (Sld3 saldokg).
         mockCommonSaves();
         mockCodeTotals(new CodeTotals(new BigDecimal("100"), new BigDecimal("125500"), new BigDecimal("9000")),
                 new CodeTotals(null, null, null));
