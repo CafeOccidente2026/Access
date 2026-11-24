@@ -316,7 +316,7 @@ class RemissionServiceImplTest {
     @Test
     void theExitUsesTheExactAverageAndRoundsOnlyTheResultToThePeso() {
         // Ejemplo del 24-nov (datos inventados con las cifras del area): 5.424,50 kg y $97.898.409
-        // -> promedio 18.047,4715... -> 7 kg = 126.332,30 -> 126.332.
+        // -> promedio exacto 18.047,4530... -> 7 kg = 126.332,17 -> 126.332.
         mockCommonSaves();
         mockCodeTotals(new CodeTotals(new BigDecimal("5424.50"), new BigDecimal("97898409"), new BigDecimal("488205")),
                 new CodeTotals(null, null, null));
@@ -324,7 +324,7 @@ class RemissionServiceImplTest {
         var line = dispatch("7").lines().get(0);
 
         assertThat(line.outputValue()).isEqualByComparingTo("126332");
-        assertThat(line.unitValue()).isEqualByComparingTo("18047.47");
+        assertThat(line.unitValue()).isEqualByComparingTo("18047.45");
     }
 
     @Test
