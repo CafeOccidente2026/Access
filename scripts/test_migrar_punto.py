@@ -180,6 +180,18 @@ def check_correction_actions():
     assert fixed_by_agency([correction()], agencies) == {}
 
 
+def check_growers_by_id_number():
+    # 25-nov: Asociados no tiene Id en Access; en correcciones.csv se senala por la cedula (IdAsociado).
+    fix = correction(punto="PuntoPrueba", tabla="Asociados", id_access="5285436", accion="corregir", campo="Tipo",
+                     valor="C", motivo="el area dice el tipo")
+    found = corrections_for([fix], "PuntoPrueba")
+    rows = [{"idasociado": "5285436", "tipo": ""}, {"idasociado": "1", "tipo": "F"}]
+    assert correct_rows("asociados_migrar.csv", rows, found) == [(("asociados", "5285436"), "tipo", "", "C")]
+    assert rows[0]["tipo"] == "C" and rows[1]["tipo"] == "F"
+    gone = corrections_for([dict(fix, accion="excluir")], "PuntoPrueba")
+    assert apply_corrections("asociados_migrar.csv", rows, gone) == ([rows[1]], [rows[0]])
+
+
 def check_grower_type():
     # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
     assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
@@ -346,6 +358,7 @@ def main():
     check_corrections()
     check_stops()
     check_correction_actions()
+    check_growers_by_id_number()
     check_grower_type()
     check_inventory()
     check_date_cut()
