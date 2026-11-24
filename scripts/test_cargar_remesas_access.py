@@ -3,7 +3,7 @@ Check del armado de remesas de cargar_remesas_access.py (sin BD ni framework):
 python scripts/test_cargar_remesas_access.py
 """
 
-from cargar_remesas_access import plan_remittances
+from cargar_remesas_access import mixed_remittances, plan_remittances
 
 
 def row(factura, remision, plano="t", fondo="RP", fecha="2026-01-17 00:00:00", estado="VALIDA", kilos="30.0"):
@@ -23,13 +23,20 @@ def main():
 
     # Una remesa por numero, con su fondo, la fecha de su ultima compra y sus facturas en orden.
     assert list(plan) == ["TA0436", "TA0437"], plan
-    assert plan["TA0436"] == {"fondo": "RP", "fecha": "2026-01-24 08:30:00", "facturas": [43000, 43001]}
-    assert plan["TA0437"] == {"fondo": "LF", "fecha": "2026-02-07 00:00:00", "facturas": [43010]}
+    assert plan["TA0436"] == {"fondo": "RP", "fondos": {"RP": 2}, "fecha": "2026-01-24 08:30:00",
+                              "facturas": [43000, 43001]}
+    assert plan["TA0437"] == {"fondo": "LF", "fondos": {"LF": 1}, "fecha": "2026-02-07 00:00:00", "facturas": [43010]}
     assert pending == [43020, 43021]
+
+    # 24-nov: una remesa de Access con compras de RP y LF se carga con el fondo de la mayoria y se lista; cada
+    # compra conserva su fondo. Empate: RP.
+    mixed, _ = plan_remittances([row("1", "TA1", fondo="RP"), row("2", "TA1", fondo="LF"), row("3", "TA1", fondo="LF"),
+                                 row("4", "TA2", fondo="RP"), row("5", "TA2", fondo="LF"), row("6", "TA3")])
+    assert mixed["TA1"]["fondo"] == "LF" and mixed["TA2"]["fondo"] == "RP"
+    assert mixed_remittances(mixed) == [("TA1", {"RP": 1, "LF": 2}), ("TA2", {"RP": 1, "LF": 1})]
 
     # Errores que deben detener la carga.
     for bad, expected in [
-        ([row("1", "TA1", fondo="RP"), row("2", "TA1", fondo="LF")], "mezcla fondos"),
         ([row("1", "", plano="t")], "sin numero"),
         ([row("1", "TA1", estado="ANULADA")], "anulada"),
         ([row("1", "TA1", kilos="0")], "sin kilos"),
