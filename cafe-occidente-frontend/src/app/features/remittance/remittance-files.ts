@@ -109,12 +109,15 @@ export function remittanceWorkbooks(files: RemittanceFiles): RemittanceWorkbook[
   ];
 }
 
+/** La fuente con la que exporta Access (MS Sans Serif 11), igual que los archivos de referencia. */
+const ACCESS_FONT = { fontFamily: 'MS Sans Serif', fontSize: 11 } as const;
+
 /** Arma los .xlsx antes del clic: asi la descarga sale del clic mismo y Chrome no la bloquea. */
 export async function workbookBlobs(books: readonly RemittanceWorkbook[]): Promise<Map<string, Blob>> {
   const { default: writeExcelFile } = await import('write-excel-file/browser');
   const blobs = new Map<string, Blob>();
   for (const book of books) {
-    blobs.set(book.fileName, await writeExcelFile(book.data, { sheet: book.sheet }).toBlob());
+    blobs.set(book.fileName, await writeExcelFile(book.data, { sheet: book.sheet }, ACCESS_FONT).toBlob());
   }
   return blobs;
 }
