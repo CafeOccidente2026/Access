@@ -82,7 +82,8 @@ def stop_if_problems():
         print(f"  {reason}: {len(items)}")
         for item in items:
             print(f"    {item}")
-    print("  Solo se pueden excluir con correcciones.csv (punto, tabla, id_access, accion, motivo, confirmado_por).")
+    print("  Solo se pueden excluir o corregir con correcciones.csv (punto, tabla, id_access, accion, campo, valor,"
+          " motivo, confirmado_por). En Asociados, id_access es la cedula.")
     raise SystemExit(1)
 
 
@@ -685,7 +686,7 @@ def load_growers(cur):
         grower_type_value = grower_type(row)
         if grower_type_value is None:
             note_stop("Asociado sin tipo (C, F o S) en Access",
-                      f"Id {s(row, 'id_access') or '?'}, cedula {id_number}, {s(row, '1er nombre')}"
+                      f"cedula {id_number}, {s(row, '1er nombre')}"
                       f" {s(row, '1er apellido')}, punto {DATA_DIR.name}")
             continue
         records.append(
