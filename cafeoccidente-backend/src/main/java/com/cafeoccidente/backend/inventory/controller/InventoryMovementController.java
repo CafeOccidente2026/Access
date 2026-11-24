@@ -32,6 +32,6 @@ public class InventoryMovementController {
 
     @GetMapping("/{id}")
     public InventoryMovementResponse findById(@PathVariable Long id) {
-        return inventoryMovementService.findById(id);
+        return inventoryMovementService.findById(currentAgencyProvider.currentAgencyId(), id);
     }
 }

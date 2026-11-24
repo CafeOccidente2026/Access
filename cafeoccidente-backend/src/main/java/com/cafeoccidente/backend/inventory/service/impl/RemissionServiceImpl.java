@@ -97,6 +97,7 @@ public class RemissionServiceImpl implements RemissionService {
         List<InventoryMovement> movements = request.lines().stream()
                 .map(RemissionLineRequest::inventoryMovementId).distinct()
                 .map(id -> inventoryMovementRepository.findById(id)
+                        .filter(m -> m.getAgency().getId().equals(agency.getId()))
                         .orElseThrow(() -> new ResourceNotFoundException("Movimiento de inventario no encontrado")))
                 .toList();
         Fund fund = requireSingleFund(movements);
@@ -269,7 +270,9 @@ public class RemissionServiceImpl implements RemissionService {
 
     @Override
     public RemissionResponse findById(Long id) {
+        // Solo las de la agencia de la sesion (la de trabajo del Administrador); una de otra agencia no existe (404).
         Remission remission = remissionRepository.findById(id)
+                .filter(r -> r.getAgency().getId().equals(currentAgencyProvider.currentAgencyId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Remision no encontrada"));
         return toResponseWithLines(remission);
     }
