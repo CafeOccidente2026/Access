@@ -20,5 +20,7 @@ public record InventoryReportRow(
         BigDecimal inventoryValue,
         BigDecimal quantity,
         BigDecimal exitPercentage,
-        BigDecimal outputValue) {
+        BigDecimal outputValue,
+        /** Solo la fila de saldo inicial: «Saldo inicial — viene de <año>» (va en la columna Especial). */
+        String label) {
 }

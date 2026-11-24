@@ -68,12 +68,12 @@ public class InventoryReportService {
                 .filter(matches)
                 .forEach(m -> {
                     if (m.getPurchaseDate().isBefore(from)) {
-                        opening.add(m.getNetKg(), m.getInventoryValue(), m.getHealthyPercentage());
+                        opening.add(m.getSpecialType(), m.getNetKg(), m.getInventoryValue(), m.getHealthyPercentage());
                     } else {
                         rows.add(new Sortable(m.getCreatedAt(), 0, m.getId(), new InventoryReportRow(
                                 m.getPurchaseDate(), m.getInvoiceNumber(), null, m.getProductCode().getCode(),
                                 m.getSpecialType(), m.getNetKg(), m.getHealthyPercentage(), m.getInventoryValue(),
-                                null, null, null)));
+                                null, null, null, null)));
                     }
                 });
         remissionLineRepository.findByRemissionAgencyIdAndRemissionRemissionDateLessThanEqual(agencyId, to).stream()
@@ -82,7 +82,8 @@ public class InventoryReportService {
                 .forEach(line -> {
                     InventoryReportRow exit = exitRow(line).row();
                     if (exit.date().isBefore(from)) {
-                        opening.add(exit.quantity().negate(), exit.outputValue().negate(), exit.exitPercentage());
+                        opening.add(exit.specialType(), exit.quantity().negate(), exit.outputValue().negate(),
+                                exit.exitPercentage());
                     } else {
                         rows.add(exitRow(line));
                     }
@@ -98,7 +99,7 @@ public class InventoryReportService {
                         .thenComparing(s -> s.id());
         List<InventoryReportRow> sorted = new ArrayList<>(rows.stream().sorted(order).map(s -> s.row()).toList());
         if (opening.any) {
-            sorted.addFirst(opening.row(from, byCode ? code : null, byCode ? null : special));
+            sorted.addFirst(opening.row(from, byCode ? code : null));
         }
         return sorted;
     }
@@ -110,22 +111,24 @@ public class InventoryReportService {
      */
     private static final class Opening {
         private boolean any;
+        private String specialType;
         private BigDecimal kg = BigDecimal.ZERO;
         private BigDecimal value = BigDecimal.ZERO;
         private BigDecimal acum = BigDecimal.ZERO;
 
-        private void add(BigDecimal kilos, BigDecimal amount, BigDecimal percentage) {
+        private void add(String special, BigDecimal kilos, BigDecimal amount, BigDecimal percentage) {
             any = true;
+            specialType = special;
             BigDecimal k = kilos == null ? BigDecimal.ZERO : kilos;
             kg = kg.add(k);
             value = value.add(amount == null ? BigDecimal.ZERO : amount);
             acum = acum.add(k.multiply(percentage == null ? BigDecimal.ZERO : percentage));
         }
 
-        private InventoryReportRow row(LocalDate from, String code, String special) {
+        private InventoryReportRow row(LocalDate from, String code) {
             BigDecimal percentage = kg.signum() == 0 ? BigDecimal.ZERO : acum.divide(kg, MathContext.DECIMAL64);
-            return new InventoryReportRow(from.minusDays(1), null, null, code,
-                    "Saldo inicial — viene de " + (from.getYear() - 1), kg, percentage, value, null, null, null);
+            return new InventoryReportRow(from.minusDays(1), null, null, code, specialType, kg, percentage, value,
+                    null, null, null, "Saldo inicial — viene de " + (from.getYear() - 1));
         }
     }
 
@@ -138,7 +141,7 @@ public class InventoryReportService {
         return new Sortable(line.getRemission().getCreatedAt(), 1, line.getId(), new InventoryReportRow(
                 line.getRemission().getRemissionDate(), null, line.getRemission().getDisplayNumber(),
                 origin.getProductCode().getCode(), origin.getSpecialType(), null, null, null,
-                line.getQuantity(), exitPercentage, line.getOutputValue()));
+                line.getQuantity(), exitPercentage, line.getOutputValue(), null));
     }
 
     private record Sortable(Instant createdAt, int kind, Long id, InventoryReportRow row) {
