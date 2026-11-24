@@ -164,6 +164,27 @@ class RemissionConsecutiveIntegrationTest {
         assertThatThrownBy(() -> remissions.annul(remission.id())).isInstanceOf(BusinessRuleException.class);
     }
 
+    /** 25-nov: la salida historica que carga migrar_punto.py (de_access) dice que viene de Access y no se anula;
+     *  la base guarda la observacion de la cabecera de la remesa. */
+    @Test
+    void aRemissionFromAccessSaysSoAndCannotBeAnnulled() {
+        Long movement = dryPurchaseInventory();
+        var remission = remissions.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "NUEVO"));
+        assertThat(remission.fromAccess()).isFalse();
+        jdbc.update("UPDATE remisiones SET de_access = true WHERE id = ?", remission.id());
+        jdbc.update("UPDATE remesas SET observacion = 'En Access tenía compras de RP y LF' WHERE id = ?",
+                remission.remittanceId());
+
+        assertThat(remissions.findById(remission.id()).fromAccess()).isTrue();
+        assertThatThrownBy(() -> remissions.annul(remission.id()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("histórica de Access");
+        assertThat(remissions.findById(remission.id()).status()).isEqualTo("VIGENTE");
+        assertThat(jdbc.queryForObject("SELECT observacion FROM remesas WHERE id = ?", String.class,
+                remission.remittanceId())).isEqualTo("En Access tenía compras de RP y LF");
+    }
+
     /** C7 (prueba del 11-nov, punto 7): la lista de Registrar Salidas muestra la cedula y filtra por el fondo. */
     @Test
     void theInventoryListBringsTheSellerAndTheFundOfThePurchase() {
