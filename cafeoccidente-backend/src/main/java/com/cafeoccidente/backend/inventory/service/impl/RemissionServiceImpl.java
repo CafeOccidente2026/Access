@@ -158,6 +158,11 @@ public class RemissionServiceImpl implements RemissionService {
         Remission remission = remissionRepository.findForUpdate(id)
                 .filter(r -> r.getAgency().getId().equals(agencyId))
                 .orElseThrow(() -> new ResourceNotFoundException("No existe esa remisión en la agencia"));
+        if (remission.isFromAccess()) {
+            // Access no guarda a que facturas pertenece cada salida: no hay a donde devolver los kilos.
+            throw new BusinessRuleException("La remisión " + remission.getDisplayNumber()
+                    + " es una remisión histórica de Access: no se puede anular.");
+        }
         if (Remission.ANULADA.equals(remission.getStatus())) {
             throw new BusinessRuleException("La remisión " + remission.getDisplayNumber() + " ya está anulada");
         }
@@ -327,6 +332,7 @@ public class RemissionServiceImpl implements RemissionService {
                         .toList(),
                 remission.getDisplayNumber(),
                 remission.getStatus(),
-                remittanceId);
+                remittanceId,
+                remission.isFromAccess());
     }
 }
