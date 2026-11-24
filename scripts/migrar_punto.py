@@ -63,6 +63,8 @@ STOPS = {}
 # registro de Access. {(tabla, id_access): fila}. EXCLUDED: los registros que se excluyeron en esta carga.
 CORRECTIONS = {}
 EXCLUDED = {}
+CORRECTED = {}
+REMISSION_COUNTER_KEY = ("consecutivo_remision", "")
 CORRECTION_TABLES = ("anuncios", "asociados", "caja", "cajamenor", "compras_a_futuro", "compras", "cupos",
                      "empaque", "inventario", "suministros")
 
@@ -91,19 +93,71 @@ def simple_name(text):
 
 
 def corrections_for(rows, point):
-    """Correcciones del punto: {(tabla, id_access): fila}. Una fila que no se entiende detiene la carga."""
+    """
+    Correcciones del punto: {(tabla, id_access): fila}. Acciones (25-nov):
+      - excluir: el registro no se carga.
+      - corregir: el registro se carga con `campo` = `valor` (lo demas tal cual).
+      - fijar_remision: el contador de remision del punto queda en `valor` (la siguiente es valor + 1).
+    Una fila que no se entiende detiene la carga.
+    """
     tables = {simple_name(t): t for t in CORRECTION_TABLES}
     found = {}
     for row in rows:
         if simple_name(row.get("punto")) != simple_name(point):
             continue
+        action = s(row, "accion").lower()
+        if action == "fijar_remision":
+            if not s(row, "valor").isdigit() or not s(row, "motivo"):
+                raise SystemExit(f"correcciones.csv: fijar_remision necesita un valor numerico y motivo: {row}")
+            found[REMISSION_COUNTER_KEY] = row
+            continue
         table = tables.get(simple_name(row.get("tabla")))
         ident = s(row, "id_access")
-        if table is None or not ident.isdigit() or s(row, "accion").lower() != "excluir" or not s(row, "motivo"):
-            raise SystemExit("correcciones.csv: fila no valida (tabla de la carga, Id de Access numerico, accion"
-                             f" 'excluir' y motivo): {row}")
+        valid = table is not None and ident.isdigit() and s(row, "motivo") and (
+            action == "excluir" or (action == "corregir" and s(row, "campo") and s(row, "valor")))
+        if not valid:
+            raise SystemExit("correcciones.csv: fila no valida (tabla de la carga, Id de Access numerico, motivo y"
+                             f" accion 'excluir', 'corregir' con campo y valor, o 'fijar_remision'): {row}")
         found[(table, ident)] = row
     return found
+
+
+def fixed_remission(found):
+    """Ultimo numero de remision fijado por correcciones.csv para el punto; None si no hay."""
+    row = found.get(REMISSION_COUNTER_KEY)
+    return int(s(row, "valor")) if row else None
+
+
+def fixed_by_agency(rows, agencies):
+    """{agencia_id: numero} de las filas fijar_remision de correcciones.csv. agencies: [(id, nombre, nombre_access)].
+    El punto se reconoce por el nombre de la agencia o por su nombre en Access ("Sotomayor" = SOTOMAYOR)."""
+    fixed = {}
+    for row in rows:
+        if s(row, "accion").lower() != "fijar_remision":
+            continue
+        point = simple_name(row.get("punto"))
+        match = [aid for aid, name, access in agencies if point in (simple_name(name), simple_name(access))]
+        if len(match) != 1:
+            raise SystemExit(f"correcciones.csv: no se reconoce la agencia del punto '{s(row, 'punto')}'")
+        fixed[match[0]] = int(s(row, "valor"))
+    return fixed
+
+
+def correct_rows(name, rows, found):
+    """Aplica las correcciones 'corregir' a las filas del CSV; devuelve [(clave, columna, antes, despues)].
+    Un campo que no existe en el CSV detiene la carga."""
+    table = name.removesuffix("_migrar.csv")
+    changes = []
+    for row in rows:
+        fix = found.get((table, s(row, "id_access")))
+        if not fix or s(fix, "accion").lower() != "corregir":
+            continue
+        column = next((c for c in row if simple_name(c) == simple_name(fix.get("campo"))), None)
+        if column is None:
+            raise SystemExit(f"correcciones.csv: {table} no tiene el campo '{s(fix, 'campo')}'")
+        changes.append(((table, s(row, "id_access")), column, row[column], s(fix, "valor")))
+        row[column] = s(fix, "valor")
+    return changes
 
 
 def pending_corrections(found):
@@ -114,8 +168,12 @@ def pending_corrections(found):
 def apply_corrections(name, rows, found):
     """(filas que se cargan, filas excluidas por correcciones.csv) de un CSV del punto."""
     table = name.removesuffix("_migrar.csv")
-    excluded = [row for row in rows if (table, s(row, "id_access")) in found]
-    return [row for row in rows if (table, s(row, "id_access")) not in found], excluded
+
+    def excluded(row):
+        fix = found.get((table, s(row, "id_access")))
+        return fix is not None and s(fix, "accion").lower() == "excluir"
+
+    return [row for row in rows if not excluded(row)], [row for row in rows if excluded(row)]
 
 
 def load_corrections(path, point, definitive):
@@ -129,8 +187,10 @@ def load_corrections(path, point, definitive):
     print(f"  correcciones.csv: {len(CORRECTIONS)} para este punto.")
     pending = pending_corrections(CORRECTIONS)
     for table, ident in pending:
-        print(f"  AVISO: correccion PENDIENTE de confirmar por el area: {table} Id {ident}"
-              f" ({s(CORRECTIONS[(table, ident)], 'motivo')})")
+        fix = CORRECTIONS[(table, ident)]
+        what = f"{table} Id {ident}" if ident else table
+        print(f"  AVISO: correccion PENDIENTE de confirmar por el area: {s(fix, 'accion')} {what}"
+              f" ({s(fix, 'motivo')})")
     if pending and definitive:
         raise SystemExit("Carga definitiva: hay correcciones PENDIENTES en correcciones.csv; no se carga nada.")
 
@@ -138,7 +198,7 @@ def load_corrections(path, point, definitive):
 def check_corrections_used():
     """Una correccion cuyo Id no esta en el CSV del punto es un error de digitacion: detiene la carga."""
     for table, ident in CORRECTIONS:
-        if (table, ident) not in EXCLUDED:
+        if (table, ident) not in EXCLUDED and (table, ident) not in CORRECTED and (table, ident) != REMISSION_COUNTER_KEY:
             note_stop("correcciones.csv con un Id que no esta en Access", f"{table} Id {ident}")
 
 
@@ -156,6 +216,8 @@ def read_csv(name):
         rows, excluded = apply_corrections(name, list(csv.DictReader(f)), CORRECTIONS)
     for row in excluded:
         EXCLUDED[(name.removesuffix("_migrar.csv"), s(row, "id_access"))] = row
+    for key, column, before, after in correct_rows(name, rows, CORRECTIONS):
+        CORRECTED[key] = (column, before, after)
     return rows
 
 
@@ -284,6 +346,11 @@ def control_record_history(updates):
     """(antes, despues) para historial_cambios, solo con los campos que cambian."""
     return ({CONTROL_HISTORY_KEYS[column]: str(web) for column, web, _ in updates},
             {CONTROL_HISTORY_KEYS[column]: str(access) for column, _, access in updates})
+
+
+def grower_type(row):
+    """Tipo del asociado de Access (C, F o S); None si esta vacio: no se inventa (25-nov), detiene la carga."""
+    return s(row, "tipo").upper()[:1] or None
 
 
 def seller_last_name(value):
@@ -609,7 +676,13 @@ def load_growers(cur):
             continue
 
         # Sin agencia o sin apellido se migran igual (V34): Access los tiene asi, no se inventa nada.
-        grower_type = s(row, "tipo").upper()[:1] or "C"
+        grower_type_value = grower_type(row)
+        if grower_type_value is None:
+            note_stop("Asociado sin tipo (C, F o S) en Access",
+                      f"Id {s(row, 'id_access') or '?'}, cedula {id_number}, {s(row, '1er nombre')}"
+                      f" {s(row, '1er apellido')}, punto {DATA_DIR.name}")
+            continue
+        grower_type = grower_type_value
         records.append(
             (
                 id_number,
@@ -761,9 +834,10 @@ def purchase_rows(desde):
 
 
 def cheque_text(value):
-    """Cheque como lo guarda la web (V21): los ultimos 4 digitos con sus ceros (548 -> 0548); None si no hay."""
+    """Cheque de Access tal cual, como texto (25-nov, V34: la base acepta de 1 a 15 digitos; no se rellena con
+    ceros); None si no hay."""
     number = parse_int(value)
-    return f"{number:04d}" if number > 0 else None
+    return str(number) if number > 0 else None
 
 
 def payment_of(row):
@@ -1361,6 +1435,11 @@ def set_consecutives(cur, agency_id):
     remission_rows = compras + exit_remission_rows(inventory_rows(read_csv("inventario_migrar.csv"))[1])
     access_remission = max_remission(remission_rows)
     summary = remission_summary(remission_rows)
+    fixed = fixed_remission(CORRECTIONS)
+    if fixed is not None:
+        print(f"  remision: correcciones.csv fija el contador en {fixed} (la regla daba {access_remission});"
+              f" la siguiente sale con {fixed + 1}")
+        access_remission = fixed
     if summary["by_number"]:
         print(f"  remision: ultima por numero {summary['by_number'][0]} ({summary['by_number'][1]}), ultima por fecha"
               f" {summary['by_date'][0]} ({summary['by_date'][1]}); la siguiente sale con {access_remission + 1}")
@@ -1422,6 +1501,11 @@ def backup(base, label="migrar_punto"):
 
 def print_excluded():
     """Registros de Access que no se cargaron porque correcciones.csv los excluye, con todos sus datos."""
+    print(f"  corregidos por correcciones.csv: {len(CORRECTED)}")
+    for (table, ident), (column, before, after) in CORRECTED.items():
+        fix = CORRECTIONS[(table, ident)]
+        print(f"    {table} Id {ident}: {column} '{before}' -> '{after}' ({s(fix, 'motivo')};"
+              f" confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'})")
     print(f"  excluidos por correcciones.csv: {len(EXCLUDED)}")
     for (table, ident), row in EXCLUDED.items():
         fix = CORRECTIONS[(table, ident)]
