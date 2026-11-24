@@ -32,6 +32,7 @@ import argparse
 import csv
 import os
 import re
+import unicodedata
 import secrets
 import subprocess
 from datetime import date, datetime, timedelta, timezone
@@ -51,7 +52,94 @@ DISCARDED = {}
 
 
 def note_discard(reason, detail):
+    """Aviso: el registro SI se cargo tal cual, pero conviene revisarlo (p. ej. caficultor sin apellido)."""
     DISCARDED.setdefault(reason, []).append(detail)
+
+
+# Regla fija de la migracion (25-nov): son datos reales de produccion; no se inventa, supone ni descarta nada.
+# Lo que no se puede cargar tal cual se junta aqui y la carga se detiene al final (no se guarda nada).
+STOPS = {}
+# correcciones.csv (fuera del repo, lo llena el usuario con lo que confirma el area): unica forma de excluir un
+# registro de Access. {(tabla, id_access): fila}. EXCLUDED: los registros que se excluyeron en esta carga.
+CORRECTIONS = {}
+EXCLUDED = {}
+CORRECTION_TABLES = ("anuncios", "asociados", "caja", "cajamenor", "compras_a_futuro", "compras", "cupos",
+                     "empaque", "inventario", "suministros")
+
+
+def note_stop(reason, detail):
+    STOPS.setdefault(reason, []).append(detail)
+
+
+def stop_if_problems():
+    """Detiene la carga (sin guardar) si hay registros de Access que no se pudieron cargar tal cual."""
+    if not STOPS:
+        return
+    print("\nLA CARGA SE DETIENE: registros de Access que no se pueden cargar tal cual (no se guardo nada).")
+    for reason, items in STOPS.items():
+        print(f"  {reason}: {len(items)}")
+        for item in items:
+            print(f"    {item}")
+    print("  Solo se pueden excluir con correcciones.csv (punto, tabla, id_access, accion, motivo, confirmado_por).")
+    raise SystemExit(1)
+
+
+def simple_name(text):
+    """Nombre comparable: sin tildes, sin espacios ni signos, en minusculas ("El Tambo" = "ElTambo")."""
+    plain = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", plain.lower())
+
+
+def corrections_for(rows, point):
+    """Correcciones del punto: {(tabla, id_access): fila}. Una fila que no se entiende detiene la carga."""
+    tables = {simple_name(t): t for t in CORRECTION_TABLES}
+    found = {}
+    for row in rows:
+        if simple_name(row.get("punto")) != simple_name(point):
+            continue
+        table = tables.get(simple_name(row.get("tabla")))
+        ident = s(row, "id_access")
+        if table is None or not ident.isdigit() or s(row, "accion").lower() != "excluir" or not s(row, "motivo"):
+            raise SystemExit("correcciones.csv: fila no valida (tabla de la carga, Id de Access numerico, accion"
+                             f" 'excluir' y motivo): {row}")
+        found[(table, ident)] = row
+    return found
+
+
+def pending_corrections(found):
+    """Correcciones que el area todavia no confirmo (confirmado_por vacio o PENDIENTE)."""
+    return [key for key, row in found.items() if s(row, "confirmado_por").upper() in ("", "PENDIENTE")]
+
+
+def apply_corrections(name, rows, found):
+    """(filas que se cargan, filas excluidas por correcciones.csv) de un CSV del punto."""
+    table = name.removesuffix("_migrar.csv")
+    excluded = [row for row in rows if (table, s(row, "id_access")) in found]
+    return [row for row in rows if (table, s(row, "id_access")) not in found], excluded
+
+
+def load_corrections(path, point, definitive):
+    """Lee correcciones.csv, las muestra y, en la carga definitiva, se detiene si alguna sigue PENDIENTE."""
+    CORRECTIONS.clear()
+    if not path:
+        print("  correcciones.csv: no se uso (ningun registro se excluye).")
+        return
+    with open(path, encoding="utf-8-sig") as f:
+        CORRECTIONS.update(corrections_for(list(csv.DictReader(f)), point))
+    print(f"  correcciones.csv: {len(CORRECTIONS)} para este punto.")
+    pending = pending_corrections(CORRECTIONS)
+    for table, ident in pending:
+        print(f"  AVISO: correccion PENDIENTE de confirmar por el area: {table} Id {ident}"
+              f" ({s(CORRECTIONS[(table, ident)], 'motivo')})")
+    if pending and definitive:
+        raise SystemExit("Carga definitiva: hay correcciones PENDIENTES en correcciones.csv; no se carga nada.")
+
+
+def check_corrections_used():
+    """Una correccion cuyo Id no esta en el CSV del punto es un error de digitacion: detiene la carga."""
+    for table, ident in CORRECTIONS:
+        if (table, ident) not in EXCLUDED:
+            note_stop("correcciones.csv con un Id que no esta en Access", f"{table} Id {ident}")
 
 
 def agency_prefix(cur, agency_id):
@@ -63,8 +151,12 @@ def agency_prefix(cur, agency_id):
 # ---------- helpers ----------
 
 def read_csv(name):
+    """Filas del CSV del punto, sin las que correcciones.csv excluye (quedan en EXCLUDED para la salida)."""
     with open(DATA_DIR / name, encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+        rows, excluded = apply_corrections(name, list(csv.DictReader(f)), CORRECTIONS)
+    for row in excluded:
+        EXCLUDED[(name.removesuffix("_migrar.csv"), s(row, "id_access"))] = row
+    return rows
 
 
 def s(row, key, default=""):
@@ -513,7 +605,7 @@ def load_growers(cur):
         id_number = s(row, "idasociado")
         agencia = s(row, "agencia")
         if not id_number:
-            note_discard("tercero_sin_idasociado", row)
+            note_stop("Asociado sin IdAsociado", row)
             continue
 
         # Sin agencia o sin apellido se migran igual (V34): Access los tiene asi, no se inventa nada.
@@ -735,11 +827,11 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
             continue
         grower = growers.get(s(row, "cedula"))
         if grower is None:
-            note_discard("compra_sin_caficultor", (invoice_number, s(row, "cedula")))
+            note_stop("Compra cuyo caficultor no esta en Asociados", (invoice_number, s(row, "cedula")))
             continue
         bad = out_of_range(row)
         if bad:
-            note_discard("compra con un porcentaje que no cabe (no se carga)",
+            note_stop("Compra con un porcentaje que no cabe en la base",
                          (invoice_number, {c: s(row, c) for c in bad}))
             continue
         values = common_values(row, invoice_number, grower)
@@ -785,10 +877,15 @@ def access_remission(row):
 
 
 def inventory_rows(rows):
-    """(entradas, salidas) del INVENTARIO de Access: entrada = una factura con kilos; salida = una remision con
-    cantidad, por codigo de producto y sin factura. Las filas en cero no cuentan."""
-    entries = [row for row in rows if parse_decimal(row.get("kilos_netos")) > 0]
-    exits = [row for row in rows if parse_decimal(row.get("cantidad")) > 0]
+    """(entradas, salidas) del INVENTARIO de Access tal cual: entrada = fila con factura (tambien las de 0 kg);
+    salida = fila con remision (por codigo de producto, sin factura). Una fila sin ninguna de las dos, o con las
+    dos, detiene la carga."""
+    entries = [row for row in rows if s(row, "factura") and not access_remission(row)]
+    exits = [row for row in rows if access_remission(row) and not s(row, "factura")]
+    for row in rows:
+        if bool(s(row, "factura")) == bool(access_remission(row)):
+            note_stop("Fila de INVENTARIO que no es entrada ni salida",
+                      f"Id {s(row, 'id_access') or '?'}, factura {s(row, 'factura')}, remision {access_remission(row)}")
     return entries, exits
 
 
@@ -812,7 +909,7 @@ def exit_remissions(exits):
         text = access_remission(row)
         match = re.search(r"(\d+)$", text)
         if not match:
-            note_discard("Salida de INVENTARIO sin numero de remision", discard_detail(row, 0, row.get("cantidad")))
+            note_stop("Salida de INVENTARIO sin numero de remision", discard_detail(row, 0, row.get("cantidad")))
             continue
         remission = grouped.setdefault(int(match.group(1)),
                                        {"text": text, "date": None, "destino": s(row, "destino"), "lines": []})
@@ -846,7 +943,7 @@ def load_inventory(cur, agency_id, user_id):
     for row in entries:
         code, invoice = s(row, "cod_prod"), s(row, "factura")
         if code not in products:
-            note_discard("Entrada de INVENTARIO con codigo de producto inexistente",
+            note_stop("Entrada de INVENTARIO con codigo de producto inexistente",
                          f"factura {invoice}, codigo {code}, kilos {s(row, 'kilos_netos')}")
             continue
         found = web_purchases.get(int(invoice)) if invoice.isdigit() and int(invoice) < 2 ** 31 else None
@@ -880,8 +977,8 @@ def load_inventory(cur, agency_id, user_id):
         funds = {products[s(r, "cod_prod")][1] for r in remission["lines"] if s(r, "cod_prod") in products}
         cur.execute(
             "INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, destino, exportado,"
-            " creado_por_usuario_id, creado_en, fondo_id, consecutivo, numero_remision, estado)"
-            " VALUES (%s, %s, %s, %s, false, %s, %s, %s, %s, %s, 'VIGENTE') RETURNING id",
+            " creado_por_usuario_id, creado_en, fondo_id, consecutivo, numero_remision, estado, de_access)"
+            " VALUES (%s, %s, %s, %s, false, %s, %s, %s, %s, %s, 'VIGENTE', true) RETURNING id",
             (number, agency_id, remission["date"], remission["destino"] or None, user_id,
              parse_timestamp(s(remission["lines"][-1], "fecha")), funds.pop() if len(funds) == 1 else None, number,
              remission["text"]))
@@ -890,7 +987,7 @@ def load_inventory(cur, agency_id, user_id):
         for row in remission["lines"]:
             product = products.get(s(row, "cod_prod"), (None,))[0]
             if first_entry.get(product) is None:
-                note_discard("Salida de INVENTARIO de un codigo sin entradas", discard_detail(row, 0, row.get("cantidad")))
+                note_stop("Salida de INVENTARIO de un codigo sin entradas", discard_detail(row, 0, row.get("cantidad")))
                 continue
             cur.execute(
                 "INSERT INTO remisiones_detalle (remision_id, inventario_id, cantidad, valor_unitario, valor_salida,"
@@ -919,8 +1016,11 @@ def load_check_relation_marks(cur, agency_id):
             continue
         invoice = parse_int(s(row, "id_transaccion"), None)
         purchase = purchase_by_invoice.get(invoice)
-        if purchase is None or parse_int(purchase[0], None) != check:
-            note_discard("Rel_cheques marcado sin compra que lo respalde", s(row, "id_transaccion"))
+        if purchase is None:
+            continue  # movimiento manual de Caja: su marca se guarda en load_manual_cash_entries
+        if parse_int(purchase[0], None) != check:
+            note_stop("Rel_cheques de un pago de compra con otro numero de cheque",
+                      f"Id {s(row, 'id_access') or '?'}, factura {invoice}, cheque Caja {check} / compra {purchase[0]}")
             continue
         marks.append((purchase[2], purchase[1]))
     psycopg2.extras.execute_values(
@@ -981,7 +1081,7 @@ def load_manual_cash_entries(cur, agency_id, desde):
             if outflow > 0:
                 table = "suministros"
         if ledger_fund(row) is None:
-            note_discard("Caja con Fondo inexistente", discard_detail(row, inflow, outflow))
+            note_stop("Caja con un fondo que no es RP ni LF", discard_detail(row, inflow, outflow))
             continue
         entry_date = parse_date(s(row, "fecha"))
         ids = existing.get((table, transaction_id, entry_date, inflow, outflow, check))
@@ -1006,26 +1106,21 @@ def load_manual_cash_entries(cur, agency_id, desde):
         print(f"  {table} {method}: {n} movimientos manuales de Caja.")
 
 
-# SUPUESTO (carga de prueba, decision del usuario 2026-10-01): en Access la fila de Suministros
-# "sumlf60-29-05" (29/05/2026, entrada 60.000.000) tiene Fondo = "j", que no es RP ni LF. Se toma como
-# LF por el patron del propio codigo ("sumlf..."), NO por confirmacion externa. Revisar con el dato
-# real de produccion. En Access esa fila no salia en los informes SuministrosRP/LF (filtran "RP"/"LF").
-# Fondo que Access escribio mal en un movimiento de Caja, Suministros o CajaMenor -> el que se supone, por
-# (id de transaccion, fondo). Decisiones del usuario: El Tambo "j" -> LF; Sotomayor "RTP" -> RP (24-nov).
-FUND_ASSUMPTIONS = {("sumlf60-29-05", "j"): "LF", ("280", "RTP"): "RP"}
+# Fondos de la web. Un fondo de Access que no es uno de estos detiene la carga (25-nov: no se supone).
 KNOWN_FUNDS = {"RP", "LF"}
 
 
 def ledger_fund(row):
-    """Codigo de fondo de un movimiento de Access; None si no existe y no hay un supuesto para ese movimiento."""
-    fund = FUND_ASSUMPTIONS.get((s(row, "id_transaccion"), s(row, "fondo")), s(row, "fondo"))
+    """Codigo de fondo de un movimiento de Access tal cual; None si no es RP ni LF (detiene la carga)."""
+    fund = s(row, "fondo")
     return fund if fund in KNOWN_FUNDS else None
 
 
 def discard_detail(row, inflow, outflow):
     """Fecha, numero, detalle, fondo y valor de un movimiento descartado, para revisar si mueve un saldo."""
     day = parse_date(row.get("fecha"))
-    return (f"{day}, {s(row, 'id_transaccion')}, {s(row, 'detalle')}, fondo {s(row, 'fondo')},"
+    return (f"Id {s(row, 'id_access') or '?'}, {day}, {s(row, 'id_transaccion')}, {s(row, 'detalle')},"
+            f" fondo {s(row, 'fondo')},"
             f" entradas {inflow}, salidas {outflow}")
 
 
@@ -1080,7 +1175,7 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
             continue
         fund = ledger_fund(row)
         if fund is None:
-            note_discard("Suministros con Fondo inexistente", discard_detail(row, inflow, outflow))
+            note_stop("Suministros con un fondo que no es RP ni LF", discard_detail(row, inflow, outflow))
             continue
         entry_date = parse_date(s(row, "fecha"))
         inserted += insert_once(
@@ -1098,7 +1193,7 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
         transaction_id = s(row, "id_transaccion")
         inflow, outflow = parse_decimal(s(row, "entradas")), parse_decimal(s(row, "salidas"))
         if ledger_fund(row) is None:
-            note_discard("CajaMenor con Fondo inexistente", discard_detail(row, inflow, outflow))
+            note_stop("CajaMenor con un fondo que no es RP ni LF", discard_detail(row, inflow, outflow))
             continue
         entry_date = parse_date(s(row, "fecha"))
         inserted += insert_once(
@@ -1141,10 +1236,10 @@ def load_purchase_payment_splits(cur, agency_id, desde):
         invoice = parse_int(s(row, "factura"), None)
         purchase = purchase_by_invoice.get(invoice)
         if purchase is None:
-            note_discard("Pago mixto sin compra migrada", invoice)
+            note_stop("Pago mixto sin compra migrada", invoice)
             continue
         if sum(parts) != purchase[0]:
-            note_discard("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[0])))
+            note_stop("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[0])))
             continue
         splits.append((purchase[2], purchase[1], *parts, cheque_text(s(row, "numcheque"))))
     psycopg2.extras.execute_values(
@@ -1187,7 +1282,7 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
         number = announcement_number(prefix, s(row, "anuncio"))
         grower = growers.get(s(row, "cedula"))
         if grower is None:
-            note_discard("compra_a_futuro_sin_tercero", (s(row, "anuncio"), s(row, "cedula")))
+            note_stop("Compra a futuro cuyo caficultor no esta en Asociados", (s(row, "anuncio"), s(row, "cedula")))
             continue
         cur.execute(
             "INSERT INTO compras_anunciadas (creado_en, agencia_id, numero_anuncio, fecha_anuncio, cedula, nombres,"
@@ -1227,7 +1322,7 @@ def load_quota_announcements(cur, agency_id):
         cur.execute("SELECT id FROM anuncios_agencias WHERE agencia_id = %s AND numero_anuncio = %s", (agency_id, number))
         found = cur.fetchone()
         if not found:
-            note_discard("cupo de un anuncio que no se cargo", (number, s(row, "cupo")))
+            note_stop("Cupo de un anuncio que no se cargo", (number, s(row, "cupo")))
             continue
         QUOTA_ANNOUNCEMENTS_KEPT.add(str(number))
         cur.execute("INSERT INTO cupos_anuncios (anuncio_agencia_id, cupo) VALUES (%s, %s)"
@@ -1325,6 +1420,15 @@ def backup(base, label="migrar_punto"):
     return target
 
 
+def print_excluded():
+    """Registros de Access que no se cargaron porque correcciones.csv los excluye, con todos sus datos."""
+    print(f"  excluidos por correcciones.csv: {len(EXCLUDED)}")
+    for (table, ident), row in EXCLUDED.items():
+        fix = CORRECTIONS[(table, ident)]
+        data = ", ".join(f"{k} {v}" for k, v in row.items() if v and k != "id_access")
+        print(f"    {table} Id {ident} ({s(fix, 'motivo')}; confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'}): {data}")
+
+
 def main():
     global DATA_DIR
     parser = argparse.ArgumentParser(description="Carga un punto de compra de Access (CSV) en la web.")
@@ -1332,11 +1436,15 @@ def main():
     parser.add_argument("--carpeta", default=str(DATA_DIR), help="carpeta con los *_migrar.csv del punto")
     parser.add_argument("--desde", type=date.fromisoformat, help="fecha de corte AAAA-MM-DD (opcional)")
     parser.add_argument("--aplicar", action="store_true", help="guarda los cambios (sin esto, modo prueba)")
+    parser.add_argument("--correcciones", help="correcciones.csv (fuera del repo) con los registros a excluir")
+    parser.add_argument("--definitiva", action="store_true",
+                        help="carga definitiva: una correccion PENDIENTE detiene la carga")
     parser.add_argument("--admin-pruebas", action="store_true", help="crea admin_eltambo (base de pruebas)")
     parser.add_argument("--ness", action="store_true",
                         help="recarga cupos_ness con la NESS de esta base (borra la que se subio con HU-54)")
     args = parser.parse_args()
     DATA_DIR = Path(args.carpeta)
+    load_corrections(args.correcciones, DATA_DIR.name, args.definitiva)
 
     env = dotenv_values(BACKEND_DIR / ".env")
     if args.aplicar:
@@ -1367,6 +1475,9 @@ def main():
             set_consecutives(cur, agency_id)
             if args.admin_pruebas:
                 ensure_admin_eltambo(cur, agency_id)
+            check_corrections_used()
+            print_excluded()
+            stop_if_problems()
 
             if args.ness:
                 print("\nParte B - NESS")
@@ -1382,11 +1493,11 @@ def main():
     finally:
         conn.close()
 
-    print("\nResumen de descartes:")
+    print("\nAvisos (se cargaron tal cual):")
     for reason, items in DISCARDED.items():
         print(f"  {reason}: {len(items)}")
-        for item in items if "Fondo inexistente" in reason else items[:5]:
-            print(f"    {'' if 'Fondo inexistente' in reason else 'ejemplo: '}{item}")
+        for item in items:
+            print(f"    {item}")
 
 
 if __name__ == "__main__":

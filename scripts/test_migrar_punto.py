@@ -82,7 +82,8 @@ def check_inventory():
     # 24-nov: el INVENTARIO de Access trae entradas (factura) y salidas (remision, por codigo y sin factura).
     entry, exit_row, zero = inv("1001", kilos="100", valor="2000000"), inv(remision="XX0450", cantidad="60"), inv("1002")
     entries, exits = inventory_rows([entry, exit_row, zero])
-    assert entries == [entry] and exits == [exit_row]
+    # 25-nov: la fila en 0 kg tambien es una entrada (se carga tal cual).
+    assert entries == [entry, zero] and exits == [exit_row]
     # Saldo disponible para Registrar Salidas: los kilos solo si la compra sigue sin remesar.
     assert entry_balance(entry, {"plano": "f", "forma_de_pago": "VALIDA"}) == Decimal("100")
     assert entry_balance(entry, {"plano": "t", "forma_de_pago": "VALIDA"}) == 0
