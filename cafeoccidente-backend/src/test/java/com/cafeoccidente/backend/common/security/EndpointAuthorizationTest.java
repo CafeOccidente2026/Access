@@ -72,7 +72,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 /**
  * Matriz rol x endpoint (RF-01, RN-01.1 a RN-01.3, RN-05.3). Cada endpoint se llama con los 3 roles:
  * 2xx si el rol esta permitido, 403 si no. Los servicios son mocks y la validacion de los body esta
- * apagada: @Valid corre antes que @PreAuthorize y un 400 taparia el 403.
+ * apagada para que los roles permitidos lleguen al 2xx con "{}". Sin permiso, el 403 sale antes de leer
+ * los datos ({@link AuthorizeBeforeBinding}).
  */
 @WebMvcTest
 @Import({SecurityConfig.class, CorsConfig.class, ClockConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
