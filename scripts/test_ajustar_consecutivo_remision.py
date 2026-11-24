@@ -2,7 +2,7 @@
 Check de ajustar_consecutivo_remision.py contra cafeoccidente_test, todo en una transaccion que se deshace (no deja
 nada): python scripts/test_ajustar_consecutivo_remision.py
 
-Usa numeros inventados (TA0999, SDXX-RP-0012, SDXX-15) sobre agencias que ya existen en la base de pruebas.
+Usa numeros inventados (TA0997 a TA0999, TA9999, SDXX-RP-0012, SDXX-15) sobre agencias que ya existen en la base de pruebas.
 """
 
 from ajustar_consecutivo_remision import adjust_remission_counters, connect
@@ -30,8 +30,10 @@ def main():
             cur.execute("DELETE FROM consecutivos_remision_agencia WHERE agencia_id IN (%s, %s, %s)", (access, web, ahead))
 
             # Remesas de Access (TA0999) y de la web (SDXX-RP-0012, SDXX-15): cuenta el numero del final.
-            remittance(cur, access, "TA0999")
-            remittance(cur, access, "TA0450")
+            for number in ("TA0450", "TA0997", "TA0998", "TA0999"):
+                remittance(cur, access, number)
+            # Un numero suelto muy arriba (como CO9999 de Consaca) no cuenta para el contador (24-nov).
+            remittance(cur, access, "TA9999")
             remittance(cur, web, "SDXX-RP-0012")
             remittance(cur, web, "SDXX-15")
             # Un contador que ya va mas adelante no se baja.
@@ -41,6 +43,7 @@ def main():
 
             assert counter(cur, access) == 999, counter(cur, access)
             assert rows[access][3] is None and rows[access][4] == 999, rows[access]
+            assert rows[access][5]["ignored"] == [9999], rows[access][5]
             assert counter(cur, web) == 15, counter(cur, web)
             assert counter(cur, ahead) == 5000, counter(cur, ahead)
             # Idempotente: correrlo otra vez no cambia nada.

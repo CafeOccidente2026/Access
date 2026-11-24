@@ -14,6 +14,8 @@ from migrar_punto import (
     keeps_purchase,
     max_invoice,
     max_remission,
+    normal_remission_last,
+    remission_summary,
     missing_control_params,
     out_of_range,
     pending_quotas,
@@ -147,6 +149,26 @@ def check_consecutives():
     # Remision: TA0968 -> 968; sin remisiones, 0.
     assert max_remission([{"remision": "TA0942"}, {"remision": "TA0968"}, {"remision": ""}]) == 968
     assert max_remission([{"remision": ""}]) == 0
+    # Un numero suelto arriba (CO1341 -> CO9999) no cuenta para el contador; la remesa conserva su numero (24-nov).
+    assert max_remission([{"remision": "XX1339"}, {"remision": "XX1341"}, {"remision": "XX9999"}]) == 1341
+    assert normal_remission_last([1339, 1340, 1341, 9999]) == (1341, [9999])
+    # Si la numeracion normal siguio despues del salto, el contador sigue con ella.
+    assert normal_remission_last([1341, 9999, 1342]) == (1342, [9999])
+    # Dos series reales en el mismo punto (una baja de RP y la alta de siempre): se respeta la alta.
+    assert normal_remission_last([436, 441, 475, 941, 945, 994, 997]) == (997, [])
+    # Saltos pequenos son normales (numeros que no se usaron).
+    assert normal_remission_last([436, 441, 470, 540]) == (540, [])
+    assert normal_remission_last([]) == (0, [])
+    assert normal_remission_last([9999]) == (9999, [])
+    # Ultima por numero y por fecha, y las ignoradas, para mostrarlas antes de aplicar.
+    summary = remission_summary([
+        purchase("1", fecha="2026-08-20 08:00:00") | {"remision": "XX1341"},
+        purchase("2", fecha="2026-08-25 08:00:00") | {"remision": "XX9999"},
+        purchase("3", fecha="2026-08-21 08:00:00") | {"remision": "XX1340"},
+        purchase("4", fecha="2026-08-22 08:00:00") | {"remision": "XX1340"},
+    ])
+    assert summary == {"by_number": ("XX1341", date(2026, 8, 20)), "by_date": ("XX1340", date(2026, 8, 22)),
+                       "ignored": [("XX9999", 1, date(2026, 8, 25), date(2026, 8, 25))], "next": 1342}
     # Id de transaccion: Access los digitaba libres; ninguno puede chocar con PREFIJO + codigo + 3 cifras.
     assert transaction_collisions(["43000", "che1234", "sumlf60-29-05", "TA0012"], "SDTA") == []
     assert transaction_collisions(["SDTA3SUM001", "SDTA2002", "sdta7GAS010"], "SDTA") == [
