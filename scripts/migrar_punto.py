@@ -52,8 +52,11 @@ DISCARDED = {}
 
 
 def note_discard(reason, detail):
-    """Aviso: el registro SI se cargo tal cual, pero conviene revisarlo (p. ej. caficultor sin apellido)."""
-    DISCARDED.setdefault(reason, []).append(detail)
+    """Aviso: el registro SI se cargo tal cual, pero conviene revisarlo (p. ej. caficultor sin apellido). Un registro
+    leido dos veces (INVENTARIO) se lista una sola vez."""
+    items = DISCARDED.setdefault(reason, [])
+    if detail not in items:
+        items.append(detail)
 
 
 # Regla fija de la migracion (25-nov): son datos reales de produccion; no se inventa, supone ni descarta nada.
@@ -959,14 +962,25 @@ def access_remission(row):
     return next((s(row, key) for key in row if key.lower().startswith("remisi")), "")
 
 
+def inventory_invoice(row):
+    """Factura de una fila de INVENTARIO; "0" es "sin factura" (salidas de El Penol, decision del 25-nov)."""
+    invoice = s(row, "factura")
+    return "" if invoice.strip("0") == "" else invoice
+
+
 def inventory_rows(rows):
     """(entradas, salidas) del INVENTARIO de Access tal cual: entrada = fila con factura (tambien las de 0 kg);
     salida = fila con remision (por codigo de producto, sin factura). Una fila sin ninguna de las dos, o con las
     dos, detiene la carga."""
-    entries = [row for row in rows if s(row, "factura") and not access_remission(row)]
-    exits = [row for row in rows if access_remission(row) and not s(row, "factura")]
+    entries = [row for row in rows if inventory_invoice(row) and not access_remission(row)]
+    exits = [row for row in rows if access_remission(row) and not inventory_invoice(row)]
+    for row in exits:
+        if s(row, "factura"):
+            note_discard("Salida de INVENTARIO con factura 0 (se toma como sin factura)",
+                         f"Id {s(row, 'id_access') or '?'}, {s(row, 'fecha')[:10]}, remision {access_remission(row)},"
+                         f" codigo {s(row, 'cod_prod')}, cantidad {s(row, 'cantidad')}")
     for row in rows:
-        if bool(s(row, "factura")) == bool(access_remission(row)):
+        if bool(inventory_invoice(row)) == bool(access_remission(row)):
             note_stop("Fila de INVENTARIO que no es entrada ni salida",
                       f"Id {s(row, 'id_access') or '?'}, factura {s(row, 'factura')}, remision {access_remission(row)}")
     return entries, exits
