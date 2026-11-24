@@ -255,10 +255,56 @@ def max_invoice(rows):
     return max((parse_int(row.get("factura")) for row in rows), default=0)
 
 
+# Un numero de remision que queda suelto arriba, a mas de esto del siguiente mas bajo, no es la numeracion normal
+# del punto (CO1341 -> CO9999 en Consaca, 24-nov): no cuenta para el contador; su remesa conserva el numero.
+MAX_REMISSION_GAP = 100
+
+
+def normal_remission_last(numbers):
+    """(ultimo numero de la numeracion normal, numeros sueltos ignorados). Se quitan desde arriba los numeros que
+    saltan mas de MAX_REMISSION_GAP sobre el siguiente mas bajo; las series reales (en Access cada punto tiene una
+    baja de RP y la alta de siempre) tienen muchos numeros seguidos y se conservan."""
+    # ponytail: solo ve numeros sueltos; dos o mas anomalos seguidos (9998, 9999) contarian como serie real.
+    ordered = sorted(set(numbers))
+    ignored = []
+    while len(ordered) > 1 and ordered[-1] - ordered[-2] > MAX_REMISSION_GAP:
+        ignored.insert(0, ordered.pop())
+    return (ordered[-1] if ordered else 0), ignored
+
+
+def remission_numbers(rows):
+    """{numero: (texto mas usado, compras, primera fecha, ultima fecha)} de la columna remision de COMPRAS."""
+    seen = {}
+    for row in rows:
+        text = s(row, "remision")
+        m = re.search(r"(\d+)$", text)
+        if not m:
+            continue
+        entry = seen.setdefault(int(m.group(1)), {"texts": {}, "dates": []})
+        entry["texts"][text] = entry["texts"].get(text, 0) + 1
+        if parse_date(row.get("fecha_compra")):
+            entry["dates"].append(parse_date(row.get("fecha_compra")))
+    return {n: (max(e["texts"], key=e["texts"].get), sum(e["texts"].values()), min(e["dates"], default=None),
+                max(e["dates"], default=None)) for n, e in seen.items()}
+
+
+def remission_summary(rows):
+    """Ultima remision por numero y por fecha (de su ultima compra), las ignoradas y el numero de la siguiente."""
+    numbers = remission_numbers(rows)
+    last, ignored = normal_remission_last(numbers)
+    normal = [n for n in numbers if n not in ignored]
+    by_date = max(normal, key=lambda n: (numbers[n][3] or date.min, n), default=None)
+    return {
+        "by_number": (numbers[last][0], numbers[last][3]) if last else None,
+        "by_date": (numbers[by_date][0], numbers[by_date][3]) if by_date is not None else None,
+        "ignored": [(numbers[n][0], numbers[n][1], numbers[n][2], numbers[n][3]) for n in ignored],
+        "next": last + 1,
+    }
+
+
 def max_remission(rows):
-    """Mayor numero de remision de Access (TA0968 -> 968); 0 si no hay."""
-    numbers = [int(m.group(1)) for row in rows if (m := re.search(r"(\d+)$", s(row, "remision")))]
-    return max(numbers, default=0)
+    """Ultimo numero de remision de la numeracion normal de Access (TA0968 -> 968), sin los sueltos; 0 si no hay."""
+    return normal_remission_last(remission_numbers(rows))[0]
 
 
 def set_remission_counter(cur, agency_id, number):
@@ -1021,6 +1067,13 @@ def set_consecutives(cur, agency_id):
 
     # Remision y remesa: un solo contador por agencia (V31) que sigue la serie de Access (TA0968 -> SDTA-969).
     access_remission = max_remission(compras)
+    summary = remission_summary(compras)
+    if summary["by_number"]:
+        print(f"  remision: ultima por numero {summary['by_number'][0]} ({summary['by_number'][1]}), ultima por fecha"
+              f" {summary['by_date'][0]} ({summary['by_date'][1]}); la siguiente sale con {access_remission + 1}")
+    for text, count, first, last in summary["ignored"]:
+        print(f"  remision {text} ignorada para el contador (numero suelto): {count} compras del {first} al {last};"
+              " su remesa conserva el numero")
     cur.execute("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia WHERE agencia_id = %s", (agency_id,))
     web = (cur.fetchone() or [None])[0]
     rows.append(("remision", access_remission, web, set_remission_counter(cur, agency_id, access_remission) + 1))
