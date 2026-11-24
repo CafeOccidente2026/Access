@@ -79,6 +79,14 @@ def plan_remittances(rows):
     return OrderedDict(sorted(plan.items())), sorted(pending)
 
 
+MIXED_NOTE = "En Access tenía compras de RP y LF"
+
+
+def remittance_note(remittance):
+    """Observacion de la cabecera (25-nov): la remesa de Access juntaba compras de RP y LF."""
+    return MIXED_NOTE if len(remittance["fondos"]) > 1 else None
+
+
 def mixed_remittances(plan):
     """[(numero, {fondo: compras})] de las remesas de Access que juntan compras de dos fondos."""
     return [(number, r["fondos"]) for number, r in plan.items() if len(r["fondos"]) > 1]
@@ -132,8 +140,9 @@ def load_sql(agency, plan):
         invoices = ",".join(map(str, r["facturas"]))
         statements.append(
             "CREATE TEMP TABLE nueva ON COMMIT DROP AS WITH ins AS (INSERT INTO remesas (agencia_id, fondo_id,"
-            " numero_remesa, estado, creado_por_usuario_id, creado_en) SELECT"
-            f" {agency}, f.id, '{number}', 'VIGENTE', u.id, '{r['fecha']}'::timestamp AT TIME ZONE 'America/Bogota'"
+            " numero_remesa, estado, creado_por_usuario_id, creado_en, observacion) SELECT"
+            f" {agency}, f.id, '{number}', 'VIGENTE', u.id, '{r['fecha']}'::timestamp AT TIME ZONE 'America/Bogota',"
+            f" {repr(remittance_note(r)) if remittance_note(r) else 'NULL'}"
             f" FROM fondos f, usuarios u WHERE f.codigo = '{r['fondo']}' AND u.usuario = '{CREATOR}' RETURNING id)"
             " SELECT id FROM ins")
         for table in ("compras_cafe_seco", "compras_pasilla"):
@@ -177,7 +186,7 @@ def main():
     mixed = mixed_remittances(plan)
     if mixed:
         print(f"  Remesas con compras de dos fondos ({len(mixed)}): quedan con el fondo de la mayoria; cada compra"
-              " conserva el suyo.")
+              f" conserva el suyo. Observacion en la cabecera: «{MIXED_NOTE}».")
         for number, funds in mixed:
             counts = ", ".join(f"{fund} {count}" for fund, count in sorted(funds.items()))
             print(f"    {number}: {counts} -> {plan[number]['fondo']}")
