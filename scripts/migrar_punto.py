@@ -854,6 +854,9 @@ def load_manual_cash_entries(cur, agency_id, desde):
             method = "CHEQUE"
             if outflow > 0:
                 table = "suministros"
+        if ledger_fund(row) is None:
+            note_discard("Caja con Fondo inexistente", discard_detail(row, inflow, outflow))
+            continue
         entry_date = parse_date(s(row, "fecha"))
         ids = existing.get((table, transaction_id, entry_date, inflow, outflow, check))
         if ids:
@@ -863,7 +866,7 @@ def load_manual_cash_entries(cur, agency_id, desde):
                 f"INSERT INTO {table} (id_transaccion, agencia_id, fondo_id, fecha, cedula, detalle,"
                 " entradas, salidas, forma_pago, numero_cheque, creado_en)"
                 " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                (transaction_id, agency_id, fund_by_code[s(row, "fondo")], entry_date, s(row, "cedula"),
+                (transaction_id, agency_id, fund_by_code[ledger_fund(row)], entry_date, s(row, "cedula"),
                  s(row, "detalle") or None, inflow, outflow, method, check, parse_timestamp(s(row, "fecha"))),
             )
             entry_id = cur.fetchone()[0]
@@ -881,7 +884,23 @@ def load_manual_cash_entries(cur, agency_id, desde):
 # "sumlf60-29-05" (29/05/2026, entrada 60.000.000) tiene Fondo = "j", que no es RP ni LF. Se toma como
 # LF por el patron del propio codigo ("sumlf..."), NO por confirmacion externa. Revisar con el dato
 # real de produccion. En Access esa fila no salia en los informes SuministrosRP/LF (filtran "RP"/"LF").
-SUPPLY_FUND_ASSUMPTIONS = {("sumlf60-29-05", "j"): "LF"}
+# Fondo que Access escribio mal en un movimiento de Caja, Suministros o CajaMenor -> el que se supone, por
+# (id de transaccion, fondo). Decisiones del usuario: El Tambo "j" -> LF; Sotomayor "RTP" -> RP (24-nov).
+FUND_ASSUMPTIONS = {("sumlf60-29-05", "j"): "LF", ("280", "RTP"): "RP"}
+KNOWN_FUNDS = {"RP", "LF"}
+
+
+def ledger_fund(row):
+    """Codigo de fondo de un movimiento de Access; None si no existe y no hay un supuesto para ese movimiento."""
+    fund = FUND_ASSUMPTIONS.get((s(row, "id_transaccion"), s(row, "fondo")), s(row, "fondo"))
+    return fund if fund in KNOWN_FUNDS else None
+
+
+def discard_detail(row, inflow, outflow):
+    """Fecha, numero, detalle, fondo y valor de un movimiento descartado, para revisar si mueve un saldo."""
+    day = parse_date(row.get("fecha"))
+    return (f"{day}, {s(row, 'id_transaccion')}, {s(row, 'detalle')}, fondo {s(row, 'fondo')},"
+            f" entradas {inflow}, salidas {outflow}")
 
 
 def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
@@ -933,9 +952,9 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
         if s(row, "forma_de_pago") == "CHEQUE" and cash_check_inflows.get(copy_key, 0) > 0:
             cash_check_inflows[copy_key] -= 1
             continue
-        fund = SUPPLY_FUND_ASSUMPTIONS.get((transaction_id, s(row, "fondo")), s(row, "fondo"))
-        if fund not in fund_by_code:
-            note_discard("Suministros con Fondo inexistente", (transaction_id, s(row, "fondo"), str(inflow)))
+        fund = ledger_fund(row)
+        if fund is None:
+            note_discard("Suministros con Fondo inexistente", discard_detail(row, inflow, outflow))
             continue
         entry_date = parse_date(s(row, "fecha"))
         inserted += insert_once(
@@ -952,10 +971,13 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
             continue
         transaction_id = s(row, "id_transaccion")
         inflow, outflow = parse_decimal(s(row, "entradas")), parse_decimal(s(row, "salidas"))
+        if ledger_fund(row) is None:
+            note_discard("CajaMenor con Fondo inexistente", discard_detail(row, inflow, outflow))
+            continue
         entry_date = parse_date(s(row, "fecha"))
         inserted += insert_once(
             found, (transaction_id, entry_date, inflow, outflow), ledger_sql.format("movimientos_caja_menor"),
-            (transaction_id, agency_id, fund_by_code[s(row, "fondo")], entry_date, s(row, "cedula"),
+            (transaction_id, agency_id, fund_by_code[ledger_fund(row)], entry_date, s(row, "cedula"),
              s(row, "detalle") or None, inflow, outflow, s(row, "forma_de_pago") or None, None,
              parse_timestamp(s(row, "fecha"))))
     print(f"  movimientos_caja_menor: {inserted} filas de CajaMenor.")
@@ -1234,8 +1256,8 @@ def main():
     print("\nResumen de descartes:")
     for reason, items in DISCARDED.items():
         print(f"  {reason}: {len(items)}")
-        for item in items[:5]:
-            print(f"    ejemplo: {item}")
+        for item in items if "Fondo inexistente" in reason else items[:5]:
+            print(f"    {'' if 'Fondo inexistente' in reason else 'ejemplo: '}{item}")
 
 
 if __name__ == "__main__":
