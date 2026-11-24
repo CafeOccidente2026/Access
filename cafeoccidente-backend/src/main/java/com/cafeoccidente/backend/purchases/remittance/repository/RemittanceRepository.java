@@ -168,6 +168,14 @@ public class RemittanceRepository {
                 (rs, i) -> new Header(rs.getString("agencia"), localDateTime(rs.getTimestamp("creado_en"))));
     }
 
+    /** Tipo de cafe de las compras de la remesa para el nombre de los archivos, en orden fijo (SECO, VERDE, PASILLA). */
+    public String coffeeType(Long id) {
+        return String.join("-", jdbc.queryForList("SELECT CASE module WHEN 'DRY' THEN 'SECO' WHEN 'GREEN' THEN 'VERDE'"
+                + " ELSE 'PASILLA' END FROM (SELECT DISTINCT module FROM (" + PURCHASES + ") c WHERE c.remesa_id = :id) m"
+                + " ORDER BY CASE module WHEN 'DRY' THEN 1 WHEN 'GREEN' THEN 2 ELSE 3 END",
+                new MapSqlParameterSource("id", id), String.class));
+    }
+
     /** Una fila por factura de la remesa, por numero de factura. */
     public List<RemittanceLine> lines(Long id) {
         String sql = "SELECT c.*, rc.prefijo, rc.tamano_muestra, f.codigo AS fund_code, an.pr_base_cps AS anuncio_pr_base_cps, "
