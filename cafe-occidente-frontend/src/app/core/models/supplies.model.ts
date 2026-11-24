@@ -1,6 +1,6 @@
 /**
  * Alta de Caja / Caja Menor / Suministros (LedgerEntryRequest del backend). El Id de transaccion lo genera el servidor;
- * entryDate solo vale en Ingresar Suministros. checkNumber: los ultimos 4 digitos, como texto (0548).
+ * entryDate solo vale en Ingresar Suministros. checkNumber: de 4 a 15 digitos, como texto (0548).
  */
 export interface LedgerEntryRequest {
   readonly fundCode: string | null;

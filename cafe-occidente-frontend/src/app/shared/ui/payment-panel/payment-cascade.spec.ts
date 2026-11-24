@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import dry from '../../../../public/assets/data/purchase-form-dry.json';
+import dry from '../../../../../public/assets/data/purchase-form-dry.json';
 import { commitPayment, initialPayment, readyPayment, visibleMethods } from './payment-cascade';
 
 const NET = 4944624;
