@@ -3,7 +3,7 @@ Check del armado de remesas de cargar_remesas_access.py (sin BD ni framework):
 python scripts/test_cargar_remesas_access.py
 """
 
-from cargar_remesas_access import mixed_remittances, plan_remittances
+from cargar_remesas_access import load_sql, mixed_remittances, plan_remittances, remittance_note
 
 
 def row(factura, remision, plano="t", fondo="RP", fecha="2026-01-17 00:00:00", estado="VALIDA", kilos="30.0"):
@@ -34,6 +34,10 @@ def main():
                                  row("4", "TA2", fondo="RP"), row("5", "TA2", fondo="LF"), row("6", "TA3")])
     assert mixed["TA1"]["fondo"] == "LF" and mixed["TA2"]["fondo"] == "RP"
     assert mixed_remittances(mixed) == [("TA1", {"RP": 1, "LF": 2}), ("TA2", {"RP": 1, "LF": 1})]
+    # 25-nov: la cabecera de la remesa mixta lleva la observacion; la de un solo fondo, ninguna.
+    assert remittance_note(mixed["TA1"]) == "En Access tenía compras de RP y LF"
+    assert remittance_note(mixed["TA3"]) is None
+    assert "En Access tenía compras de RP y LF" in load_sql(4, mixed)
 
     # Errores que deben detener la carga.
     for bad, expected in [
