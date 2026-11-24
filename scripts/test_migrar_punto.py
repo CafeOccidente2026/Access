@@ -36,6 +36,7 @@ from migrar_punto import (
     normal_remission_last,
     opening_purchase_id,
     out_of_range,
+    payment_mismatches,
     pending_quotas,
     quota_purchase,
     quota_announcements,
@@ -190,6 +191,26 @@ def check_growers_by_id_number():
     assert rows[0]["tipo"] == "C" and rows[1]["tipo"] == "F"
     gone = corrections_for([dict(fix, accion="excluir")], "PuntoPrueba")
     assert apply_corrections("asociados_migrar.csv", rows, gone) == ([rows[1]], [rows[0]])
+
+
+def check_payments():
+    # 25-nov: lo pagado en Caja (salidas - entradas) por cada compra de Access debe ser su neto, y lo de Suministros
+    # su parte en cheque. Si no cuadra (un pago registrado dos veces, o ninguno) la carga se detiene.
+    compra = {"id_access": "7", "factura": "1001", "fecha_compra": "2026-03-01 08:00:00", "neto_a_pagar": "300",
+              "fpch": "200", "forma_de_pago": "VALIDA"}
+    cash = [{"id_access": "11", "id_transaccion": "1001", "fecha": "2026-03-01 08:00:00", "entradas": "0",
+             "salidas": "100"},
+            {"id_access": "12", "id_transaccion": "1001", "fecha": "2026-03-01 08:00:00", "entradas": "0",
+             "salidas": "200"}]
+    supply = [{"id_access": "21", "id_transaccion": "1001", "fecha": "2026-03-01 08:00:00", "valor_suministro": "0",
+               "vr_gastos_o_comp": "200"}]
+    assert payment_mismatches([compra], cash, supply) == []
+    double = cash + [dict(cash[0], id_access="13")]
+    found = payment_mismatches([compra], double, supply)
+    assert len(found) == 1 and "factura 1001" in found[0] and "Caja 400" in found[0] and "Id 13" in found[0]
+    unpaid = dict(compra, factura="1002", neto_a_pagar="50", fpch="0")
+    assert "Caja 0" in payment_mismatches([unpaid], [], [])[0]
+    assert payment_mismatches([dict(unpaid, neto_a_pagar="0", forma_de_pago="ANULADA")], [], []) == []
 
 
 def check_grower_type():
@@ -362,6 +383,7 @@ def main():
     check_correction_actions()
     check_growers_by_id_number()
     check_grower_type()
+    check_payments()
     check_inventory()
     check_date_cut()
     check_cheque_text()
