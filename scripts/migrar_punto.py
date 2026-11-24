@@ -10,8 +10,8 @@ Uso:
 Parte A: Registro de Control, terceros, anuncios, compras (seco y pasilla), caja, suministros, caja menor,
 empaques, formas de pago, compras a futuro y consecutivos. Idempotente: no duplica si se vuelve a correr.
 - La agencia sale del Registro de Control del punto; si no existe en la web, se detiene.
-- Registro de Control: si falta un parametro se detiene (nunca pone 0); si la agencia ya tiene uno en la web,
-  no lo toca y lista las diferencias con Access.
+- Registro de Control: si falta un parametro se detiene (nunca pone 0); si la agencia ya tiene uno en la web, lo
+  actualiza con los campos que trae Access, muestra cada diferencia y la deja en el Historial (24-nov).
 - Terceros: inserta los nuevos y no sobrescribe los que ya estan; las diferencias van a diferencias_terceros.csv.
 - Con --desde se cargan igual las compras sin remesar, todos los anuncios, las compras a futuro vigentes y el
   Registro de Control, para que los saldos cuadren.
@@ -161,6 +161,42 @@ CONTROL_FIELDS = [
 def missing_control_params(reg):
     """Parametros del RegControl vacios en Access (decision del usuario: la carga se detiene, nunca pone 0)."""
     return sorted(key for key, _, _ in CONTROL_FIELDS if not (reg.get(key) or "").strip())
+
+
+# Columna -> nombre del campo en el Historial (los de ControlRecordResponse, como los guarda la pantalla).
+CONTROL_HISTORY_KEYS = {
+    "numero_registro_control": "controlNumber", "kg_excelso": "excelsoKg", "base_retencion": "baseWithholding",
+    "base_carga": "baseLoad", "porcentaje_retencion": "withholdingPercentage", "base_pasilla": "baseHusk",
+    "porc_kg_pasilla_promedio": "avgHuskPercentage", "prefijo": "prefix", "costos": "costs",
+    "tamano_muestra": "sampleSize", "umbral_cafes_especiales": "specialtyThreshold",
+    "porcentaje_cafe_verde": "greenCoffeePercentage", "factor_base": "baseFactor",
+    "porc_aportes_asociados": "associatePercentage", "porc_desc_coop_no_asociados": "nonAssociateDiscount",
+    "cedula_fiel": "trustedId", "resolucion_dian": "dianResolution", "fecha_resolucion": "resolutionDate",
+    "desde_resolucion": "resolutionFrom", "hasta_resolucion": "resolutionTo", "vigencia": "validity",
+}
+
+
+def control_record_updates(web, reg):
+    """[(columna, valor en la base, valor de Access)] a actualizar (24-nov): los campos que Access trae y no coinciden.
+    Un campo vacio en Access no borra el de la base; los que solo tiene la web (cafe verde, alerta) no estan aqui."""
+    updates = []
+    for key, column, parse in CONTROL_FIELDS:
+        if column in web and (reg.get(key) or "").strip():
+            access = parse(reg.get(key))
+            if access != web[column]:
+                updates.append((column, web[column], access))
+    return updates
+
+
+def control_record_history(updates):
+    """(antes, despues) para historial_cambios, solo con los campos que cambian."""
+    return ({CONTROL_HISTORY_KEYS[column]: str(web) for column, web, _ in updates},
+            {CONTROL_HISTORY_KEYS[column]: str(access) for column, _, access in updates})
+
+
+def seller_last_name(value):
+    """Apellido del caficultor para la compra: vacio si Access no lo tiene (nombre completo en el primer nombre)."""
+    return (value or "").strip()
 
 
 def control_record_differences(web, reg):
@@ -338,17 +374,25 @@ def load_agency(cur):
     return by_access[target], cur.fetchone()[0]
 
 
-def load_control_record(cur, agency_id):
+def load_control_record(cur, agency_id, user_id):
     reg = read_csv("regcontrol_migrar.csv")[0]
     columns = [column for _, column, _ in CONTROL_FIELDS]
-    cur.execute(f"SELECT {', '.join(columns)} FROM registros_control WHERE agencia_id = %s AND activo",
+    cur.execute(f"SELECT id, {', '.join(columns)} FROM registros_control WHERE agencia_id = %s AND activo",
                 (agency_id,))
     existing = cur.fetchone()
     if existing:
-        differences = control_record_differences(dict(zip(columns, existing)), reg)
-        print(f"  Registro de Control: ya existe en la web, no se toca. Diferencias con Access: {len(differences)}")
-        for column, web, access in differences:
-            print(f"    {column}: web {web} / Access {access}")
+        # 24-nov: Access manda en los campos que trae; se actualizan y quedan en el Historial.
+        updates = control_record_updates(dict(zip(columns, existing[1:])), reg)
+        print(f"  Registro de Control: ya existe en la web; se actualiza con Access. Diferencias: {len(updates)}")
+        for column, web, access in updates:
+            print(f"    {column}: base {web} / Access {access}")
+        if updates:
+            cur.execute(f"UPDATE registros_control SET {', '.join(f'{c} = %s' for c, _, _ in updates)} WHERE id = %s",
+                        (*[access for _, _, access in updates], existing[0]))
+            before, after = control_record_history(updates)
+            cur.execute("INSERT INTO historial_cambios (fecha, usuario_id, entidad, entidad_id, accion, agencia_id,"
+                        " antes, despues) VALUES (now(), %s, 'REGISTRO_CONTROL', %s, 'MODIFICAR', %s, %s, %s)",
+                        (user_id, existing[0], agency_id, psycopg2.extras.Json(before), psycopg2.extras.Json(after)))
         return
     missing = missing_control_params(reg)
     if missing:
@@ -663,6 +707,10 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
 
     def common_values(row, invoice_number, grower):
         first_name, last_name, address, phone, grower_type = grower
+        if not seller_last_name(last_name):
+            note_discard("compra con caficultor sin apellido en Access (se carga con el apellido vacio)",
+                         f"factura {invoice_number}, cedula {s(row, 'cedula')}")
+        last_name = seller_last_name(last_name)
         payment_method, check_number = payment_of(row)
         return (
             parse_date(row["fecha_compra"]), invoice_number, agency_id, fund_by_code[s(row, "fondo")],
@@ -1150,14 +1198,14 @@ def main():
             print(f"Parte A - {DATA_DIR}" + (f" (desde {args.desde})" if args.desde else ""))
             agency_id, agency_name = load_agency(cur)
             print(f"  Agencia '{agency_name}' id={agency_id}")
-            load_control_record(cur, agency_id)
+            cur.execute("SELECT id FROM usuarios WHERE usuario = 'admin'")
+            admin_user_id = cur.fetchone()[0]
+            load_control_record(cur, agency_id, admin_user_id)
             load_growers(cur)
             cur.execute("SELECT id FROM fondos WHERE codigo = 'RP'")
             rp_fund_id = cur.fetchone()[0]
             load_announcements(cur, agency_id, rp_fund_id)
             load_quota_announcements(cur, agency_id)
-            cur.execute("SELECT id FROM usuarios WHERE usuario = 'admin'")
-            admin_user_id = cur.fetchone()[0]
             load_purchases(cur, agency_id, admin_user_id, args.desde)
             load_check_relation_marks(cur, agency_id)
             load_manual_cash_entries(cur, agency_id, args.desde)
