@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    DISCARDED,
     STOPS,
     apply_corrections,
     correct_rows,
@@ -89,6 +90,13 @@ def check_inventory():
     entries, exits = inventory_rows([entry, exit_row, zero])
     # 25-nov: la fila en 0 kg tambien es una entrada (se carga tal cual).
     assert entries == [entry, zero] and exits == [exit_row]
+    # 25-nov: una salida con "factura 0" (El Penol) se toma como sin factura y se lista en los avisos, una sola vez.
+    DISCARDED.clear()
+    zero_exit = inv("0", remision="XX0500", cantidad="5")
+    for _ in range(2):  # la carga lee el INVENTARIO dos veces
+        assert inventory_rows([zero_exit]) == ([], [zero_exit])
+    assert len(DISCARDED["Salida de INVENTARIO con factura 0 (se toma como sin factura)"]) == 1
+    DISCARDED.clear()
     # Saldo disponible para Registrar Salidas: los kilos solo si la compra sigue sin remesar.
     assert entry_balance(entry, {"plano": "f", "forma_de_pago": "VALIDA"}) == Decimal("100")
     assert entry_balance(entry, {"plano": "t", "forma_de_pago": "VALIDA"}) == 0
