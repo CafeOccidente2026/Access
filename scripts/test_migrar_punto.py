@@ -10,17 +10,20 @@ from migrar_punto import (
     announcement_number,
     cheque_text,
     control_record_differences,
+    control_record_history,
+    control_record_updates,
     husk_purchase,
     keeps_purchase,
     max_invoice,
     max_remission,
-    normal_remission_last,
-    remission_summary,
     missing_control_params,
+    normal_remission_last,
     out_of_range,
     pending_quotas,
     quota_purchase,
     quota_announcements,
+    remission_summary,
+    seller_last_name,
     split_future_purchases,
     transaction_collisions,
 )
@@ -42,9 +45,24 @@ def check_control_record():
     assert missing_control_params(REG) == []
     # Decision del usuario: un parametro vacio detiene la carga; nunca se pone 0.
     assert missing_control_params({**REG, "porcasociados": "", "muestra": " "}) == ["muestra", "porcasociados"]
-    # Una agencia con Registro de Control en la web no se toca: solo se listan las diferencias.
+    # Una agencia con Registro de Control en la web: se listan las diferencias con Access.
     web = {"porc_aportes_asociados": Decimal("2.00"), "prefijo": "SDTA", "porc_kg_pasilla_promedio": Decimal("5.00")}
     assert control_record_differences(web, REG) == [("porc_kg_pasilla_promedio", "5.00", "6.14")]
+    # 24-nov: la carga actualiza con Access los campos que Access trae; uno vacio en Access no borra el de la base.
+    web = {"base_retencion": Decimal("8379840.00"), "cedula_fiel": "900000001", "prefijo": "SDTA"}
+    updates = control_record_updates(web, {**REG, "baseretefte": "10000000", "fiel": "900000002", "prefijo": ""})
+    assert updates == [("base_retencion", Decimal("8379840.00"), Decimal("10000000")),
+                       ("cedula_fiel", "900000001", "900000002")]
+    # Al Historial con los mismos nombres de campo que guarda la pantalla Registro de Control.
+    assert control_record_history(updates) == ({"baseWithholding": "8379840.00", "trustedId": "900000001"},
+                                               {"baseWithholding": "10000000", "trustedId": "900000002"})
+
+
+def check_seller_without_last_name():
+    # 24-nov: un caficultor sin apellido en Access (nombre completo en el primer nombre) no detiene la carga.
+    assert seller_last_name(None) == ""
+    assert seller_last_name("  ") == ""
+    assert seller_last_name("PRUEBA") == "PRUEBA"
 
 
 def check_date_cut():
@@ -180,6 +198,7 @@ def check_consecutives():
 
 def main():
     check_control_record()
+    check_seller_without_last_name()
     check_date_cut()
     check_cheque_text()
     check_husk()
