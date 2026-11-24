@@ -11,6 +11,8 @@ import com.cafeoccidente.backend.purchases.annulment.service.impl.PurchaseAnnulm
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseRequest;
 import com.cafeoccidente.backend.purchases.drycoffee.dto.DryCoffeePurchaseResponse;
 import com.cafeoccidente.backend.purchases.drycoffee.service.DryCoffeePurchaseService;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaRequest;
+import com.cafeoccidente.backend.purchases.future.dto.AnnouncementQuotaResponse;
 import com.cafeoccidente.backend.purchases.future.dto.QuotaBalanceResponse;
 import com.cafeoccidente.backend.purchases.future.service.AnnouncementQuotaService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
@@ -189,13 +191,49 @@ class QuotaPurchaseIntegrationTest {
 
         assertThatThrownBy(() -> buy(quotaAnnouncement, KG))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("supera el saldo");
-        // Tampoco desde Compras Cafe Seco cuando el anuncio con cupo es el vigente.
-        jdbc.update("UPDATE anuncios SET activo = false WHERE id = (SELECT anuncio_id FROM anuncios_agencias"
-                + " WHERE agencia_id = ? AND numero_anuncio = ?)", AGENCY, latestAnnouncement);
-        assertThatThrownBy(() -> buy(null, null))
-                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("superan el saldo del cupo");
         assertThat(quotas.withBalance(AGENCY, rp, "RN")).extracting(QuotaBalanceResponse::balance)
                 .singleElement().satisfies(b -> assertThat(b).isEqualByComparingTo("500"));
+    }
+
+    private void makeTheQuotaAnnouncementTheCurrentOne() {
+        jdbc.update("UPDATE anuncios SET activo = false WHERE id = (SELECT anuncio_id FROM anuncios_agencias"
+                + " WHERE agencia_id = ? AND numero_anuncio = ?)", AGENCY, latestAnnouncement);
+    }
+
+    /** Regla del area (18-nov): una compra normal de Seco con el mismo anuncio no toca el cupo ni la frena el saldo. */
+    @Test
+    void aNormalPurchaseWithTheQuotaAnnouncementDoesNotTouchTheQuota() {
+        buy(quotaAnnouncement, KG);
+        buy(quotaAnnouncement, KG);
+        makeTheQuotaAnnouncementTheCurrentOne();
+
+        DryCoffeePurchaseResponse normal = buy(null, null);
+
+        assertThat((String) jdbc.queryForObject("SELECT numero_anuncio FROM compras_cafe_seco WHERE id = ?", String.class,
+                normal.id())).endsWith("-" + quotaAnnouncement);
+        assertThat(balance()).isEqualByComparingTo("500");
+        // Prueba del 19-nov: Kilos Entregados cuenta todas las compras; Kilos con Cupo, solo las de cupo.
+        assertThat(quotas.get(AGENCY, quotaAnnouncement).deliveredKg()).isEqualByComparingTo("3000");
+        assertThat(quotas.get(AGENCY, quotaAnnouncement).quotaKg()).isEqualByComparingTo("2000");
+    }
+
+    /** Regla del area (18-nov): al asignar el cupo el Saldo queda igual al Cupo, aunque ya haya compras normales. */
+    @Test
+    void assigningTheQuotaLeavesTheBalanceEqualToTheQuota() {
+        buy(null, null);
+        assertThat(quotas.available(AGENCY)).filteredOn(c -> c.announcement().announcementNumber().endsWith("-" + latestAnnouncement))
+                .singleElement().satisfies(c -> {
+                    assertThat(c.deliveredKg()).isEqualByComparingTo(KG);
+                    assertThat(c.quotaKg()).isZero();
+                });
+
+        AnnouncementQuotaResponse assigned = quotas.assign(AGENCY, latestAnnouncement, new AnnouncementQuotaRequest(new BigDecimal("200")));
+
+        assertThat(assigned.deliveredKg()).isEqualByComparingTo(KG);
+        assertThat(assigned.quotaKg()).isZero();
+        assertThat(assigned.balance()).isEqualByComparingTo("200");
+        buy(latestAnnouncement, new BigDecimal("150"));
+        assertThat(quotas.get(AGENCY, latestAnnouncement).balance()).isEqualByComparingTo("50");
     }
 
     @Test

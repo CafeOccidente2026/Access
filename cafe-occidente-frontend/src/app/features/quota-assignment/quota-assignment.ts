@@ -12,6 +12,7 @@ import { AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowD
 import { announcementDisplay, formatMoney, parseDisplayNumber, stripAnnouncementPrefix } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { QuotaAssignmentContent } from './quota-assignment.model';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /** Texto de cada anuncio en la lista: número, especial y Pr Base Carg Perg Seco, para buscar por cualquiera (RN-21.1.2, RN-21.1.3). */
 function optionLabel(candidate: QuotaCandidate): string {
@@ -19,9 +20,12 @@ function optionLabel(candidate: QuotaCandidate): string {
   return `${announcementDisplay(a.announcementNumber)} · ${a.specialType} · ${formatMoney(a.basePriceLoad)}`;
 }
 
-/** Saldo = Cupo - Kilos Entregados; vacío mientras no hay Cupo. El servidor lo vuelve a calcular al guardar. */
-export function liveBalance(quota: string, deliveredKg: number): string {
-  return quota.trim() === '' ? '' : String(parseDisplayNumber(quota) - deliveredKg);
+/**
+ * Regla del area (18-nov): al asignar, el Saldo es el Cupo; las compras normales hechas antes con ese anuncio no se
+ * descuentan (solo las de Facturar con Cupos). Vacío mientras no hay Cupo.
+ */
+export function liveBalance(quota: string): string {
+  return quota.trim() === '' ? '' : String(parseDisplayNumber(quota));
 }
 
 /**
@@ -32,7 +36,7 @@ export function liveBalance(quota: string, deliveredKg: number): string {
 @Component({
   selector: 'app-quota-assignment',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, ComboboxComponent, FormFieldComponent, FormFlowDirective],
   templateUrl: './quota-assignment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -77,9 +81,11 @@ export class QuotaAssignmentComponent {
       bonus: String(a.bonus),
       costs: String(a.costs),
       deliveredKg: String(saved?.deliveredKg ?? selected.deliveredKg),
+      // Prueba del 19-nov: lo comprado por Facturar con Cupos, lo único que descuenta el Saldo.
+      quotaKg: String(saved?.quotaKg ?? selected.quotaKg),
       quota: saved ? String(saved.assignedQuota) : this.quota(),
-      // R2 (17-nov): RN-21.1.8, el Saldo (Cupo - Kilos Entregados) se ve mientras se digita el Cupo.
-      balance: saved ? String(saved.balance) : liveBalance(this.quota(), selected.deliveredKg),
+      // R2 (17-nov): el Saldo se ve mientras se digita el Cupo; regla del 18-nov: es igual al Cupo.
+      balance: saved ? String(saved.balance) : liveBalance(this.quota()),
     };
   });
 

@@ -12,7 +12,8 @@ public enum Screen {
     REGISTRO_CONTROL("Registro de Control"),
     HISTORIAL("Historial"),
     /** HU-05 Habilitacion (11-nov): corregir una compra sin anularla. */
-    CORREGIR_COMPRA("Corregir Compra");
+    CORREGIR_COMPRA("Corregir Compra"),
+    ANULAR_REMISION("Anular Remisión");
 
     /** Prefijo de la authority de Spring Security: SCREEN_ANULAR_DOCUMENTO, etc. */
     public static final String AUTHORITY_PREFIX = "SCREEN_";

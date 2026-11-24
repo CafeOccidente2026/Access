@@ -115,7 +115,7 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(service.publishAll).toHaveBeenCalledWith({ fundId: 1, basePriceLoad: 1546900 });
 
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="success-overlay"]')?.textContent).toContain('Anuncio actualizado');
+    expect(el.querySelector('app-confirm-dialog')?.textContent).toContain('Anuncio actualizado');
     vi.advanceTimersByTime(SUCCESS_MESSAGE_DURATION_MS - 1);
     expect(component.message()).toBe('Anuncio actualizado');
     vi.advanceTimersByTime(1);
@@ -252,5 +252,24 @@ describe('AnnouncementUpdateComponent (HU-10, HU-11)', () => {
     expect(component.priceError).not.toBeNull();
     component.save();
     expect(service.publishAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('typing in the middle of a price keeps the cursor next to the same digit, also in the list', () => {
+    const { component } = render();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.value = '4.5690';
+    input.setSelectionRange(4, 4);
+    component.onPriceInput(input.value, input);
+    expect(component.basePriceLoad).toBe('45.690');
+    expect(input.selectionStart).toBe(4);
+
+    const row = { specialType: 'RN', basePriceLoad: '', specialSurcharge: '', defectiveUnitPrice: '' } as Parameters<typeof component.onRowInput>[0];
+    input.value = '1.2000';
+    input.setSelectionRange(3, 3);
+    component.onRowInput(row, 'specialSurcharge', input.value, input);
+    expect(row.specialSurcharge).toBe('12.000');
+    expect(input.selectionStart).toBe(2);
+    input.remove();
   });
 });

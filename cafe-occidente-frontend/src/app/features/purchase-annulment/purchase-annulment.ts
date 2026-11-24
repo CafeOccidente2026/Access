@@ -6,7 +6,7 @@ import { AnnulmentCandidate, AnnulmentDirection } from '../../core/models/purcha
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseAnnulmentService } from '../../core/services/purchase-annulment.service';
-import { AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton } from '../../shared/ui';
+import { AccessWindowComponent, ConfirmDialogComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton } from '../../shared/ui';
 import { formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
@@ -63,7 +63,7 @@ export function fieldValue(c: AnnulmentCandidate, key: string, type: string | un
 @Component({
   selector: 'app-purchase-annulment',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceNavigatorComponent],
+  imports: [CommonModule, AccessWindowComponent, ConfirmDialogComponent, FormFlowDirective, InvoiceNavigatorComponent],
   templateUrl: './purchase-annulment.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -128,8 +128,8 @@ export class PurchaseAnnulmentComponent {
 
   startAnnul(): void {
     this.message.set(null);
+    // El mensaje compartido pone el foco: Cancelar en la pregunta (anular no se deshace), Aceptar en el aviso.
     this.prompt.set(this.selected()!.annulmentLocked ? 'locked' : 'confirm');
-    this.focusButton(this.prompt() === 'confirm' ? 'accept' : 'locked-accept');
   }
 
   confirm(): void {

@@ -33,6 +33,11 @@ export interface PurchaseReportRow {
   readonly status: 'VALIDA' | 'ANULADA';
   /** Fecha del anuncio de la compra (yyyy-MM-dd). */
   readonly announcementDate: string;
+  /** Reporte Anuncio (prueba del 19-nov): 1er Nombre y 1er Apellido de Asociados, como Access; null sin tercero. */
+  readonly growerFirstName?: string | null;
+  readonly growerFirstLastName?: string | null;
+  /** Nombre del Fiel del Registro de Control; null si su cédula no está en Asociados. */
+  readonly trustedName?: string | null;
 }
 
 /** Una persona del informe Saldo Anuncios (HU-35): K Anun, K Entr y Saldo Kg. */

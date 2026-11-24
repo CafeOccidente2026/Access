@@ -13,6 +13,7 @@
   "screens": {
     "cash": {
       "windowTitle": "Caja suministros",
+      "closeOnSaved": true,
       "lookupGrower": true,
       "endpoint": "cash",
       "kind": "ledger",
@@ -116,6 +117,7 @@
     },
     "packaging": {
       "windowTitle": "Empaque Suministros",
+      "closeOnSaved": true,
       "lookupGrower": true,
       "endpoint": "packaging",
       "kind": "packaging",

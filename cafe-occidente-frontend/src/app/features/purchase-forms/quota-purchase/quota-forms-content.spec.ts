@@ -27,3 +27,11 @@ describe('Facturar Anuncios con Cupos: lista de Especial', () => {
     expect(special.options).toBeUndefined();
   });
 });
+
+describe('ventana de Facturar con Cupos', () => {
+  it('prueba del 19-nov: Facturar con Cupos tiene la columna Kilos con Cupo; Compras Anunciadas no (no son cupos)', () => {
+    const columns = (content: unknown) => (content as { quotaPicker: { columns: Record<string, string> } }).quotaPicker.columns;
+    expect(columns(quota)['quotaKg']).toBe('Kilos con Cupo');
+    expect(columns(billing)['quotaKg']).toBeUndefined();
+  });
+});

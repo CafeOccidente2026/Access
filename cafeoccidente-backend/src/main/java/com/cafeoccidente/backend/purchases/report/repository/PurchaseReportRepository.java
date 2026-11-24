@@ -31,11 +31,15 @@ public class PurchaseReportRepository {
             + " c.cedula, c.nombres, c.apellidos, c.kv, c.kilos_netos, c.porc, c.vr_kilo, c.vr_bruto, c.vr_inventario,"
             + " c.aporte_asociado, c.descuento_cooperativo, c.descuento_financiero, c.retefuente, c.otros_descuentos,"
             + " c.neto_a_pagar, CASE WHEN c.estado = 'ANULADA' THEN 'ANULADA' ELSE c.forma_pago END AS forma_pago, c.estado,"
-            + " c.fecha_anuncio"
+            + " c.fecha_anuncio, t.primer_nombre, t.primer_apellido,"
+            + " NULLIF(concat_ws(' ', tf.primer_nombre, tf.segundo_nombre, tf.primer_apellido, tf.segundo_apellido), '')"
+            + " AS trusted_name"
             + " FROM (" + PURCHASES + ") c"
             + " JOIN agencias a ON a.id = c.agencia_id JOIN fondos f ON f.id = c.fondo_id"
             + " JOIN productos pr ON pr.id = c.producto_id"
-            + " LEFT JOIN registros_control rc ON rc.agencia_id = c.agencia_id AND rc.activo";
+            + " LEFT JOIN registros_control rc ON rc.agencia_id = c.agencia_id AND rc.activo"
+            + " LEFT JOIN terceros t ON t.identificacion = c.cedula"
+            + " LEFT JOIN terceros tf ON tf.identificacion = rc.cedula_fiel";
     private static final String BY_DATE = REPORT_SELECT
             + " WHERE c.agencia_id = :agencyId AND c.fecha_compra BETWEEN :from AND :to"
             + " ORDER BY c.numero_factura, c.module";
@@ -44,6 +48,16 @@ public class PurchaseReportRepository {
             + " WHERE c.module = 'DRY' AND c.agencia_id = :agencyId AND c.numero_anuncio = :announcement"
             + " AND c.fecha_compra BETWEEN :from AND :to"
             + " ORDER BY c.numero_factura";
+    /**
+     * Generar Reporte Anuncio (prueba del 19-nov): un anuncio (de cualquier fecha si no hay fechas) o todos los del rango.
+     * Cada filtro null no filtra; el servicio exige el rango cuando no hay anuncio.
+     */
+    private static final String ANNOUNCEMENT = REPORT_SELECT
+            + " WHERE c.agencia_id = :agencyId"
+            + " AND (CAST(:announcement AS varchar) IS NULL OR c.numero_anuncio = :announcement)"
+            + " AND (CAST(:from AS date) IS NULL OR c.fecha_compra >= :from)"
+            + " AND (CAST(:to AS date) IS NULL OR c.fecha_compra <= :to)"
+            + " ORDER BY c.fecha_anuncio, c.numero_anuncio, c.especial, pr.codigo, c.numero_factura, c.cedula";
     /** Informe Saldo Anuncios (HU-35): las compras a futuro del anuncio, por cedula. */
     private static final String FUTURE_BALANCE = "SELECT a.nombre AS agency_name, f.numero_anuncio, f.fecha_anuncio,"
             + " f.cedula, f.nombres, f.apellidos, f.kilos, f.kilos - f.saldo AS entregados, f.saldo, f.pr_alm_sana,"
@@ -73,6 +87,14 @@ public class PurchaseReportRepository {
         return jdbc.query(FUTURE_ANNOUNCEMENT, params, (rs, i) -> row(rs));
     }
 
+    /** Las compras de la agencia de un anuncio (numero de display) y/o entre dos fechas; null = sin ese filtro. */
+    public List<PurchaseReportRow> announcement(Long agencyId, String announcement, LocalDate from, LocalDate to) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("agencyId", agencyId).addValue("announcement", announcement)
+                .addValue("from", from).addValue("to", to);
+        return jdbc.query(ANNOUNCEMENT, params, (rs, i) -> row(rs));
+    }
+
     /** Las compras a futuro de la agencia con ese anuncio (numero de display). */
     public List<FutureBalanceRow> futureBalance(Long agencyId, String announcement) {
         MapSqlParameterSource params = new MapSqlParameterSource()
@@ -96,6 +118,7 @@ public class PurchaseReportRepository {
                 rs.getBigDecimal("vr_inventario"), rs.getBigDecimal("aporte_asociado"),
                 rs.getBigDecimal("descuento_cooperativo"), rs.getBigDecimal("descuento_financiero"),
                 rs.getBigDecimal("retefuente"), rs.getBigDecimal("otros_descuentos"), rs.getBigDecimal("neto_a_pagar"),
-                rs.getString("forma_pago"), rs.getString("estado"), rs.getObject("fecha_anuncio", LocalDate.class));
+                rs.getString("forma_pago"), rs.getString("estado"), rs.getObject("fecha_anuncio", LocalDate.class),
+                rs.getString("primer_nombre"), rs.getString("primer_apellido"), rs.getString("trusted_name"));
     }
 }

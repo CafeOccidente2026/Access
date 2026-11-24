@@ -69,7 +69,7 @@ function detailRow(r: BalancedRow): TableCell[] {
     num(r.netKg ?? 0, 'right', formatKilos),
     num(r.healthyPercentage ?? 0, 'center'),
     num(r.inventoryValue ?? 0, 'right', formatMoney),
-    txt(r.specialType),
+    txt(r.label ?? r.specialType),
     num(r.weightedPercentage),
     '',
     txt(r.remissionNumber),

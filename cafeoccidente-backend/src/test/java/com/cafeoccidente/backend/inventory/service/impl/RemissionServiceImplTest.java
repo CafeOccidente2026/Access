@@ -3,35 +3,53 @@ package com.cafeoccidente.backend.inventory.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
+import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
 import com.cafeoccidente.backend.controlrecord.entity.ControlRecord;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.inventory.dto.RemissionLineRequest;
 import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
 import com.cafeoccidente.backend.inventory.dto.RemissionResponse;
 import com.cafeoccidente.backend.inventory.entity.InventoryMovement;
+import com.cafeoccidente.backend.inventory.entity.Remission;
+import com.cafeoccidente.backend.inventory.entity.RemissionLine;
 import com.cafeoccidente.backend.inventory.repository.CodeTotals;
 import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionConsecutiveRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionLineRepository;
 import com.cafeoccidente.backend.inventory.repository.RemissionRepository;
+import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
+import com.cafeoccidente.backend.purchases.remittance.repository.RemittanceRepository;
+import com.cafeoccidente.backend.purchases.remittance.repository.RemittanceRepository.LockedPurchase;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
+import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.GrowerRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-/** Form_EXITS.bas, Cantidad_AfterUpdate: "La salida no puede ser superior al saldo". */
+/**
+ * Registrar Salidas (Form_EXITS.bas) con las respuestas del area del 23-nov: cada factura sale completa, la remision
+ * genera su remesa con el mismo numero PREFIJO-CONSECUTIVO y registra el empaque; Anular Remision la deshace.
+ */
+@SuppressWarnings("unchecked")
 class RemissionServiceImplTest {
 
     private final RemissionRepository remissionRepository = mock(RemissionRepository.class);
@@ -42,16 +60,22 @@ class RemissionServiceImplTest {
     private final SecurityUtils securityUtils = mock(SecurityUtils.class);
     private final ControlRecordService controlRecordService = mock(ControlRecordService.class);
     private final RemissionConsecutiveRepository consecutives = mock(RemissionConsecutiveRepository.class);
+    private final RemittanceRepository remittances = mock(RemittanceRepository.class);
+    private final ChangeHistoryService history = mock(ChangeHistoryService.class);
 
     /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final RemissionServiceImpl service = new RemissionServiceImpl(
-            remissionRepository, remissionLineRepository, inventoryMovementRepository,
-            agencyRepository, growerRepository, securityUtils, currentAgencyProvider, controlRecordService, consecutives);
+            remissionRepository, remissionLineRepository, inventoryMovementRepository, agencyRepository,
+            growerRepository, securityUtils, currentAgencyProvider, controlRecordService, consecutives, remittances, history);
 
-    /** Linea con Sacos y Kilos Brutos de relleno (no intervienen en saldo ni valor). */
-    private static RemissionLineRequest line(long movementId, String quantity) {
-        return new RemissionLineRequest(movementId, new BigDecimal(quantity), 1, new BigDecimal(quantity));
+    private static RemissionRequest request(LocalDate date, String conductor, Long... movementIds) {
+        return new RemissionRequest(date, "ALMACAFE", conductor,
+                Arrays.stream(movementIds).map(RemissionLineRequest::new).toList(), 12, "usado");
+    }
+
+    private static RemissionRequest request(Long... movementIds) {
+        return request(LocalDate.now(), null, movementIds);
     }
 
     private Agency agency() {
@@ -70,196 +94,160 @@ class RemissionServiceImplTest {
         return productCode;
     }
 
-    private InventoryMovement movement(BigDecimal netKg, BigDecimal remainingKg, BigDecimal inventoryValue) {
+    private InventoryMovement movement(long id, String remainingKg) {
         InventoryMovement movement = new InventoryMovement();
-        movement.setId(10L);
+        movement.setId(id);
         movement.setProductCode(productCode(1L, "RP"));
+        movement.setAgency(agency());
         movement.setPurchaseModule(InventoryMovement.PurchaseModule.DRY_COFFEE);
-        movement.setPurchaseId(100L);
+        movement.setPurchaseId(100L + id);
         movement.setInvoiceNumber(27867);
-        movement.setNetKg(netKg);
-        movement.setRemainingKg(remainingKg);
-        movement.setInventoryValue(inventoryValue);
+        movement.setSpecialType("RN");
+        movement.setNetKg(new BigDecimal("5000"));
+        movement.setRemainingKg(new BigDecimal(remainingKg));
+        movement.setSacos(9);
+        movement.setGrossKg(new BigDecimal("365"));
+        when(inventoryMovementRepository.findById(id)).thenReturn(Optional.of(movement));
         return movement;
     }
 
     private void mockCommonSaves() {
         when(agencyRepository.findById(1L)).thenReturn(Optional.of(agency()));
-        when(remissionRepository.findMaxRemissionNumber(1L)).thenReturn(null);
         ControlRecord controlRecord = new ControlRecord();
         controlRecord.setPrefix("SDBU");
+        controlRecord.setTrustedId("98765");
         when(controlRecordService.getActive(1L)).thenReturn(controlRecord);
+        when(consecutives.take(1L)).thenReturn(969);
+        when(remittances.insert(any(), any(), eq(969), any(), any(), eq(12), any(), any(), any())).thenReturn(55L);
+        // Las compras de las facturas: de la agencia, RP, validas y sin remesa.
+        when(remittances.lock(any(), anyList())).thenAnswer(inv -> ((List<Long>) inv.getArgument(1)).stream()
+                .map(id -> new LockedPurchase(id, 1L, "RP", "RN", "VALIDA", BigDecimal.TEN, null, 27867)).toList());
         // Sld3 por defecto: 1200 kg a 1255/kg y factor 90 en el año, sin salidas previas.
         mockCodeTotals(new CodeTotals(new BigDecimal("1200"), new BigDecimal("1506000"), new BigDecimal("108000")),
                 new CodeTotals(null, null, null));
     }
 
     private void mockCodeTotals(CodeTotals entries, CodeTotals exits) {
-        when(inventoryMovementRepository.sumEntries(any(), any(), any(), any())).thenReturn(entries);
-        when(remissionLineRepository.sumExits(any(), any(), any(), any())).thenReturn(exits);
+        when(inventoryMovementRepository.sumEntries(any(), any(), any())).thenReturn(entries);
+        when(remissionLineRepository.sumExits(any(), any(), any())).thenReturn(exits);
         when(remissionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test
-    void quantityAboveRemainingKgIsRejected() {
+    void theWholeBalanceOfTheInvoiceGoesOutValuedAtTheCodeAverage() {
         mockCommonSaves();
-        InventoryMovement movement = movement(new BigDecimal("1200.00"), new BigDecimal("100.00"), new BigDecimal("1506000.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
+        InventoryMovement movement = movement(10L, "500.00");
 
-        RemissionRequest request = new RemissionRequest(
-                LocalDate.now(), "Bodega central", null,
-                java.util.List.of(line(10L, "150.00")));
-
-        assertThatThrownBy(() -> service.create(request)).isInstanceOf(BusinessRuleException.class);
-
-        // Como fallo la validacion de saldo, el movimiento nunca se debe haber tocado.
-        verify(inventoryMovementRepository, org.mockito.Mockito.never()).save(any());
-    }
-
-    @Test
-    void quantityWithinRemainingKgIsValuedAtTheCodeAverage() {
-        mockCommonSaves();
-        InventoryMovement movement = movement(new BigDecimal("1200.00"), new BigDecimal("1200.00"), new BigDecimal("1506000.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
-
-        RemissionRequest request = new RemissionRequest(
-                LocalDate.now(), "Bodega central", null,
-                java.util.List.of(line(10L, "500.00")));
-
-        RemissionResponse response = service.create(request);
+        RemissionResponse response = service.create(request(10L));
 
         // VRUNIT (Sld3) = 1506000 / 1200 = 1255.00 ; Vr_Salida = 1255 * 500 = 627500
         assertThat(response.lines()).hasSize(1);
+        assertThat(response.lines().get(0).quantity()).isEqualByComparingTo("500");
         assertThat(response.lines().get(0).unitValue()).isEqualByComparingTo("1255.00");
         assertThat(response.lines().get(0).outputValue()).isEqualByComparingTo("627500.00");
-    }
-
-    @Test
-    void dispatchingDecrementsTheMovementRemainingKg() {
-        mockCommonSaves();
-        InventoryMovement movement = movement(new BigDecimal("1200.00"), new BigDecimal("1200.00"), new BigDecimal("1506000.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
-
-        RemissionRequest request = new RemissionRequest(
-                LocalDate.now(), "Bodega central", null,
-                java.util.List.of(line(10L, "500.00")));
-
-        service.create(request);
-
-        assertThat(movement.getRemainingKg()).isEqualByComparingTo("700.00");
+        assertThat(movement.getRemainingKg()).isEqualByComparingTo("0");
         verify(inventoryMovementRepository).save(movement);
     }
 
     @Test
-    void exactlyTheFullRemainingBalanceIsAllowed() {
+    void takesSacosAndGrossKgFromTheInvoice() {
         mockCommonSaves();
-        InventoryMovement movement = movement(new BigDecimal("1200.00"), new BigDecimal("300.00"), new BigDecimal("1506000.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
+        movement(10L, "400.00");
 
-        RemissionRequest request = new RemissionRequest(
-                LocalDate.now(), "Bodega central", null,
-                java.util.List.of(line(10L, "300.00")));
-
-        service.create(request);
-
-        assertThat(movement.getRemainingKg()).isEqualByComparingTo("0.00");
-    }
-
-    @Test
-    void linesFromDifferentFundsAreRejected() {
-        mockCommonSaves();
-        InventoryMovement rp = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
-        InventoryMovement lf = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
-        lf.setId(11L);
-        lf.setProductCode(productCode(2L, "LF"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
-        when(inventoryMovementRepository.findById(11L)).thenReturn(Optional.of(lf));
-
-        RemissionRequest request = new RemissionRequest(
-                LocalDate.now(), "Bodega central", null,
-                java.util.List.of(
-                        line(10L, "10.00"),
-                        line(11L, "10.00")));
-
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("mismo fondo");
-        verify(remissionRepository, org.mockito.Mockito.never()).save(any());
-        verify(inventoryMovementRepository, org.mockito.Mockito.never()).save(any());
-    }
-
-    @Test
-    void takesTheNumberFromTheConsecutiveOfItsAgencyAndFund() {
-        mockCommonSaves();
-        InventoryMovement rp = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
-        // 7a: el consecutivo de agencia y fondo (compartido con las remesas) ya va en 947.
-        when(consecutives.take(1L, 1L)).thenReturn(948);
-
-        RemissionResponse response = service.create(new RemissionRequest(
-                LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
-
-        assertThat(response.displayNumber()).isEqualTo("SDBU-RP-0948");
-        verify(consecutives).take(1L, 1L);
-        verify(consecutives, org.mockito.Mockito.never()).take(1L, 2L);
-    }
-
-    @Test
-    void anLfExitUsesTheLfConsecutive() {
-        mockCommonSaves();
-        InventoryMovement lf = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
-        lf.setProductCode(productCode(2L, "LF"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(lf));
-        when(consecutives.take(1L, 2L)).thenReturn(1);
-
-        RemissionResponse response = service.create(new RemissionRequest(
-                LocalDate.now(), "ALMACAFE", null, java.util.List.of(line(10L, "10.00"))));
-
-        assertThat(response.displayNumber()).isEqualTo("SDBU-LF-0001");
-    }
-
-    @Test
-    void conductorWithoutLastNameOrAgencyShowsOnlyTheFirstName() {
-        mockCommonSaves();
-        InventoryMovement rp = movement(new BigDecimal("100.00"), new BigDecimal("100.00"), new BigDecimal("125500.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
-        com.cafeoccidente.backend.purchases.shared.entity.Grower conductor =
-                new com.cafeoccidente.backend.purchases.shared.entity.Grower();
-        conductor.setIdNumber("990723205");
-        conductor.setFirstName("FUNDACION PRUEBA");
-        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(conductor));
-
-        RemissionResponse response = service.create(new RemissionRequest(
-                LocalDate.now(), "ALMACAFE", "990723205", java.util.List.of(line(10L, "10.00"))));
-
-        assertThat(response.conductorName()).isEqualTo("FUNDACION PRUEBA");
-    }
-
-    @Test
-    void displayNumberPadsToFourDigitsAndGrowsBeyond() {
-        assertThat(RemissionServiceImpl.displayNumber("SDTA", "LF", 7)).isEqualTo("SDTA-LF-0007");
-        assertThat(RemissionServiceImpl.displayNumber("SDTA", "RP", 9999)).isEqualTo("SDTA-RP-9999");
-        assertThat(RemissionServiceImpl.displayNumber("SDTA", "RP", 10000)).isEqualTo("SDTA-RP-10000");
-    }
-
-    @Test
-    void keepsSacosAndGrossKgOfEachLine() {
-        mockCommonSaves();
-        InventoryMovement rp = movement(new BigDecimal("400.00"), new BigDecimal("400.00"), new BigDecimal("502000.00"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(rp));
-
-        RemissionResponse response = service.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
-                java.util.List.of(new RemissionLineRequest(10L, new BigDecimal("360"), 9, new BigDecimal("365")))));
+        RemissionResponse response = service.create(request(10L));
 
         assertThat(response.lines().get(0).sacos()).isEqualTo(9);
         assertThat(response.lines().get(0).grossKg()).isEqualByComparingTo("365");
     }
 
+    @Test
+    void anInvoiceThatAlreadyWentOutIsRejected() {
+        mockCommonSaves();
+        movement(10L, "0.00");
+
+        assertThatThrownBy(() -> service.create(request(10L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ya salió en otra remisión");
+        verify(inventoryMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void anInvoiceAlreadyInARemittanceIsRejected() {
+        mockCommonSaves();
+        movement(10L, "500.00");
+        when(remittances.lock(any(), anyList())).thenReturn(
+                List.of(new LockedPurchase(110L, 1L, "RP", "RN", "VALIDA", BigDecimal.TEN, 7L, 27867)));
+
+        assertThatThrownBy(() -> service.create(request(10L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ya no está pendiente de remesar");
+        verify(remissionRepository, never()).save(any());
+    }
+
+    @Test
+    void thePackagingTypeMustBeNewOrUsed() {
+        mockCommonSaves();
+        movement(10L, "500.00");
+        RemissionRequest broken = new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(10L)), 12, "ROTO");
+
+        assertThatThrownBy(() -> service.create(broken))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("NUEVO o USADO");
+    }
+
+    @Test
+    void linesFromDifferentFundsAreRejected() {
+        mockCommonSaves();
+        movement(10L, "100.00");
+        movement(11L, "100.00").setProductCode(productCode(2L, "LF"));
+        RemissionRequest mixed = request(10L, 11L);
+
+        assertThatThrownBy(() -> service.create(mixed))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("mismo fondo");
+        verify(remissionRepository, never()).save(any());
+        verify(inventoryMovementRepository, never()).save(any());
+    }
+
+    @Test
+    void theRemissionAndItsRemittanceShareThePrefixAndTheAgencyConsecutive() {
+        mockCommonSaves();
+        movement(10L, "100.00");
+
+        RemissionResponse response = service.create(request(10L));
+
+        assertThat(response.displayNumber()).isEqualTo("SDBU-969");
+        assertThat(response.status()).isEqualTo("VIGENTE");
+        assertThat(response.remittanceId()).isEqualTo(55L);
+        verify(remittances).insert(eq(1L), eq(1L), eq(969), eq("SDBU-969"), eq("RN"), eq(12), eq("USADO"), any(), any());
+        verify(remittances).assign(AnnulmentModule.DRY, List.of(110L), 55L);
+        verify(remittances).addPackagingExit(1L, "SDBU-969", "USADO", "98765", 12);
+    }
+
+    @Test
+    void conductorWithoutLastNameOrAgencyShowsOnlyTheFirstName() {
+        mockCommonSaves();
+        movement(10L, "100.00");
+        Grower conductor = new Grower();
+        conductor.setIdNumber("990723205");
+        conductor.setFirstName("FUNDACION PRUEBA");
+        when(growerRepository.findByIdNumber("990723205")).thenReturn(Optional.of(conductor));
+
+        RemissionResponse response = service.create(request(LocalDate.now(), "990723205", 10L));
+
+        assertThat(response.conductorName()).isEqualTo("FUNDACION PRUEBA");
+    }
+
+    @Test
+    void displayNumberIsPrefixAndConsecutive() {
+        assertThat(RemissionServiceImpl.displayNumber("SDTA", 125)).isEqualTo("SDTA-125");
+        assertThat(RemissionServiceImpl.displayNumber("SDTA", 10000)).isEqualTo("SDTA-10000");
+    }
+
     private RemissionResponse dispatch(String quantity) {
-        InventoryMovement movement = movement(new BigDecimal("5000"), new BigDecimal("5000"), new BigDecimal("1"));
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(movement));
-        return service.create(new RemissionRequest(LocalDate.of(2026, 4, 11), "ALMACAFE", null,
-                java.util.List.of(line(10L, quantity))));
+        movement(10L, quantity);
+        return service.create(request(LocalDate.of(2026, 4, 11), null, 10L));
     }
 
     @Test
@@ -296,31 +284,53 @@ class RemissionServiceImplTest {
         // -> saldo 800 kg, SALVAL 8.500.000, VRUNIT 10625, frpond 90.
         mockCodeTotals(new CodeTotals(new BigDecimal("1000"), new BigDecimal("10000000"), new BigDecimal("90000")),
                 new CodeTotals(new BigDecimal("200"), new BigDecimal("1500000"), new BigDecimal("18000")));
-        InventoryMovement a = movement(new BigDecimal("600"), new BigDecimal("600"), new BigDecimal("1"));
-        InventoryMovement b = movement(new BigDecimal("600"), new BigDecimal("600"), new BigDecimal("1"));
-        b.setId(11L);
-        b.setProductCode(a.getProductCode());
-        when(inventoryMovementRepository.findById(10L)).thenReturn(Optional.of(a));
-        when(inventoryMovementRepository.findById(11L)).thenReturn(Optional.of(b));
+        InventoryMovement a = movement(10L, "300");
+        movement(11L, "500").setProductCode(a.getProductCode());
 
-        RemissionResponse ok = service.create(new RemissionRequest(LocalDate.of(2026, 5, 7), "ALMACAFE", null,
-                java.util.List.of(line(10L, "300"), line(11L, "500"))));
+        RemissionResponse ok = service.create(request(LocalDate.of(2026, 5, 7), null, 10L, 11L));
         assertThat(ok.lines().get(0).outputValue()).isEqualByComparingTo("3187500");
         assertThat(ok.lines().get(1).outputValue()).isEqualByComparingTo("5312500");
         assertThat(ok.lines().get(1).exitPercentage()).isEqualByComparingTo("90");
 
         // Con el mismo saldo de 800 kg, 300 + 501 ya no alcanza: la segunda linea ve el saldo que dejo la primera.
-        a.setRemainingKg(new BigDecimal("600"));
-        b.setRemainingKg(new BigDecimal("600"));
-        assertThatThrownBy(() -> service.create(new RemissionRequest(LocalDate.of(2026, 5, 7), "ALMACAFE", null,
-                java.util.List.of(line(10L, "300"), line(11L, "501")))))
+        movement(10L, "300").setProductCode(a.getProductCode());
+        movement(11L, "501").setProductCode(a.getProductCode());
+        RemissionRequest tooMuch = request(LocalDate.of(2026, 5, 7), null, 10L, 11L);
+        assertThatThrownBy(() -> service.create(tooMuch))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("saldo");
     }
 
     @Test
-    void cannotDispatchMoreThanTheCodeBalanceOfTheYear() {
-        // El movimiento aun tiene saldo propio, pero el Cod_Prod solo tiene 100 kg en el año (Sld3 saldokg).
+    void theBalanceIsTheWholeHistoryOfTheCodeUpToTheRemissionDate() {
+        // Sin corte por año (decision del 24-nov): el 1 de enero el saldo no arranca en cero.
+        mockCommonSaves();
+        InventoryMovement movement = movement(10L, "100");
+        movement.getProductCode().setId(7L);
+
+        service.create(request(LocalDate.of(2027, 1, 2), null, 10L));
+
+        verify(inventoryMovementRepository).sumEntries(1L, 7L, LocalDate.of(2027, 1, 2));
+        verify(remissionLineRepository).sumExits(1L, 7L, LocalDate.of(2027, 1, 2));
+    }
+
+    @Test
+    void theExitUsesTheExactAverageAndRoundsOnlyTheResultToThePeso() {
+        // Ejemplo del 24-nov (datos inventados con las cifras del area): 5.424,50 kg y $97.898.409
+        // -> promedio exacto 18.047,4530... -> 7 kg = 126.332,17 -> 126.332.
+        mockCommonSaves();
+        mockCodeTotals(new CodeTotals(new BigDecimal("5424.50"), new BigDecimal("97898409"), new BigDecimal("488205")),
+                new CodeTotals(null, null, null));
+
+        var line = dispatch("7").lines().get(0);
+
+        assertThat(line.outputValue()).isEqualByComparingTo("126332");
+        assertThat(line.unitValue()).isEqualByComparingTo("18047.45");
+    }
+
+    @Test
+    void cannotDispatchMoreThanTheCodeBalance() {
+        // El movimiento aun tiene saldo propio, pero el Cod_Prod solo tiene 100 kg de saldo (Sld3 saldokg).
         mockCommonSaves();
         mockCodeTotals(new CodeTotals(new BigDecimal("100"), new BigDecimal("125500"), new BigDecimal("9000")),
                 new CodeTotals(null, null, null));
@@ -328,5 +338,84 @@ class RemissionServiceImplTest {
         assertThatThrownBy(() -> dispatch("120"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("vuelva a intentarlo");
+    }
+
+    @Test
+    void aRemissionOfAnotherAgencyIsNotFoundById() {
+        // Hallazgo 2 (24-nov): la remision 7 es de la agencia 2 y la sesion trabaja en la 1.
+        Remission other = new Remission();
+        other.setId(7L);
+        Agency agency2 = new Agency();
+        agency2.setId(2L);
+        other.setAgency(agency2);
+        when(remissionRepository.findById(7L)).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> service.findById(7L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void aMovementOfAnotherAgencyCannotGoOutInARemission() {
+        mockCommonSaves();
+        InventoryMovement other = movement(10L, "100");
+        Agency agency2 = new Agency();
+        agency2.setId(2L);
+        other.setAgency(agency2);
+
+        assertThatThrownBy(() -> service.create(request(10L))).isInstanceOf(ResourceNotFoundException.class);
+        verify(remittances, never()).lock(any(), anyList());
+        verify(inventoryMovementRepository, never()).save(any());
+    }
+
+    private Remission saved(String status) {
+        Remission remission = new Remission();
+        remission.setId(5L);
+        remission.setAgency(agency());
+        remission.setDisplayNumber("SDBU-969");
+        remission.setStatus(status);
+        when(remissionRepository.findForUpdate(5L)).thenReturn(Optional.of(remission));
+        return remission;
+    }
+
+    @Test
+    void annullingGivesTheBalanceBackUnmarksTheRemittanceAndIsRecorded() {
+        Remission remission = saved(Remission.VIGENTE);
+        InventoryMovement movement = movement(10L, "0");
+        RemissionLine line = new RemissionLine();
+        line.setRemission(remission);
+        line.setInventoryMovement(movement);
+        line.setQuantity(new BigDecimal("500"));
+        when(remissionLineRepository.findByRemissionId(5L)).thenReturn(List.of(line));
+        when(remittances.idByRemission(5L)).thenReturn(Optional.of(55L));
+        when(securityUtils.getCurrentUserId()).thenReturn(3L);
+
+        RemissionResponse response = service.annul(5L);
+
+        assertThat(response.status()).isEqualTo("ANULADA");
+        assertThat(remission.getAnnulledByUserId()).isEqualTo(3L);
+        assertThat(remission.getAnnulledAt()).isNotNull();
+        assertThat(movement.getRemainingKg()).isEqualByComparingTo("500");
+        verify(remittances).unmark(1L, 55L, "SDBU-969", 3L);
+        verify(history).record(ChangeHistoryService.Entity.REMISION, 5L, ChangeHistoryService.Action.ANULAR, 1L,
+                Map.of("number", "SDBU-969", "status", "VIGENTE"), Map.of("number", "SDBU-969", "status", "ANULADA"));
+    }
+
+    @Test
+    void anAnnulledRemissionCannotBeAnnulledAgain() {
+        saved(Remission.ANULADA);
+
+        assertThatThrownBy(() -> service.annul(5L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ya está anulada");
+        verify(remittances, never()).unmark(any(), any(), any(), any());
+    }
+
+    @Test
+    void aRemissionOfAnotherAgencyIsNotFound() {
+        Remission remission = saved(Remission.VIGENTE);
+        Agency other = new Agency();
+        other.setId(2L);
+        remission.setAgency(other);
+
+        assertThatThrownBy(() -> service.annul(5L)).isInstanceOf(ResourceNotFoundException.class);
     }
 }

@@ -1,9 +1,11 @@
 package com.cafeoccidente.backend.inventory.entity;
 
+import com.cafeoccidente.backend.common.persistence.UpperCaseConverter;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.Grower;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -41,6 +43,7 @@ public class Remission {
     @Column(name = "fecha_remision", nullable = false)
     private LocalDate remissionDate;
 
+    @Convert(converter = UpperCaseConverter.class)
     @Column(name = "destino")
     private String destination;
 
@@ -67,7 +70,21 @@ public class Remission {
     @Column(name = "consecutivo")
     private Integer sequenceNumber;
 
-    /** Numero impreso: {prefijo}-{LF|RP}-{0000}; en las viejas, su remission_number tal cual. */
+    /** Numero impreso: {prefijo}-{consecutivo} desde V31 (el mismo de su remesa); antes {prefijo}-{LF|RP}-{0000}
+     *  y, en las de Access, su remission_number tal cual. */
     @Column(name = "numero_remision", nullable = false)
     private String displayNumber;
+
+    /** VIGENTE o ANULADA (V31): la anulada no se borra. */
+    @Column(name = "estado", nullable = false)
+    private String status = VIGENTE;
+
+    @Column(name = "anulada_por_usuario_id")
+    private Long annulledByUserId;
+
+    @Column(name = "anulada_en")
+    private Instant annulledAt;
+
+    public static final String VIGENTE = "VIGENTE";
+    public static final String ANULADA = "ANULADA";
 }

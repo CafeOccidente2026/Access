@@ -3,7 +3,7 @@
     <div class="flex flex-col gap-3 p-3 text-sm">
       <app-invoice-search [browser]="browser" [texts]="c">
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
-        <p message *ngIf="message() as m" data-testid="message" class="pb-1.5 font-semibold" [class.text-red-600]="noticeError() || !detailValue()" [class.text-teal-700]="!noticeError() && !!detailValue()">{{ m }}</p>
+        <p message *ngIf="listMessage() as m" data-testid="message" class="pb-1.5 font-semibold" [class.text-red-600]="!detailValue()" [class.text-teal-700]="!!detailValue()">{{ m }}</p>
       </app-invoice-search>
 
       <app-purchase-form-view *ngIf="view() as v" [content]="v" [readOnly]="true"></app-purchase-form-view>
@@ -23,15 +23,28 @@
         <fieldset class="flex flex-wrap gap-3" [disabled]="blocked()">
           <label *ngFor="let f of fields()" class="flex flex-col gap-1">
             <span class="font-medium text-blue-900">{{ f.label }}:</span>
-            <input
-              type="text"
-              [attr.inputmode]="f.text ? null : 'decimal'"
-              [attr.data-field-key]="f.key"
-              [class]="'rounded border border-slate-300 px-2 py-1 ' + (f.text ? 'w-56' : 'w-28 text-right')"
-              [value]="values()[f.key] ?? ''"
-              (input)="setValue(f.key, $any($event.target).value)"
-              (change)="recalculate()"
-            />
+            @if (f.money) {
+              <input
+                type="text"
+                inputmode="numeric"
+                [attr.data-field-key]="f.key"
+                class="w-28 rounded border border-slate-300 px-2 py-1 text-right"
+                [appLiveThousands]="values()[f.key]"
+                [allowNegative]="!!f.negative"
+                (liveThousands)="setValue(f.key, $event)"
+                (change)="recalculate()"
+              />
+            } @else {
+              <input
+                type="text"
+                [attr.inputmode]="f.text ? null : 'decimal'"
+                [attr.data-field-key]="f.key"
+                [class]="'rounded border border-slate-300 px-2 py-1 ' + (f.text ? 'w-56' : 'w-28 text-right')"
+                [value]="values()[f.key] ?? ''"
+                (input)="setValue(f.key, $any($event.target).value)"
+                (change)="recalculate()"
+              />
+            }
           </label>
         </fieldset>
 
@@ -55,14 +68,25 @@
         <fieldset class="flex flex-wrap items-end gap-3" [disabled]="blocked()">
           <label *ngFor="let f of c.paymentFields" class="flex flex-col gap-1">
             <span class="font-medium text-blue-900">{{ f.label }}:</span>
-            <input
-              type="text"
-              [attr.inputmode]="f.text ? 'numeric' : 'decimal'"
-              [attr.data-field-key]="f.key"
-              [class]="'rounded border border-slate-300 px-2 py-1 ' + (f.text ? 'w-20' : 'w-32 text-right')"
-              [value]="payment()[f.key] ?? ''"
-              (input)="setPayment(f.key, $any($event.target).value)"
-            />
+            @if (f.money) {
+              <input
+                type="text"
+                inputmode="numeric"
+                [attr.data-field-key]="f.key"
+                class="w-32 rounded border border-slate-300 px-2 py-1 text-right"
+                [appLiveThousands]="payment()[f.key]"
+                (liveThousands)="setPayment(f.key, $event)"
+              />
+            } @else {
+              <input
+                type="text"
+                [attr.inputmode]="f.text ? 'numeric' : 'decimal'"
+                [attr.data-field-key]="f.key"
+                [class]="'rounded border border-slate-300 px-2 py-1 ' + (f.text ? 'w-20' : 'w-32 text-right')"
+                [value]="payment()[f.key] ?? ''"
+                (input)="setPayment(f.key, $any($event.target).value)"
+              />
+            }
           </label>
           <span class="pb-1.5">{{ c.paymentTotalLabel }}: <b>{{ paymentTotalText() }}</b></span>
         </fieldset>
@@ -83,4 +107,5 @@
       </form>
     </div>
   </app-access-window>
+  <app-confirm-dialog *ngIf="savedNotice() as m" [message]="m" (confirmed)="savedNotice.set(null)"></app-confirm-dialog>
 </div>

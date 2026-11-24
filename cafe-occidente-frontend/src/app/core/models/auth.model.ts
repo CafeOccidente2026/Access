@@ -2,7 +2,7 @@
 export type UserRole = 'ADMINISTRADOR' | 'USUARIO' | 'OPERACIONES';
 
 /** Pantallas que el Administrador puede conceder a un Usuario u Operaciones (RF-02). */
-export type Screen = 'ANULAR_DOCUMENTO' | 'ACCESO_TABLAS' | 'ACTUALIZAR_ANUNCIOS' | 'REGISTRO_CONTROL' | 'HISTORIAL' | 'CORREGIR_COMPRA';
+export type Screen = 'ANULAR_DOCUMENTO' | 'ACCESO_TABLAS' | 'ACTUALIZAR_ANUNCIOS' | 'REGISTRO_CONTROL' | 'HISTORIAL' | 'CORREGIR_COMPRA' | 'ANULAR_REMISION';
 
 export interface AuthSession {
   readonly username: string;

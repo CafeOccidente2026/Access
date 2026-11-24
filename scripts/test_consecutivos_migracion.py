@@ -2,7 +2,7 @@
 Check de una base ya migrada con migrar_punto.py (sin framework; necesita la base):
 python scripts/test_consecutivos_migracion.py --base <base> --carpeta <CSV del punto> [--comparar <otra base>]
 
-1. Consecutivos: el siguiente numero de factura, de remision (RP y LF) y de anuncio de la agencia es el ultimo de
+1. Consecutivos: el siguiente numero de factura, de remision (uno por agencia, V31) y de anuncio de la agencia es el ultimo de
    Access + 1 (o mas, si la web ya habia usado numeros mayores).
 2. Con --comparar (la misma carga hecha con y sin --desde): los saldos de la agencia dan igual en las dos bases:
    compras validas sin remesar (cantidad y kilos), compras a futuro con saldo, numeros de anuncio y Registro de
@@ -29,10 +29,10 @@ def check_consecutives(base, agency, folder):
 
     remission = max_remission(compras)
     if remission:
-        for fund in ("RP", "LF"):
-            last = int(psql(base, "SELECT r.ultimo_consecutivo FROM consecutivos_remision r JOIN fondos f"
-                                  f" ON f.id = r.fondo_id WHERE r.agencia_id = {agency} AND f.codigo = '{fund}'"))
-            assert last >= remission, (fund, last, remission)
+        # V31: un solo contador por agencia para remision y remesa.
+        last = int(psql(base, "SELECT ultimo_consecutivo FROM consecutivos_remision_agencia"
+                              f" WHERE agencia_id = {agency}"))
+        assert last >= remission, (last, remission)
 
     announcement = max(parse_int(r["anuncio"]) for r in read(folder, "anuncios_migrar.csv"))
     last = int(psql(base, f"SELECT max(numero_anuncio) FROM anuncios_agencias WHERE agencia_id = {agency}"))

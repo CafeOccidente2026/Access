@@ -30,6 +30,7 @@
       [readonly]="field.readonly"
       [ngModel]="inputValue"
       (ngModelChange)="onInput($event, textInput)"
+      (keydown)="onKeydown($event, textInput)"
       (focus)="onFocus()"
       (blur)="onBlur()"
       (keydown.enter)="commit()"

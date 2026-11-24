@@ -4,6 +4,8 @@
   "toLabel": "Hasta Fecha",
   "acceptLabel": "Aceptar",
   "cancelLabel": "Cancelar",
+  "exportExcelLabel": "Excel",
+  "exportFileName": "compras por fecha",
   "pdfTitle": "COMPRAS POR FECHA",
   "messages": {
     "fromAfterTo": "La fecha Desde no puede ser posterior a la fecha Hasta",

@@ -43,6 +43,15 @@ public class PurchaseReportController {
         return service.futureAnnouncement(announcement, from, to);
     }
 
+    /** Generar Reporte Anuncio (prueba del 19-nov): Anuncio y/o Desde y Hasta, todos opcionales. */
+    @GetMapping("/announcement")
+    public List<PurchaseReportRow> announcement(
+            @RequestParam(required = false) Integer announcement,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return service.announcement(announcement, from, to);
+    }
+
     @GetMapping("/future-balance")
     public List<FutureBalanceRow> futureBalance(@RequestParam int announcement) {
         return service.futureBalance(announcement);

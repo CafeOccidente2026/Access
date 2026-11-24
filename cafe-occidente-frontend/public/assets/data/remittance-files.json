@@ -1,0 +1,9 @@
+{
+  "filesLabel": "Archivos de la remesa",
+  "fileLabels": { "ParaOperaciones": "Para Operaciones", "ParaOpen": "Para Open", "GeneraPlano": "Genera Plano", "ParaAlmacafe": "Para Almacafé" },
+  "downloadAllLabel": "Descargar las 4",
+  "messages": {
+    "filesError": "No se pudieron generar los archivos de la remesa.",
+    "downloadAllHint": "Si Chrome pregunta si este sitio puede descargar varios archivos, elija «Permitir» (se hace una sola vez en cada computador). Mientras no responda ese aviso, Chrome no baja ningún otro archivo. Si después no llegaron los 4, use los botones de cada archivo."
+  }
+}

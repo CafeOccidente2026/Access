@@ -1,0 +1,20 @@
+{
+  "windowTitle": "REIMPRIMIR REMISIÓN",
+  "agencyLabel": "Pto Compra",
+  "numberLabel": "N° de Remisión",
+  "acceptLabel": "Aceptar",
+  "pdfTitle": "REMISIÓN",
+  "annulledLabel": "ANULADA",
+  "annulLabel": "Anular Remisión",
+  "annulConfirm": "¿Anular la remisión {number}? Sus facturas vuelven a quedar disponibles, salen de la remesa y se reversa la salida de empaques. No se puede deshacer.",
+  "yesLabel": "Sí",
+  "noLabel": "No",
+  "messages": {
+    "missingNumber": "Escriba el número de remisión",
+    "notFound": "No existe una remisión con ese número",
+    "pdfError": "No se pudo generar la remisión",
+    "searchError": "No se pudo buscar la remisión",
+    "annulled": "Se anuló la remisión {number}.",
+    "annulError": "No se pudo anular la remisión."
+  }
+}

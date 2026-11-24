@@ -51,7 +51,7 @@
     ]
   },
   "messages": {
-    "saved": "Tercero {id} guardado. Puede ingresar el siguiente.",
+    "saved": "Tercero {id} guardado.",
     "required": "Falta: {label}",
     "email": "El Email no es válido",
     "duplicate": "Ya existe un tercero con esa cédula o NIT",

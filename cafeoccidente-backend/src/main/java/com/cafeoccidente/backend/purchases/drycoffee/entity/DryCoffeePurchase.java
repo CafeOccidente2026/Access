@@ -1,10 +1,13 @@
 package com.cafeoccidente.backend.purchases.drycoffee.entity;
 
+import com.cafeoccidente.backend.common.persistence.SellerFields;
+import com.cafeoccidente.backend.common.persistence.SellerFieldsUpperCase;
 import com.cafeoccidente.backend.purchases.shared.entity.Agency;
 import com.cafeoccidente.backend.purchases.shared.entity.Fund;
 import com.cafeoccidente.backend.purchases.shared.entity.ProductCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -28,7 +31,8 @@ import lombok.Setter;
 @Table(name = "compras_cafe_seco")
 @Getter
 @Setter
-public class DryCoffeePurchase {
+@EntityListeners(SellerFieldsUpperCase.class)
+public class DryCoffeePurchase implements SellerFields {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -179,4 +183,8 @@ public class DryCoffeePurchase {
     /** Compra anunciada que factura (RF-21.5, V17): la anulacion le devuelve los kilos por aqui. */
     @Column(name = "compra_anunciada_id")
     private Long futurePurchaseId;
+
+    /** Hecha por Facturar Anuncios con Cupos (V29): solo estas bajan el saldo del cupo del anuncio. */
+    @Column(name = "con_cupo", nullable = false)
+    private boolean quotaPurchase;
 }

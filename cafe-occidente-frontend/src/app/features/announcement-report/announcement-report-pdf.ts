@@ -2,14 +2,13 @@ import type { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interface
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import { cooperativeNit } from '../../shared/utils/nit';
-import { announcementDisplay, formatDate, formatKilos, formatMoney, formatThousands } from '../../shared/utils/number-format';
+import { announcementDisplay, formatDate, formatDisplayNumber, formatMoney, formatThousands } from '../../shared/utils/number-format';
 
 /**
  * Reportes "RESUMEN ANUNCIO" y "ANUNCIO" (detallado) de Access (macro "Imprimir Anuncio",
- * reports/RESUMEN ANUNCIO.txt y reports/ANUNCIO.txt) en un solo PDF: primero el resumen y luego el
- * detalle (RN-24.4). Access pedia un numero de anuncio; RF-24 pide todas las compras del dia (seco,
- * verde y pasilla), asi que sale un bloque por anuncio y tipo de cafe (RN-24.3), y el detalle trae la
- * columna Anun (RN-24.2). Lo que no aplica a un modulo (KV fuera del verde) queda vacio.
+ * reports/RESUMEN ANUNCIO.txt y reports/ANUNCIO.txt). Prueba del 19-nov (fotos del 3590 NESPRESSO en
+ * docs/referencia-reportes): Generar Reporte Anuncio da cada uno como documento aparte, un anuncio por hoja, sin la
+ * columna Anun. El Informe Anuncios a Futuro sigue con los dos en un PDF (buildAnnouncementReportDoc).
  */
 
 type Row = PurchaseReportRow;
@@ -49,8 +48,13 @@ interface ProductGroup {
 
 interface AnnouncementBlock {
   readonly announcementNumber: string;
+  /** El numero sin prefijo, como el encabezado de Access ("3590"). */
+  readonly number: string;
   readonly specialType: string;
   readonly agencyName: string;
+  /** Fecha del anuncio (o de la compra si no la trae). */
+  readonly date: string;
+  readonly trustedName: string | null;
   readonly groups: ProductGroup[];
   readonly rows: Row[];
 }
@@ -63,9 +67,9 @@ const THIN = {
 
 /** Peso entero con punto de miles (Format=Standard, DecimalPlaces=0 en Access). */
 const peso = formatMoney;
-/** 2 decimales con coma (KN, KV y Factor, Format=Standard); vacio si no aplica. */
-const dec2 = (v: number | null): string =>
-  formatKilos(v);
+/** 2 decimales fijos con coma, cortando hacia cero (KN, KV y Factor, Format=Standard: "200,00", "89,29"); vacio si no
+ *  aplica. */
+const dec2 = (v: number | null): string => (v == null ? '' : formatDisplayNumber(v, 'currency'));
 /** "2026-05-09" -> "09/05/2026": dd/mm/aaaa en todos los reportes (hallazgo #1 del 16-nov). */
 export function shortDate(iso: string): string {
   return formatDate(iso);
@@ -74,10 +78,13 @@ const sum = (rows: Row[], f: (p: Row) => number): number => rows.reduce((acc, p)
 const fill = (template: string, values: Record<string, string | number>): string =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ''));
 
-/** KV del grupo: la suma si alguna fila es de verde; vacio si ninguna lo es. */
-function greenKg(rows: Row[]): number | null {
-  return rows.some((p) => p.greenKg != null) ? sum(rows, (p) => p.greenKg ?? 0) : null;
+/** KV del grupo: la suma de Kilos Verdes; 0 fuera del verde, como Access (foto del 3590). */
+function greenKg(rows: Row[]): number {
+  return sum(rows, (p) => p.greenKg ?? 0);
 }
+
+/** KV de una compra: con decimales en el verde, 0 en los demas cafes (Access mostraba 0). */
+const kv = (v: number | null): string => (v == null ? '0' : dec2(v));
 
 /**
  * Porcent Ponderado = Sum(KN*Factor)/Sum(KN) de las filas con Factor. Sin Factor: null (vacio).
@@ -109,10 +116,14 @@ export function groupByAnnouncement(rows: Row[]): AnnouncementBlock[] {
     for (const p of blockRows) {
       groups.set(p.productCode, [...(groups.get(p.productCode) ?? []), p]);
     }
+    const first = blockRows[0];
     return {
-      announcementNumber: announcementDisplay(blockRows[0].announcementNumber),
-      specialType: blockRows[0].specialType,
-      agencyName: blockRows[0].agencyName,
+      announcementNumber: announcementDisplay(first.announcementNumber),
+      number: first.announcementNumber.slice(first.announcementNumber.lastIndexOf('-') + 1),
+      specialType: first.specialType,
+      agencyName: first.agencyName,
+      date: first.announcementDate ?? first.purchaseDate,
+      trustedName: first.trustedName ?? null,
       rows: blockRows,
       groups: [...groups.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -122,6 +133,13 @@ export function groupByAnnouncement(rows: Row[]): AnnouncementBlock[] {
 }
 
 function reportHeader(title: string, block: AnnouncementBlock, date: string, pageBreak: boolean, text: AnnouncementReportText): Content {
+  return pageHeader(title, `${block.announcementNumber} ${block.specialType}`, block.agencyName,
+    [{ text: `${text.dateLabel}  `, bold: true }, date], pageBreak, text);
+}
+
+/** Encabezado de Access: linea, cooperativa, NIT, titulo, rotulo grande (anuncio o rango), agencia y fecha. */
+function pageHeader(title: string, heading: string, agencyName: string, date: string | Content[], pageBreak: boolean,
+  text: AnnouncementReportText): Content {
   return {
     pageBreak: pageBreak ? 'before' : undefined,
     margin: [0, 0, 0, 4],
@@ -133,21 +151,23 @@ function reportHeader(title: string, block: AnnouncementBlock, date: string, pag
       {
         columns: [
           { text: title, bold: true, fontSize: 16, width: 170 },
-          { text: `${block.announcementNumber} ${block.specialType}`, bold: true, fontSize: 14, width: '*' },
-          { text: [{ text: `${text.agencyLabel}  `, bold: true }, block.agencyName], fontSize: 8, width: 180, margin: [0, 5, 0, 0] },
-          { text: [{ text: `${text.dateLabel}  `, bold: true }, date], fontSize: 8, width: 110, margin: [0, 5, 0, 0] },
+          { text: heading, bold: true, fontSize: 14, width: '*' },
+          { text: [{ text: `${text.agencyLabel}  `, bold: true }, agencyName], fontSize: 8, width: 180, margin: [0, 5, 0, 0] },
+          { text: date, bold: typeof date === 'string', fontSize: 8, width: 110, margin: [0, 5, 0, 0] },
         ],
       },
     ],
   };
 }
 
-export function signatures(text: ReportFooterText): Content {
+/** Firmas de Access: "Fiel:" con su linea (y, debajo, el Fiel del Registro de Control) y las tres firmas. */
+export function signatures(text: ReportFooterText, trustedName?: string | null): Content {
   return {
     unbreakable: true,
     margin: [0, 18, 0, 0],
     stack: [
       { text: text.trusted, bold: true, fontSize: 9 },
+      ...(trustedName ? [{ text: trustedName, fontSize: 8, margin: [30, 1, 0, 0] as [number, number, number, number] }] : []),
       { margin: [0, 30, 0, 0], columns: text.signatures.map((s) => ({ text: s, bold: true, fontSize: 9 })) },
     ],
   };
@@ -156,53 +176,77 @@ export function signatures(text: ReportFooterText): Content {
 const r = (value: string, extra: object = {}): TableCell => ({ text: value, alignment: 'right', ...extra });
 const b = { bold: true };
 
-/** RESUMEN ANUNCIO de un bloque: una fila por Cod_Prod y "SUMA TOTAL". */
-function summaryTable(block: AnnouncementBlock, text: AnnouncementReportText): Content {
-  const head: TableCell[] = text.summaryColumns.map((t) => ({ text: t, bold: true, fontSize: 6, alignment: 'right' }));
-  const sums = (rows: Row[]): TableCell[] => [
-    r(dec2(greenKg(rows))), r(peso(sum(rows, (p) => p.netKg))), r(dec2(weightedFactor(rows))),
+/** Fila de totales del RESUMEN: en Access el "SUMA TOTAL" no trae Porcent Ponderado (no hay control en esa posicion). */
+function summaryTotalRow(label: string, rows: Row[]): TableCell[] {
+  const total = summarySums(rows);
+  total[2] = '';
+  return [{ text: label, bold: true, fontSize: 6 }, ...total];
+}
+
+function summarySums(rows: Row[]): TableCell[] {
+  return [
+    r(peso(greenKg(rows))), r(peso(sum(rows, (p) => p.netKg))), r(dec2(weightedFactor(rows))),
     r(peso(sum(rows, (p) => p.grossValue))), r(peso(sum(rows, (p) => p.associateContribution))),
     r(peso(sum(rows, (p) => p.cooperativeDiscount))), r(peso(sum(rows, (p) => p.freightDiscount))),
     r(peso(sum(rows, (p) => p.withholding))), r(peso(sum(rows, (p) => p.netToPay))),
   ];
+}
+
+const SUMMARY_WIDTHS = [110, 40, 55, 60, 75, 65, 65, 55, 65, 75];
+
+function table(widths: number[], body: TableCell[][], headerRows = 1): Content {
+  return { table: { headerRows, widths, body }, layout: { ...THIN, hLineWidth: (row: number) => (row <= 1 ? 0.5 : 0) } };
+}
+
+/** RESUMEN ANUNCIO de un bloque: una fila por Cod_Prod y "SUMA TOTAL" (o el subtotal del anuncio, por rango). */
+function summaryTable(block: AnnouncementBlock, text: AnnouncementReportText, totalLabel = text.summaryTotal): Content {
+  const head: TableCell[] = text.summaryColumns.map((t) => ({ text: t, bold: true, fontSize: 6, alignment: 'right' }));
   const body: TableCell[][] = [head];
   for (const group of block.groups) {
     body.push([{ text: groupTitle(group), bold: true, fontSize: 9, colSpan: 10, margin: [0, 3, 0, 0] }, ...Array(9).fill('')]);
-    body.push(['', ...sums(group.rows)]);
+    body.push(['', ...summarySums(group.rows)]);
   }
-  // En Access el "SUMA TOTAL" no trae Porcent Ponderado (no hay control en esa posicion).
-  const total = sums(block.rows);
-  total[2] = '';
-  body.push([{ text: text.summaryTotal, bold: true, fontSize: 6 }, ...total]);
-  return {
-    table: { headerRows: 1, widths: [110, 40, 55, 60, 75, 65, 65, 55, 65, 75], body },
-    layout: { ...THIN, hLineWidth: (row: number) => (row <= 1 ? 0.5 : 0) },
-  };
+  body.push(summaryTotalRow(totalLabel, block.rows));
+  return table(SUMMARY_WIDTHS, body);
 }
 
-/** ANUNCIO de un bloque: una fila por compra, subtotales por Cod_Prod y "Suma total". */
-function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Content {
-  // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt, con la
-  // columna Anun (RN-24.2) al frente. FP se ensancha (a costa de Nombre y Apellidos) porque guarda la
-  // forma de pago completa y "ANULADA" en negrilla tiene que caber en una linea.
+interface DetailLayout {
+  readonly widths: number[];
+  readonly columns: number;
+  readonly firstNumber: number;
+  readonly withAnnouncement: boolean;
+}
+
+function detailLayout(text: AnnouncementReportText): DetailLayout {
+  // Anchos relativos tomados de los Width (twips) de los controles de reports/ANUNCIO.txt (con la columna Anun al
+  // frente si se pide). FP se ensancha porque "ANULADA" en negrilla tiene que caber en una linea; Access la cortaba
+  // ("VA" en la foto del 3590).
   const withAnnouncement = text.announcementColumn !== false;
   const twips = [600, 651, 1299, 1032, 561, 1371, 1350, 737, 885, 750, 840, 1020, 855, 900, 855, 900, 960, 1185, 1100]
     .slice(withAnnouncement ? 0 : 1);
   const total = twips.reduce((a, t) => a + t, 0);
   const widths = twips.map((t) => (t * 752) / total - 2);
-  const columns = twips.length;
-  const firstNumber = withAnnouncement ? 7 : 6;
-  const head: TableCell[] = text.detailColumns.map((t, i) => ({
-    text: t, bold: true, fontSize: 6, alignment: i >= firstNumber && i < columns - 1 ? 'right' : 'left',
-  }));
-  const sums = (rows: Row[]): TableCell[] => [
-    r(dec2(greenKg(rows)), b), r(peso(sum(rows, (p) => p.netKg)), b), '', '', r(peso(sum(rows, (p) => p.grossValue)), b),
+  return { widths, columns: twips.length, firstNumber: withAnnouncement ? 7 : 6, withAnnouncement };
+}
+
+/** Fila de totales del ANUNCIO: el rotulo ocupa las columnas de texto y luego las sumas en negrilla. */
+function detailTotalRow(label: string, rows: Row[], layout: DetailLayout): TableCell[] {
+  const sums: TableCell[] = [
+    r(peso(greenKg(rows)), b), r(peso(sum(rows, (p) => p.netKg)), b), '', '', r(peso(sum(rows, (p) => p.grossValue)), b),
     r(peso(sum(rows, (p) => p.associateContribution)), b), r(peso(sum(rows, (p) => p.cooperativeDiscount)), b),
     r(peso(sum(rows, (p) => p.freightDiscount)), b), r(peso(sum(rows, (p) => p.withholding)), b),
     r(peso(sum(rows, (p) => p.otherDiscounts)), b), r(peso(sum(rows, (p) => p.netToPay)), b), '',
   ];
-  const span = firstNumber;
-  const label = (value: string): TableCell[] => [{ text: value, bold: true, colSpan: span }, ...Array(span - 1).fill('')];
+  return [{ text: label, bold: true, colSpan: layout.firstNumber }, ...Array(layout.firstNumber - 1).fill(''), ...sums];
+}
+
+/** ANUNCIO de un bloque: una fila por compra, subtotales por Cod_Prod y "Suma total" (o el subtotal del anuncio). */
+function detailTable(block: AnnouncementBlock, text: AnnouncementReportText, totalLabel = text.detailTotal): Content {
+  const layout = detailLayout(text);
+  const { columns, firstNumber, withAnnouncement } = layout;
+  const head: TableCell[] = text.detailColumns.map((t, i) => ({
+    text: t, bold: true, fontSize: 6, alignment: i >= firstNumber && i < columns - 1 ? 'right' : 'left',
+  }));
 
   const body: TableCell[][] = [head];
   for (const group of block.groups) {
@@ -211,10 +255,13 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
       const cells: TableCell[] = [
         r(String(p.invoiceNumber)),
         r(/^\d+$/.test(p.idNumber) ? formatThousands(p.idNumber) : p.idNumber), r(shortDate(p.purchaseDate)),
-        p.fundCode, p.firstName, p.lastName ?? '', r(dec2(p.greenKg)), r(dec2(p.netKg)), r(dec2(p.factor)),
+        // Access: 1er Nombre y 1er Apellido de Asociados; si la cedula ya no esta, lo guardado en la compra.
+        p.fundCode, p.growerFirstName ?? p.firstName, p.growerFirstLastName ?? p.lastName ?? '', r(kv(p.greenKg)),
+        r(dec2(p.netKg)), r(dec2(p.factor)),
         r(peso(p.unitPrice)), r(peso(p.grossValue)), r(peso(p.associateContribution)), r(peso(p.cooperativeDiscount)),
         r(peso(p.freightDiscount)), r(peso(p.withholding)), r(peso(p.otherDiscounts)), r(peso(p.netToPay)),
-        p.status === 'ANULADA' ? { text: p.paymentMethod, bold: true } : p.paymentMethod,
+        // FP de Access es COMPRAS.Forma_de_Pago, donde se guardaba el estado (VALIDA o ANULADA).
+        p.status === 'ANULADA' ? { text: p.status, bold: true } : p.status,
       ];
       body.push(withAnnouncement ? [announcementDisplay(p.announcementNumber), ...cells] : cells);
     }
@@ -226,13 +273,10 @@ function detailTable(block: AnnouncementBlock, text: AnnouncementReportText): Co
       },
       ...Array(columns - 1).fill(''),
     ]);
-    body.push([...label(text.sum), ...sums(group.rows)]);
+    body.push(detailTotalRow(text.sum, group.rows, layout));
   }
-  body.push([...label(text.detailTotal), ...sums(block.rows)]);
-  return {
-    table: { headerRows: 1, widths, body },
-    layout: { ...THIN, hLineWidth: (row: number) => (row <= 1 ? 0.5 : 0) },
-  };
+  body.push(detailTotalRow(totalLabel, block.rows, layout));
+  return table(layout.widths, body);
 }
 
 export function footer(text: ReportFooterText): TDocumentDefinitions['footer'] {
@@ -272,4 +316,34 @@ export function buildAnnouncementReportDoc(rows: Row[], date: string, text: Anno
     footer: footer(text),
     defaultStyle: { font: 'Roboto', fontSize: FONT_SIZE },
   };
+}
+
+/** Hoja de Access: encabezado ANUNCIO con numero y especial, la tabla y las firmas con el Fiel. */
+function announcementSheets(rows: Row[], text: AnnouncementReportText,
+  table: (block: AnnouncementBlock) => Content): TDocumentDefinitions {
+  const blocks = groupByAnnouncement(rows).sort((a, c) =>
+    a.date.localeCompare(c.date) || Number(a.number) - Number(c.number) || a.specialType.localeCompare(c.specialType));
+  return {
+    pageSize: 'LETTER',
+    pageOrientation: 'landscape',
+    pageMargins: [20, 20, 20, 30],
+    content: blocks.flatMap((block, i): Content[] => [
+      pageHeader(text.detailTitle, `${block.number} ${block.specialType}`, block.agencyName.toUpperCase(),
+        [{ text: `${text.dateLabel}  `, bold: true }, shortDate(block.date)], i > 0, text),
+      table(block),
+      signatures(text, block.trustedName),
+    ]),
+    footer: footer(text),
+    defaultStyle: { font: 'Roboto', fontSize: FONT_SIZE },
+  };
+}
+
+/** RESUMEN ANUNCIO de Access: una hoja por anuncio, una fila por Cod_Prod y SUMA TOTAL. */
+export function buildAnnouncementSummaryDoc(rows: Row[], text: AnnouncementReportText): TDocumentDefinitions {
+  return announcementSheets(rows, text, (block) => summaryTable(block, text));
+}
+
+/** ANUNCIO (detallado) de Access: una hoja por anuncio, una fila por compra, Suma por Cod_Prod y Suma total. */
+export function buildAnnouncementDetailDoc(rows: Row[], text: AnnouncementReportText): TDocumentDefinitions {
+  return announcementSheets(rows, text, (block) => detailTable(block, text));
 }

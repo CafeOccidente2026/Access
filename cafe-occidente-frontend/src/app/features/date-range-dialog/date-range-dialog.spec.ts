@@ -9,6 +9,7 @@ import { routes } from '../../app.routes';
 import { API_BASE_URL } from '../../core/config/api.config';
 import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
+import { TableExporter } from '../../shared/utils/export-table';
 import content from '../../../../public/assets/data/date-range-dialog.json';
 import menu from '../../../../public/assets/data/purchases-menu.json';
 import { DateRangeDialogComponent } from './date-range-dialog';
@@ -25,6 +26,7 @@ const ROW = {
 describe('DateRangeDialogComponent (HU-27)', () => {
   let http: HttpTestingController;
   const goTo = vi.fn();
+  const exporter = { xlsx: vi.fn(() => Promise.resolve()), docx: vi.fn() };
 
   beforeEach(() => {
     goTo.mockReset();
@@ -35,6 +37,7 @@ describe('DateRangeDialogComponent (HU-27)', () => {
         provideHttpClientTesting(),
         { provide: ContentService, useValue: { loadJson: () => of(content) } },
         { provide: NavigationService, useValue: { goTo } },
+        { provide: TableExporter, useValue: exporter },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -114,5 +117,26 @@ describe('DateRangeDialogComponent (HU-27)', () => {
     expect(menu.options.find((o) => o.label === 'Consulta compras por fecha')?.route).toBe('/compras/dialogo-fechas');
     const shell = routes.find((r) => r.children?.some((c) => c.path === 'compras/dialogo-fechas'));
     expect(shell?.children?.find((c) => c.path === 'compras/dialogo-fechas')?.data?.['roles']).toEqual(['ADMINISTRADOR', 'USUARIO']);
+  });
+
+  it('demo del 23-nov: Exportar a Excel appears with the report and downloads the same table as the PDF', async () => {
+    const { fixture, component, el } = render();
+    expect(el.querySelector('[data-testid="export-excel"]')).toBeNull();
+    component.fromDate.set('2026-10-01');
+    component.toDate.set('2026-10-29');
+    component.onAccept();
+    TestBed.tick();
+    http.expectOne(`${URL}?from=2026-10-01&to=2026-10-29`).flush([ROW]);
+    await settle();
+    fixture.detectChanges();
+
+    // Demo del 23-nov: "Excel" a secas, para que el boton no se parta en dos lineas en el dialogo angosto.
+    expect(el.querySelector('[data-testid="export-excel"]')?.textContent?.trim()).toBe('Excel');
+    (el.querySelector('[data-testid="export-excel"] button') as HTMLButtonElement).click();
+
+    expect(exporter.xlsx).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'COMPRAS POR FECHA', subtitle: 'Desde 01/10/2026 hasta 29/10/2026', columns: content.pdf.columns }),
+      'compras por fecha',
+    );
   });
 });

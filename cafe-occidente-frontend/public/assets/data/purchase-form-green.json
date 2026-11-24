@@ -51,17 +51,22 @@
     { "key": "netKg", "label": "Kilos_Netos", "type": "count", "display": "kilos" }
   ],
   "priceFields": [
-    { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency", "display": "money" },
-    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true, "negativeOnly": true, "display": "money" }
+    { "key": "compKgPrice", "label": "Vr. Kilo Comp", "type": "currency", "display": "money", "liveThousands": true },
+    { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true, "negativeOnly": true, "display": "money", "liveThousands": true }
   ],
-  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true, "display": "money" },
+  "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "rawDisplay": true, "display": "money", "liveThousands": true },
   "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
-    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "inputWidthClass": "max-w-[110px]", "display": "money" },
-    { "key": "withholding", "label": "Retefuente", "type": "currency", "inputWidthClass": "max-w-[100px]", "display": "money" },
-    { "key": "otherDiscounts", "label": "Otros Dscts", "type": "currency", "rawDisplay": true, "inputWidthClass": "max-w-[100px]", "display": "money" }
+    { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "display": "money" },
+    { "key": "grossValue", "label": "Vr. Bruto", "type": "currency", "integer": true, "display": "money" },
+    { "key": "netToPay", "label": "Neto a Pagar", "type": "currency", "integer": true, "highlighted": true, "display": "money" }
   ],
+  "additionalDiscountFields": [
+    { "key": "contribution", "label": "Aporte Socio", "type": "currency", "integer": true, "display": "money" },
+    { "key": "withholding", "label": "Retefuente", "type": "currency", "display": "money" }
+  ],
+  "netToPayField": { "key": "otherDiscounts", "label": "Otros Desctos", "type": "currency", "rawDisplay": true, "display": "money", "liveThousands": true },
   "compactFields": true,
   "messages": {
     "acceptLabel": "Aceptar",
@@ -78,6 +83,7 @@
     "priceChangedWarning": "El precio de este tipo de café se actualizó. Si sale, la próxima compra tomará el precio nuevo. ¿Está seguro?",
     "closeConfirm": "Cerrar sin guardar",
     "closeCancel": "Seguir en el formulario",
-    "cellphoneMissing": "Este vendedor no tiene celular registrado. Digítelo para continuar."
+    "cellphoneMissing": "Este vendedor no tiene celular registrado. Digítelo para continuar.",
+    "cooperativeDiscountLabel": "Descuento Coop"
   }
 }

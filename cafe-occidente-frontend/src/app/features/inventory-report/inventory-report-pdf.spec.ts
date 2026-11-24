@@ -42,6 +42,14 @@ describe('inventory report', () => {
     expect(JSON.stringify(paged.content)).toContain('"600.000"');
   });
 
+  it('cierre de año: the opening row shows its label in Especial and the title keeps the specialty', () => {
+    const opening: InventoryReportRow = { ...entry(100, 90, 1800000), date: '2025-12-31', invoiceNumber: null,
+      label: 'Saldo inicial — viene de 2025' };
+    const doc = JSON.stringify(buildInventoryReportDoc([opening, entry(50, 92, 950000)], true).content);
+    expect(doc).toContain('"Saldo inicial — viene de 2025"');
+    expect(doc).toContain('{"text":"RN","fontSize":20');
+  });
+
   it('really renders both variants (auto height cannot carry a page footer)', async () => {
     pdfMake.vfs = pdfFonts;
     const rows = [entry(30, 90, 600000), exit(20, 91, 410000)];

@@ -72,7 +72,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 /**
  * Matriz rol x endpoint (RF-01, RN-01.1 a RN-01.3, RN-05.3). Cada endpoint se llama con los 3 roles:
  * 2xx si el rol esta permitido, 403 si no. Los servicios son mocks y la validacion de los body esta
- * apagada: @Valid corre antes que @PreAuthorize y un 400 taparia el 403.
+ * apagada para que los roles permitidos lleguen al 2xx con "{}". Sin permiso, el 403 sale antes de leer
+ * los datos ({@link AuthorizeBeforeBinding}).
  */
 @WebMvcTest
 @Import({SecurityConfig.class, CorsConfig.class, ClockConfig.class, EndpointAuthorizationTest.NoBodyValidation.class})
@@ -102,9 +103,9 @@ class EndpointAuthorizationTest {
     private static final Map<String, String> BODIES = Map.of(
             "/api/vendors", "{\"legalPerson\": false}");
 
-    /** Las 6 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
+    /** Las 7 pantallas que se pueden conceder (Screen, ck_permisos_pantalla). */
     private static final List<String> SCREENS = List.of("ANULAR_DOCUMENTO", "ACCESO_TABLAS", "ACTUALIZAR_ANUNCIOS",
-            "REGISTRO_CONTROL", "HISTORIAL", "CORREGIR_COMPRA");
+            "REGISTRO_CONTROL", "HISTORIAL", "CORREGIR_COMPRA", "ANULAR_REMISION");
 
     private static void add(Set<String> roles, HttpMethod method, String pattern, String url) {
         MATRIX.add(new Endpoint(method, pattern, url, roles, null));
@@ -176,6 +177,7 @@ class EndpointAuthorizationTest {
         // Generar Reporte Anuncio (Q14: Administrador y Usuario, prima sobre RF-24) y Compras por fecha (RF-25).
         add(ADMIN_USER, get, "/api/purchases/reports/by-date", "/api/purchases/reports/by-date?from=2026-01-01&to=2026-01-01");
         // Informes de Compras a Futuro (RF-21.6 y RF-21.7): Administrador y Usuario.
+        add(ADMIN_USER, get, "/api/purchases/reports/announcement", "/api/purchases/reports/announcement?announcement=1");
         add(ADMIN_USER, get, "/api/purchases/reports/future-announcement",
                 "/api/purchases/reports/future-announcement?announcement=1&from=2026-01-01&to=2026-01-01");
         add(ADMIN_USER, get, "/api/purchases/reports/future-balance", "/api/purchases/reports/future-balance?announcement=1");
@@ -220,9 +222,6 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, put, "/api/announcement-quotas/{announcementNumber}", "/api/announcement-quotas/1");
 
         // Genera Remesa (RF-11, RF-12): Administrador y Usuario; desmarcar una remesa, solo el Administrador.
-        add(ADMIN_USER, get, "/api/remittances/pending", "/api/remittances/pending?fundCode=RP");
-        add(ADMIN_USER, get, "/api/remittances/specials", "/api/remittances/specials?fundCode=RP");
-        add(ADMIN_USER, post, "/api/remittances");
         add(ADMIN_USER, get, "/api/remittances", "/api/remittances?number=X");
         add(ADMIN_USER, get, "/api/remittances/{id}/files", "/api/remittances/1/files");
         add(ADMIN, post, "/api/remittances/{id}/unmark", "/api/remittances/1/unmark");
@@ -231,6 +230,7 @@ class EndpointAuthorizationTest {
         add(ADMIN_USER, post, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions");
         add(ADMIN_USER, get, "/api/remissions/{id}", "/api/remissions/1");
+        add(ADMIN, "ANULAR_REMISION", post, "/api/remissions/{id}/annul", "/api/remissions/1/annul");
         add(ADMIN_USER, get, "/api/inventory-movements");
         add(ADMIN_USER, get, "/api/inventory-movements/{id}", "/api/inventory-movements/1");
         add(ADMIN_USER, get, "/api/inventory-report");
@@ -365,6 +365,33 @@ class EndpointAuthorizationTest {
         } else {
             assertThat(status).as("%s con %s", endpoint, profile).isEqualTo(403);
         }
+    }
+
+    /**
+     * Hallazgo 3 (ZAP, 24-nov): sin permiso responde 403 aunque la peticion venga incompleta (sin parametros y con un
+     * cuerpo que no se puede leer). El permiso se revisa antes de leer y validar los datos, asi un 400 no le cuenta
+     * a quien no tiene permiso como es la peticion.
+     */
+    @ParameterizedTest(name = "{1} {0}")
+    @MethodSource("matrix")
+    void withoutPermissionAnIncompleteRequestIsStill403(Endpoint endpoint, String profile) throws Exception {
+        String[] parts = profile.split("\\+");
+        String role = parts[0];
+        List<String> screens = parts.length > 1 ? List.of(parts[1].split(",")) : List.of();
+        if (endpoint.roles().contains(role) || endpoint.screen() != null && screens.contains(endpoint.screen())) {
+            return;
+        }
+        List<String> authorities = new ArrayList<>(List.of("ROLE_" + role));
+        screens.forEach(screen -> authorities.add("SCREEN_" + screen));
+
+        int status = mockMvc.perform(request(endpoint.method(), endpoint.url().replaceAll("\\?.*$", ""))
+                        .with(user("prueba").authorities(authorities.stream()
+                                .map(SimpleGrantedAuthority::new).toList()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).as("%s con %s", endpoint, profile).isEqualTo(403);
     }
 
     /** Un endpoint nuevo sin fila en la matriz hace fallar este test: nadie queda sin revisar. */

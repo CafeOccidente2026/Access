@@ -57,7 +57,7 @@ describe('PermissionsComponent (HU-03)', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="catalog"]')?.textContent).toContain('Anular Documento');
     expect(component.catalog()).toEqual(
-      ['ANULAR_DOCUMENTO', 'ACCESO_TABLAS', 'ACTUALIZAR_ANUNCIOS', 'REGISTRO_CONTROL', 'HISTORIAL', 'CORREGIR_COMPRA'],
+      ['ANULAR_DOCUMENTO', 'ACCESO_TABLAS', 'ACTUALIZAR_ANUNCIOS', 'REGISTRO_CONTROL', 'HISTORIAL', 'CORREGIR_COMPRA', 'ANULAR_REMISION'],
     );
   });
 

@@ -12,7 +12,19 @@ import { Grower } from '../../../core/models/grower.model';
 import { PurchaseFormContent } from '../../../core/models/purchase-form-content.model';
 import pdfMake from 'pdfmake/build/pdfmake';
 import { GREEN } from '../../purchase-query/purchase-query.testing';
+import greenContent from '../../../../../public/assets/data/purchase-form-green.json';
 
+
+describe('purchase-form-green.json', () => {
+  it('the settlement shows Vr. Bruto, Aporte Socio and Neto a Pagar in whole pesos, read only', () => {
+    const fields = [...greenContent.settlementFields, ...greenContent.additionalDiscountFields];
+    expect(fields.map((f) => f.key)).toEqual(expect.arrayContaining(['grossValue', 'contribution', 'netToPay']));
+    for (const key of ['grossValue', 'contribution', 'netToPay']) {
+      expect(fields.find((f) => f.key === key)).toMatchObject({ display: 'money', integer: true });
+    }
+    expect(greenContent.messages.cooperativeDiscountLabel).toBe('Descuento Coop');
+  });
+});
 
 describe('GreenCoffeeFormComponent - guardado', () => {
   const content: PurchaseFormContent & { messages: Record<string, string> } = {
@@ -146,6 +158,31 @@ describe('GreenCoffeeFormComponent - guardado', () => {
     expect(TestBed.inject(GrowerService).findProgram).toHaveBeenCalledWith('990514', 'CV');
     for (const [key, value] of Object.entries({ idNumber: '990514', fullName: 'CAFICULTOR DOS NESS', program: 'NESPRESSO' })) {
       expect(federation(key)).toMatchObject({ value, readonly: true });
+    }
+  });
+
+  it('shows Vr. Bruto, Descuento Coop (type C) and Neto a Pagar as soon as the server calculates', () => {
+    const editable = content as { settlementFields?: PurchaseFormContent['settlementFields'] };
+    editable.settlementFields = [
+      { key: 'kgPrice', label: 'Vr. Kilo', type: 'currency' },
+      { key: 'grossValue', label: 'Vr. Bruto', type: 'currency' },
+      { key: 'contribution', label: 'Aporte Socio', type: 'currency' },
+      { key: 'withholding', label: 'Retefuente', type: 'currency' },
+      { key: 'netToPay', label: 'Neto a Pagar', type: 'currency' },
+    ];
+    try {
+      setup();
+      (TestBed.inject(GreenCoffeePurchaseService).preview as ReturnType<typeof vi.fn>).mockReturnValue(of({
+        greenKg: 497, netKg: 497, unitPrice: 8000, grossValue: 3976000, associateContribution: 0, cooperativeDiscount: 79520,
+        withholding: 0, netToPay: 3896480,
+      }));
+      fillEverything();
+      const shown = (key: string) => component.viewContent()!.settlementFields!.find((f) => f.key === key)!;
+      expect(shown('grossValue')).toMatchObject({ value: 3976000, readonly: true });
+      expect(shown('contribution')).toMatchObject({ value: 79520, readonly: true, label: 'Descuento Coop' });
+      expect(shown('netToPay')).toMatchObject({ value: 3896480, readonly: true });
+    } finally {
+      editable.settlementFields = undefined;
     }
   });
 

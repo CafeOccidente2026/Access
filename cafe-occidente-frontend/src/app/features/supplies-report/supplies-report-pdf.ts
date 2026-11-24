@@ -2,6 +2,7 @@ import type { Content, ContentStack, TableCell, TDocumentDefinitions } from 'pdf
 import type { SheetData } from 'write-excel-file/browser';
 
 import { SuppliesReportRow } from '../../core/models/supplies.model';
+import { ExportCell, ExportRow, ExportTable } from '../../shared/utils/export-table';
 import { cooperativeNit } from '../../shared/utils/nit';
 import { formatDisplayNumber, formatMoney, formatThousands } from '../../shared/utils/number-format';
 import { themeColor } from '../../shared/utils/theme-color';
@@ -230,4 +231,29 @@ export function paymentMethodsSheet(columns: readonly string[], rows: readonly S
       r.inflow, r.outflow, r.paymentMethod, r.checkNumber,
     ].map((cell) => (cell == null || cell === '' ? null : typeof cell === 'object' ? cell : { value: cell }))),
   ];
+}
+
+const money = (value: number): ExportCell => ({ value, format: 'money' });
+
+function checksTotal(label: string, rows: readonly SuppliesReportRow[]): ExportRow {
+  return { kind: 'total', cells: [label, null, null, null, null, money(sum(rows, (r) => r.inflow)), money(sum(rows, (r) => r.outflow))] };
+}
+
+/**
+ * Demo del 23-nov: Relacion Cheques (y la Especial) para Exportar a Excel y a Word: las columnas, los grupos por agencia y
+ * las sumas del PDF; Por Sum y Por Comp como numeros.
+ */
+export function checksTable(report: SuppliesReport, text: SuppliesReportText, rows: readonly SuppliesReportRow[]): ExportTable {
+  const body: ExportRow[] = [];
+  for (const [agency, group] of groupByAgency(rows)) {
+    body.push({ kind: 'group', cells: [`${text.agencyGroup}  ${agency}`] },
+      ...group.map((r): ExportRow => ({
+        cells: [shortDate(r.date), formatThousands(r.idNumber), r.firstNames ?? '', r.lastNames ?? '', String(r.checkNumber ?? ''),
+          money(r.inflow), money(r.outflow)],
+      })),
+      { kind: 'summary', cells: [fill(text.checksGroupSummary, { agency, count: group.length })] },
+      checksTotal(text.sum, group));
+  }
+  body.push(checksTotal(text.grandTotal, rows));
+  return { title: text.checksTitle, subtitle: `${text.company}  ${text.nit} ${cooperativeNit()}`, columns: report.columns, rows: body };
 }

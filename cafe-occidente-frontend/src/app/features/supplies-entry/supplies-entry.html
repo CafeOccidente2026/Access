@@ -46,8 +46,8 @@
         <button *ngIf="saved()" type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200" (click)="reset()">{{ c.newLoanLabel }}</button>
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="back()">{{ c.backLabel }}</button>
       </div>
-      <p *ngIf="message() as m" class="text-sm" [class.text-red-600]="error()" [class.text-teal-700]="!error()">{{ m }}</p>
       <iframe *ngIf="pdfUrl() as url" [title]="s.windowTitle" class="min-h-[480px] w-full flex-1 border" [src]="url"></iframe>
     </div>
   </app-access-window>
 </div>
+<app-confirm-dialog *ngIf="message() as m" [message]="m" [focusFirstFieldOnClose]="!error() && !screen()?.closeOnSaved" (confirmed)="closeMessage()"></app-confirm-dialog>

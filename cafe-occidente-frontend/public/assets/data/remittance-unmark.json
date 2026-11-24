@@ -1,0 +1,17 @@
+{
+  "title": "Desmarcar remesa (solo remesas sin remisión)",
+  "numberLabel": "N° de Remesa",
+  "searchLabel": "Buscar",
+  "unmarkLabel": "Desmarcar remesa",
+  "confirm": "¿Desmarcar la remesa {number}? Sus compras vuelven a quedar pendientes y se reversa la salida de empaques. No se puede deshacer.",
+  "yesLabel": "Sí",
+  "noLabel": "No",
+  "statuses": { "VIGENTE": "Vigente", "DESMARCADA": "Desmarcada" },
+  "messages": {
+    "missingNumber": "Escriba el número de remesa",
+    "notFound": "No hay ninguna remesa con ese número.",
+    "fromRemission": "Esta remesa salió con una remisión: se deshace con Anular Remisión.",
+    "unmarked": "Se desmarcó la remesa {number}.",
+    "error": "No se pudo desmarcar la remesa."
+  }
+}

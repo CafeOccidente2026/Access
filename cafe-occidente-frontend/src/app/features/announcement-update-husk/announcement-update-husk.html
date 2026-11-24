@@ -16,7 +16,8 @@
             [class.border-slate-300]="!fieldErrors.basePriceLoad"
             [class.bg-white]="!fieldErrors.basePriceLoad"
             [value]="numeric.basePriceLoad"
-            (input)="onNumericInput('basePriceLoad', $any($event.target).value)"
+            (input)="onNumericInput('basePriceLoad', $any($event.target).value, $any($event.target))"
+            (keydown)="skipThousandsSeparator($event, $any($event.target))"
             (keydown.enter)="onEnter('basePriceLoad')"
           />
         </label>
@@ -36,7 +37,8 @@
             [class.border-slate-300]="!fieldErrors.pointPrice"
             [class.bg-white]="!fieldErrors.pointPrice"
             [value]="numeric.pointPrice"
-            (input)="onNumericInput('pointPrice', $any($event.target).value)"
+            (input)="onNumericInput('pointPrice', $any($event.target).value, $any($event.target))"
+            (keydown)="skipThousandsSeparator($event, $any($event.target))"
             (focus)="onFocus('pointPrice')"
             (keydown.enter)="onEnter('pointPrice')"
           />
@@ -44,12 +46,12 @@
         <p *ngIf="fieldErrors.pointPrice" class="ml-48 pl-2 text-xs text-red-600">{{ fieldErrors.pointPrice }}</p>
       </div>
 
-      <p *ngIf="error()" class="text-sm text-red-600">{{ error() }}</p>
+      <app-confirm-dialog *ngIf="error() as m" [message]="m" (confirmed)="error.set(null)"></app-confirm-dialog>
 
       <div class="flex justify-end">
         <app-button [label]="p.updateButton" variant="access" [disabled]="saving()" (pressed)="update()"></app-button>
       </div>
     </section>
   </div>
-  <app-success-overlay [message]="message()"></app-success-overlay>
+  <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="message.set(null)"></app-confirm-dialog>
 </app-access-window>

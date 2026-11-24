@@ -47,6 +47,12 @@ describe('MainMenuComponent (HU-01, HU-06)', () => {
 
   const labels = (el: HTMLElement) => Array.from(el.querySelectorAll('app-button')).map((b) => b.textContent?.trim());
 
+  it('cierre de año: the heading shows the current year, not a fixed one', () => {
+    const el = render('USUARIO');
+    expect(el.textContent).toContain(`AÑO ${new Date().getFullYear()}`);
+    expect(el.textContent).not.toContain('{year}');
+  });
+
   it('CA-1: the Administrator sees every option, including the exclusive ones, and the Agencias button', () => {
     const el = render('ADMINISTRADOR');
     expect(labels(el)).toEqual(expect.arrayContaining([...ADMIN_ONLY, 'Actualizar Anuncios', 'Compras', 'Suministros', 'Vendedores']));

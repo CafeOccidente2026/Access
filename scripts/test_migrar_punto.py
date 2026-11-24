@@ -17,6 +17,7 @@ from migrar_punto import (
     missing_control_params,
     out_of_range,
     pending_quotas,
+    quota_purchase,
     quota_announcements,
     split_future_purchases,
     transaction_collisions,
@@ -129,6 +130,17 @@ def check_quota_purchases_kept_before_the_cut():
     assert not keeps_purchase({**old, "anuncio": "9001"}, desde, {"9002"})
 
 
+def check_quota_purchase():
+    # Regla del 18-nov: el saldo del cupo solo baja con las compras de cupo. Access las guardaba en COMPRAS sin marca,
+    # asi que las validas de un anuncio cuyo cupo se carga quedan como compras de cupo (con_cupo), igual que
+    # pending_quotas; las de otros anuncios y las anuladas no.
+    kept = {"9002"}
+    assert quota_purchase({"anuncio": "9002", "forma_de_pago": "EFECTIVO"}, kept)
+    assert not quota_purchase({"anuncio": "9002", "forma_de_pago": "ANULADA"}, kept)
+    assert not quota_purchase({"anuncio": "9001", "forma_de_pago": "EFECTIVO"}, kept)
+    assert not quota_purchase({"anuncio": "", "forma_de_pago": "EFECTIVO"}, kept)
+
+
 def check_consecutives():
     # Factura: la mayor de COMPRAS, tambien las anuladas.
     assert max_invoice([purchase("43902"), purchase("43903", estado="ANULADA"), purchase("43001")]) == 43903
@@ -155,6 +167,7 @@ def main():
     check_announcement_number()
     check_pending_quotas()
     check_quota_purchases_kept_before_the_cut()
+    check_quota_purchase()
     check_consecutives()
     print("OK")
 

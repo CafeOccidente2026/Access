@@ -10,6 +10,7 @@ import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
 import { buildVendorRequest, validationError } from './vendor-entry-request';
 import { VendorEntryContent, VendorKind } from './vendor-entry.model';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /**
  * Catalogar Terceros (RF-28.1, antes "Ingresar Vendedores"): el dialogo elige Persona Juridica (NIT,
@@ -19,7 +20,7 @@ import { VendorEntryContent, VendorKind } from './vendor-entry.model';
 @Component({
   selector: 'app-vendor-entry',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, AgencyPickerComponent, FormFlowDirective],
   templateUrl: './vendor-entry.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -76,6 +77,15 @@ export class VendorEntryComponent {
         this.message.set(duplicate ? content.messages.duplicate : content.messages.error);
       },
     });
+  }
+
+  /** Demo del 23-nov: Aceptar en el mensaje de guardado cierra la pantalla y vuelve a Vendedores; un error se queda. */
+  closeMessage(): void {
+    const saved = !this.error();
+    this.message.set(null);
+    if (saved) {
+      this.back();
+    }
   }
 
   back(): void {

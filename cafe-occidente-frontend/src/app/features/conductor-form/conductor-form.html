@@ -69,8 +69,8 @@
         </div>
       </div>
 
-      <p *ngIf="message() as m" class="text-sm text-green-700">{{ m }}</p>
-      <p *ngIf="error() as e" class="text-sm text-red-600">{{ e }}</p>
+      <app-confirm-dialog *ngIf="message() as m" [message]="m" (confirmed)="closeSaved()"></app-confirm-dialog>
+      <app-confirm-dialog *ngIf="error() as m" [message]="m" (confirmed)="error.set(null)"></app-confirm-dialog>
     </div>
   </app-access-window>
 </div>

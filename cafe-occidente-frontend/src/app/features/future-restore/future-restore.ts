@@ -41,7 +41,7 @@ export function futureCells(r: FuturePurchaseRestoreRow): string[] {
 
 export function quotaCells(q: AnnouncementQuotaResponse): string[] {
   return [announcementDisplay(q.displayNumber), formatDate(q.announcementDate), q.specialType, kg(q.assignedQuota), kg(q.deliveredKg),
-    kg(q.balance)];
+    kg(q.quotaKg), kg(q.balance)];
 }
 
 /** Anunciadas de Hoy: Kl_Entregados = kilos anunciados menos el saldo. */

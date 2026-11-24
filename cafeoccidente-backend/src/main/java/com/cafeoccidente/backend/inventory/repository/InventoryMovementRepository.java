@@ -15,26 +15,29 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
 
     List<InventoryMovement> findByAgencyIdOrderByPurchaseDateDesc(Long agencyId);
 
-    /** Cedula y fondo de la compra de cada entrada de la agencia: [id, cedula, codigo del fondo]. */
+    /** Cedula, fondo y si ya esta en una remesa, de la compra de cada entrada de la agencia:
+     *  [id, cedula, codigo del fondo, remesada]. */
     @Query(value = """
-            SELECT i.id, c.cedula, f.codigo
+            SELECT i.id, c.cedula, f.codigo, c.remesa_id IS NOT NULL
             FROM inventarios i
-            JOIN (SELECT 'DRY_COFFEE' AS modulo, id, cedula, fondo_id FROM compras_cafe_seco
-                  UNION ALL SELECT 'GREEN_COFFEE', id, cedula, fondo_id FROM compras_cafe_verde
-                  UNION ALL SELECT 'HUSK', id, cedula, fondo_id FROM compras_pasilla) c
+            JOIN (SELECT 'DRY_COFFEE' AS modulo, id, cedula, fondo_id, remesa_id FROM compras_cafe_seco
+                  UNION ALL SELECT 'GREEN_COFFEE', id, cedula, fondo_id, remesa_id FROM compras_cafe_verde
+                  UNION ALL SELECT 'HUSK', id, cedula, fondo_id, remesa_id FROM compras_pasilla) c
               ON c.modulo = i.modulo_compra AND c.id = i.compra_id
             JOIN fondos f ON f.id = c.fondo_id
             WHERE i.agencia_id = :agencyId
             """, nativeQuery = true)
     List<Object[]> findSellerAndFund(@Param("agencyId") Long agencyId);
 
-    List<InventoryMovement> findByAgencyIdAndPurchaseDateBetween(Long agencyId, LocalDate from, LocalDate to);
+    /** Entradas de la agencia hasta la fecha, con toda la historia (la base no se corta por año). */
+    List<InventoryMovement> findByAgencyIdAndPurchaseDateLessThanEqual(Long agencyId, LocalDate to);
 
-    /** Entradas del Cod_Prod (Sld1/Sld2): SumaDeKilos_Netos, SumaDeVr_Inventario, SumaDeKXFC. */
+    /** Entradas del Cod_Prod (Sld1/Sld2) hasta la fecha, con toda la historia (sin corte por año):
+     *  SumaDeKilos_Netos, SumaDeVr_Inventario, SumaDeKXFC. */
     @Query("SELECT new com.cafeoccidente.backend.inventory.repository.CodeTotals("
             + "SUM(m.netKg), SUM(m.inventoryValue), SUM(m.netKg * COALESCE(m.healthyPercentage, 0))) "
             + "FROM InventoryMovement m WHERE m.agency.id = :agencyId AND m.productCode.id = :productCodeId "
-            + "AND m.purchaseDate BETWEEN :from AND :to")
+            + "AND m.purchaseDate <= :upTo")
     CodeTotals sumEntries(@Param("agencyId") Long agencyId, @Param("productCodeId") Long productCodeId,
-            @Param("from") LocalDate from, @Param("to") LocalDate to);
+            @Param("upTo") LocalDate upTo);
 }

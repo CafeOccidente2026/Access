@@ -26,6 +26,10 @@
         </label>
         <button type="button" class="rounded border border-slate-400 bg-slate-100 px-4 py-1.5 text-sm font-bold hover:bg-slate-200" data-flow-submit (click)="accept()">{{ c.acceptLabel }}</button>
         <button type="button" class="rounded border border-slate-400 bg-white px-4 py-1.5 text-sm font-bold hover:bg-slate-100" (click)="cancel()">{{ c.cancelLabel }}</button>
+        <ng-container *ngIf="r.exportFileName && reported()">
+          <button type="button" data-testid="export-excel" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700" (click)="exportChecks('xlsx')">{{ c.exportExcelLabel }}</button>
+          <button type="button" data-testid="export-word" class="rounded border border-blue-500 bg-blue-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-blue-700" (click)="exportChecks('docx')">{{ c.exportWordLabel }}</button>
+        </ng-container>
         <button *ngIf="r.excel && rows().length" type="button" class="rounded border border-teal-500 bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700" (click)="downloadExcel()">{{ c.downloadLabel }}</button>
       </div>
       <p *ngIf="message() as m" class="text-sm text-red-600">{{ m }}</p>

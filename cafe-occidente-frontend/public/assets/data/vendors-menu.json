@@ -5,7 +5,6 @@
       { "label": "Catalogar Terceros", "route": "/vendedores/ingresar", "emphasis": true },
       { "label": "Genera Inf Ventas Benef", "route": "/vendedores/beneficiario" },
       { "label": "Inf Ventas Benef por Fechas", "route": "/vendedores/beneficiario-fechas" },
-      { "label": "Actualizar Vendedores", "disabled": true, "hint": "No aplica con base de datos unificada" },
       { "label": "Consultar Asociados", "route": "/vendedores/asociados" },
       { "label": "Actualiza Cupos NESS", "route": "/vendedores/actualiza-cupos-ness", "roles": ["ADMINISTRADOR"] },
       { "label": "Consulta Cupos Ness", "route": "/vendedores/cupos-ness" },

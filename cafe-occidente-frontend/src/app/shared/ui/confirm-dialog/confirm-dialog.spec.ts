@@ -58,6 +58,119 @@ describe('ConfirmDialogComponent', () => {
   });
 });
 
+describe('ConfirmDialogComponent con el teclado (18-nov)', () => {
+  function open(inputs: Record<string, unknown>) {
+    const fixture = TestBed.createComponent(ConfirmDialogComponent);
+    document.body.appendChild(fixture.nativeElement);
+    for (const [key, value] of Object.entries(inputs)) {
+      fixture.componentRef.setInput(key, value);
+    }
+    fixture.detectChanges();
+    const events: string[] = [];
+    fixture.componentInstance.confirmed.subscribe(() => events.push('confirmed'));
+    fixture.componentInstance.cancelled.subscribe(() => events.push('cancelled'));
+    const close = () => {
+      fixture.nativeElement.remove();
+      fixture.destroy();
+    };
+    return { fixture, events, close };
+  }
+  const key = (k: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+  const focused = () => document.activeElement?.textContent?.trim();
+
+  it('Compra registrada: Enter accepts even when the focus was lost (after the print window), and Esc too', () => {
+    const { events, close } = open({ message: 'Compra registrada. Documento soporte generado.' });
+    (document.activeElement as HTMLElement).blur();
+    key('Enter');
+    key('Escape');
+    expect(events).toEqual(['confirmed', 'confirmed']);
+    close();
+  });
+
+  it('coming back from the print window puts the focus on Aceptar again', () => {
+    const { close } = open({ message: 'Compra registrada.' });
+    (document.activeElement as HTMLElement).blur();
+    window.dispatchEvent(new Event('focus'));
+    expect(focused()).toBe('Aceptar');
+    close();
+  });
+
+  it('prueba del 19-nov: printing leaves the focus in the invoice frame; the dialog takes it back so Enter closes it', async () => {
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    const { events, close } = open({ message: 'Compra registrada. Documento soporte generado.' });
+    // En Chrome el foco entra al marco de impresión sin focusin en la página: solo llega blur a la ventana.
+    (document.activeElement as HTMLElement).blur();
+    const inFrame = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(frame);
+    window.dispatchEvent(new Event('blur'));
+    inFrame.mockRestore();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(focused()).toBe('Aceptar');
+    (document.activeElement as HTMLButtonElement).click();
+    expect(events).toEqual(['confirmed']);
+    close();
+    frame.remove();
+  });
+
+  it('a blur to another window (not a frame of the page) does not move the focus', async () => {
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    const { close } = open({ message: 'Compra registrada.' });
+    const spy = vi.spyOn(HTMLElement.prototype, 'focus');
+    window.dispatchEvent(new Event('blur'));
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    close();
+    field.remove();
+  });
+
+  it('with Si/No, Esc is No and the screen behind does not get that Esc', () => {
+    const behind = vi.fn();
+    document.addEventListener('keydown', behind);
+    const { events, close } = open({ message: 'Hay datos sin guardar.', confirmLabel: 'Cerrar', cancelLabel: 'Cancelar' });
+    key('Escape');
+    expect(events).toEqual(['cancelled']);
+    expect(behind).not.toHaveBeenCalled();
+    document.removeEventListener('keydown', behind);
+    close();
+  });
+
+  it('an action that cannot be undone opens with the focus on the safe button, and Enter with the focus lost picks it', () => {
+    const { events, close } = open({ message: '¿Está seguro de querer anular este documento?', confirmLabel: 'Sí',
+      cancelLabel: 'No', safeFocus: true });
+    expect(focused()).toBe('No');
+    (document.activeElement as HTMLElement).blur();
+    key('Enter');
+    expect(events).toEqual(['cancelled']);
+    close();
+  });
+
+  it('while busy the buttons are disabled and the keys do nothing', () => {
+    const { events, close } = open({ message: '¿Anular?', confirmLabel: 'Sí', cancelLabel: 'No', busy: true });
+    key('Escape');
+    key('Enter');
+    expect(events).toEqual([]);
+    expect([...document.querySelectorAll('app-confirm-dialog button')].every((b) => (b as HTMLButtonElement).disabled)).toBe(true);
+    close();
+  });
+
+  it('focusFirstFieldOnClose: closing Compra registrada leaves the cursor in the first field (Fondo)', () => {
+    vi.useFakeTimers();
+    const screen = document.body.appendChild(document.createElement('div'));
+    screen.innerHTML = '<input readonly id="agency" /><input id="fund" /><button id="print">Imprimir</button>';
+    (screen.querySelector('#print') as HTMLElement).focus();
+    const { close } = open({ message: 'Compra registrada.', focusFirstFieldOnClose: true });
+    close();
+    vi.runAllTimers();
+    expect(document.activeElement).toBe(screen.querySelector('#fund'));
+    screen.remove();
+    vi.useRealTimers();
+  });
+});
+
 /** Como purchase-form.html: "Compra registrada" y "No se pudo generar la factura" pueden quedar abiertos a la vez. */
 @Component({
   standalone: true,

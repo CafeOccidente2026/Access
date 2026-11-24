@@ -39,6 +39,7 @@
       <div class="mt-2 flex justify-center gap-4">
         <app-button data-flow-submit [label]="d.acceptLabel" variant="access" [disabled]="!canAccept()" (pressed)="onAccept()"></app-button>
         <app-button [label]="d.cancelLabel" variant="access" (pressed)="onCancel()"></app-button>
+        <app-button *ngIf="doc()" data-testid="export-excel" [label]="d.exportExcelLabel" variant="access" (pressed)="exportExcel()"></app-button>
       </div>
     </div>
   </div>

@@ -8,11 +8,13 @@ import { AnnouncementType, Fund } from '../../core/models/dry-coffee-purchase.mo
 import { AnnouncementService } from '../../core/services/announcement.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { ContentService } from '../../core/services/content.service';
-import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS, SuccessOverlayComponent } from '../../shared/ui';
+import { AccessWindowComponent, AppButtonComponent, SUCCESS_MESSAGE_DURATION_MS } from '../../shared/ui';
 import { formatThousands, validateWholeNumberField } from '../../shared/utils/number-format';
+import { formatTypedMoney, skipThousandsSeparator } from '../../shared/utils/live-thousands';
 import { changedByKeyboard } from '../../shared/utils/select-keys';
 import { AnnouncementUpdateContent, TypeRow } from './announcement-update.model';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 type Field = 'fundId' | 'basePriceLoad';
 type RowField = 'basePriceLoad' | 'specialSurcharge' | 'defectiveUnitPrice';
@@ -41,7 +43,7 @@ const CLOSE_ROUTE = '/menu-principal';
 @Component({
   selector: 'app-announcement-update',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent, SuccessOverlayComponent],
+  imports: [ConfirmDialogComponent, CommonModule, FormsModule, AccessWindowComponent, AppButtonComponent],
   templateUrl: './announcement-update.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -79,9 +81,12 @@ export class AnnouncementUpdateComponent {
     }
   }
 
-  onPriceInput(value: string): void {
+  /** Backspace o Supr junto a un punto de miles borran el digito. */
+  readonly skipThousandsSeparator = skipThousandsSeparator;
+
+  onPriceInput(value: string, input?: HTMLInputElement): void {
     this.priceError = validateWholeNumberField(value);
-    this.basePriceLoad = this.priceError ? value : formatThousands(value.replace(/\D/g, ''));
+    this.basePriceLoad = this.priceError ? value : formatTypedMoney(value, input);
   }
 
   /** RN-08.1: con Enter pasa al siguiente campo si el actual esta diligenciado; en el ultimo, guarda. */
@@ -140,8 +145,8 @@ export class AnnouncementUpdateComponent {
     });
   }
 
-  onRowInput(row: TypeRow, field: RowField, value: string): void {
-    row[field] = validateWholeNumberField(value) ? value : formatThousands(value.replace(/\D/g, ''));
+  onRowInput(row: TypeRow, field: RowField, value: string, input?: HTMLInputElement): void {
+    row[field] = validateWholeNumberField(value) ? value : formatTypedMoney(value, input);
   }
 
   /**

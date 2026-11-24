@@ -7,7 +7,9 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseReportService } from '../../core/services/purchase-report.service';
 import { AppButtonComponent, FormFlowDirective, PdfGeneratingComponent } from '../../shared/ui';
+import { TableExporter } from '../../shared/utils/export-table';
 import { renderReportPdf } from '../report-pdf/report-pdf';
+import { purchasesByDateTable } from './purchases-by-date-pdf';
 import { DateRangeDialogContent } from './date-range-dialog.model';
 
 /**
@@ -26,6 +28,7 @@ export class DateRangeDialogComponent {
   private readonly navigation = inject(NavigationService);
   private readonly service = inject(PurchaseReportService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly exporter = inject(TableExporter);
 
   readonly data = toSignal(inject(ContentService).loadJson<DateRangeDialogContent>('date-range-dialog'));
   readonly fromDate = signal('');
@@ -88,6 +91,16 @@ export class DateRangeDialogComponent {
       this.report.reload();
     } else {
       this.requested.set(range);
+    }
+  }
+
+  /** Demo del 23-nov: el mismo informe en Excel (columnas, grupos por agencia y totales del PDF). */
+  exportExcel(): void {
+    const rows = this.rows();
+    const range = this.requested();
+    const data = this.data();
+    if (rows?.length && range && data) {
+      void this.exporter.xlsx(purchasesByDateTable(rows, range.from, range.to, data.pdf), data.exportFileName);
     }
   }
 

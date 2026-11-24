@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PurchaseReportRow } from '../../core/models/purchase-report.model';
 import content from '../../../../public/assets/data/date-range-dialog.json';
-import { buildPurchasesByDateDoc, sumKg, sumPesos } from './purchases-by-date-pdf';
+import { buildPurchasesByDateDoc, purchasesByDateTable, sumKg, sumPesos } from './purchases-by-date-pdf';
 
 const text = content.pdf;
 
@@ -75,5 +75,43 @@ describe('Compras por fecha (RF-25)', () => {
     const rows = [row({ netKg: 0.1, netToPay: 0.4 }), row({ netKg: 0.2, netToPay: 0.4 })];
     expect(sumKg(rows)).toBe(0.3);
     expect(sumPesos(rows, (p) => p.netToPay)).toBe(0);
+  });
+});
+
+/** Demo del 23-nov: Exportar a Excel con las mismas columnas, la agrupacion por agencia y los totales del PDF. */
+describe('Compras por fecha para exportar', () => {
+  const rows = [
+    row({ agencyName: 'El Tambo', invoiceNumber: 43907, netToPay: 100, netKg: 10.5 }),
+    row({}),
+    row({ invoiceNumber: 27870, status: 'ANULADA', netToPay: 0, netKg: 0 }),
+  ];
+  const exported = purchasesByDateTable(rows, '2026-10-01', '2026-10-29', text);
+
+  it('has the title, the range and the 16 columns of the PDF', () => {
+    expect(exported.title).toBe('COMPRAS POR FECHA');
+    expect(exported.subtitle).toBe('Desde 01/10/2026 hasta 29/10/2026');
+    expect(exported.columns).toEqual(text.columns);
+  });
+
+  it('groups by agency like the PDF, with its summary, Suma and the Suma total at the end', () => {
+    const kinds = exported.rows.map((r) => [r.kind ?? 'line', typeof r.cells[0] === 'string' ? r.cells[0] : '']);
+    expect(kinds).toEqual([
+      ['group', 'Buesaco 1'], ['line', 'BU-4'], ['line', 'BU-4'],
+      ['summary', "Resumir por 'Agencia' = Buesaco 1 (2 registros de detalle)"], ['total', 'Suma'],
+      ['group', 'El Tambo'], ['line', 'BU-4'],
+      ['summary', "Resumir por 'Agencia' = El Tambo (1 registro de detalle)"], ['total', 'Suma'],
+      ['total', 'Suma total'],
+    ]);
+  });
+
+  it('keeps kilos and pesos as numbers and marks the annulled purchase', () => {
+    const line = exported.rows[1].cells;
+    expect(line.slice(0, 5)).toEqual(['BU-4', '29/10/2026', 'RP', 'SDBU 27869', '990006002']);
+    expect(line[5]).toEqual({ value: 1000, format: 'kg' });
+    expect(line[14]).toEqual({ value: 12255579, format: 'money' });
+    expect(exported.rows[2].cells[15]).toBe('RN ANULADA');
+    const total = exported.rows.at(-1)!.cells;
+    expect(total[5]).toEqual({ value: 1010.5, format: 'kg' });
+    expect(total[14]).toEqual({ value: 12255679, format: 'money' });
   });
 });

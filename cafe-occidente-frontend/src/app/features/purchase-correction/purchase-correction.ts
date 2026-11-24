@@ -11,7 +11,7 @@ import { ContentService } from '../../core/services/content.service';
 import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseCorrectionService } from '../../core/services/purchase-correction.service';
 import { PurchaseQueryService } from '../../core/services/purchase-query.service';
-import { AccessWindowComponent, FormFlowDirective, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
+import { AccessWindowComponent, FormFlowDirective, LiveThousandsDirective, NavigatorButton, PurchaseFormViewComponent } from '../../shared/ui';
 import { formatDisplayNumber, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { saveOnce } from '../../shared/utils/save-once';
 import { PurchaseQueryContent } from '../purchase-query/purchase-query';
@@ -19,12 +19,16 @@ import { InvoiceBrowser } from '../purchase-query/invoice-browser';
 import { fillQueryContent } from '../purchase-query/purchase-query-fields';
 import { InvoiceSearchComponent } from '../purchase-query/invoice-search';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 /** Un campo que se corrige; {@code text}: direccion, celular y numero de cheque (no son montos). */
 export interface CorrectionField {
   readonly key: string;
   readonly label: string;
   readonly text?: boolean;
+  /** Plata: se ve con puntos de miles mientras se digita (appLiveThousands); `negative` deja el menos (Castigo). */
+  readonly money?: boolean;
+  readonly negative?: boolean;
 }
 
 export interface PurchaseCorrectionContent {
@@ -88,7 +92,7 @@ function toPayment(values: Values): PurchasePayment {
 @Component({
   selector: 'app-purchase-correction',
   standalone: true,
-  imports: [CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceSearchComponent, PurchaseFormViewComponent],
+  imports: [ConfirmDialogComponent, CommonModule, AccessWindowComponent, FormFlowDirective, InvoiceSearchComponent, LiveThousandsDirective, PurchaseFormViewComponent],
   templateUrl: './purchase-correction.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -171,16 +175,15 @@ export class PurchaseCorrectionComponent {
   readonly saving = signal(false);
   readonly canSave = computed(() => !!this.after() && this.balanced() && !this.blocked() && !this.preview.isLoading());
   /** Resultado del ultimo guardado; se borra al cambiar de compra. */
-  private readonly notice = linkedSignal<AnnulmentCandidate | null, { text: string; error: boolean } | null>({
+  readonly savedNotice = linkedSignal<AnnulmentCandidate | null, string | null>({
     source: this.selected,
     computation: () => null,
   });
-  readonly noticeError = computed(() => !!this.notice()?.error);
-  private readonly listMessage = computed(() => {
+  readonly listMessage = computed(() => {
     const m = this.content()?.messages;
     return m ? this.browser.listMessage(m) : null;
   });
-  readonly message = computed(() => this.notice()?.text ?? this.listMessage());
+  readonly message = computed(() => this.savedNotice() ?? this.listMessage());
 
   setValue(key: string, value: string): void {
     this.values.update((values) => ({ ...values, [key]: value }));
@@ -204,10 +207,10 @@ export class PurchaseCorrectionComponent {
     const request = this.buildRequest(detail, this.values(), toPayment(this.payment()));
     saveOnce(this.saving, () => this.service.correct(detail.module, detail.purchase.id, request), {
       next: () => {
-        this.notice.set({ text: content.messages.saved.replace('{invoice}', String(detail.purchase.invoiceNumber)), error: false });
+        this.savedNotice.set(content.messages.saved.replace('{invoice}', String(detail.purchase.invoiceNumber)));
         this.browser.detail.reload();
       },
-      error: (err: HttpErrorResponse) => this.notice.set({ text: serverError(err, content.messages.saveError), error: true }),
+      error: (err: HttpErrorResponse) => this.savedNotice.set(serverError(err, content.messages.saveError)),
     });
   }
 

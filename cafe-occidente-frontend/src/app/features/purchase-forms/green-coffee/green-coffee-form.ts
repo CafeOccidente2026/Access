@@ -16,11 +16,12 @@ import { GreenCoffeePurchaseService } from '../../../core/services/green-coffee-
 import { GrowerService } from '../../../core/services/grower.service';
 import { ConfirmDialogComponent, PurchaseFormViewComponent } from '../../../shared/ui';
 import { announcementDisplay, parseDisplayNumber, stripAnnouncementPrefix } from '../../../shared/utils/number-format';
-import { isSequentialFieldEnabled } from '../../../shared/utils/sequential-gate';
 import { buildGreenCoffeeInvoiceDocDefinition } from './green-coffee-invoice';
 import { hasRequired, saveAndPrint } from '../purchase-print';
+import { settlementRows } from '../settlement';
 import { lookupSeller } from '../seller-lookup';
 import { advanceFocus, focusField } from '../form-focus';
+import { fieldRows, purchaseFieldMap } from '../field-state';
 import { askCellphoneOr } from '../seller-cellphone';
 import { PurchaseMessages, UnsavedCloseForm } from '../unsaved-close';
 import { WeightMessages } from '../weight-check';
@@ -33,6 +34,7 @@ import { localToday } from '../../../shared/utils/local-date';
 type FormModel = Record<string, string>;
 
 interface GreenCoffeeMessages extends PurchaseMessages, WeightMessages {
+  readonly cooperativeDiscountLabel?: string;
   readonly noAnnouncement: string;
   readonly deceasedBlocked: string;
   readonly sampleMissing: string;
@@ -60,7 +62,7 @@ const ZERO_IF_EMPTY: string[] = ['penalty', 'shrinkageDiscount', 'otherDiscounts
 const READONLY: string[] = [
   'agency', 'date', 'announcement', 'announcementDate', 'productCode', 'fund', 'invoicePrefix',
   'invoiceNumber', 'basePriceLoad', 'special', 'healthyStoredPrice', 'defectStoredPrice',
-  'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding',
+  'bonus', 'costs', 'greenKg', 'netKg', 'kgPrice', 'withholding', 'grossValue', 'contribution', 'netToPay',
   // C3: el bloque Informacion Federacion lo llena NESS (lookupProgram).
   ...FEDERATION_KEYS,
   // HU-23 CA-2: muestra fija del Registro de Control.
@@ -111,9 +113,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   private readonly tick = signal(0);
 
   override model: FormModel = {};
-  private readonly locked = new Set<string>();
+  readonly locked = new Set<string>();
   private readonly today = localToday();
-  private readonly fieldCache = new Map<string, FormFieldDefinition>();
+  readonly fieldCache = new Map<string, FormFieldDefinition>();
 
 
   readonly viewContent = computed<PurchaseFormContent | null>(() => {
@@ -342,20 +344,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
   }
 
   private buildContent(base: GreenCoffeeContent): PurchaseFormContent {
-    const bmap = new Map<string, FormFieldDefinition>();
-    const collect = (fields?: FormFieldDefinition[]) => fields?.forEach((f) => bmap.set(f.key, f));
-    collect(base.topFields);
-    collect(base.identificationFields);
-    collect(base.federationFields);
-    collect(base.contactFields);
-    collect(base.qualityFields);
-    collect(base.weightFields);
-    collect(base.netWeightFields);
-    collect(base.priceFields);
-    collect(base.settlementFields);
-    if (base.discountField) {
-      bmap.set(base.discountField.key, base.discountField);
-    }
+    const bmap = purchaseFieldMap(base);
 
     const info = this.announcementInfo();
     const inv = this.invoiceReservation();
@@ -384,32 +373,9 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       factor: info?.sample?.factor ?? '',
       greenKg: c ? c.greenKg : '',
       netKg: c ? c.netKg : '',
-      kgPrice: c?.unitPrice ?? '',
-      withholding: c?.withholding ?? '',
     };
 
-    const field = (key: string): FormFieldDefinition => {
-      const b = bmap.get(key)!;
-      const patch: { readonly?: boolean; value?: string | number } = {};
-      if (READONLY.includes(key)) {
-        patch.readonly = true;
-        patch.value = computedValues[key] ?? this.model[key] ?? '';
-      } else if (this.locked.has(key)) {
-        patch.readonly = true;
-        patch.value = this.model[key] ?? '';
-      } else if (!isSequentialFieldEnabled(key, FOCUS_ORDER, this.locked)) {
-        patch.readonly = true;
-      }
-      const next: FormFieldDefinition = { ...b, ...patch };
-      const prev = this.fieldCache.get(key);
-      if (prev && prev.value === next.value && prev.readonly === next.readonly) {
-        return prev;
-      }
-      this.fieldCache.set(key, next);
-      return next;
-    };
-
-    const row = (fields?: FormFieldDefinition[]) => fields?.map((f) => field(f.key));
+    const { field, row } = fieldRows(bmap, READONLY, FOCUS_ORDER, this, computedValues, c);
 
     return {
       ...base,
@@ -421,7 +387,7 @@ export class GreenCoffeeFormComponent extends UnsavedCloseForm {
       weightFields: row(base.weightFields),
       netWeightFields: row(base.netWeightFields),
       priceFields: row(base.priceFields),
-      settlementFields: row(base.settlementFields)!,
+      ...settlementRows(base, field),
       discountField: base.discountField ? field(base.discountField.key) : undefined,
       paymentNetToPay: this.calc()?.netToPay ?? null,
       reprintButtonLabel: this.canPrint() ? 'Imprimir' : undefined,

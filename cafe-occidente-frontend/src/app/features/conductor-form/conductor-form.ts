@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 
@@ -6,6 +6,7 @@ import { Conductor } from '../../core/models/grower.model';
 import { GrowerService } from '../../core/services/grower.service';
 import { AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective } from '../../shared/ui';
 import { serverError } from '../../shared/utils/server-error';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog/confirm-dialog';
 
 type Mode = 'choose' | 'new' | 'update';
 
@@ -36,16 +37,23 @@ export function dateTime(instant: string | null): string {
 @Component({
   selector: 'app-conductor-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
+  imports: [ConfirmDialogComponent, CommonModule, FormsModule, AccessWindowComponent, AgencyPickerComponent, ComboboxComponent, FormFlowDirective],
   templateUrl: './conductor-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConductorFormComponent {
   private readonly growerService = inject(GrowerService);
+  private readonly location = inject(Location);
 
   readonly mode = signal<Mode>('choose');
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+
+  /** Demo del 23-nov: Aceptar en "Conductor registrado/actualizado" cierra la pantalla y vuelve de donde vino. */
+  closeSaved(): void {
+    this.message.set(null);
+    this.location.back();
+  }
   readonly shortDate = shortDate;
   readonly dateTime = dateTime;
 

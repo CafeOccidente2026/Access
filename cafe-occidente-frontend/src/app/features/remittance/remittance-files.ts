@@ -12,6 +12,8 @@ export interface RemittanceWorkbook {
   readonly fileName: string;
   readonly sheet: string;
   readonly data: SheetData;
+  /** Genera Plano: texto separado por comas en vez de Excel. */
+  readonly csv?: boolean;
 }
 
 type Cell = SheetData[number][number];
@@ -95,23 +97,63 @@ function operationsTotals(lastLineRow: number): Cell[][] {
   ];
 }
 
+/**
+ * Nombres del 24-nov: el archivo + la remision + el tipo de cafe, pegados (ParaOperacionesSDTA-970SECO.xlsx). Genera
+ * Plano va en CSV con solo el numero de la remision (SDTA-970.csv), sin encabezados.
+ */
 export function remittanceWorkbooks(files: RemittanceFiles): RemittanceWorkbook[] {
-  const n = files.number;
+  const suffix = files.number + files.coffeeType;
   return [
-    { fileName: `ParaOperaciones_${n}.xlsx`, sheet: 'ParaOperaciones',
+    { fileName: `ParaOperaciones${suffix}.xlsx`, sheet: 'ParaOperaciones',
       data: [...table(PARA_OPERACIONES, files), ...operationsTotals(files.lines.length + 1)] },
-    { fileName: `ParaOpen_${n}.xlsx`, sheet: 'ParaOpen', data: table(PARA_OPEN, files) },
-    { fileName: `${n}.xlsx`, sheet: 'GeneraPlano', data: table(GENERA_PLANO, files) },
-    { fileName: `ParaAlmacafe_${n}.xlsx`, sheet: 'ParaAlmacafe', data: table(PARA_ALMACAFE, files) },
+    { fileName: `ParaOpen${suffix}.xlsx`, sheet: 'ParaOpen', data: table(PARA_OPEN, files) },
+    { fileName: `${files.number}.csv`, sheet: 'GeneraPlano', data: table(GENERA_PLANO, files).slice(1), csv: true },
+    { fileName: `ParaAlmacafe${suffix}.xlsx`, sheet: 'ParaAlmacafe', data: table(PARA_ALMACAFE, files) },
   ];
 }
+
+/**
+ * Windows-1252 (ANSI), como exporta Access: asi la Ñ y las tildes van en un byte. De 0xA0 a 0xFF es igual a
+ * Latin-1; de 0x80 a 0x9F, estos caracteres (en ese orden; 0 = sin caracter). Lo demas sale como '?'.
+ */
+const CP1252_HIGH = [
+  0x20ac, 0, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0, 0x017d, 0,
+  0, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0, 0x017e, 0x0178,
+];
+
+function windows1252(text: string): Uint8Array<ArrayBuffer> {
+  return new Uint8Array(Array.from(text, (char) => {
+    const code = char.codePointAt(0) ?? 0;
+    if (code < 0x80 || (code >= 0xa0 && code <= 0xff)) {
+      return code;
+    }
+    const high = CP1252_HIGH.indexOf(code);
+    return high >= 0 ? 0x80 + high : 0x3f;
+  }));
+}
+
+/** Un campo del CSV: numeros con todos sus decimales y sin miles; un texto con coma o comillas, entre comillas. */
+function csvField(cell: Cell): string {
+  const value = cell == null ? '' : String((cell as { value: unknown }).value);
+  return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+/** Genera Plano: una linea por factura, separada por comas y terminada en CRLF, sin encabezados. */
+function csvBlob(data: SheetData): Blob {
+  const text = (data as Cell[][]).map((row) => row.map(csvField).join(',') + '\r\n').join('');
+  return new Blob([windows1252(text)], { type: 'text/csv' });
+}
+
+/** La fuente con la que exporta Access (MS Sans Serif 11), igual que los archivos de referencia. */
+const ACCESS_FONT = { fontFamily: 'MS Sans Serif', fontSize: 11 } as const;
 
 /** Arma los .xlsx antes del clic: asi la descarga sale del clic mismo y Chrome no la bloquea. */
 export async function workbookBlobs(books: readonly RemittanceWorkbook[]): Promise<Map<string, Blob>> {
   const { default: writeExcelFile } = await import('write-excel-file/browser');
   const blobs = new Map<string, Blob>();
   for (const book of books) {
-    blobs.set(book.fileName, await writeExcelFile(book.data, { sheet: book.sheet }).toBlob());
+    blobs.set(book.fileName, book.csv ? csvBlob(book.data)
+      : await writeExcelFile(book.data, { sheet: book.sheet }, ACCESS_FONT).toBlob());
   }
   return blobs;
 }
