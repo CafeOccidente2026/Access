@@ -216,6 +216,24 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(consecutives.take(other)).isEqualTo(otherBefore + 1);
     }
 
+    /** 25-nov: el contador se salta los numeros que la agencia ya usa (remesas y remisiones de Access, como SA4819
+     *  en Samaniego o CO9999 en Consaca), para que la remision nueva nunca choque con una vieja. */
+    @Test
+    void theConsecutiveSkipsTheNumbersAlreadyUsedInTheAgency() {
+        int next = last(AGENCY) + 1;
+        remittance(AGENCY, "XX" + next, "VIGENTE");
+        remittance(AGENCY, "XX " + (next + 1), "VIGENTE");
+        jdbc.update("INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, exportado,"
+                + " creado_por_usuario_id, creado_en, consecutivo, numero_remision, estado, de_access)"
+                + " VALUES (?, ?, CURRENT_DATE, false, ?, now(), ?, ?, 'VIGENTE', true)",
+                next + 2, AGENCY, user.getId(), next + 2, "XX" + (next + 2));
+        Long other = jdbc.queryForObject("SELECT min(id) FROM agencias WHERE id <> ?", Long.class, AGENCY);
+        remittance(other, "XX" + (next + 3), "VIGENTE");
+
+        assertThat(consecutives.take(AGENCY)).isEqualTo(next + 3);
+        assertThat(last(AGENCY)).isEqualTo(next + 3);
+    }
+
     @Test
     void theConsecutiveStartsAtTheHighestNumberAlreadyUsed() {
         Long behind = jdbc.queryForObject("""
