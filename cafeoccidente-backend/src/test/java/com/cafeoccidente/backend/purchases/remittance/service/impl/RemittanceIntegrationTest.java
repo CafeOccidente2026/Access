@@ -153,7 +153,8 @@ class RemittanceIntegrationTest {
 
     /** Una remesa vieja, sin remision (de Access o de Genera Remesa): la remesa, sus compras y su salida de empaques. */
     private RemittanceResponse remit(String special, List<Ref> purchases) {
-        String number = "SDBU-RP-9" + purchases.get(0).id();
+        // Con el modulo: en una base nueva el seco, el verde y la pasilla pueden tener el mismo id.
+        String number = "SDBU-RP-9" + purchases.get(0).module().name().charAt(0) + purchases.get(0).id();
         Long id = jdbc.queryForObject("INSERT INTO remesas (agencia_id, fondo_id, numero_remesa, especial_filtro,"
                 + " cantidad_empaques, tipo_empaque, estado, creado_por_usuario_id, creado_en) VALUES (?, ?, ?, ?, 15,"
                 + " 'USADO', 'VIGENTE', (SELECT id FROM usuarios WHERE usuario = 'prueba_7b_usuario'), now()) RETURNING id",
