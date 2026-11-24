@@ -19,8 +19,6 @@
             type="date"
             data-testid="from"
             class="rounded border border-slate-300 px-2 py-1"
-            [min]="minDate"
-            [max]="maxDate"
             [value]="fromDate()"
             (input)="fromDate.set($any($event.target).value)"
           />
@@ -31,8 +29,6 @@
             type="date"
             data-testid="to"
             class="rounded border border-slate-300 px-2 py-1"
-            [min]="minDate"
-            [max]="maxDate"
             [value]="toDate()"
             (input)="toDate.set($any($event.target).value)"
           />
