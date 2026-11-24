@@ -70,7 +70,10 @@ CORRECTION_TABLES = ("anuncios", "asociados", "caja", "cajamenor", "compras_a_fu
 
 
 def note_stop(reason, detail):
-    STOPS.setdefault(reason, []).append(detail)
+    """Un registro que no se puede cargar tal cual; si se lee dos veces (INVENTARIO), se lista una sola vez."""
+    items = STOPS.setdefault(reason, [])
+    if detail not in items:
+        items.append(detail)
 
 
 def stop_if_problems():
