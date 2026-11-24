@@ -48,12 +48,15 @@ class PurchasePaymentServiceImplTest {
             assertThatThrownBy(() -> service.validate(pay("0", "4944624", "0", "0", number), NET))
                     .as(String.valueOf(number)).hasMessage("Digite el numero de cheque");
         }
-        // Como Caja y Suministros (V21): los ultimos 4 digitos, con sus ceros.
-        for (String number : new String[] {"0", "548", "12A4", "12345", "0000"}) {
+        // 24-nov (V32): de 4 a 15 digitos, solo numeros, con sus ceros; Consaca usa chequeras de 5 digitos.
+        for (String number : new String[] {"0", "548", "12A4", "0000", "000000", "1234567890123456"}) {
             assertThatThrownBy(() -> service.validate(pay("0", "4944624", "0", "0", number), NET))
-                    .as(number).hasMessage("El cheque son los últimos 4 dígitos");
+                    .as(number).hasMessage("El número de cheque debe tener entre 4 y 15 dígitos");
         }
         assertThat(service.validate(pay("0", "4944624", "0", "0", " 0548 "), NET).checkNumber()).isEqualTo("0548");
+        assertThat(service.validate(pay("0", "4944624", "0", "0", "13324"), NET).checkNumber()).isEqualTo("13324");
+        assertThat(service.validate(pay("0", "4944624", "0", "0", "012345678901234"), NET).checkNumber())
+                .isEqualTo("012345678901234");
         // Sin monto en cheque el numero no importa y no se guarda.
         assertThat(service.validate(pay("4944624", "0", "0", "0", "99"), NET).checkNumber()).isNull();
     }

@@ -1,4 +1,5 @@
 import { PaymentKey, PurchasePayment } from '../../../core/models';
+import { validCheckNumber } from '../../utils/check-number';
 
 export const PAYMENT_ORDER: readonly PaymentKey[] = ['cash', 'check', 'transfer', 'card'];
 
@@ -59,8 +60,8 @@ export function readyPayment(netToPay: number, state: PaymentState): PurchasePay
   if (total(amounts) !== netToPay || PAYMENT_ORDER.some((k) => amounts[k] < 0)) {
     return null;
   }
-  // Mismo criterio que el backend: 1 a 9 digitos y distinto de 0 (Caja.Cheque es numerico).
-  if (amounts.check > 0 && !(/^\d{1,9}$/.test(checkNumber.trim()) && Number(checkNumber) > 0)) {
+  // Mismo criterio que el backend (V32, 24-nov): de 4 a 15 digitos, con sus ceros, y no todos ceros.
+  if (amounts.check > 0 && !validCheckNumber(checkNumber)) {
     return null;
   }
   return {

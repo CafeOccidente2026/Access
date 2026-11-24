@@ -83,14 +83,16 @@ class CheckNumberIntegrationTest {
 
     /** Un caso por valor: en PostgreSQL, despues de un INSERT rechazado la transaccion queda abortada. */
     @ParameterizedTest
-    @CsvSource({"movimientos_caja, 548", "movimientos_caja, 12345", "movimientos_caja, abcd", "suministros, 548",
-        "suministros, 12345", "suministros, abcd", "movimientos_caja_menor, 548", "movimientos_caja_menor, 12345",
-        "movimientos_caja_menor, abcd"})
-    void theDatabaseOnlyAcceptsFourDigits(String table, String wrong) {
+    @CsvSource({"movimientos_caja, 548", "movimientos_caja, 1234567890123456", "movimientos_caja, abcd",
+        "suministros, 548", "suministros, 1234567890123456", "suministros, abcd", "movimientos_caja_menor, 548",
+        "movimientos_caja_menor, 1234567890123456", "movimientos_caja_menor, abcd"})
+    void theDatabaseAcceptsFourToFifteenDigits(String table, String wrong) {
         String insert = "INSERT INTO " + table + " (id_transaccion, agencia_id, fondo_id, fecha, cedula, numero_cheque,"
                 + " creado_en) VALUES ('PRUEBA5A', ?, (SELECT id FROM fondos WHERE codigo = 'RP'), CURRENT_DATE, ?, ?, now())";
 
         assertThat(jdbc.update(insert, AGENCY, FIEL, "0548")).isOne();
+        assertThat(jdbc.update(insert, AGENCY, FIEL, "13324")).isOne();
+        assertThat(jdbc.update(insert, AGENCY, FIEL, "012345678901234")).isOne();
         assertThatThrownBy(() -> jdbc.update(insert, AGENCY, FIEL, wrong)).isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -106,19 +108,30 @@ class CheckNumberIntegrationTest {
     }
 
     @Test
-    void aCheckThatIsNotFourDigitsIsRejected() {
-        assertThatThrownBy(() -> entries.createIssuedCheck(issuedCheck("548")))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("El cheque son los últimos 4 dígitos");
-        assertThatThrownBy(() -> entries.createIssuedCheck(issuedCheck("12345")))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("El cheque son los últimos 4 dígitos");
+    void aLongCheckGoesUpToTheReportAndTheCheckRelation() {
+        // 24-nov (V32): Consaca usa cheques de 5 digitos; se aceptan hasta 15, con sus ceros.
+        String id = entries.createIssuedCheck(issuedCheck("012345678901234")).transactionId();
+
+        assertThat(reports.supplies(AGENCY, "RP", LocalDate.now(clock)))
+                .filteredOn(row -> id.equals(row.transactionId()))
+                .extracting(SuppliesReportRow::checkNumber).containsExactly("012345678901234");
+        assertThat(reports.checkRelation(AGENCY, null, null, LocalDate.now(clock)))
+                .extracting(SuppliesReportRow::checkNumber).contains("012345678901234");
     }
 
-    /** V25: el cheque de las compras tambien es texto de 4 digitos (antes integer: 0548 quedaba 548). */
+    @Test
+    void aCheckOutsideFourToFifteenDigitsIsRejected() {
+        for (String wrong : new String[] {"548", "1234567890123456", "12A45", "00000"}) {
+            assertThatThrownBy(() -> entries.createIssuedCheck(issuedCheck(wrong)))
+                    .as(wrong).isInstanceOf(BusinessRuleException.class)
+                    .hasMessage("El número de cheque debe tener entre 4 y 15 dígitos");
+        }
+    }
+
+    /** V25 y V32: el cheque de las compras tambien es texto (0548 sigue 0548), de 4 a 15 digitos. */
     @ParameterizedTest
-    @CsvSource({"548", "12345", "abcd"})
-    void purchasePaymentsKeepTheFourDigitsToo(String wrong) {
+    @CsvSource({"548", "1234567890123456", "abcd"})
+    void purchasePaymentsKeepTheirDigitsToo(String wrong) {
         String insert = "INSERT INTO formas_pago_compras (origen, origen_id, efectivo, cheque, transferencia, datafono,"
                 + " numero_cheque) VALUES ('DRY', ?, 0, 0, 0, 0, ?)";
         assertThat(jdbc.update(insert, -1L, "0548")).isOne();

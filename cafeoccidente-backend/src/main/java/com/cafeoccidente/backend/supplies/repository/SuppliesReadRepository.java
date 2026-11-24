@@ -33,7 +33,7 @@ public class SuppliesReadRepository {
         String sql = String.join(" UNION ALL ", PURCHASE_TABLES.entrySet().stream()
                 .map(e -> "SELECT '" + e.getKey() + "' AS module, p.id, p.numero_factura, p.agencia_id,"
                         + " a.nombre AS agency_name, f.codigo AS fund_code, p.fecha_compra, p.cedula,"
-                        // El cheque es texto de 4 digitos con sus ceros (V21, V25): no se pasa a numero.
+                        // El cheque es texto de 4 a 15 digitos con sus ceros (V21, V25, V32): no se pasa a numero.
                         + " p.neto_a_pagar, p.forma_pago, p.numero_cheque,"
                         + " p.creado_en, s.origen_id AS split_id, s.efectivo, s.cheque,"
                         + " s.transferencia, s.datafono, s.numero_cheque AS split_check_number"

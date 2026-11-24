@@ -54,7 +54,7 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
     private static final Set<String> PACKAGING_TYPES = Set.of("NUEVO", "USADO");
     /** Caja Menor siempre es RP y en efectivo (RN-27.12.1, D6). */
     private static final String PETTY_CASH_FUND = "RP";
-    private static final Pattern FOUR_DIGITS = Pattern.compile("[0-9]{4}");
+    private static final Pattern CHECK_DIGITS = Pattern.compile("[0-9]{4,15}");
 
     private final CashEntryRepository cashEntryRepository;
     private final PettyCashEntryRepository pettyCashEntryRepository;
@@ -295,11 +295,11 @@ public class SuppliesEntryServiceImpl implements SuppliesEntryService {
         return idNumber.trim();
     }
 
-    /** RN-27.1.4 y RN-27.10.3: los ultimos 4 digitos, con sus ceros (0548); vacio = sin cheque. */
+    /** RN-27.1.4 y RN-27.10.3, cambiada el 24-nov (V32): de 4 a 15 digitos con sus ceros (0548); vacio = sin cheque. */
     private static String checkNumber(LedgerEntryRequest request) {
         String check = blankToNull(request.checkNumber());
-        if (check != null && !FOUR_DIGITS.matcher(check).matches()) {
-            throw new BusinessRuleException("El cheque son los últimos 4 dígitos");
+        if (check != null && (!CHECK_DIGITS.matcher(check).matches() || check.matches("0+"))) {
+            throw new BusinessRuleException("El número de cheque debe tener entre 4 y 15 dígitos");
         }
         return check;
     }

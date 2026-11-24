@@ -15,7 +15,7 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
 
     static final String UNBALANCED = "FORMA DE PAGO DESCUADRADA, REVISE";
     static final String CHECK_NUMBER_REQUIRED = "Digite el numero de cheque";
-    static final String CHECK_NUMBER_FORMAT = "El cheque son los últimos 4 dígitos";
+    static final String CHECK_NUMBER_FORMAT = "El número de cheque debe tener entre 4 y 15 dígitos";
 
     private final JdbcTemplate jdbc;
 
@@ -41,12 +41,12 @@ public class PurchasePaymentServiceImpl implements PurchasePaymentService {
         String checkNumber = null;
         if (payment.checkAmount().signum() > 0) {
             // Access no lo exige, pero las 322 compras reales con cheque de El Tambo lo tienen (decision
-            // del usuario 2026-10-02). Los ultimos 4 digitos con sus ceros, como Caja y Suministros (V21, V25).
+            // del usuario 2026-10-02). De 4 a 15 digitos con sus ceros, como Caja y Suministros (V32, 24-nov).
             checkNumber = payment.checkNumber() == null ? "" : payment.checkNumber().trim();
             if (checkNumber.isEmpty()) {
                 throw new BusinessRuleException(CHECK_NUMBER_REQUIRED);
             }
-            if (!checkNumber.matches("[0-9]{4}") || "0000".equals(checkNumber)) {
+            if (!checkNumber.matches("[0-9]{4,15}") || checkNumber.matches("0+")) {
                 throw new BusinessRuleException(CHECK_NUMBER_FORMAT);
             }
         }

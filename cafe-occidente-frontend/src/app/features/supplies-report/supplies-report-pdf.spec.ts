@@ -141,6 +141,14 @@ describe('supplies reports', () => {
 describe('Relacion Cheques para exportar', () => {
   const exported = checksTable(data.reports['checks'], data.text, rows);
 
+  it('24-nov: a long check (Consaca, up to 15 digits) goes as text with its zeros to Excel, Word and the sheet', () => {
+    const long = { ...row('CONSACA', 'C1', 0, 10), checkNumber: '012345678901234' };
+    const table = checksTable(data.reports['checks'], data.text, [long]);
+    expect(table.rows.find((r) => !r.kind)!.cells[4]).toBe('012345678901234');
+    const sheet = paymentMethodsSheet(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], [long]);
+    expect(sheet[1][9]).toEqual({ value: '012345678901234' });
+  });
+
   it('has the title, the cooperative with its NIT and the 7 columns of the PDF', () => {
     expect(exported.title).toBe('RELACION CHEQUES');
     expect(exported.subtitle).toContain('NIT. 891.200.986-8');
