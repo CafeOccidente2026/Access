@@ -33,6 +33,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 /**
  * Demo del 23-nov (V31): la remision y su remesa tienen el mismo numero PREFIJO-CONSECUTIVO, de un solo consecutivo
  * por agencia (sin fondo). Sobre la semilla (agencia 1). Transaccional: no deja nada.
@@ -61,6 +63,8 @@ class RemissionConsecutiveIntegrationTest {
     private AgencyRepository agencies;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private EntityManager entityManager;
 
     private Long rp;
     private User user;
@@ -175,6 +179,7 @@ class RemissionConsecutiveIntegrationTest {
         jdbc.update("UPDATE remisiones SET de_access = true WHERE id = ?", remission.id());
         jdbc.update("UPDATE remesas SET observacion = 'En Access tenía compras de RP y LF' WHERE id = ?",
                 remission.remittanceId());
+        entityManager.clear(); // la remision creada sigue en cache: se lee de nuevo con la marca de la migracion
 
         assertThat(remissions.findById(remission.id()).fromAccess()).isTrue();
         assertThatThrownBy(() -> remissions.annul(remission.id()))
