@@ -1083,6 +1083,47 @@ def load_inventory(cur, agency_id, user_id):
     print(f"  remisiones: {remissions} salidas de INVENTARIO de Access ({lines} lineas), sin remesa.")
 
 
+def payment_mismatches(purchases, cash_rows, supply_rows):
+    """
+    25-nov: en Access lo pagado en Caja (salidas - entradas, Id_Transaccion = factura) es el neto de la compra, y lo
+    de Suministros su parte en cheque. La web arma esos pagos desde la compra, asi que una diferencia (un pago
+    registrado dos veces, o ninguno) no se veria: se lista con factura, Ids de Access, fechas y valores.
+    """
+    invoices = {s(c, "factura") for c in purchases}
+    cash, supply = {}, {}
+    for row in cash_rows:
+        if s(row, "id_transaccion") in invoices:
+            cash.setdefault(s(row, "id_transaccion"), []).append(row)
+    for row in supply_rows:
+        if s(row, "id_transaccion") in invoices:
+            supply.setdefault(s(row, "id_transaccion"), []).append(row)
+    found = []
+    for c in purchases:
+        invoice = s(c, "factura")
+        paid = sum((parse_decimal(r.get("salidas")) - parse_decimal(r.get("entradas")) for r in cash.get(invoice, [])),
+                   Decimal(0))
+        checks = sum((parse_decimal(r.get("vr_gastos_o_comp")) - parse_decimal(r.get("valor_suministro"))
+                      for r in supply.get(invoice, [])), Decimal(0))
+        net, cheque = parse_decimal(c.get("neto_a_pagar")), parse_decimal(c.get("fpch"))
+        if paid == net and checks == cheque:
+            continue
+        rows = "; ".join(f"{name} Id {s(r, 'id_access') or '?'} {s(r, 'fecha')[:19]} entradas"
+                         f" {s(r, 'entradas') or s(r, 'valor_suministro') or '0'} salidas"
+                         f" {s(r, 'salidas') or s(r, 'vr_gastos_o_comp') or '0'}"
+                         for name, group in (("Caja", cash), ("Suministros", supply)) for r in group.get(invoice, []))
+        found.append(f"factura {invoice} (Id {s(c, 'id_access') or '?'}, {s(c, 'fecha_compra')[:10]},"
+                     f" {s(c, 'forma_de_pago')}): neto {net}, pagado en Caja {paid}; cheque {cheque}, en Suministros"
+                     f" {checks} | {rows or 'sin pagos en Caja ni Suministros'}")
+    return found
+
+
+def check_payments():
+    """Detiene la carga si lo pagado en Caja/Suministros de Access no cuadra con alguna compra."""
+    for item in payment_mismatches(read_csv("compras_migrar.csv"), read_csv("caja_migrar.csv"),
+                                   read_csv("suministros_migrar.csv")):
+        note_stop("Compra cuyo pago en Caja/Suministros de Access no cuadra con su neto", item)
+
+
 def before_cut(row, desde):
     """Movimiento de Caja, Suministros, Caja Menor o Empaque anterior a la fecha de corte."""
     moved = parse_date(row.get("fecha"))
@@ -1568,6 +1609,7 @@ def main():
             set_consecutives(cur, agency_id)
             if args.admin_pruebas:
                 ensure_admin_eltambo(cur, agency_id)
+            check_payments()
             check_corrections_used()
             print_excluded()
             stop_if_problems()
