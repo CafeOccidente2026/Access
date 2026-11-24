@@ -12,8 +12,10 @@ from migrar_punto import (
     control_record_differences,
     control_record_history,
     control_record_updates,
+    discard_detail,
     husk_purchase,
     keeps_purchase,
+    ledger_fund,
     max_invoice,
     max_remission,
     missing_control_params,
@@ -56,6 +58,19 @@ def check_control_record():
     # Al Historial con los mismos nombres de campo que guarda la pantalla Registro de Control.
     assert control_record_history(updates) == ({"baseWithholding": "8379840.00", "trustedId": "900000001"},
                                                {"baseWithholding": "10000000", "trustedId": "900000002"})
+
+
+def check_ledger_fund():
+    # 24-nov: fondos que Access escribio mal; los supuestos son explicitos por movimiento (j -> LF en El Tambo,
+    # RTP -> RP en Sotomayor). Uno que no se puede deducir se descarta (None) y se lista con su valor.
+    assert ledger_fund({"id_transaccion": "SUMPRUEBA", "fondo": "LF"}) == "LF"
+    assert ledger_fund({"id_transaccion": "280", "fondo": "RTP"}) == "RP"
+    assert ledger_fund({"id_transaccion": "sumlf60-29-05", "fondo": "j"}) == "LF"
+    assert ledger_fund({"id_transaccion": "999", "fondo": "RTP"}) is None
+    assert ledger_fund({"id_transaccion": "02", "fondo": "02"}) is None
+    row = {"fecha": "2026-03-18 00:00:00", "id_transaccion": "02", "detalle": "SUM PRUEBA", "fondo": "02"}
+    assert discard_detail(row, Decimal("1500000"), Decimal("0")) == (
+        "2026-03-18, 02, SUM PRUEBA, fondo 02, entradas 1500000, salidas 0")
 
 
 def check_seller_without_last_name():
@@ -199,6 +214,7 @@ def check_consecutives():
 def main():
     check_control_record()
     check_seller_without_last_name()
+    check_ledger_fund()
     check_date_cut()
     check_cheque_text()
     check_husk()
