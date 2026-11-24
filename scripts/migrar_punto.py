@@ -149,13 +149,13 @@ def correct_rows(name, rows, found):
     table = name.removesuffix("_migrar.csv")
     changes = []
     for row in rows:
-        fix = found.get((table, s(row, "id_access")))
+        fix = found.get((table, row_key(table, row)))
         if not fix or s(fix, "accion").lower() != "corregir":
             continue
         column = next((c for c in row if simple_name(c) == simple_name(fix.get("campo"))), None)
         if column is None:
             raise SystemExit(f"correcciones.csv: {table} no tiene el campo '{s(fix, 'campo')}'")
-        changes.append(((table, s(row, "id_access")), column, row[column], s(fix, "valor")))
+        changes.append(((table, row_key(table, row)), column, row[column], s(fix, "valor")))
         row[column] = s(fix, "valor")
     return changes
 
@@ -165,12 +165,17 @@ def pending_corrections(found):
     return [key for key, row in found.items() if s(row, "confirmado_por").upper() in ("", "PENDIENTE")]
 
 
+def row_key(table, row):
+    """Id de Access del registro; en Asociados (no tiene Id en Access) la cedula, IdAsociado."""
+    return s(row, "id_access") or (s(row, "idasociado") if table == "asociados" else "")
+
+
 def apply_corrections(name, rows, found):
     """(filas que se cargan, filas excluidas por correcciones.csv) de un CSV del punto."""
     table = name.removesuffix("_migrar.csv")
 
     def excluded(row):
-        fix = found.get((table, s(row, "id_access")))
+        fix = found.get((table, row_key(table, row)))
         return fix is not None and s(fix, "accion").lower() == "excluir"
 
     return [row for row in rows if not excluded(row)], [row for row in rows if excluded(row)]
@@ -215,7 +220,8 @@ def read_csv(name):
     with open(DATA_DIR / name, encoding="utf-8") as f:
         rows, excluded = apply_corrections(name, list(csv.DictReader(f)), CORRECTIONS)
     for row in excluded:
-        EXCLUDED[(name.removesuffix("_migrar.csv"), s(row, "id_access"))] = row
+        table = name.removesuffix("_migrar.csv")
+        EXCLUDED[(table, row_key(table, row))] = row
     for key, column, before, after in correct_rows(name, rows, CORRECTIONS):
         CORRECTED[key] = (column, before, after)
     return rows
