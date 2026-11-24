@@ -11,7 +11,7 @@ import java.time.LocalDate;
  * Alta de Caja / Caja Menor / Suministros. El Id de transaccion, la agencia y la fecha los pone el servidor (RF §2.1,
  * D2, D8); un transactionId que mande el cliente se ignora. entryDate solo vale en Ingresar Suministros (Q16); vacio es
  * hoy. idNumber no se usa en Ingresar Suministros Caja Menor: sale del Fiel del Registro de Control. checkNumber: los
- * ultimos 4 digitos (RN-27.1.4), lo valida el servicio.
+ * de 4 a 15 digitos (RN-27.1.4, V32), lo valida el servicio.
  */
 public record LedgerEntryRequest(
         String fundCode,
