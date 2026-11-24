@@ -85,9 +85,10 @@ def mixed_remittances(plan):
 
 
 def psql(base, sql):
-    cmd = ["docker", "exec", CONTAINER, "psql", "-U", "postgres", "-d", base, "-At", "-F", "|",
-           "-v", "ON_ERROR_STOP=1", "-c", sql]
-    return subprocess.run(cmd, check=True, capture_output=True, text=True).stdout.strip()
+    # El SQL va por la entrada estandar: con muchas remesas (94 en El Tambo) no cabe en la linea de comandos de Windows.
+    cmd = ["docker", "exec", "-i", CONTAINER, "psql", "-U", "postgres", "-d", base, "-At", "-F", "|",
+           "-v", "ON_ERROR_STOP=1", "-f", "-"]
+    return subprocess.run(cmd, check=True, capture_output=True, text=True, input=sql, encoding="utf-8").stdout.strip()
 
 
 def backup(base):
