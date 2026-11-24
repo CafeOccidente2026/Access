@@ -74,7 +74,9 @@ class InventoryReportServiceTest {
 
         assertThat(rows).hasSize(2);
         InventoryReportRow opening = rows.get(0);
-        assertThat(opening.specialType()).isEqualTo("Saldo inicial — viene de 2025");
+        // La especial real (para el titulo del reporte) y la etiqueta aparte.
+        assertThat(opening.specialType()).isEqualTo("RN");
+        assertThat(opening.label()).isEqualTo("Saldo inicial — viene de 2025");
         assertThat(opening.date()).isEqualTo(LocalDate.of(2025, 12, 31));
         assertThat(opening.netKg()).isEqualByComparingTo("60");
         assertThat(opening.inventoryValue()).isEqualByComparingTo("600000");
