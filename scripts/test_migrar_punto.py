@@ -13,6 +13,10 @@ from migrar_punto import (
     control_record_history,
     control_record_updates,
     discard_detail,
+    entry_balance,
+    exit_remission_rows,
+    exit_remissions,
+    inventory_rows,
     husk_purchase,
     keeps_purchase,
     ledger_fund,
@@ -20,6 +24,7 @@ from migrar_punto import (
     max_remission,
     missing_control_params,
     normal_remission_last,
+    opening_purchase_id,
     out_of_range,
     pending_quotas,
     quota_purchase,
@@ -58,6 +63,39 @@ def check_control_record():
     # Al Historial con los mismos nombres de campo que guarda la pantalla Registro de Control.
     assert control_record_history(updates) == ({"baseWithholding": "8379840.00", "trustedId": "900000001"},
                                                {"baseWithholding": "10000000", "trustedId": "900000002"})
+
+
+def inv(factura="", remision="", cod="0110002000001", kilos="0", cantidad="0", fecha="2026-03-01 00:00:00", **extra):
+    return {"factura": factura, "remisión": remision, "cod_prod": cod, "kilos_netos": kilos, "cantidad": cantidad,
+            "fecha": fecha, "vr_inventario": extra.get("valor", "0"), "vr_salida": extra.get("salida", "0"),
+            "porcalmsana": "90", "porcalmsanasl": "91", "valor unitario": "20000", "destino": "PRUEBA",
+            "especial": "RN", "sacos": "1", "kilos_brutos": kilos}
+
+
+def check_inventory():
+    # 24-nov: el INVENTARIO de Access trae entradas (factura) y salidas (remision, por codigo y sin factura).
+    entry, exit_row, zero = inv("1001", kilos="100", valor="2000000"), inv(remision="XX0450", cantidad="60"), inv("1002")
+    entries, exits = inventory_rows([entry, exit_row, zero])
+    assert entries == [entry] and exits == [exit_row]
+    # Saldo disponible para Registrar Salidas: los kilos solo si la compra sigue sin remesar.
+    assert entry_balance(entry, {"plano": "f", "forma_de_pago": "VALIDA"}) == Decimal("100")
+    assert entry_balance(entry, {"plano": "t", "forma_de_pago": "VALIDA"}) == 0
+    assert entry_balance(entry, {"plano": "f", "forma_de_pago": "ANULADA"}) == 0
+    # Saldo que viene del año anterior (factura 99..., sin compra): cuenta en el saldo pero no sale en una remision.
+    assert entry_balance(inv("9911210226", kilos="413"), None) == 0
+    assert opening_purchase_id(3, "9911210226") < 0
+    assert opening_purchase_id(3, "9911210226") != opening_purchase_id(11, "9911210226")
+    # Salidas: una remision por numero, con una linea por fila (TA0463 trae dos filas del mismo codigo).
+    grouped = exit_remissions([inv(remision="XX0463", cantidad="10", fecha="2026-02-01 00:00:00"),
+                               inv(remision="XX0463", cantidad="5", fecha="2026-02-02 00:00:00"),
+                               inv(remision="XX0464", cantidad="7")])
+    assert list(grouped) == [463, 464]
+    assert grouped[463]["text"] == "XX0463" and grouped[463]["date"] == date(2026, 2, 2)
+    assert [line["cantidad"] for line in grouped[463]["lines"]] == ["10", "5"]
+    # El contador de remision tambien cuenta las salidas (una salida 1088 por encima de la remesa 1086).
+    rows = [{"remision": "XX1085", "fecha_compra": "2026-10-01 00:00:00"},
+            {"remision": "XX1086", "fecha_compra": "2026-10-02 00:00:00"}]
+    assert max_remission(rows + exit_remission_rows([inv(remision="XX1088", cantidad="5")])) == 1088
 
 
 def check_ledger_fund():
@@ -215,6 +253,7 @@ def main():
     check_control_record()
     check_seller_without_last_name()
     check_ledger_fund()
+    check_inventory()
     check_date_cut()
     check_cheque_text()
     check_husk()
