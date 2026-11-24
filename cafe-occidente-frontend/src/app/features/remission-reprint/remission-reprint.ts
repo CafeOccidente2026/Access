@@ -28,7 +28,7 @@ export interface RemissionReprintContent {
   readonly annulConfirm: string;
   readonly yesLabel: string;
   readonly noLabel: string;
-  readonly messages: Record<'missingNumber' | 'notFound' | 'pdfError' | 'searchError' | 'annulled' | 'annulError', string>;
+  readonly messages: Record<'missingNumber' | 'notFound' | 'pdfError' | 'searchError' | 'annulled' | 'annulError' | 'fromAccess', string>;
 }
 
 const fill = (text: string, number: string) => text.replace('{number}', number);
@@ -97,6 +97,17 @@ export class RemissionReprintComponent {
 
   confirmText(c: RemissionReprintContent): string {
     return fill(c.annulConfirm, this.found()?.displayNumber ?? '');
+  }
+
+  /** Anular Remision: una salida historica de Access no se anula; se avisa en vez de pedir la confirmacion. */
+  pressAnnul(): void {
+    const remission = this.found();
+    const c = this.content();
+    if (remission?.fromAccess && c) {
+      this.message.set(fill(c.messages.fromAccess, remission.displayNumber));
+      return;
+    }
+    this.confirmingAnnul.set(true);
   }
 
   annul(): void {
