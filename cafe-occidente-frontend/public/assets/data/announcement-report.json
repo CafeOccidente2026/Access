@@ -11,7 +11,6 @@
   "summaryPdfTitle": "RESUMEN ANUNCIO",
   "detailPdfTitle": "ANUNCIO",
   "messages": {
-    "wrongYear": "La fecha debe ser del año {year}",
     "fromAfterTo": "Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)",
     "empty": "No hay compras para esas fechas",
     "emptyAnnouncement": "No hay compras con el anuncio {announcement}",

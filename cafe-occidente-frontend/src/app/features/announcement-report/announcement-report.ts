@@ -25,7 +25,7 @@ export interface AnnouncementReportContent {
   readonly printDetailLabel: string;
   readonly summaryPdfTitle: string;
   readonly detailPdfTitle: string;
-  readonly messages: Record<'wrongYear' | 'fromAfterTo' | 'empty' | 'emptyAnnouncement' | 'error', string>;
+  readonly messages: Record<'fromAfterTo' | 'empty' | 'emptyAnnouncement' | 'error', string>;
   readonly pdf: AnnouncementReportText;
 }
 
@@ -54,9 +54,6 @@ export class AnnouncementReportComponent {
 
   readonly content = toSignal(inject(ContentService).loadJson<AnnouncementReportContent>('announcement-report'));
   readonly kindOptions: readonly AnnouncementReportKind[] = ['both', 'summary', 'detail'];
-  readonly year = new Date().getFullYear();
-  readonly minDate = `${this.year}-01-01`;
-  readonly maxDate = `${this.year}-12-31`;
   /** El Anuncio es solo el numero, como el InputBox de Access. */
   readonly digitsOnly = /\D/g;
   readonly announcement = signal('');
@@ -65,7 +62,7 @@ export class AnnouncementReportComponent {
   readonly kind = signal<AnnouncementReportKind>('both');
   /** Lo pedido con Generar; undefined = todavia no se ha generado (o no paso las validaciones). */
   private readonly requested = signal<{ query: AnnouncementReportQuery; kind: AnnouncementReportKind } | undefined>(undefined);
-  private readonly invalid = signal<'wrongYear' | 'fromAfterTo' | null>(null);
+  private readonly invalid = signal<'fromAfterTo' | null>(null);
 
   readonly report = rxResource({
     params: () => this.requested()?.query,
@@ -95,9 +92,6 @@ export class AnnouncementReportComponent {
       return null;
     }
     const invalid = this.invalid();
-    if (invalid === 'wrongYear') {
-      return m.wrongYear.replace('{year}', String(this.year));
-    }
     if (invalid) {
       return m[invalid];
     }
@@ -150,14 +144,10 @@ export class AnnouncementReportComponent {
     }
   }
 
-  /** Sin anuncio hacen falta Desde y Hasta; las fechas que se pongan son del año y Desde no pasa de Hasta. */
-  private validate(announcement: string, from: string, to: string): 'wrongYear' | 'fromAfterTo' | null {
-    const dates = [from, to].filter((d) => d !== '');
-    if (!announcement && dates.length < 2) {
+  /** Sin anuncio hacen falta Desde y Hasta y Desde no pasa de Hasta. El rango puede cruzar de año (cierre de año). */
+  private validate(announcement: string, from: string, to: string): 'fromAfterTo' | null {
+    if (!announcement && (from === '' || to === '')) {
       return 'fromAfterTo';
-    }
-    if (dates.some((d) => !d.startsWith(`${this.year}-`))) {
-      return 'wrongYear';
     }
     return from && to && from > to ? 'fromAfterTo' : null;
   }

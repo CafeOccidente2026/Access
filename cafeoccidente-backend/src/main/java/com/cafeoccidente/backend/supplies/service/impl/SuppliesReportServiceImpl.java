@@ -39,8 +39,9 @@ import org.springframework.transaction.annotation.Transactional;
  * Girados" se copiaba a Caja (Cheques girados a caja). Aca no se copia nada: {@link #cashBook} y
  * {@link #supplyBook} arman al leer la misma Caja y el mismo Suministros que veia Access.
  *
- * Corte por año: al cerrar el año Access borraba Caja, CajaMenor, Empaque y Suministros del año
- * anterior (eliminacajaañoanterior, etc.), asi que los informes de movimiento arrancan el 1 de enero.
+ * Cierre de año, fase 1: Access borraba Caja, CajaMenor, Empaque y Suministros del año anterior
+ * (eliminacajaañoanterior, etc.); aca nada se borra. Los informes de movimiento muestran el año en curso, pero el saldo
+ * se calcula con toda la historia: lo anterior llega como la fila «Saldo inicial — viene de <año>».
  */
 @Service
 public class SuppliesReportServiceImpl implements SuppliesReportService {
@@ -88,18 +89,19 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     @Override
     public List<SuppliesReportRow> cashMovement(Long agencyId, String fundCode, LocalDate today) {
         String fund = likePrefix(fundCode);
-        return withBalance(cashBook(agencyId, yearStart(today), yearEnd(today)).stream()
-                .filter(l -> CASH.equals(l.paymentMethod()) && l.fundCode().startsWith(fund)));
+        return withBalance(cashBook(agencyId, BEGINNING, yearEnd(today)).stream()
+                .filter(l -> CASH.equals(l.paymentMethod()) && l.fundCode().startsWith(fund)), yearStart(today));
     }
 
     /**
      * C5 (prueba del 11-nov, punto 5): lo pagado con datafono, en su propio informe (no en el de Caja). Sale de la
-     * cuenta por cobrar PENDIENTE: al anular la compra pasa a ANULADA y deja de salir. Mismo periodo y fondo que Caja.
+     * cuenta por cobrar PENDIENTE: al anular la compra pasa a ANULADA y deja de salir. Lo pendiente de años anteriores
+     * sigue saliendo hasta que se salde.
      */
     @Override
     public List<SuppliesReportRow> cardPayments(Long agencyId, String fundCode, LocalDate today) {
         String fund = likePrefix(fundCode);
-        List<Line> lines = suppliesReadRepository.cardReceivables(agencyId, yearStart(today), yearEnd(today)).stream()
+        List<Line> lines = suppliesReadRepository.cardReceivables(agencyId, BEGINNING, yearEnd(today)).stream()
                 .filter(p -> p.fundCode().startsWith(fund))
                 .map(p -> new Line(p.module(), p.id(), p.agencyName(), String.valueOf(p.invoiceNumber()), p.fundCode(),
                         p.purchaseDate(), p.idNumber(), null, BigDecimal.ZERO, BigDecimal.ZERO, p.paymentMethod(), null,
@@ -112,30 +114,31 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
 
     @Override
     public List<SuppliesReportRow> pettyCashMovement(Long agencyId, LocalDate today) {
-        return withBalance(pettyCashEntryRepository.findInPeriod(agencyId, yearStart(today), yearEnd(today)).stream()
+        return withBalance(pettyCashEntryRepository.findInPeriod(agencyId, BEGINNING, yearEnd(today)).stream()
                 .map(e -> line("PETTY", e, e.getInflow(), e.getOutflow(), e.getPaymentMethod()))
-                .filter(l -> CASH.equals(l.paymentMethod())));
+                .filter(l -> CASH.equals(l.paymentMethod())), yearStart(today));
     }
 
     @Override
     public List<SuppliesReportRow> supplies(Long agencyId, String fundCode, LocalDate today) {
         String fund = likePrefix(fundCode);
-        return withBalance(supplyBook(agencyId, yearStart(today), yearEnd(today)).stream()
-                .filter(l -> l.fundCode().equals(fund)));
+        return withBalance(supplyBook(agencyId, BEGINNING, yearEnd(today)).stream()
+                .filter(l -> l.fundCode().equals(fund)), yearStart(today));
     }
 
     @Override
     public List<SuppliesReportRow> packaging(Long agencyId, String packagingType, LocalDate today) {
         String type = likePrefix(packagingType);
-        return withBalance(packagingEntryRepository.findInPeriod(agencyId, yearStart(today), yearEnd(today)).stream()
+        return withBalance(packagingEntryRepository.findInPeriod(agencyId, BEGINNING, yearEnd(today)).stream()
                 .filter(e -> e.getPackagingType().startsWith(type))
-                .map(SuppliesReportServiceImpl::line));
+                .map(SuppliesReportServiceImpl::line), yearStart(today));
     }
 
     @Override
     @Transactional
     public List<SuppliesReportRow> checkRelation(Long agencyId, LocalDate from, LocalDate to, LocalDate today) {
-        List<Line> checks = cashBook(agencyId, yearStart(today), yearEnd(today)).stream()
+        // Los cheques sin relacionar de años anteriores siguen pendientes; el rango puede cruzar de año.
+        List<Line> checks = cashBook(agencyId, BEGINNING, yearEnd(today)).stream()
                 .filter(l -> l.checkNumber() != null && !l.checkNumber().matches("0*"))
                 .toList();
         if (from != null && to != null) {
@@ -233,15 +236,37 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
                 .collect(Collectors.toMap(GrowerName::idNumber, Function.identity(), (a, b) -> a));
     }
 
-    /** RunningSum "Sobre todo" de =[Entradas]-[Salidas]. */
-    private static List<SuppliesReportRow> withBalance(Stream<Line> lines) {
-        BigDecimal[] balance = {BigDecimal.ZERO};
-        return lines.sorted(BY_DATE)
-                .map(l -> {
-                    balance[0] = balance[0].add(l.inflow()).subtract(l.outflow());
-                    return row(l, null, balance[0]);
-                })
-                .toList();
+    /**
+     * RunningSum "Sobre todo" de =[Entradas]-[Salidas] con toda la historia; se muestran las filas desde {@code from},
+     * precedidas por «Saldo inicial — viene de <año>» si hubo movimientos antes (entradas y salidas en 0, para que
+     * no cambien los totales del año).
+     */
+    // ponytail: lee toda la historia en cada informe; si pesa, sumar lo anterior con un SUM en la base.
+    private static List<SuppliesReportRow> withBalance(Stream<Line> lines, LocalDate from) {
+        List<SuppliesReportRow> rows = new ArrayList<>();
+        BigDecimal balance = BigDecimal.ZERO;
+        Line lastEarlier = null;
+        for (Line l : lines.sorted(BY_DATE).toList()) {
+            balance = balance.add(l.inflow()).subtract(l.outflow());
+            if (l.date().isBefore(from)) {
+                lastEarlier = l;
+            } else {
+                if (lastEarlier != null && rows.isEmpty()) {
+                    rows.add(opening(lastEarlier, balance.subtract(l.inflow()).add(l.outflow()), from));
+                }
+                rows.add(row(l, null, balance));
+            }
+        }
+        if (lastEarlier != null && rows.isEmpty()) {
+            rows.add(opening(lastEarlier, balance, from));
+        }
+        return rows;
+    }
+
+    private static SuppliesReportRow opening(Line last, BigDecimal balance, LocalDate from) {
+        return new SuppliesReportRow(last.agencyName(), null, last.fundCode(), from.minusDays(1), null, null, null,
+                "Saldo inicial — viene de " + (from.getYear() - 1), BigDecimal.ZERO, BigDecimal.ZERO, balance, null,
+                null, null);
     }
 
     private static Line line(String source, LedgerEntry e, BigDecimal inflow, BigDecimal outflow, String method) {
@@ -276,6 +301,9 @@ public class SuppliesReportServiceImpl implements SuppliesReportService {
     private static String likePrefix(String text) {
         return text == null ? "" : text.trim().toUpperCase();
     }
+
+    /** Desde el principio: los saldos no se cortan por año. */
+    static final LocalDate BEGINNING = LocalDate.of(1900, 1, 1);
 
     private static LocalDate yearStart(LocalDate today) {
         return today.withDayOfYear(1);

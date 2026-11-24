@@ -29,7 +29,8 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             """, nativeQuery = true)
     List<Object[]> findSellerAndFund(@Param("agencyId") Long agencyId);
 
-    List<InventoryMovement> findByAgencyIdAndPurchaseDateBetween(Long agencyId, LocalDate from, LocalDate to);
+    /** Entradas de la agencia hasta la fecha, con toda la historia (la base no se corta por año). */
+    List<InventoryMovement> findByAgencyIdAndPurchaseDateLessThanEqual(Long agencyId, LocalDate to);
 
     /** Entradas del Cod_Prod (Sld1/Sld2) hasta la fecha, con toda la historia (sin corte por año):
      *  SumaDeKilos_Netos, SumaDeVr_Inventario, SumaDeKXFC. */

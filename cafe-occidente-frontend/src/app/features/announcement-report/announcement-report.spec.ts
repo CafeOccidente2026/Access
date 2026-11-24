@@ -71,8 +71,8 @@ describe('AnnouncementReportComponent (HU-26)', () => {
 
   it('without the announcement it asks every announcement of the range', () => {
     const { component } = render();
-    const from = `${component.year}-05-09`;
-    const to = `${component.year}-05-12`;
+    const from = '2026-05-09';
+    const to = '2026-05-12';
     component.fromDate.set(from);
     component.toDate.set(to);
     component.generate();
@@ -113,8 +113,8 @@ describe('AnnouncementReportComponent (HU-26)', () => {
     component.generate();
     expect(component.message()).toBe('Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)');
 
-    component.fromDate.set(`${component.year}-05-12`);
-    component.toDate.set(`${component.year}-05-09`);
+    component.fromDate.set('2026-05-12');
+    component.toDate.set('2026-05-09');
     component.generate();
     expect(component.message()).toBe('Indique Desde Fecha y Hasta Fecha (Desde no puede ser posterior a Hasta)');
     http.expectNone(() => true);
@@ -143,12 +143,18 @@ describe('AnnouncementReportComponent (HU-26)', () => {
     expect(component.message()).toBe(content.messages.error);
   });
 
-  it('only accepts dates of the current year', () => {
-    const { component } = render();
-    component.fromDate.set(`${component.year - 1}-12-31`);
+  it('cierre de año: the range can cross the year (28-dic to 3-ene)', () => {
+    const { component, el } = render();
+    const year = new Date().getFullYear();
+    component.fromDate.set(`${year - 1}-12-28`);
+    component.toDate.set(`${year}-01-03`);
     component.generate();
-    expect(component.message()).toBe(content.messages.wrongYear.replace('{year}', String(component.year)));
-    http.expectNone(() => true);
+    TestBed.tick();
+
+    expect(component.message()).toBeNull();
+    const request = http.expectOne((r) => r.url === URL);
+    expect([request.request.params.get('from'), request.request.params.get('to')]).toEqual([`${year - 1}-12-28`, `${year}-01-03`]);
+    expect(el.querySelector('[data-testid="from"]')!.getAttribute('min')).toBeNull();
   });
 
   it('each document has its own Imprimir, shown only once it is ready', () => {

@@ -90,6 +90,8 @@ export interface InventoryReportRow {
   readonly quantity: number | null;
   readonly exitPercentage: number | null;
   readonly outputValue: number | null;
+  /** Solo la fila de saldo inicial (cierre de año): «Saldo inicial — viene de <año>». */
+  readonly label?: string | null;
 }
 
 export interface ProductCodeOption {

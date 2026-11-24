@@ -2,7 +2,10 @@ package com.cafeoccidente.backend.supplies.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.cafeoccidente.backend.common.config.ClockConfig;
@@ -42,8 +45,8 @@ import org.springframework.transaction.annotation.Transactional;
  * 5d (RF-27.2 a RF-27.12.3, HU-37 a HU-49): los informes de Suministros con los ejemplos numericos del RF, sobre la
  * semilla (agencia 1, fondo RP). Los movimientos se dan de alta con el servicio real; la compra de 587.824 en efectivo
  * se inyecta en la lectura de compras (su copia a Caja ya la prueba {@code NewPurchasePaymentIntegrationTest}). El
- * reloj esta en 2031 para que ningun movimiento de otra prueba caiga en el corte por año. Transaccional: no deja
- * movimientos, consecutivos ni marcas de cheques.
+ * reloj esta en 2031: lo de años anteriores (de otras pruebas) llega como fila «Saldo inicial» y las cuentas se miden
+ * desde ese saldo. Transaccional: no deja movimientos, consecutivos ni marcas de cheques.
  */
 @SpringBootTest
 @Transactional
@@ -117,8 +120,25 @@ class SuppliesReportIntegrationTest {
         doReturn(List.of(purchase)).when(reads).purchasePayments(any(), any(), any());
     }
 
+    private static final String OPENING = "Saldo inicial — viene de ";
+
+    private static boolean isOpening(SuppliesReportRow row) {
+        return row.detail() != null && row.detail().startsWith(OPENING);
+    }
+
+    /** Lo que se movio en el año, sin la fila de saldo inicial. */
+    private static List<SuppliesReportRow> movements(List<SuppliesReportRow> rows) {
+        return rows.stream().filter(r -> !isOpening(r)).toList();
+    }
+
+    /** Saldo del año: el ultimo saldo menos el saldo inicial (si lo hay). */
     private static BigDecimal lastBalance(List<SuppliesReportRow> rows) {
-        return rows.getLast().balance();
+        BigDecimal opening = rows.isEmpty() || !isOpening(rows.getFirst()) ? BigDecimal.ZERO : rows.getFirst().balance();
+        return rows.getLast().balance().subtract(opening);
+    }
+
+    private void today(String instant) {
+        when(clock.instant()).thenReturn(Instant.parse(instant));
     }
 
     @Test
@@ -128,10 +148,10 @@ class SuppliesReportIntegrationTest {
 
         List<SuppliesReportRow> rp = reports.supplies(AGENCY, "RP", TODAY);
         // Vr Suministro de Tesoreria y, como Gastos o Comp, el suministro de efectivo con cheque (D3).
-        assertThat(rp).extracting(row -> row.inflow().subtract(row.outflow()).toBigInteger())
+        assertThat(movements(rp)).extracting(row -> row.inflow().subtract(row.outflow()).toBigInteger())
                 .containsExactlyInAnyOrder(new BigInteger("100000000"), new BigInteger("-97000000"));
         assertThat(lastBalance(rp)).isEqualByComparingTo("3000000");
-        assertThat(reports.supplies(AGENCY, "LF", TODAY)).isEmpty();
+        assertThat(movements(reports.supplies(AGENCY, "LF", TODAY))).isEmpty();
     }
 
     @Test
@@ -143,7 +163,7 @@ class SuppliesReportIntegrationTest {
 
         List<SuppliesReportRow> cash = reports.cashMovement(AGENCY, "RP", TODAY);
 
-        assertThat(cash).extracting(SuppliesReportRow::transactionId).containsExactlyInAnyOrder("SDBU-2-001", "990001");
+        assertThat(movements(cash)).extracting(SuppliesReportRow::transactionId).containsExactlyInAnyOrder("SDBU-2-001", "990001");
         assertThat(lastBalance(cash)).isEqualByComparingTo("96412176");
     }
 
@@ -156,7 +176,7 @@ class SuppliesReportIntegrationTest {
 
         List<SuppliesReportRow> used = reports.packaging(AGENCY, "USADO", TODAY);
 
-        assertThat(used).extracting(SuppliesReportRow::detail).containsExactlyInAnyOrder(DETAIL, "Remision");
+        assertThat(movements(used)).extracting(SuppliesReportRow::detail).containsExactlyInAnyOrder(DETAIL, "Remision");
         assertThat(lastBalance(used)).isEqualByComparingTo("519");
         assertThat(lastBalance(reports.packaging(AGENCY, "NUEVO", TODAY))).isEqualByComparingTo("40");
     }
@@ -168,7 +188,7 @@ class SuppliesReportIntegrationTest {
         entries.createIssuedCheck(ledger("RP", "1000000", null, "0549"));
 
         assertThat(reports.checkRelation(AGENCY, null, null, TODAY)).extracting(SuppliesReportRow::checkNumber)
-                .containsExactlyInAnyOrder("0548", "0549");
+                .contains("0548", "0549");
         assertThat(reports.checkRelation(AGENCY, null, null, TODAY)).isEmpty();
         assertThat(reports.checkRelation(AGENCY, TODAY, TODAY, TODAY)).extracting(SuppliesReportRow::checkNumber)
                 .containsExactlyInAnyOrder("0548", "0549");
@@ -197,5 +217,65 @@ class SuppliesReportIntegrationTest {
         entries.createPettyCashExpense(ledger(null, "650000", null, null));
 
         assertThat(lastBalance(reports.pettyCashMovement(AGENCY, TODAY))).isEqualByComparingTo("-150000");
+    }
+
+    @Test
+    void januaryStartsWithTheBalanceThatComesFromDecember() {
+        // Cierre de año, fase 1: nada se borra; el saldo de empaques de 2030 llega a 2031 como «Saldo inicial».
+        today("2031-01-03T15:00:00Z");
+        BigDecimal before = reports.packaging(AGENCY, "USADO", TODAY).stream().map(SuppliesReportRow::balance)
+                .reduce((a, b) -> b).orElse(BigDecimal.ZERO);
+        today("2030-12-28T15:00:00Z");
+        entries.createPackagingEntry(new PackagingEntryRequest("USADO", GROWER, DETAIL, 100));
+        today("2031-01-03T15:00:00Z");
+        entries.createPackagingEntry(new PackagingEntryRequest("USADO", GROWER, DETAIL, 20));
+
+        List<SuppliesReportRow> used = reports.packaging(AGENCY, "USADO", LocalDate.of(2031, 1, 3));
+
+        SuppliesReportRow opening = used.getFirst();
+        assertThat(opening.detail()).isEqualTo(OPENING + "2030");
+        assertThat(opening.date()).isEqualTo(LocalDate.of(2030, 12, 31));
+        assertThat(opening.balance()).isEqualByComparingTo(before.add(BigDecimal.valueOf(100)));
+        assertThat(opening.inflow()).isZero();
+        assertThat(opening.outflow()).isZero();
+        assertThat(movements(used)).singleElement().satisfies(row -> {
+            assertThat(row.date()).isEqualTo(LocalDate.of(2031, 1, 3));
+            assertThat(row.balance()).isEqualByComparingTo(opening.balance().add(BigDecimal.valueOf(20)));
+        });
+    }
+
+    @Test
+    void suppliesCashAndPettyCashCarryTheBalanceAcrossTheYear() {
+        today("2030-12-30T15:00:00Z");
+        entries.createSupply(ledger("RP", "1000", null, null));
+        entries.createPettyCashSupply(ledger(null, "300", null, null));
+        today("2031-01-02T15:00:00Z");
+        LocalDate january = LocalDate.of(2031, 1, 2);
+
+        for (List<SuppliesReportRow> rows : List.of(reports.supplies(AGENCY, "RP", january),
+                reports.pettyCashMovement(AGENCY, january))) {
+            assertThat(rows.getFirst().detail()).isEqualTo(OPENING + "2030");
+            assertThat(movements(rows)).isEmpty();
+        }
+    }
+
+    @Test
+    void aCheckFromLastYearThatWasNeverRelatedStillShowsUp() {
+        today("2030-12-30T15:00:00Z");
+        entries.createIssuedCheck(ledger("RP", "1000000", null, "0777"));
+        today("2031-01-02T15:00:00Z");
+
+        assertThat(reports.checkRelation(AGENCY, null, null, LocalDate.of(2031, 1, 2)))
+                .extracting(SuppliesReportRow::checkNumber).contains("0777");
+        // Del 28-dic al 3-ene: el rango cruza de año.
+        assertThat(reports.checkRelation(AGENCY, LocalDate.of(2030, 12, 28), LocalDate.of(2031, 1, 3),
+                LocalDate.of(2031, 1, 2))).extracting(SuppliesReportRow::checkNumber).contains("0777");
+    }
+
+    @Test
+    void theCardReportKeepsPendingReceivablesFromEarlierYears() {
+        reports.cardPayments(AGENCY, "RP", TODAY);
+
+        verify(reads).cardReceivables(eq(AGENCY), argThat(from -> from.getYear() < 2031), eq(LocalDate.of(2031, 12, 31)));
     }
 }
