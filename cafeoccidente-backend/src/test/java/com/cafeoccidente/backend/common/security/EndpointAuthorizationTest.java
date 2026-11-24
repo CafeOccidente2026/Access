@@ -366,6 +366,33 @@ class EndpointAuthorizationTest {
         }
     }
 
+    /**
+     * Hallazgo 3 (ZAP, 24-nov): sin permiso responde 403 aunque la peticion venga incompleta (sin parametros y con un
+     * cuerpo que no se puede leer). El permiso se revisa antes de leer y validar los datos, asi un 400 no le cuenta
+     * a quien no tiene permiso como es la peticion.
+     */
+    @ParameterizedTest(name = "{1} {0}")
+    @MethodSource("matrix")
+    void withoutPermissionAnIncompleteRequestIsStill403(Endpoint endpoint, String profile) throws Exception {
+        String[] parts = profile.split("\+");
+        String role = parts[0];
+        List<String> screens = parts.length > 1 ? List.of(parts[1].split(",")) : List.of();
+        if (endpoint.roles().contains(role) || endpoint.screen() != null && screens.contains(endpoint.screen())) {
+            return;
+        }
+        List<String> authorities = new ArrayList<>(List.of("ROLE_" + role));
+        screens.forEach(screen -> authorities.add("SCREEN_" + screen));
+
+        int status = mockMvc.perform(request(endpoint.method(), endpoint.url().replaceAll("\?.*$", ""))
+                        .with(user("prueba").authorities(authorities.stream()
+                                .map(SimpleGrantedAuthority::new).toList()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andReturn().getResponse().getStatus();
+
+        assertThat(status).as("%s con %s", endpoint, profile).isEqualTo(403);
+    }
+
     /** Un endpoint nuevo sin fila en la matriz hace fallar este test: nadie queda sin revisar. */
     @Test
     void everyEndpointIsInTheMatrix() {

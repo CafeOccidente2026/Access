@@ -98,6 +98,7 @@ class RemissionServiceImplTest {
         InventoryMovement movement = new InventoryMovement();
         movement.setId(id);
         movement.setProductCode(productCode(1L, "RP"));
+        movement.setAgency(agency());
         movement.setPurchaseModule(InventoryMovement.PurchaseModule.DRY_COFFEE);
         movement.setPurchaseId(100L + id);
         movement.setInvoiceNumber(27867);
@@ -337,6 +338,32 @@ class RemissionServiceImplTest {
         assertThatThrownBy(() -> dispatch("120"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("vuelva a intentarlo");
+    }
+
+    @Test
+    void aRemissionOfAnotherAgencyIsNotFoundById() {
+        // Hallazgo 2 (24-nov): la remision 7 es de la agencia 2 y la sesion trabaja en la 1.
+        Remission other = new Remission();
+        other.setId(7L);
+        Agency agency2 = new Agency();
+        agency2.setId(2L);
+        other.setAgency(agency2);
+        when(remissionRepository.findById(7L)).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> service.findById(7L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void aMovementOfAnotherAgencyCannotGoOutInARemission() {
+        mockCommonSaves();
+        InventoryMovement other = movement(10L, "100");
+        Agency agency2 = new Agency();
+        agency2.setId(2L);
+        other.setAgency(agency2);
+
+        assertThatThrownBy(() -> service.create(request(10L))).isInstanceOf(ResourceNotFoundException.class);
+        verify(remittances, never()).lock(any(), anyList());
+        verify(inventoryMovementRepository, never()).save(any());
     }
 
     private Remission saved(String status) {
