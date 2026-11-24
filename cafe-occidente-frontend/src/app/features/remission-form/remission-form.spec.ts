@@ -31,7 +31,7 @@ describe('RemissionFormComponent', () => {
   const saved: RemissionResponse = {
     id: 1, remissionNumber: 1, agencyId: 1, agencyName: 'Buesaco', remissionDate: '2026-09-24', destination: 'Bodega central',
     conductorIdNumber: null, conductorName: null, transportCompany: null, vehiclePlate: null, exported: false,
-    displayNumber: 'SDBU-125', status: 'VIGENTE', remittanceId: 9, lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }],
+    displayNumber: 'SDBU-125', status: 'VIGENTE', remittanceId: 9, fromAccess: false, lines: [{ id: 1, inventoryMovementId: 10, quantity: 300, unitValue: 7218, outputValue: 2165400 }],
   } as unknown as RemissionResponse;
 
   let createSpy: ReturnType<typeof vi.fn>;
