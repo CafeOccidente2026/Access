@@ -10,6 +10,7 @@ import com.cafeoccidente.backend.inventory.repository.InventoryMovementRepositor
 import com.cafeoccidente.backend.inventory.repository.RemissionLineRepository;
 import com.cafeoccidente.backend.purchases.shared.repository.ProductCodeRepository;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -56,23 +57,36 @@ public class InventoryReportService {
                 ? m -> m.getProductCode().getCode().equals(code)
                 : m -> m.getSpecialType().equals(special);
 
-        // Corte por año, en un solo lugar: al cerrar el año Access borraba las filas del año anterior
-        // (consulta "eliminainventarioañoanterior": DELETE FROM INVENTARIO WHERE Fecha Between
-        // #1/1/2025# And #12/31/2025#), asi que el reporte solo ve el año en curso y arranca en cero.
+        // Cierre de año, fase 1: Access borraba el año anterior ("eliminainventarioañoanterior"); aca nada se borra.
+        // El reporte sigue mostrando el año en curso, pero lo anterior llega como una fila de saldo inicial.
         LocalDate from = today.withDayOfYear(1);
         LocalDate to = today.withDayOfYear(today.lengthOfYear());
 
         List<Sortable> rows = new ArrayList<>();
-        inventoryMovementRepository.findByAgencyIdAndPurchaseDateBetween(agencyId, from, to).stream()
+        Opening opening = new Opening();
+        inventoryMovementRepository.findByAgencyIdAndPurchaseDateLessThanEqual(agencyId, to).stream()
                 .filter(matches)
-                .forEach(m -> rows.add(new Sortable(m.getCreatedAt(), 0, m.getId(), new InventoryReportRow(
-                        m.getPurchaseDate(), m.getInvoiceNumber(), null, m.getProductCode().getCode(),
-                        m.getSpecialType(), m.getNetKg(), m.getHealthyPercentage(), m.getInventoryValue(),
-                        null, null, null))));
-        remissionLineRepository.findByRemissionAgencyIdAndRemissionRemissionDateBetween(agencyId, from, to).stream()
+                .forEach(m -> {
+                    if (m.getPurchaseDate().isBefore(from)) {
+                        opening.add(m.getNetKg(), m.getInventoryValue(), m.getHealthyPercentage());
+                    } else {
+                        rows.add(new Sortable(m.getCreatedAt(), 0, m.getId(), new InventoryReportRow(
+                                m.getPurchaseDate(), m.getInvoiceNumber(), null, m.getProductCode().getCode(),
+                                m.getSpecialType(), m.getNetKg(), m.getHealthyPercentage(), m.getInventoryValue(),
+                                null, null, null)));
+                    }
+                });
+        remissionLineRepository.findByRemissionAgencyIdAndRemissionRemissionDateLessThanEqual(agencyId, to).stream()
                 .filter(line -> Remission.VIGENTE.equals(line.getRemission().getStatus()))
                 .filter(line -> matches.test(line.getInventoryMovement()))
-                .forEach(line -> rows.add(exitRow(line)));
+                .forEach(line -> {
+                    InventoryReportRow exit = exitRow(line).row();
+                    if (exit.date().isBefore(from)) {
+                        opening.add(exit.quantity().negate(), exit.outputValue().negate(), exit.exitPercentage());
+                    } else {
+                        rows.add(exitRow(line));
+                    }
+                });
 
         Comparator<Sortable> order = byCode
                 // INVXCODPROD: BreakLevel Id = orden de ingreso a la tabla INVENTARIO.
@@ -82,7 +96,37 @@ public class InventoryReportService {
                         .thenComparing(s -> s.row().invoiceNumber(), Comparator.nullsFirst(Comparator.naturalOrder()))
                         .thenComparing(s -> s.row().remissionNumber(), Comparator.nullsFirst(Comparator.naturalOrder()))
                         .thenComparing(s -> s.id());
-        return rows.stream().sorted(order).map(s -> s.row()).toList();
+        List<InventoryReportRow> sorted = new ArrayList<>(rows.stream().sorted(order).map(s -> s.row()).toList());
+        if (opening.any) {
+            sorted.addFirst(opening.row(from, byCode ? code : null, byCode ? null : special));
+        }
+        return sorted;
+    }
+
+    /**
+     * «Saldo inicial — viene de <año>»: lo que dejaron los años anteriores, calculado al leer (no se copia nada). Va
+     * como una entrada para que el reporte siga su suma corrida: kilos, valor y el % ponderado que quedaba
+     * (Acum / Saldo_Cantidad).
+     */
+    private static final class Opening {
+        private boolean any;
+        private BigDecimal kg = BigDecimal.ZERO;
+        private BigDecimal value = BigDecimal.ZERO;
+        private BigDecimal acum = BigDecimal.ZERO;
+
+        private void add(BigDecimal kilos, BigDecimal amount, BigDecimal percentage) {
+            any = true;
+            BigDecimal k = kilos == null ? BigDecimal.ZERO : kilos;
+            kg = kg.add(k);
+            value = value.add(amount == null ? BigDecimal.ZERO : amount);
+            acum = acum.add(k.multiply(percentage == null ? BigDecimal.ZERO : percentage));
+        }
+
+        private InventoryReportRow row(LocalDate from, String code, String special) {
+            BigDecimal percentage = kg.signum() == 0 ? BigDecimal.ZERO : acum.divide(kg, MathContext.DECIMAL64);
+            return new InventoryReportRow(from.minusDays(1), null, null, code,
+                    "Saldo inicial — viene de " + (from.getYear() - 1), kg, percentage, value, null, null, null);
+        }
     }
 
     private static Sortable exitRow(RemissionLine line) {

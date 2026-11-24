@@ -11,8 +11,8 @@ public interface RemissionLineRepository extends JpaRepository<RemissionLine, Lo
 
     List<RemissionLine> findByRemissionId(Long remissionId);
 
-    List<RemissionLine> findByRemissionAgencyIdAndRemissionRemissionDateBetween(
-            Long agencyId, LocalDate from, LocalDate to);
+    /** Salidas de la agencia hasta la fecha, con toda la historia. */
+    List<RemissionLine> findByRemissionAgencyIdAndRemissionRemissionDateLessThanEqual(Long agencyId, LocalDate to);
 
     /** Salidas del Cod_Prod (Sld1/Sld2): SumaDeCantidad, SumaDeVr_Salida, SumaDeKXFrSal. Las lineas
      *  anteriores a V32 no tienen factor de salida: se usa el de su entrada origen, con el que se
