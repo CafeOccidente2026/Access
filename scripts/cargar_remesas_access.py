@@ -48,25 +48,34 @@ def agency_id(base, folder):
 
 
 def plan_remittances(rows):
-    """{numero: {fondo, fecha, facturas}} en orden de numero, y las facturas pendientes (Plano = f)."""
-    plan, pending, seen = {}, [], set()
+    """
+    ({numero: {fondo, fecha, facturas[, anuladas]}} en orden de numero, facturas pendientes (Plano = f),
+    {numero: [motivos]} de las remesas que quedan pendientes).
+    25-nov: una compra ANULADA dentro de una remesa de Access se carga tal cual (anuladas, con observacion). Una
+    remesa con otro problema (compra valida sin kilos, factura repetida) no se carga y se lista; las demas si.
+    """
+    plan, pending, seen, held = {}, [], {}, {}
     for r in rows:
         invoice = int(r["factura"])
+        number = r["remision"].strip() if r["plano"] == "t" else ""
         if invoice in seen:
-            raise ValueError(f"factura {invoice} repetida en el CSV")
-        seen.add(invoice)
+            for repeated in ({seen[invoice], number} - {""}) or {"(sin remesa)"}:
+                held.setdefault(repeated, []).append(f"factura {invoice} repetida en el CSV")
+            continue
+        seen[invoice] = number
         if r["plano"] != "t":
             pending.append(invoice)
             continue
-        number = r["remision"].strip()
         if not number:
-            raise ValueError(f"factura {invoice} remesada sin numero de remesa")
-        if r["forma_de_pago"] != "VALIDA":
-            raise ValueError(f"factura {invoice} anulada dentro de la remesa {number}")
-        if float(r["kilos_netos"] or 0) <= 0:
-            raise ValueError(f"factura {invoice} sin kilos dentro de la remesa {number}")
+            held.setdefault("(sin numero)", []).append(f"factura {invoice} remesada sin numero de remesa")
+            continue
+        annulled = r["forma_de_pago"] != "VALIDA"
+        if not annulled and float(r["kilos_netos"] or 0) <= 0:
+            held.setdefault(number, []).append(f"factura {invoice} valida sin kilos")
         remittance = plan.setdefault(number, {"fondo": r["fondo"], "fondos": {}, "fecha": r["fecha_compra"],
                                               "facturas": []})
+        if annulled:
+            remittance.setdefault("anuladas", []).append(invoice)
         remittance["fondos"][r["fondo"]] = remittance["fondos"].get(r["fondo"], 0) + 1
         remittance["fecha"] = max(remittance["fecha"], r["fecha_compra"])
         remittance["facturas"].append(invoice)
@@ -76,15 +85,23 @@ def plan_remittances(rows):
         # Cada compra conserva su propio fondo, y los archivos de la remesa salen con el fondo de cada compra.
         funds = remittance["fondos"]
         remittance["fondo"] = max(funds, key=lambda fund: (funds[fund], fund == "RP"))
-    return OrderedDict(sorted(plan.items())), sorted(pending)
+    for number in held:
+        plan.pop(number, None)
+    return OrderedDict(sorted(plan.items())), sorted(pending), held
 
 
 MIXED_NOTE = "En Access tenía compras de RP y LF"
 
 
 def remittance_note(remittance):
-    """Observacion de la cabecera (25-nov): la remesa de Access juntaba compras de RP y LF."""
-    return MIXED_NOTE if len(remittance["fondos"]) > 1 else None
+    """Observacion de la cabecera (25-nov): la remesa de Access juntaba compras de RP y LF, o contiene compras
+    anuladas (se cargan tal cual)."""
+    notes = [MIXED_NOTE] if len(remittance["fondos"]) > 1 else []
+    annulled = remittance.get("anuladas", [])
+    if annulled:
+        notes.append(("En Access contiene la compra anulada " if len(annulled) == 1
+                      else "En Access contiene las compras anuladas ") + ", ".join(map(str, annulled)))
+    return "; ".join(notes) or None
 
 
 def mixed_remittances(plan):
@@ -121,8 +138,12 @@ def check_database(base, agency, plan):
     for number, r in plan.items():
         for invoice in r["facturas"]:
             got = found.get(invoice)
+            annulled = invoice in r.get("anuladas", [])
             if got is None:
                 problems.append(f"{number}: factura {invoice} no esta en la base")
+            elif annulled:
+                if got[0] not in r["fondos"] or got[1] != "ANULADA" or not got[3]:
+                    problems.append(f"{number}: factura anulada {invoice} no cuadra (fondo, estado, kilos, libre) = {got}")
             elif got[0] not in r["fondos"] or got[1:] != ("VALIDA", True, True):
                 problems.append(f"{number}: factura {invoice} no cuadra (fondo, estado, kilos, libre) = {got}")
     quoted = ",".join(f"'{n}'" for n in plan)
@@ -148,7 +169,7 @@ def load_sql(agency, plan):
         for table in ("compras_cafe_seco", "compras_pasilla"):
             statements.append(
                 f"UPDATE {table} p SET remesa_id = nueva.id FROM nueva WHERE p.agencia_id = {agency}"
-                f" AND p.numero_factura IN ({invoices}) AND p.remesa_id IS NULL AND p.estado = 'VALIDA'")
+                f" AND p.numero_factura IN ({invoices}) AND p.remesa_id IS NULL")
         statements.append("DROP TABLE nueva")
     statements.append("COMMIT")
     return "; ".join(statements) + ";"
@@ -173,7 +194,16 @@ def main():
 
     with (folder / "compras_migrar.csv").open(encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if keeps_purchase(r, args.desde)]
-    plan, pending = plan_remittances(rows)
+    plan, pending, held = plan_remittances(rows)
+    if held:
+        print(f"Remesas PENDIENTES: no se cargan y se listan ({len(held)}); las demas si se cargan:")
+        for number, reasons in sorted(held.items()):
+            print(f"  {number}: " + "; ".join(reasons))
+    annulled = [(n, r["anuladas"]) for n, r in plan.items() if r.get("anuladas")]
+    if annulled:
+        print(f"  Remesas con compras ANULADAS en Access ({len(annulled)}): se cargan tal cual, con la observacion:")
+        for number, invoices in annulled:
+            print(f"    {number}: {remittance_note(plan[number])}")
     if not plan:
         print(f"CSV de Access: no hay remesas que cargar; {len(pending)} compras sin remesar.")
         return
