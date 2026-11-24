@@ -688,7 +688,6 @@ def load_growers(cur):
                       f"Id {s(row, 'id_access') or '?'}, cedula {id_number}, {s(row, '1er nombre')}"
                       f" {s(row, '1er apellido')}, punto {DATA_DIR.name}")
             continue
-        grower_type = grower_type_value
         records.append(
             (
                 id_number,
@@ -701,7 +700,7 @@ def load_growers(cur):
                 s(row, "direccion"),
                 s(row, "telefono"),
                 parse_date(row.get("fechaafiliación")),
-                grower_type,
+                grower_type_value,
                 parse_bool(row.get("habil")) and parse_bool(row.get("aceptado")),
                 parse_bool(row.get("fallecido")),
                 parse_bool(row.get("retirado")),
