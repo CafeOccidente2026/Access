@@ -50,7 +50,7 @@ describe('RemittanceFilesComponent (los 4 archivos de la remesa)', () => {
 
     expect(saveFile).toHaveBeenCalledTimes(1);
     const [name, blob] = saveFile.mock.calls[0] as [string, Blob];
-    expect(name).toBe('ParaAlmacafe_SDXX-125.xlsx');
+    expect(name).toBe('ParaAlmacafe.XLSX');
     expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
   });
 
@@ -64,7 +64,7 @@ describe('RemittanceFilesComponent (los 4 archivos de la remesa)', () => {
     component.downloadAll();
 
     expect(saveFile.mock.calls.map(([name]) => name)).toEqual([
-      'ParaOperaciones_SDXX-125.xlsx', 'ParaOpen_SDXX-125.xlsx', 'SDXX-125.xlsx', 'ParaAlmacafe_SDXX-125.xlsx',
+      'ParaOperaciones.XLSX', 'ParaOpen.XLSX', 'GeneraPlano.XLSX', 'ParaAlmacafe.XLSX',
     ]);
     expect(component.message()).toBe(content.messages.downloadAllHint);
   });

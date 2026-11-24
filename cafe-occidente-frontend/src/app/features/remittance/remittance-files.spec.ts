@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import writeExcelFile from 'write-excel-file/browser';
 
 import { RemittanceFiles, RemittanceLine } from '../../core/models/remittance.model';
-import { remittanceWorkbooks } from './remittance-files';
+import { unzipSync } from 'fflate';
+
+import { remittanceWorkbooks, workbookBlobs } from './remittance-files';
 
 /** Datos inventados con la estructura de los ejemplos del area (los reales no van a los tests). */
 const line = (over: Partial<RemittanceLine>): RemittanceLine => ({
@@ -35,17 +37,17 @@ const byName = (name: string) => {
 const utc = (y: number, m: number, d: number, h = 0, mi = 0, s = 0) => new Date(Date.UTC(y, m - 1, d, h, mi, s));
 
 describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', () => {
-  it('produces the 4 files named after the remittance, each with the sheet of its Access query', () => {
+  it('produces the 4 files with the names Access gave them (other systems load them), each with its query sheet', () => {
     expect(remittanceWorkbooks(FILES).map((b) => [b.fileName, b.sheet])).toEqual([
-      ['ParaOperaciones_SDXX-LF-0007.xlsx', 'ParaOperaciones'],
-      ['ParaOpen_SDXX-LF-0007.xlsx', 'ParaOpen'],
-      ['SDXX-LF-0007.xlsx', 'GeneraPlano'],
-      ['ParaAlmacafe_SDXX-LF-0007.xlsx', 'ParaAlmacafe'],
+      ['ParaOperaciones.XLSX', 'ParaOperaciones'],
+      ['ParaOpen.XLSX', 'ParaOpen'],
+      ['GeneraPlano.XLSX', 'GeneraPlano'],
+      ['ParaAlmacafe.XLSX', 'ParaAlmacafe'],
     ]);
   });
 
   it('GeneraPlano: the 18 Access columns, PORC_AS = W_AlmSana / Muestra x 100 and the crossed price columns', () => {
-    const data = byName('SDXX-LF-0007.xlsx').data;
+    const data = byName('GeneraPlano.XLSX').data;
     expect(values(data[0])).toEqual(['Cedula', 'cantidad', 'ZUND', 'CODFINCA', 'CEDULA_VEND', 'Nombre_Vend', 'Fech',
       'Factura', 'FACTOR', 'VrKgBase', 'PR_BASE_AS', 'SPR_NESPR', 'PORC_AS', 'PORC_AD', 'PR_BASE_TOT', 'VrSprTtl',
       'SPR_NESS_TOT', 'PR_TOTAL']);
@@ -55,7 +57,7 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
   });
 
   it('ParaOpen: Remision first, Porcmerma and fechaOrigEntr = when the remittance was generated', () => {
-    const data = byName('ParaOpen_SDXX-LF-0007.xlsx').data;
+    const data = byName('ParaOpen.XLSX').data;
     expect(values(data[0])).toEqual(['Remision', 'Cedula', 'cantidad', 'ZUND', 'CODFINCA', 'CEDULA_VEND', 'Nombre_Vend',
       'Fech', 'Factura', 'FACTOR', 'VrKgBase', 'PR_BASE_AS', 'SPR_NESPR', 'Porcmerma', 'PORC_AD', 'PR_BASE_TOT',
       'VrSprTtl', 'SPR_NESS_TOT', 'PR_TOTAL', 'fechaOrigEntr']);
@@ -66,7 +68,7 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
   });
 
   it('ParaAlmacafe: Cedula, Nombre_Vend, cantidad and Factura (XLSX, as the area receives it)', () => {
-    const data = byName('ParaAlmacafe_SDXX-LF-0007.xlsx').data;
+    const data = byName('ParaAlmacafe.XLSX').data;
     expect(data.map(values)).toEqual([
       ['Cedula', 'Nombre_Vend', 'cantidad', 'Factura'],
       [900100200, 'ANA MARIA PRUEBA UNO', 300, 'SDXX1001'],
@@ -75,7 +77,7 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
   });
 
   it('ParaOperaciones: KAS without /100, the sum row and FACTOR PONDERADO / VR KG PROM REMISION below', () => {
-    const data = byName('ParaOperaciones_SDXX-LF-0007.xlsx').data;
+    const data = byName('ParaOperaciones.XLSX').data;
     expect(values(data[0])).toEqual(['Cedula', 'Nombre_Vend', 'Agencia', 'Remision', 'Fecha_Compra', 'Factura', 'Fondo',
       'cantidad', 'PORC_AS', 'KAS', 'PR_TOTAL', 'Especial']);
     const first = data[1] as Cell[];
@@ -114,6 +116,15 @@ describe('remittanceWorkbooks (RF-12, como los archivos que recibe el area)', ()
     for (const book of remittanceWorkbooks(FILES)) {
       const blob = await writeExcelFile(book.data, { sheet: book.sheet }).toBlob();
       expect(new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(0, 2))).toBe('PK');
+    }
+  });
+
+  it('uses the Access export font (MS Sans Serif 11), as in the reference files', async () => {
+    const blobs = await workbookBlobs(remittanceWorkbooks(FILES));
+    for (const blob of blobs.values()) {
+      const styles = new TextDecoder().decode(unzipSync(new Uint8Array(await blob.arrayBuffer()))['xl/styles.xml']);
+      expect(styles).toContain('<sz val="11"/>');
+      expect(styles).toContain('<name val="MS Sans Serif"/>');
     }
   });
 });
