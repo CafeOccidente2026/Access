@@ -374,7 +374,7 @@ class EndpointAuthorizationTest {
     @ParameterizedTest(name = "{1} {0}")
     @MethodSource("matrix")
     void withoutPermissionAnIncompleteRequestIsStill403(Endpoint endpoint, String profile) throws Exception {
-        String[] parts = profile.split("\+");
+        String[] parts = profile.split("\\+");
         String role = parts[0];
         List<String> screens = parts.length > 1 ? List.of(parts[1].split(",")) : List.of();
         if (endpoint.roles().contains(role) || endpoint.screen() != null && screens.contains(endpoint.screen())) {
@@ -383,7 +383,7 @@ class EndpointAuthorizationTest {
         List<String> authorities = new ArrayList<>(List.of("ROLE_" + role));
         screens.forEach(screen -> authorities.add("SCREEN_" + screen));
 
-        int status = mockMvc.perform(request(endpoint.method(), endpoint.url().replaceAll("\?.*$", ""))
+        int status = mockMvc.perform(request(endpoint.method(), endpoint.url().replaceAll("\\?.*$", ""))
                         .with(user("prueba").authorities(authorities.stream()
                                 .map(SimpleGrantedAuthority::new).toList()))
                         .contentType(MediaType.APPLICATION_JSON)
