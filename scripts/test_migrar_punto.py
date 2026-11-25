@@ -7,6 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    CORRECTIONS,
     DISCARDED,
     STOPS,
     apply_corrections,
@@ -18,6 +19,7 @@ from migrar_punto import (
     note_stop,
     pending_corrections,
     stop_if_problems,
+    unpaid_purchase,
     announcement_number,
     cheque_text,
     control_record_differences,
@@ -38,6 +40,7 @@ from migrar_punto import (
     opening_purchase_id,
     out_of_range,
     payment_mismatches,
+    payment_of,
     pending_quotas,
     quota_purchase,
     quota_announcements,
@@ -219,6 +222,22 @@ def check_payments():
     unpaid = dict(compra, factura="1002", neto_a_pagar="50", fpch="0")
     assert "Caja 0" in payment_mismatches([unpaid], [], [])[0]
     assert payment_mismatches([dict(unpaid, neto_a_pagar="0", forma_de_pago="ANULADA")], [], []) == []
+    # 25-nov (opcion A): una compra valida sin pago en Access se carga tal cual si correcciones.csv la marca
+    # "sin_pago"; la revision la acepta solo si de verdad no tiene ningun pago.
+    assert payment_mismatches([unpaid], [], [], unpaid={"1002"}) == []
+    partial = [dict(cash[0], id_transaccion="1002", salidas="10")]
+    assert len(payment_mismatches([unpaid], partial, [], unpaid={"1002"})) == 1
+    found = corrections_for([correction(tabla="COMPRAS", id_access="7", accion="sin_pago",
+                                        motivo="compra valida sin pago en Access")], "PuntoPrueba")
+    assert found == {("compras", "7"): found[("compras", "7")]}
+    CORRECTIONS.clear()
+    CORRECTIONS.update(found)
+    try:
+        assert unpaid_purchase({"id_access": "7", "fpch": "0"}) and not unpaid_purchase({"id_access": "8"})
+        assert payment_of({"id_access": "7", "fpch": "0"}) == ("SIN PAGO", None)
+        assert payment_of({"id_access": "8", "fpch": "0"}) == ("EFECTIVO", None)
+    finally:
+        CORRECTIONS.clear()
 
 
 def check_grower_type():
