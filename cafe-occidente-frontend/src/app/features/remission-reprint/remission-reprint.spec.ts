@@ -63,6 +63,30 @@ describe('RemissionReprintComponent', () => {
     render.mockRestore();
   });
 
+  it('Anular Remisión on a remission from Access warns that it is historical and does not ask to annul', () => {
+    const annulRemission = vi.fn();
+    const fromAccess = { ...REMISSION, displayNumber: 'TA0436', fromAccess: true } as RemissionResponse;
+    const component = setup({ findRemissionByNumber: () => of([fromAccess]), annulRemission });
+    component.remissionNumber.set('TA0436');
+    component.search();
+
+    component.pressAnnul();
+
+    expect(component.confirmingAnnul()).toBe(false);
+    expect(component.message()).toBe('La remisión TA0436 es una remisión histórica de Access: no se puede anular.');
+    expect(annulRemission).not.toHaveBeenCalled();
+  });
+
+  it('Anular Remisión on a web remission asks to confirm', () => {
+    const component = setup({ findRemissionByNumber: () => of([REMISSION]) });
+    component.remissionNumber.set('SDBU-125');
+    component.search();
+
+    component.pressAnnul();
+
+    expect(component.confirmingAnnul()).toBe(true);
+  });
+
   it('Anular Remisión: only with permission and while in force; two clicks annul it once', () => {
     const pending = new Subject<RemissionResponse>();
     const annulRemission = vi.fn(() => pending);

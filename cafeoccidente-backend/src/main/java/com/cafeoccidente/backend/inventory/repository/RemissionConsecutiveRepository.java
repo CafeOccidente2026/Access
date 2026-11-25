@@ -25,6 +25,16 @@ public class RemissionConsecutiveRepository {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public int take(Long agencyId) {
+        // 25-nov: se salta los numeros que la agencia ya usa (remesas y remisiones de Access, como SA4819 o
+        // CO9999), asi la remision nueva nunca choca con una vieja.
+        int taken = next(agencyId);
+        while (used(agencyId, taken)) {
+            taken = next(agencyId);
+        }
+        return taken;
+    }
+
+    private int next(Long agencyId) {
         Integer taken = jdbc.queryForObject("""
                 INSERT INTO consecutivos_remision_agencia (agencia_id, ultimo_consecutivo) VALUES (:agencyId, 1)
                 ON CONFLICT (agencia_id) DO UPDATE
@@ -32,5 +42,16 @@ public class RemissionConsecutiveRepository {
                 RETURNING ultimo_consecutivo""",
                 new MapSqlParameterSource().addValue("agencyId", agencyId), Integer.class);
         return taken == null ? 1 : taken;
+    }
+
+    /** El numero ya esta en una remision o remesa de la agencia (por su consecutivo o por el numero del texto). */
+    private boolean used(Long agencyId, int number) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM remisiones WHERE agencia_id = :agencyId
+                                 AND (numero_remision_anterior = :number OR consecutivo = :number))
+                    OR EXISTS (SELECT 1 FROM remesas WHERE agencia_id = :agencyId
+                                 AND (consecutivo = :number
+                                      OR substring(numero_remesa from '([0-9]+)$')::numeric = :number))""",
+                new MapSqlParameterSource().addValue("agencyId", agencyId).addValue("number", number), Boolean.class));
     }
 }

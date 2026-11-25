@@ -391,12 +391,28 @@ class RemissionServiceImplTest {
         RemissionResponse response = service.annul(5L);
 
         assertThat(response.status()).isEqualTo("ANULADA");
+        assertThat(response.fromAccess()).isFalse();
         assertThat(remission.getAnnulledByUserId()).isEqualTo(3L);
         assertThat(remission.getAnnulledAt()).isNotNull();
         assertThat(movement.getRemainingKg()).isEqualByComparingTo("500");
         verify(remittances).unmark(1L, 55L, "SDBU-969", 3L);
         verify(history).record(ChangeHistoryService.Entity.REMISION, 5L, ChangeHistoryService.Action.ANULAR, 1L,
                 Map.of("number", "SDBU-969", "status", "VIGENTE"), Map.of("number", "SDBU-969", "status", "ANULADA"));
+    }
+
+    /** 25-nov: una salida historica que vino de Access no se anula (no se sabe a que facturas devolver los kilos). */
+    @Test
+    void aRemissionFromAccessCannotBeAnnulled() {
+        Remission remission = saved(Remission.VIGENTE);
+        remission.setFromAccess(true);
+
+        assertThatThrownBy(() -> service.annul(5L))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("La remisión SDBU-969 es una remisión histórica de Access: no se puede anular.");
+        assertThat(remission.getStatus()).isEqualTo(Remission.VIGENTE);
+        verify(remissionLineRepository, never()).findByRemissionId(any());
+        verify(remittances, never()).unmark(any(), any(), any(), any());
+        verify(history, never()).record(any(), any(), any(), any(), any(), any());
     }
 
     @Test

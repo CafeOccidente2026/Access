@@ -21,5 +21,7 @@ public record RemissionResponse(
         /** VIGENTE o ANULADA. */
         String status,
         /** Su remesa (mismo numero); null en las remisiones anteriores a V31. */
-        Long remittanceId) {
+        Long remittanceId,
+        /** Salida historica de Access (V33): Anular Remision avisa y no la anula. */
+        boolean fromAccess) {
 }

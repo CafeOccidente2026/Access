@@ -22,10 +22,15 @@ import com.cafeoccidente.backend.purchases.query.dto.PurchaseQueryDetail;
 import com.cafeoccidente.backend.purchases.query.service.PurchaseQueryService;
 import com.cafeoccidente.backend.purchases.shared.dto.PurchasePaymentRequest;
 import com.cafeoccidente.backend.purchases.shared.repository.AgencyRepository;
+import com.cafeoccidente.backend.supplies.dto.SuppliesReportRow;
+import com.cafeoccidente.backend.supplies.service.SuppliesReportService;
 import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,6 +75,12 @@ class PurchaseQueryIntegrationTest {
     private AgencyRepository agencies;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private SuppliesReportService reports;
+    @Autowired
+    private Clock clock;
+    @Autowired
+    private EntityManager entityManager;
 
     private Long rp;
     private Long userId;
@@ -137,6 +148,39 @@ class PurchaseQueryIntegrationTest {
         assertThat(detail.payment().cashAmount().add(CHECK).add(TRANSFER).add(CARD)).isEqualByComparingTo(saved.netToPay());
         assertThat(detail.payment().checkNumber()).isEqualTo("4321");
         assertThat(detail.remissions()).isEmpty();
+    }
+
+    /** 25-nov (migracion, opcion A): una compra valida que en Access no tiene ningun pago se carga con la forma de
+     *  pago "SIN PAGO" y el desglose en 0. Consultar Compras y la reimpresion la muestran con FORMAS DE PAGO en 0,
+     *  y no sale en Caja, Suministros ni Formas de pago. */
+    @Test
+    void aPurchaseWithoutPaymentFromAccessIsShownAndStaysOutOfCashAndReports() {
+        BigDecimal net = dry.preview(dryRequest(null)).netToPay();
+        DryCoffeePurchaseResponse saved = dry.create(dryRequest(
+                new PurchasePaymentRequest(net, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null)));
+        jdbc.update("UPDATE compras_cafe_seco SET forma_pago = 'SIN PAGO', numero_cheque = NULL WHERE id = ?", saved.id());
+        jdbc.update("INSERT INTO formas_pago_compras (origen, origen_id, efectivo, cheque, transferencia, datafono)"
+                + " VALUES ('DRY', ?, 0, 0, 0, 0) ON CONFLICT (origen, origen_id) DO UPDATE SET efectivo = 0,"
+                + " cheque = 0, transferencia = 0, datafono = 0, numero_cheque = NULL", saved.id());
+        entityManager.clear(); // la compra creada sigue en cache: se lee de nuevo como la deja la migracion
+
+        PurchaseQueryDetail detail = query.detail(AnnulmentModule.DRY, saved.id());
+        assertThat(detail.status()).isEqualTo("VALIDA");
+        assertThat(detail.purchase()).isInstanceOfSatisfying(DryCoffeePurchaseResponse.class,
+                p -> assertThat(p.paymentMethod()).isEqualTo("SIN PAGO"));
+        assertThat(detail.payment().cashAmount()).isZero();
+        assertThat(detail.payment().checkAmount()).isZero();
+        assertThat(detail.payment().transferAmount()).isZero();
+        assertThat(detail.payment().cardAmount()).isZero();
+
+        String invoice = String.valueOf(saved.invoiceNumber());
+        LocalDate today = LocalDate.now(clock);
+        assertThat(reports.cashMovement(AGENCY, "RP", today)).extracting(SuppliesReportRow::transactionId)
+                .doesNotContain(invoice);
+        assertThat(reports.supplies(AGENCY, "RP", today)).extracting(SuppliesReportRow::transactionId)
+                .doesNotContain(invoice);
+        assertThat(reports.paymentMethods(AGENCY, today.minusDays(1), today.plusDays(1), null))
+                .extracting(SuppliesReportRow::transactionId).doesNotContain(invoice);
     }
 
     @Test
