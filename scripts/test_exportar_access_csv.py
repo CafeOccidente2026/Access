@@ -17,7 +17,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from exportar_access_csv import TABLES, cell, export
+from exportar_access_csv import TABLES, cell, export, export_name
 
 ROOT = Path(__file__).resolve().parent.parent
 ELTAMBO_CSV = ROOT / "docs" / "legacy-postgres-reference" / "eltambo"
@@ -38,6 +38,9 @@ def check_formats():
     assert cell(97.10526315789474) == "97.10526315789474"
     assert cell(1.0) == "1.0"
     assert cell(43000) == "43000" and cell("EL TAMBO") == "EL TAMBO"
+    # 25-nov: el Id de Access va en el CSV como id_access (las demas columnas en minusculas).
+    assert export_name("Id") == "id_access" and export_name("ID") == "id_access"
+    assert export_name("Fondo") == "fondo"
 
 
 def read(path):
@@ -56,6 +59,9 @@ def check_eltambo(accdb):
         for name in TABLES:
             old_header, old_rows = read(ELTAMBO_CSV / f"{name}_migrar.csv")
             new_header, new_rows = read(Path(out) / f"{name}_migrar.csv")
+            if new_header[0] == "id_access":  # los CSV de referencia son de antes del 25-nov, sin el Id
+                assert [int(r[0]) for r in new_rows] == sorted(int(r[0]) for r in new_rows), name
+                new_header, new_rows = new_header[1:], [r[1:] for r in new_rows]
             assert old_header == new_header, (name, old_header, new_header)
             pending = Counter(map(tuple, new_rows))
             for row in map(tuple, old_rows):

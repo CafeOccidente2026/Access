@@ -10,8 +10,8 @@ Uso:
 Parte A: Registro de Control, terceros, anuncios, compras (seco y pasilla), caja, suministros, caja menor,
 empaques, formas de pago, compras a futuro y consecutivos. Idempotente: no duplica si se vuelve a correr.
 - La agencia sale del Registro de Control del punto; si no existe en la web, se detiene.
-- Registro de Control: si falta un parametro se detiene (nunca pone 0); si la agencia ya tiene uno en la web,
-  no lo toca y lista las diferencias con Access.
+- Registro de Control: si falta un parametro se detiene (nunca pone 0); si la agencia ya tiene uno en la web, lo
+  actualiza con los campos que trae Access, muestra cada diferencia y la deja en el Historial (24-nov).
 - Terceros: inserta los nuevos y no sobrescribe los que ya estan; las diferencias van a diferencias_terceros.csv.
 - Con --desde se cargan igual las compras sin remesar, todos los anuncios, las compras a futuro vigentes y el
   Registro de Control, para que los saldos cuadren.
@@ -32,6 +32,7 @@ import argparse
 import csv
 import os
 import re
+import unicodedata
 import secrets
 import subprocess
 from datetime import date, datetime, timedelta, timezone
@@ -51,7 +52,180 @@ DISCARDED = {}
 
 
 def note_discard(reason, detail):
-    DISCARDED.setdefault(reason, []).append(detail)
+    """Aviso: el registro SI se cargo tal cual, pero conviene revisarlo (p. ej. caficultor sin apellido). Un registro
+    leido dos veces (INVENTARIO) se lista una sola vez."""
+    items = DISCARDED.setdefault(reason, [])
+    if detail not in items:
+        items.append(detail)
+
+
+# Regla fija de la migracion (25-nov): son datos reales de produccion; no se inventa, supone ni descarta nada.
+# Lo que no se puede cargar tal cual se junta aqui y la carga se detiene al final (no se guarda nada).
+STOPS = {}
+# correcciones.csv (fuera del repo, lo llena el usuario con lo que confirma el area): unica forma de excluir un
+# registro de Access. {(tabla, id_access): fila}. EXCLUDED: los registros que se excluyeron en esta carga.
+CORRECTIONS = {}
+EXCLUDED = {}
+CORRECTED = {}
+REMISSION_COUNTER_KEY = ("consecutivo_remision", "")
+CORRECTION_TABLES = ("anuncios", "asociados", "caja", "cajamenor", "compras_a_futuro", "compras", "cupos",
+                     "empaque", "inventario", "suministros")
+
+
+def note_stop(reason, detail):
+    """Un registro que no se puede cargar tal cual; si se lee dos veces (INVENTARIO), se lista una sola vez."""
+    items = STOPS.setdefault(reason, [])
+    if detail not in items:
+        items.append(detail)
+
+
+def stop_if_problems():
+    """Detiene la carga (sin guardar) si hay registros de Access que no se pudieron cargar tal cual."""
+    if not STOPS:
+        return
+    print("\nLA CARGA SE DETIENE: registros de Access que no se pueden cargar tal cual (no se guardo nada).")
+    for reason, items in STOPS.items():
+        print(f"  {reason}: {len(items)}")
+        for item in items:
+            print(f"    {item}")
+    print("  Solo se pueden excluir o corregir con correcciones.csv (punto, tabla, id_access, accion, campo, valor,"
+          " motivo, confirmado_por). En Asociados, id_access es la cedula.")
+    raise SystemExit(1)
+
+
+def simple_name(text):
+    """Nombre comparable: sin tildes, sin espacios ni signos, en minusculas ("El Tambo" = "ElTambo")."""
+    plain = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", plain.lower())
+
+
+def corrections_for(rows, point):
+    """
+    Correcciones del punto: {(tabla, id_access): fila}. Acciones (25-nov):
+      - excluir: el registro no se carga.
+      - corregir: el registro se carga con `campo` = `valor` (lo demas tal cual).
+      - fijar_remision: el contador de remision del punto queda en `valor` (la siguiente es valor + 1).
+      - sin_pago (tabla COMPRAS): la compra valida que en Access no tiene ningun pago se carga tal cual, con la
+        forma de pago "SIN PAGO" y el desglose en 0 (no sale en Caja ni en Suministros).
+    Una fila que no se entiende detiene la carga.
+    """
+    tables = {simple_name(t): t for t in CORRECTION_TABLES}
+    found = {}
+    for row in rows:
+        if simple_name(row.get("punto")) != simple_name(point):
+            continue
+        action = s(row, "accion").lower()
+        if action == "fijar_remision":
+            if not s(row, "valor").isdigit() or not s(row, "motivo"):
+                raise SystemExit(f"correcciones.csv: fijar_remision necesita un valor numerico y motivo: {row}")
+            found[REMISSION_COUNTER_KEY] = row
+            continue
+        table = tables.get(simple_name(row.get("tabla")))
+        ident = s(row, "id_access")
+        valid = table is not None and ident.isdigit() and s(row, "motivo") and (
+            action == "excluir" or (action == "corregir" and s(row, "campo") and s(row, "valor"))
+            or (action == "sin_pago" and table == "compras"))
+        if not valid:
+            raise SystemExit("correcciones.csv: fila no valida (tabla de la carga, Id de Access numerico, motivo y"
+                             f" accion 'excluir', 'corregir' con campo y valor, o 'fijar_remision'): {row}")
+        found[(table, ident)] = row
+    return found
+
+
+UNPAID = "SIN PAGO"
+
+
+def unpaid_purchase(row):
+    """La compra de Access esta marcada "sin_pago" en correcciones.csv (25-nov, opcion A)."""
+    fix = CORRECTIONS.get(("compras", s(row, "id_access")))
+    return fix is not None and s(fix, "accion").lower() == "sin_pago"
+
+
+def fixed_remission(found):
+    """Ultimo numero de remision fijado por correcciones.csv para el punto; None si no hay."""
+    row = found.get(REMISSION_COUNTER_KEY)
+    return int(s(row, "valor")) if row else None
+
+
+def fixed_by_agency(rows, agencies):
+    """{agencia_id: numero} de las filas fijar_remision de correcciones.csv. agencies: [(id, nombre, nombre_access)].
+    El punto se reconoce por el nombre de la agencia o por su nombre en Access ("Sotomayor" = SOTOMAYOR)."""
+    fixed = {}
+    for row in rows:
+        if s(row, "accion").lower() != "fijar_remision":
+            continue
+        point = simple_name(row.get("punto"))
+        match = [aid for aid, name, access in agencies if point in (simple_name(name), simple_name(access))]
+        if len(match) != 1:
+            raise SystemExit(f"correcciones.csv: no se reconoce la agencia del punto '{s(row, 'punto')}'")
+        fixed[match[0]] = int(s(row, "valor"))
+    return fixed
+
+
+def correct_rows(name, rows, found):
+    """Aplica las correcciones 'corregir' a las filas del CSV; devuelve [(clave, columna, antes, despues)].
+    Un campo que no existe en el CSV detiene la carga."""
+    table = name.removesuffix("_migrar.csv")
+    changes = []
+    for row in rows:
+        fix = found.get((table, row_key(table, row)))
+        if not fix or s(fix, "accion").lower() != "corregir":
+            continue
+        column = next((c for c in row if simple_name(c) == simple_name(fix.get("campo"))), None)
+        if column is None:
+            raise SystemExit(f"correcciones.csv: {table} no tiene el campo '{s(fix, 'campo')}'")
+        changes.append(((table, row_key(table, row)), column, row[column], s(fix, "valor")))
+        row[column] = s(fix, "valor")
+    return changes
+
+
+def pending_corrections(found):
+    """Correcciones que el area todavia no confirmo (confirmado_por vacio o PENDIENTE)."""
+    return [key for key, row in found.items() if s(row, "confirmado_por").upper() in ("", "PENDIENTE")]
+
+
+def row_key(table, row):
+    """Id de Access del registro; en Asociados (no tiene Id en Access) la cedula, IdAsociado."""
+    return s(row, "id_access") or (s(row, "idasociado") if table == "asociados" else "")
+
+
+def apply_corrections(name, rows, found):
+    """(filas que se cargan, filas excluidas por correcciones.csv) de un CSV del punto."""
+    table = name.removesuffix("_migrar.csv")
+
+    def excluded(row):
+        fix = found.get((table, row_key(table, row)))
+        return fix is not None and s(fix, "accion").lower() == "excluir"
+
+    return [row for row in rows if not excluded(row)], [row for row in rows if excluded(row)]
+
+
+def load_corrections(path, point, definitive):
+    """Lee correcciones.csv, las muestra y, en la carga definitiva, se detiene si alguna sigue PENDIENTE."""
+    CORRECTIONS.clear()
+    if not path:
+        print("  correcciones.csv: no se uso (ningun registro se excluye).")
+        return
+    with open(path, encoding="utf-8-sig") as f:
+        CORRECTIONS.update(corrections_for(list(csv.DictReader(f)), point))
+    print(f"  correcciones.csv: {len(CORRECTIONS)} para este punto.")
+    pending = pending_corrections(CORRECTIONS)
+    for table, ident in pending:
+        fix = CORRECTIONS[(table, ident)]
+        what = f"{table} Id {ident}" if ident else table
+        print(f"  AVISO: correccion PENDIENTE de confirmar por el area: {s(fix, 'accion')} {what}"
+              f" ({s(fix, 'motivo')})")
+    if pending and definitive:
+        raise SystemExit("Carga definitiva: hay correcciones PENDIENTES en correcciones.csv; no se carga nada.")
+
+
+def check_corrections_used():
+    """Una correccion cuyo Id no esta en el CSV del punto es un error de digitacion: detiene la carga."""
+    unpaid = {("compras", s(r, "id_access")) for r in read_csv("compras_migrar.csv") if unpaid_purchase(r)}
+    for table, ident in CORRECTIONS:
+        if (table, ident) not in EXCLUDED and (table, ident) not in CORRECTED and (table, ident) not in unpaid \
+                and (table, ident) != REMISSION_COUNTER_KEY:
+            note_stop("correcciones.csv con un Id que no esta en Access", f"{table} Id {ident}")
 
 
 def agency_prefix(cur, agency_id):
@@ -63,8 +237,15 @@ def agency_prefix(cur, agency_id):
 # ---------- helpers ----------
 
 def read_csv(name):
+    """Filas del CSV del punto, sin las que correcciones.csv excluye (quedan en EXCLUDED para la salida)."""
     with open(DATA_DIR / name, encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+        rows, excluded = apply_corrections(name, list(csv.DictReader(f)), CORRECTIONS)
+    for row in excluded:
+        table = name.removesuffix("_migrar.csv")
+        EXCLUDED[(table, row_key(table, row))] = row
+    for key, column, before, after in correct_rows(name, rows, CORRECTIONS):
+        CORRECTED[key] = (column, before, after)
+    return rows
 
 
 def s(row, key, default=""):
@@ -163,6 +344,47 @@ def missing_control_params(reg):
     return sorted(key for key, _, _ in CONTROL_FIELDS if not (reg.get(key) or "").strip())
 
 
+# Columna -> nombre del campo en el Historial (los de ControlRecordResponse, como los guarda la pantalla).
+CONTROL_HISTORY_KEYS = {
+    "numero_registro_control": "controlNumber", "kg_excelso": "excelsoKg", "base_retencion": "baseWithholding",
+    "base_carga": "baseLoad", "porcentaje_retencion": "withholdingPercentage", "base_pasilla": "baseHusk",
+    "porc_kg_pasilla_promedio": "avgHuskPercentage", "prefijo": "prefix", "costos": "costs",
+    "tamano_muestra": "sampleSize", "umbral_cafes_especiales": "specialtyThreshold",
+    "porcentaje_cafe_verde": "greenCoffeePercentage", "factor_base": "baseFactor",
+    "porc_aportes_asociados": "associatePercentage", "porc_desc_coop_no_asociados": "nonAssociateDiscount",
+    "cedula_fiel": "trustedId", "resolucion_dian": "dianResolution", "fecha_resolucion": "resolutionDate",
+    "desde_resolucion": "resolutionFrom", "hasta_resolucion": "resolutionTo", "vigencia": "validity",
+}
+
+
+def control_record_updates(web, reg):
+    """[(columna, valor en la base, valor de Access)] a actualizar (24-nov): los campos que Access trae y no coinciden.
+    Un campo vacio en Access no borra el de la base; los que solo tiene la web (cafe verde, alerta) no estan aqui."""
+    updates = []
+    for key, column, parse in CONTROL_FIELDS:
+        if column in web and (reg.get(key) or "").strip():
+            access = parse(reg.get(key))
+            if access != web[column]:
+                updates.append((column, web[column], access))
+    return updates
+
+
+def control_record_history(updates):
+    """(antes, despues) para historial_cambios, solo con los campos que cambian."""
+    return ({CONTROL_HISTORY_KEYS[column]: str(web) for column, web, _ in updates},
+            {CONTROL_HISTORY_KEYS[column]: str(access) for column, _, access in updates})
+
+
+def grower_type(row):
+    """Tipo del asociado de Access (C, F o S); None si esta vacio: no se inventa (25-nov), detiene la carga."""
+    return s(row, "tipo").upper()[:1] or None
+
+
+def seller_last_name(value):
+    """Apellido del caficultor para la compra: vacio si Access no lo tiene (nombre completo en el primer nombre)."""
+    return (value or "").strip()
+
+
 def control_record_differences(web, reg):
     """[(columna, valor en la web, valor en Access)] de las columnas de `web` que no coinciden."""
     return [(column, str(web[column]), str(parse(reg.get(key))))
@@ -255,10 +477,56 @@ def max_invoice(rows):
     return max((parse_int(row.get("factura")) for row in rows), default=0)
 
 
+# Un numero de remision que queda suelto arriba, a mas de esto del siguiente mas bajo, no es la numeracion normal
+# del punto (CO1341 -> CO9999 en Consaca, 24-nov): no cuenta para el contador; su remesa conserva el numero.
+MAX_REMISSION_GAP = 100
+
+
+def normal_remission_last(numbers):
+    """(ultimo numero de la numeracion normal, numeros sueltos ignorados). Se quitan desde arriba los numeros que
+    saltan mas de MAX_REMISSION_GAP sobre el siguiente mas bajo; las series reales (en Access cada punto tiene una
+    baja de RP y la alta de siempre) tienen muchos numeros seguidos y se conservan."""
+    # ponytail: solo ve numeros sueltos; dos o mas anomalos seguidos (9998, 9999) contarian como serie real.
+    ordered = sorted(set(numbers))
+    ignored = []
+    while len(ordered) > 1 and ordered[-1] - ordered[-2] > MAX_REMISSION_GAP:
+        ignored.insert(0, ordered.pop())
+    return (ordered[-1] if ordered else 0), ignored
+
+
+def remission_numbers(rows):
+    """{numero: (texto mas usado, compras, primera fecha, ultima fecha)} de la columna remision de COMPRAS."""
+    seen = {}
+    for row in rows:
+        text = s(row, "remision")
+        m = re.search(r"(\d+)$", text)
+        if not m:
+            continue
+        entry = seen.setdefault(int(m.group(1)), {"texts": {}, "dates": []})
+        entry["texts"][text] = entry["texts"].get(text, 0) + 1
+        if parse_date(row.get("fecha_compra")):
+            entry["dates"].append(parse_date(row.get("fecha_compra")))
+    return {n: (max(e["texts"], key=e["texts"].get), sum(e["texts"].values()), min(e["dates"], default=None),
+                max(e["dates"], default=None)) for n, e in seen.items()}
+
+
+def remission_summary(rows):
+    """Ultima remision por numero y por fecha (de su ultima compra), las ignoradas y el numero de la siguiente."""
+    numbers = remission_numbers(rows)
+    last, ignored = normal_remission_last(numbers)
+    normal = [n for n in numbers if n not in ignored]
+    by_date = max(normal, key=lambda n: (numbers[n][3] or date.min, n), default=None)
+    return {
+        "by_number": (numbers[last][0], numbers[last][3]) if last else None,
+        "by_date": (numbers[by_date][0], numbers[by_date][3]) if by_date is not None else None,
+        "ignored": [(numbers[n][0], numbers[n][1], numbers[n][2], numbers[n][3]) for n in ignored],
+        "next": last + 1,
+    }
+
+
 def max_remission(rows):
-    """Mayor numero de remision de Access (TA0968 -> 968); 0 si no hay."""
-    numbers = [int(m.group(1)) for row in rows if (m := re.search(r"(\d+)$", s(row, "remision")))]
-    return max(numbers, default=0)
+    """Ultimo numero de remision de la numeracion normal de Access (TA0968 -> 968), sin los sueltos; 0 si no hay."""
+    return normal_remission_last(remission_numbers(rows))[0]
 
 
 def set_remission_counter(cur, agency_id, number):
@@ -292,17 +560,25 @@ def load_agency(cur):
     return by_access[target], cur.fetchone()[0]
 
 
-def load_control_record(cur, agency_id):
+def load_control_record(cur, agency_id, user_id):
     reg = read_csv("regcontrol_migrar.csv")[0]
     columns = [column for _, column, _ in CONTROL_FIELDS]
-    cur.execute(f"SELECT {', '.join(columns)} FROM registros_control WHERE agencia_id = %s AND activo",
+    cur.execute(f"SELECT id, {', '.join(columns)} FROM registros_control WHERE agencia_id = %s AND activo",
                 (agency_id,))
     existing = cur.fetchone()
     if existing:
-        differences = control_record_differences(dict(zip(columns, existing)), reg)
-        print(f"  Registro de Control: ya existe en la web, no se toca. Diferencias con Access: {len(differences)}")
-        for column, web, access in differences:
-            print(f"    {column}: web {web} / Access {access}")
+        # 24-nov: Access manda en los campos que trae; se actualizan y quedan en el Historial.
+        updates = control_record_updates(dict(zip(columns, existing[1:])), reg)
+        print(f"  Registro de Control: ya existe en la web; se actualiza con Access. Diferencias: {len(updates)}")
+        for column, web, access in updates:
+            print(f"    {column}: base {web} / Access {access}")
+        if updates:
+            cur.execute(f"UPDATE registros_control SET {', '.join(f'{c} = %s' for c, _, _ in updates)} WHERE id = %s",
+                        (*[access for _, _, access in updates], existing[0]))
+            before, after = control_record_history(updates)
+            cur.execute("INSERT INTO historial_cambios (fecha, usuario_id, entidad, entidad_id, accion, agencia_id,"
+                        " antes, despues) VALUES (now(), %s, 'REGISTRO_CONTROL', %s, 'MODIFICAR', %s, %s, %s)",
+                        (user_id, existing[0], agency_id, psycopg2.extras.Json(before), psycopg2.extras.Json(after)))
         return
     missing = missing_control_params(reg)
     if missing:
@@ -423,11 +699,16 @@ def load_growers(cur):
         id_number = s(row, "idasociado")
         agencia = s(row, "agencia")
         if not id_number:
-            note_discard("tercero_sin_idasociado", row)
+            note_stop("Asociado sin IdAsociado", row)
             continue
 
         # Sin agencia o sin apellido se migran igual (V34): Access los tiene asi, no se inventa nada.
-        grower_type = s(row, "tipo").upper()[:1] or "C"
+        grower_type_value = grower_type(row)
+        if grower_type_value is None:
+            note_stop("Asociado sin tipo (C, F o S) en Access",
+                      f"cedula {id_number}, {s(row, '1er nombre')}"
+                      f" {s(row, '1er apellido')}, punto {DATA_DIR.name}")
+            continue
         records.append(
             (
                 id_number,
@@ -440,7 +721,7 @@ def load_growers(cur):
                 s(row, "direccion"),
                 s(row, "telefono"),
                 parse_date(row.get("fechaafiliación")),
-                grower_type,
+                grower_type_value,
                 parse_bool(row.get("habil")) and parse_bool(row.get("aceptado")),
                 parse_bool(row.get("fallecido")),
                 parse_bool(row.get("retirado")),
@@ -579,13 +860,17 @@ def purchase_rows(desde):
 
 
 def cheque_text(value):
-    """Cheque como lo guarda la web (V21): los ultimos 4 digitos con sus ceros (548 -> 0548); None si no hay."""
+    """Cheque de Access tal cual, como texto (25-nov, V34: la base acepta de 1 a 15 digitos; no se rellena con
+    ceros); None si no hay."""
     number = parse_int(value)
-    return f"{number:04d}" if number > 0 else None
+    return str(number) if number > 0 else None
 
 
 def payment_of(row):
-    """Forma de pago y cheque de la compra (el desglose de pagos mixtos va en formas_pago_compras)."""
+    """Forma de pago y cheque de la compra (el desglose de pagos mixtos va en formas_pago_compras). Una compra
+    marcada "sin_pago" en correcciones.csv queda "SIN PAGO" (25-nov)."""
+    if unpaid_purchase(row):
+        return UNPAID, None
     if parse_decimal(row.get("fpch")) > 0:
         return "CHEQUE", cheque_text(row.get("numcheque"))
     return "EFECTIVO", None
@@ -617,6 +902,10 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
 
     def common_values(row, invoice_number, grower):
         first_name, last_name, address, phone, grower_type = grower
+        if not seller_last_name(last_name):
+            note_discard("compra con caficultor sin apellido en Access (se carga con el apellido vacio)",
+                         f"factura {invoice_number}, cedula {s(row, 'cedula')}")
+        last_name = seller_last_name(last_name)
         payment_method, check_number = payment_of(row)
         return (
             parse_date(row["fecha_compra"]), invoice_number, agency_id, fund_by_code[s(row, "fondo")],
@@ -641,11 +930,11 @@ def load_purchases(cur, agency_id, admin_user_id, desde):
             continue
         grower = growers.get(s(row, "cedula"))
         if grower is None:
-            note_discard("compra_sin_caficultor", (invoice_number, s(row, "cedula")))
+            note_stop("Compra cuyo caficultor no esta en Asociados", (invoice_number, s(row, "cedula")))
             continue
         bad = out_of_range(row)
         if bad:
-            note_discard("compra con un porcentaje que no cabe (no se carga)",
+            note_stop("Compra con un porcentaje que no cabe en la base",
                          (invoice_number, {c: s(row, c) for c in bad}))
             continue
         values = common_values(row, invoice_number, grower)
@@ -683,6 +972,199 @@ def purchases_by_invoice(cur, agency_id, column):
     return {inv: (value, pid, origin) for inv, value, pid, origin in cur.fetchall()}
 
 
+# ---------- inventario (24-nov) ----------
+
+def access_remission(row):
+    """Texto de la remision de una fila del INVENTARIO de Access (columna "remision" con tilde)."""
+    return next((s(row, key) for key in row if key.lower().startswith("remisi")), "")
+
+
+def inventory_invoice(row):
+    """Factura de una fila de INVENTARIO; "0" es "sin factura" (salidas de El Penol, decision del 25-nov)."""
+    invoice = s(row, "factura")
+    return "" if invoice.strip("0") == "" else invoice
+
+
+def inventory_rows(rows):
+    """(entradas, salidas) del INVENTARIO de Access tal cual: entrada = fila con factura (tambien las de 0 kg);
+    salida = fila con remision (por codigo de producto, sin factura). Una fila sin ninguna de las dos, o con las
+    dos, detiene la carga."""
+    entries = [row for row in rows if inventory_invoice(row) and not access_remission(row)]
+    exits = [row for row in rows if access_remission(row) and not inventory_invoice(row)]
+    for row in exits:
+        if s(row, "factura"):
+            note_discard("Salida de INVENTARIO con factura 0 (se toma como sin factura)",
+                         f"Id {s(row, 'id_access') or '?'}, {s(row, 'fecha')[:10]}, remision {access_remission(row)},"
+                         f" codigo {s(row, 'cod_prod')}, cantidad {s(row, 'cantidad')}")
+    for row in rows:
+        if bool(inventory_invoice(row)) == bool(access_remission(row)):
+            note_stop("Fila de INVENTARIO que no es entrada ni salida",
+                      f"Id {s(row, 'id_access') or '?'}, factura {s(row, 'factura')}, remision {access_remission(row)}")
+    return entries, exits
+
+
+def entry_balance(row, purchase):
+    """Saldo disponible del movimiento para Registrar Salidas: sus kilos si la compra sigue sin remesar (Plano = f) y
+    valida; 0 si ya salio en una remesa, si esta anulada o si no hay compra (saldo que viene del anio anterior)."""
+    if purchase is None or s(purchase, "plano") == "t" or s(purchase, "forma_de_pago") != "VALIDA":
+        return Decimal(0)
+    return parse_decimal(row.get("kilos_netos"))
+
+
+def opening_purchase_id(agency_id, invoice):
+    """compra_id del saldo que viene del anio anterior (factura 9911210226, sin compra): negativo y unico por agencia."""
+    return -(agency_id * 10 ** 12 + int(re.sub(r"\D", "", invoice) or 0))
+
+
+def exit_remissions(exits):
+    """{numero: {text, date, destino, lines}} de las salidas de Access, en orden de numero."""
+    grouped = {}
+    for row in exits:
+        text = access_remission(row)
+        match = re.search(r"(\d+)$", text)
+        if not match:
+            note_stop("Salida de INVENTARIO sin numero de remision", discard_detail(row, 0, row.get("cantidad")))
+            continue
+        remission = grouped.setdefault(int(match.group(1)),
+                                       {"text": text, "date": None, "destino": s(row, "destino"), "lines": []})
+        day = parse_date(row.get("fecha"))
+        if day and (remission["date"] is None or day > remission["date"]):
+            remission["date"] = day
+        remission["lines"].append(row)
+    return dict(sorted(grouped.items()))
+
+
+def exit_remission_rows(exits):
+    """Las salidas como filas de remision (texto y fecha), para el contador de remision."""
+    return [{"remision": access_remission(row), "fecha_compra": s(row, "fecha")} for row in exits]
+
+
+def load_inventory(cur, agency_id, user_id):
+    """
+    INVENTARIO de Access (24-nov): cada entrada a inventarios, unida a su compra por factura, con su saldo disponible
+    (entry_balance); cada salida a una remision historica VIGENTE (numero de Access, sin remesa) con una linea por fila.
+    Las salidas de Access no van por factura: cada linea apunta a la primera entrada de su codigo de producto, que
+    solo sirve para el codigo. Asi el saldo y el valor promedio por codigo quedan como en Access. Idempotente.
+    """
+    entries, exits = inventory_rows(read_csv("inventario_migrar.csv"))
+    access_purchases = {s(r, "factura"): r for r in read_csv("compras_migrar.csv")}
+    web_purchases = purchases_by_invoice(cur, agency_id, "kilos_netos")
+    cur.execute("SELECT codigo, id, fondo_id FROM productos")
+    products = {code: (pid, fund) for code, pid, fund in cur.fetchall()}
+    modules = {"DRY": "DRY_COFFEE", "HUSK": "HUSK"}
+
+    inserted = opening = 0
+    for row in entries:
+        code, invoice = s(row, "cod_prod"), s(row, "factura")
+        if code not in products:
+            note_stop("Entrada de INVENTARIO con codigo de producto inexistente",
+                         f"factura {invoice}, codigo {code}, kilos {s(row, 'kilos_netos')}")
+            continue
+        found = web_purchases.get(int(invoice)) if invoice.isdigit() and int(invoice) < 2 ** 31 else None
+        if found:
+            module, purchase_id, number = modules[found[2]], found[1], int(invoice)
+            purchase = access_purchases.get(invoice)
+        else:
+            module, purchase_id, number, purchase = "DRY_COFFEE", opening_purchase_id(agency_id, invoice), 0, None
+            opening += 1
+        cur.execute(
+            "INSERT INTO inventarios (modulo_compra, compra_id, agencia_id, producto_id, especial, numero_factura,"
+            " fecha_compra, sacos, kilos_brutos, kilos_netos, saldo_kilos, factor, vr_inventario, creado_en)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            " ON CONFLICT (modulo_compra, compra_id) DO NOTHING",
+            (module, purchase_id, agency_id, products[code][0], s(row, "especial"), number,
+             parse_date(row.get("fecha")), parse_int(row.get("sacos")), parse_decimal(row.get("kilos_brutos")),
+             parse_decimal(row.get("kilos_netos")), entry_balance(row, purchase), parse_decimal(row.get("porcalmsana")),
+             parse_decimal(row.get("vr_inventario")), parse_timestamp(s(row, "fecha"))))
+        inserted += cur.rowcount
+    print(f"  inventarios: {inserted} entradas de INVENTARIO ({opening} del saldo que viene del anio anterior).")
+
+    cur.execute("SELECT DISTINCT ON (producto_id) producto_id, id FROM inventarios WHERE agencia_id = %s"
+                " ORDER BY producto_id, fecha_compra, id", (agency_id,))
+    first_entry = dict(cur.fetchall())
+    cur.execute("SELECT numero_remision_anterior FROM remisiones WHERE agencia_id = %s", (agency_id,))
+    existing = {r[0] for r in cur.fetchall()}
+    remissions = lines = 0
+    for number, remission in exit_remissions(exits).items():
+        if number in existing:
+            continue
+        funds = {products[s(r, "cod_prod")][1] for r in remission["lines"] if s(r, "cod_prod") in products}
+        cur.execute(
+            "INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, destino, exportado,"
+            " creado_por_usuario_id, creado_en, fondo_id, consecutivo, numero_remision, estado, de_access)"
+            " VALUES (%s, %s, %s, %s, false, %s, %s, %s, %s, %s, 'VIGENTE', true) RETURNING id",
+            (number, agency_id, remission["date"], remission["destino"] or None, user_id,
+             parse_timestamp(s(remission["lines"][-1], "fecha")), funds.pop() if len(funds) == 1 else None, number,
+             remission["text"]))
+        remission_id = cur.fetchone()[0]
+        remissions += 1
+        for row in remission["lines"]:
+            product = products.get(s(row, "cod_prod"), (None,))[0]
+            if first_entry.get(product) is None:
+                note_stop("Salida de INVENTARIO de un codigo sin entradas", discard_detail(row, 0, row.get("cantidad")))
+                continue
+            cur.execute(
+                "INSERT INTO remisiones_detalle (remision_id, inventario_id, cantidad, valor_unitario, valor_salida,"
+                " sacos, kilos_brutos, factor_salida) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (remission_id, first_entry[product], parse_decimal(row.get("cantidad")),
+                 parse_decimal(row.get("valor unitario")), parse_decimal(row.get("vr_salida")),
+                 parse_int(row.get("sacos")), parse_decimal(row.get("kilos_brutos")),
+                 parse_decimal(row.get("porcalmsanasl"))))
+            lines += 1
+    print(f"  remisiones: {remissions} salidas de INVENTARIO de Access ({lines} lineas), sin remesa.")
+
+
+def payment_mismatches(purchases, cash_rows, supply_rows, unpaid=frozenset()):
+    """
+    25-nov: en Access lo pagado en Caja (salidas - entradas, Id_Transaccion = factura) es el neto de la compra, y lo
+    de Suministros su parte en cheque. La web arma esos pagos desde la compra, asi que una diferencia (un pago
+    registrado dos veces, o ninguno) no se veria: se lista con factura, Ids de Access, fechas y valores.
+    """
+    invoices = {s(c, "factura") for c in purchases}
+    cash, supply = {}, {}
+    for row in cash_rows:
+        if s(row, "id_transaccion") in invoices:
+            cash.setdefault(s(row, "id_transaccion"), []).append(row)
+    for row in supply_rows:
+        if s(row, "id_transaccion") in invoices:
+            supply.setdefault(s(row, "id_transaccion"), []).append(row)
+    found = []
+    for c in purchases:
+        invoice = s(c, "factura")
+        paid = sum((parse_decimal(r.get("salidas")) - parse_decimal(r.get("entradas")) for r in cash.get(invoice, [])),
+                   Decimal(0))
+        checks = sum((parse_decimal(r.get("vr_gastos_o_comp")) - parse_decimal(r.get("valor_suministro"))
+                      for r in supply.get(invoice, [])), Decimal(0))
+        net, cheque = parse_decimal(c.get("neto_a_pagar")), parse_decimal(c.get("fpch"))
+        if paid == net and checks == cheque:
+            continue
+        if invoice in unpaid and paid == 0 and checks == 0:
+            continue  # marcada "sin_pago" en correcciones.csv y de verdad sin ningun pago
+        rows = "; ".join(f"{name} Id {s(r, 'id_access') or '?'} {s(r, 'fecha')[:19]} entradas"
+                         f" {s(r, 'entradas') or s(r, 'valor_suministro') or '0'} salidas"
+                         f" {s(r, 'salidas') or s(r, 'vr_gastos_o_comp') or '0'}"
+                         for name, group in (("Caja", cash), ("Suministros", supply)) for r in group.get(invoice, []))
+        found.append(f"factura {invoice} (Id {s(c, 'id_access') or '?'}, {s(c, 'fecha_compra')[:10]},"
+                     f" {s(c, 'forma_de_pago')}): neto {net}, pagado en Caja {paid}; cheque {cheque}, en Suministros"
+                     f" {checks} | {rows or 'sin pagos en Caja ni Suministros'}")
+    return found
+
+
+def check_payments():
+    """Detiene la carga si lo pagado en Caja/Suministros de Access no cuadra con alguna compra."""
+    purchases = read_csv("compras_migrar.csv")
+    unpaid = [c for c in purchases if unpaid_purchase(c)]
+    print(f"  compras SIN PAGO por correcciones.csv: {len(unpaid)}")
+    for c in unpaid:
+        fix = CORRECTIONS[("compras", s(c, "id_access"))]
+        print(f"    factura {s(c, 'factura')} (Id {s(c, 'id_access')}, {s(c, 'fecha_compra')[:10]}, cedula {s(c, 'cedula')},"
+              f" neto {s(c, 'neto_a_pagar')}): se carga sin pago, desglose en 0 ({s(fix, 'motivo')};"
+              f" confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'})")
+    for item in payment_mismatches(purchases, read_csv("caja_migrar.csv"), read_csv("suministros_migrar.csv"),
+                                   {s(c, "factura") for c in unpaid}):
+        note_stop("Compra cuyo pago en Caja/Suministros de Access no cuadra con su neto", item)
+
+
 def before_cut(row, desde):
     """Movimiento de Caja, Suministros, Caja Menor o Empaque anterior a la fecha de corte."""
     moved = parse_date(row.get("fecha"))
@@ -699,8 +1181,11 @@ def load_check_relation_marks(cur, agency_id):
             continue
         invoice = parse_int(s(row, "id_transaccion"), None)
         purchase = purchase_by_invoice.get(invoice)
-        if purchase is None or parse_int(purchase[0], None) != check:
-            note_discard("Rel_cheques marcado sin compra que lo respalde", s(row, "id_transaccion"))
+        if purchase is None:
+            continue  # movimiento manual de Caja: su marca se guarda en load_manual_cash_entries
+        if parse_int(purchase[0], None) != check:
+            note_stop("Rel_cheques de un pago de compra con otro numero de cheque",
+                      f"Id {s(row, 'id_access') or '?'}, factura {invoice}, cheque Caja {check} / compra {purchase[0]}")
             continue
         marks.append((purchase[2], purchase[1]))
     psycopg2.extras.execute_values(
@@ -760,6 +1245,9 @@ def load_manual_cash_entries(cur, agency_id, desde):
             method = "CHEQUE"
             if outflow > 0:
                 table = "suministros"
+        if ledger_fund(row) is None:
+            note_stop("Caja con un fondo que no es RP ni LF", discard_detail(row, inflow, outflow))
+            continue
         entry_date = parse_date(s(row, "fecha"))
         ids = existing.get((table, transaction_id, entry_date, inflow, outflow, check))
         if ids:
@@ -769,7 +1257,7 @@ def load_manual_cash_entries(cur, agency_id, desde):
                 f"INSERT INTO {table} (id_transaccion, agencia_id, fondo_id, fecha, cedula, detalle,"
                 " entradas, salidas, forma_pago, numero_cheque, creado_en)"
                 " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                (transaction_id, agency_id, fund_by_code[s(row, "fondo")], entry_date, s(row, "cedula"),
+                (transaction_id, agency_id, fund_by_code[ledger_fund(row)], entry_date, s(row, "cedula"),
                  s(row, "detalle") or None, inflow, outflow, method, check, parse_timestamp(s(row, "fecha"))),
             )
             entry_id = cur.fetchone()[0]
@@ -783,11 +1271,22 @@ def load_manual_cash_entries(cur, agency_id, desde):
         print(f"  {table} {method}: {n} movimientos manuales de Caja.")
 
 
-# SUPUESTO (carga de prueba, decision del usuario 2026-10-01): en Access la fila de Suministros
-# "sumlf60-29-05" (29/05/2026, entrada 60.000.000) tiene Fondo = "j", que no es RP ni LF. Se toma como
-# LF por el patron del propio codigo ("sumlf..."), NO por confirmacion externa. Revisar con el dato
-# real de produccion. En Access esa fila no salia en los informes SuministrosRP/LF (filtran "RP"/"LF").
-SUPPLY_FUND_ASSUMPTIONS = {("sumlf60-29-05", "j"): "LF"}
+# Fondos de la web. Un fondo de Access que no es uno de estos detiene la carga (25-nov: no se supone).
+KNOWN_FUNDS = {"RP", "LF"}
+
+
+def ledger_fund(row):
+    """Codigo de fondo de un movimiento de Access tal cual; None si no es RP ni LF (detiene la carga)."""
+    fund = s(row, "fondo")
+    return fund if fund in KNOWN_FUNDS else None
+
+
+def discard_detail(row, inflow, outflow):
+    """Fecha, numero, detalle, fondo y valor de un movimiento descartado, para revisar si mueve un saldo."""
+    day = parse_date(row.get("fecha"))
+    return (f"Id {s(row, 'id_access') or '?'}, {day}, {s(row, 'id_transaccion')}, {s(row, 'detalle')},"
+            f" fondo {s(row, 'fondo')},"
+            f" entradas {inflow}, salidas {outflow}")
 
 
 def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
@@ -839,9 +1338,9 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
         if s(row, "forma_de_pago") == "CHEQUE" and cash_check_inflows.get(copy_key, 0) > 0:
             cash_check_inflows[copy_key] -= 1
             continue
-        fund = SUPPLY_FUND_ASSUMPTIONS.get((transaction_id, s(row, "fondo")), s(row, "fondo"))
-        if fund not in fund_by_code:
-            note_discard("Suministros con Fondo inexistente", (transaction_id, s(row, "fondo"), str(inflow)))
+        fund = ledger_fund(row)
+        if fund is None:
+            note_stop("Suministros con un fondo que no es RP ni LF", discard_detail(row, inflow, outflow))
             continue
         entry_date = parse_date(s(row, "fecha"))
         inserted += insert_once(
@@ -858,10 +1357,13 @@ def load_supplies_petty_cash_and_packaging(cur, agency_id, desde):
             continue
         transaction_id = s(row, "id_transaccion")
         inflow, outflow = parse_decimal(s(row, "entradas")), parse_decimal(s(row, "salidas"))
+        if ledger_fund(row) is None:
+            note_stop("CajaMenor con un fondo que no es RP ni LF", discard_detail(row, inflow, outflow))
+            continue
         entry_date = parse_date(s(row, "fecha"))
         inserted += insert_once(
             found, (transaction_id, entry_date, inflow, outflow), ledger_sql.format("movimientos_caja_menor"),
-            (transaction_id, agency_id, fund_by_code[s(row, "fondo")], entry_date, s(row, "cedula"),
+            (transaction_id, agency_id, fund_by_code[ledger_fund(row)], entry_date, s(row, "cedula"),
              s(row, "detalle") or None, inflow, outflow, s(row, "forma_de_pago") or None, None,
              parse_timestamp(s(row, "fecha"))))
     print(f"  movimientos_caja_menor: {inserted} filas de CajaMenor.")
@@ -894,15 +1396,20 @@ def load_purchase_payment_splits(cur, agency_id, desde):
     splits = []
     for row in purchase_rows(desde):
         parts = [parse_decimal(s(row, k)) for k in ("fpef", "fpch", "fptx", "fpdat")]
-        if sum(1 for p in parts if p > 0) < 2:
+        unpaid = unpaid_purchase(row)
+        if sum(1 for p in parts if p > 0) < 2 and not unpaid:
             continue
         invoice = parse_int(s(row, "factura"), None)
         purchase = purchase_by_invoice.get(invoice)
+        if unpaid and purchase is not None:
+            # 25-nov: compra sin pago en Access: el desglose queda en 0 (como la web deja una compra anulada).
+            splits.append((purchase[2], purchase[1], Decimal(0), Decimal(0), Decimal(0), Decimal(0), None))
+            continue
         if purchase is None:
-            note_discard("Pago mixto sin compra migrada", invoice)
+            note_stop("Pago mixto sin compra migrada", invoice)
             continue
         if sum(parts) != purchase[0]:
-            note_discard("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[0])))
+            note_stop("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[0])))
             continue
         splits.append((purchase[2], purchase[1], *parts, cheque_text(s(row, "numcheque"))))
     psycopg2.extras.execute_values(
@@ -945,7 +1452,7 @@ def load_future_purchases(cur, agency_id, admin_user_id, today):
         number = announcement_number(prefix, s(row, "anuncio"))
         grower = growers.get(s(row, "cedula"))
         if grower is None:
-            note_discard("compra_a_futuro_sin_tercero", (s(row, "anuncio"), s(row, "cedula")))
+            note_stop("Compra a futuro cuyo caficultor no esta en Asociados", (s(row, "anuncio"), s(row, "cedula")))
             continue
         cur.execute(
             "INSERT INTO compras_anunciadas (creado_en, agencia_id, numero_anuncio, fecha_anuncio, cedula, nombres,"
@@ -985,7 +1492,7 @@ def load_quota_announcements(cur, agency_id):
         cur.execute("SELECT id FROM anuncios_agencias WHERE agencia_id = %s AND numero_anuncio = %s", (agency_id, number))
         found = cur.fetchone()
         if not found:
-            note_discard("cupo de un anuncio que no se cargo", (number, s(row, "cupo")))
+            note_stop("Cupo de un anuncio que no se cargo", (number, s(row, "cupo")))
             continue
         QUOTA_ANNOUNCEMENTS_KEPT.add(str(number))
         cur.execute("INSERT INTO cupos_anuncios (anuncio_agencia_id, cupo) VALUES (%s, %s)"
@@ -1020,7 +1527,21 @@ def set_consecutives(cur, agency_id):
     rows.append(("factura", access_invoice, web, cur.fetchone()[0] + 1))
 
     # Remision y remesa: un solo contador por agencia (V31) que sigue la serie de Access (TA0968 -> SDTA-969).
-    access_remission = max_remission(compras)
+    # Tambien las salidas de INVENTARIO: su numero de remision no puede volver a salir en la web.
+    remission_rows = compras + exit_remission_rows(inventory_rows(read_csv("inventario_migrar.csv"))[1])
+    access_remission = max_remission(remission_rows)
+    summary = remission_summary(remission_rows)
+    fixed = fixed_remission(CORRECTIONS)
+    if fixed is not None:
+        print(f"  remision: correcciones.csv fija el contador en {fixed} (la regla daba {access_remission});"
+              f" la siguiente sale con {fixed + 1}")
+        access_remission = fixed
+    if summary["by_number"]:
+        print(f"  remision: ultima por numero {summary['by_number'][0]} ({summary['by_number'][1]}), ultima por fecha"
+              f" {summary['by_date'][0]} ({summary['by_date'][1]}); la siguiente sale con {access_remission + 1}")
+    for text, count, first, last in summary["ignored"]:
+        print(f"  remision {text} ignorada para el contador (numero suelto): {count} compras del {first} al {last};"
+              " su remesa conserva el numero")
     cur.execute("SELECT ultimo_consecutivo FROM consecutivos_remision_agencia WHERE agencia_id = %s", (agency_id,))
     web = (cur.fetchone() or [None])[0]
     rows.append(("remision", access_remission, web, set_remission_counter(cur, agency_id, access_remission) + 1))
@@ -1074,6 +1595,20 @@ def backup(base, label="migrar_punto"):
     return target
 
 
+def print_excluded():
+    """Registros de Access que no se cargaron porque correcciones.csv los excluye, con todos sus datos."""
+    print(f"  corregidos por correcciones.csv: {len(CORRECTED)}")
+    for (table, ident), (column, before, after) in CORRECTED.items():
+        fix = CORRECTIONS[(table, ident)]
+        print(f"    {table} Id {ident}: {column} '{before}' -> '{after}' ({s(fix, 'motivo')};"
+              f" confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'})")
+    print(f"  excluidos por correcciones.csv: {len(EXCLUDED)}")
+    for (table, ident), row in EXCLUDED.items():
+        fix = CORRECTIONS[(table, ident)]
+        data = ", ".join(f"{k} {v}" for k, v in row.items() if v and k != "id_access")
+        print(f"    {table} Id {ident} ({s(fix, 'motivo')}; confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'}): {data}")
+
+
 def main():
     global DATA_DIR
     parser = argparse.ArgumentParser(description="Carga un punto de compra de Access (CSV) en la web.")
@@ -1081,11 +1616,15 @@ def main():
     parser.add_argument("--carpeta", default=str(DATA_DIR), help="carpeta con los *_migrar.csv del punto")
     parser.add_argument("--desde", type=date.fromisoformat, help="fecha de corte AAAA-MM-DD (opcional)")
     parser.add_argument("--aplicar", action="store_true", help="guarda los cambios (sin esto, modo prueba)")
+    parser.add_argument("--correcciones", help="correcciones.csv (fuera del repo) con los registros a excluir")
+    parser.add_argument("--definitiva", action="store_true",
+                        help="carga definitiva: una correccion PENDIENTE detiene la carga")
     parser.add_argument("--admin-pruebas", action="store_true", help="crea admin_eltambo (base de pruebas)")
     parser.add_argument("--ness", action="store_true",
                         help="recarga cupos_ness con la NESS de esta base (borra la que se subio con HU-54)")
     args = parser.parse_args()
     DATA_DIR = Path(args.carpeta)
+    load_corrections(args.correcciones, DATA_DIR.name, args.definitiva)
 
     env = dotenv_values(BACKEND_DIR / ".env")
     if args.aplicar:
@@ -1097,15 +1636,16 @@ def main():
             print(f"Parte A - {DATA_DIR}" + (f" (desde {args.desde})" if args.desde else ""))
             agency_id, agency_name = load_agency(cur)
             print(f"  Agencia '{agency_name}' id={agency_id}")
-            load_control_record(cur, agency_id)
+            cur.execute("SELECT id FROM usuarios WHERE usuario = 'admin'")
+            admin_user_id = cur.fetchone()[0]
+            load_control_record(cur, agency_id, admin_user_id)
             load_growers(cur)
             cur.execute("SELECT id FROM fondos WHERE codigo = 'RP'")
             rp_fund_id = cur.fetchone()[0]
             load_announcements(cur, agency_id, rp_fund_id)
             load_quota_announcements(cur, agency_id)
-            cur.execute("SELECT id FROM usuarios WHERE usuario = 'admin'")
-            admin_user_id = cur.fetchone()[0]
             load_purchases(cur, agency_id, admin_user_id, args.desde)
+            load_inventory(cur, agency_id, admin_user_id)
             load_check_relation_marks(cur, agency_id)
             load_manual_cash_entries(cur, agency_id, args.desde)
             load_supplies_petty_cash_and_packaging(cur, agency_id, args.desde)
@@ -1115,6 +1655,10 @@ def main():
             set_consecutives(cur, agency_id)
             if args.admin_pruebas:
                 ensure_admin_eltambo(cur, agency_id)
+            check_payments()
+            check_corrections_used()
+            print_excluded()
+            stop_if_problems()
 
             if args.ness:
                 print("\nParte B - NESS")
@@ -1130,11 +1674,11 @@ def main():
     finally:
         conn.close()
 
-    print("\nResumen de descartes:")
+    print("\nAvisos (se cargaron tal cual):")
     for reason, items in DISCARDED.items():
         print(f"  {reason}: {len(items)}")
-        for item in items[:5]:
-            print(f"    ejemplo: {item}")
+        for item in items:
+            print(f"    {item}")
 
 
 if __name__ == "__main__":

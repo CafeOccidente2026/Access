@@ -5,7 +5,9 @@ Exporta las 14 tablas de una base de Access de un punto de compra a los CSV que 
 Uso:  python scripts/exportar_access_csv.py <archivo.accdb> <carpeta_salida> [--clave <clave de la base>]
 
 Abre la base en solo lectura con el driver ODBC de Access (no la modifica). La columna autonumerica "Id"
-que agrega Access no va en los CSV. La carpeta de salida guarda datos reales: debe estar fuera de git.
+de Access va primero como "id_access" (25-nov): sin ella no se puede decir que registro de Access es cada fila
+(correcciones.csv, listas de la carga). Las filas salen en orden de Id. La carpeta de salida guarda datos reales:
+debe estar fuera de git.
 """
 
 import argparse
@@ -60,14 +62,21 @@ def connect(accdb, password=None):
     return pyodbc.connect(conn, autocommit=True, readonly=True)
 
 
+def export_name(column):
+    """Nombre de la columna en el CSV: en minusculas; el Id autonumerico de Access como id_access."""
+    return "id_access" if column.lower() == "id" else column.lower()
+
+
 def export_table(cur, table, path):
     cur.execute(f"SELECT * FROM [{table}]")
     names = [d[0] for d in cur.description]
-    keep = [i for i, name in enumerate(names) if name.lower() != "id"]
+    if any(name.lower() == "id" for name in names):
+        cur.execute(f"SELECT * FROM [{table}] ORDER BY [Id]")
+    keep = sorted(range(len(names)), key=lambda i: names[i].lower() != "id")
     count = 0
     with open(path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f, lineterminator="\n")
-        writer.writerow([names[i].lower() for i in keep])
+        writer.writerow([export_name(names[i]) for i in keep])
         for row in cur:
             writer.writerow([cell(row[i]) for i in keep])
             count += 1
