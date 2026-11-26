@@ -18,6 +18,7 @@ from migrar_punto import (
     grower_type,
     note_stop,
     pending_corrections,
+    split_parts,
     stop_if_problems,
     unpaid_purchase,
     announcement_number,
@@ -40,6 +41,7 @@ from migrar_punto import (
     opening_purchase_id,
     out_of_range,
     payment_mismatches,
+    payment_action,
     payment_of,
     pending_quotas,
     quota_purchase,
@@ -240,6 +242,33 @@ def check_payments():
         CORRECTIONS.clear()
 
 
+def check_payment_corrections():
+    # 26-nov: pago_efectivo = compra que el area da por pagada en efectivo aunque Access no tiene el pago en Caja;
+    # pago_tal_cual = el pago de Access no cuadra con el neto y se carga como esta. Solo si estan en correcciones.csv.
+    compra = {"id_access": "7", "factura": "1003", "fecha_compra": "2026-03-01 08:00:00", "neto_a_pagar": "300",
+              "fpef": "0", "fpch": "0", "fptx": "0", "fpdat": "0", "forma_de_pago": "VALIDA"}
+    assert len(payment_mismatches([compra], [], [])) == 1
+    assert payment_mismatches([compra], [], [], cash_paid={"1003"}) == []
+    paid_some = [{"id_access": "11", "id_transaccion": "1003", "fecha": "2026-03-01", "entradas": "0", "salidas": "10"}]
+    assert len(payment_mismatches([compra], paid_some, [], cash_paid={"1003"})) == 1  # si tiene algun pago, no
+    over = [dict(paid_some[0], salidas="300"), dict(paid_some[0], id_access="12", salidas="5")]
+    assert len(payment_mismatches([compra], over, [])) == 1
+    assert payment_mismatches([compra], over, [], as_is={"1003"}) == []
+    for action in ("pago_efectivo", "pago_tal_cual"):
+        found = corrections_for([correction(tabla="COMPRAS", id_access="7", accion=action, motivo="decision del area")],
+                                "PuntoPrueba")
+        CORRECTIONS.clear()
+        CORRECTIONS.update(found)
+        try:
+            assert payment_action({"id_access": "7"}) == action and payment_action({"id_access": "8"}) is None
+            assert payment_of({"id_access": "7", "fpch": "0"}) == ("EFECTIVO", None)
+        finally:
+            CORRECTIONS.clear()
+    # El desglose que no suma el neto se guarda tal cual solo con pago_tal_cual.
+    assert split_parts({"fpef": "5", "fptx": "300", "fpch": "0", "fpdat": "0"}, Decimal("300"), "pago_tal_cual") ==         [Decimal("5"), Decimal("0"), Decimal("300"), Decimal("0")]
+    assert split_parts({"fpef": "5", "fptx": "300", "fpch": "0", "fpdat": "0"}, Decimal("300"), None) is None
+
+
 def check_grower_type():
     # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
     assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
@@ -411,6 +440,7 @@ def main():
     check_growers_by_id_number()
     check_grower_type()
     check_payments()
+    check_payment_corrections()
     check_inventory()
     check_date_cut()
     check_cheque_text()
