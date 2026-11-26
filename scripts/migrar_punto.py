@@ -1198,6 +1198,46 @@ def check_payments():
         note_stop("Compra cuyo pago en Caja/Suministros de Access no cuadra con su neto", item)
 
 
+ACCESS_ANNULMENT_NOTE = "Access deja la compra en 0 al anular"
+
+
+def access_annulments(purchases, prefix):
+    """
+    26-nov: las compras ANULADAS de Access para el registro de anulaciones (V35), tal cual las tiene Access (aunque
+    esten en 0). Access no guarda quien, cuando ni por que se anularon: esos campos quedan vacios.
+    """
+    found = []
+    for row in purchases:
+        if s(row, "forma_de_pago") != "ANULADA":
+            continue
+        invoice = parse_int(s(row, "factura"), None)
+        values = {"grossKg": s(row, "kilos_brutos"), "netKg": s(row, "kilos_netos"), "grossValue": s(row, "vr_bruto"),
+                  "netToPay": s(row, "neto_a_pagar"), "idNumber": s(row, "cedula")}
+        found.append({"type": "COMPRA_PASILLA" if husk_purchase(row) else "COMPRA_SECO",
+                      "number": f"{prefix} {invoice}", "invoice": invoice,
+                      "values": {k: v for k, v in values.items() if v != ""}})
+    return found
+
+
+def load_access_annulments(cur, agency_id):
+    """Inserta las anuladas de Access en anulaciones (origen ACCESS). La tabla solo admite insertar: no se repite."""
+    web = purchases_by_invoice(cur, agency_id, "estado")
+    inserted = 0
+    for item in access_annulments(read_csv("compras_migrar.csv"), agency_prefix(cur, agency_id)):
+        purchase = web.get(item["invoice"])
+        cur.execute(
+            "INSERT INTO anulaciones (origen, tipo_documento, numero_documento, agencia_id, documento_id, valores, nota)"
+            " SELECT 'ACCESS', %(type)s, %(number)s, %(agency)s, %(document)s, %(values)s, %(note)s"
+            " WHERE NOT EXISTS (SELECT 1 FROM anulaciones WHERE origen = 'ACCESS' AND agencia_id = %(agency)s"
+            " AND tipo_documento = %(type)s AND numero_documento = %(number)s)",
+            {"type": item["type"], "number": item["number"], "agency": agency_id,
+             "document": purchase[1] if purchase else None, "values": psycopg2.extras.Json(item["values"]),
+             "note": ACCESS_ANNULMENT_NOTE})
+        inserted += cur.rowcount
+    print(f"  anulaciones: {inserted} compras anuladas de Access al registro (origen ACCESS, sin usuario, fecha ni"
+          " motivo).")
+
+
 def before_cut(row, desde):
     """Movimiento de Caja, Suministros, Caja Menor o Empaque anterior a la fecha de corte."""
     moved = parse_date(row.get("fecha"))
@@ -1679,6 +1719,7 @@ def main():
             load_quota_announcements(cur, agency_id)
             load_purchases(cur, agency_id, admin_user_id, args.desde)
             load_inventory(cur, agency_id, admin_user_id)
+            load_access_annulments(cur, agency_id)
             load_check_relation_marks(cur, agency_id)
             load_manual_cash_entries(cur, agency_id, args.desde)
             load_supplies_petty_cash_and_packaging(cur, agency_id, args.desde)
