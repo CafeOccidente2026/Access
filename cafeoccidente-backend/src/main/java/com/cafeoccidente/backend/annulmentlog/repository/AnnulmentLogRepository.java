@@ -28,6 +28,16 @@ public class AnnulmentLogRepository {
             AnnulmentModule.DRY, "COMPRA_SECO", AnnulmentModule.GREEN, "COMPRA_VERDE", AnnulmentModule.HUSK, "COMPRA_PASILLA");
     public static final String REMISSION_TYPE = "REMISION";
 
+    /** La foto de una compra, una consulta fija por tabla (el SQL no se arma en tiempo de ejecucion). */
+    private static final String SNAPSHOT_COLUMNS = "SELECT p.agencia_id, rc.prefijo, p.numero_factura, p.kilos_brutos,"
+            + " p.kilos_netos, p.vr_bruto, p.neto_a_pagar, p.forma_pago, p.cedula, p.nombres, p.apellidos FROM ";
+    private static final String SNAPSHOT_JOIN = " p LEFT JOIN registros_control rc ON rc.agencia_id = p.agencia_id"
+            + " AND rc.activo WHERE p.id = :id";
+    private static final Map<AnnulmentModule, String> PURCHASE_SNAPSHOT = Map.of(
+            AnnulmentModule.DRY, SNAPSHOT_COLUMNS + "compras_cafe_seco" + SNAPSHOT_JOIN,
+            AnnulmentModule.GREEN, SNAPSHOT_COLUMNS + "compras_cafe_verde" + SNAPSHOT_JOIN,
+            AnnulmentModule.HUSK, SNAPSHOT_COLUMNS + "compras_pasilla" + SNAPSHOT_JOIN);
+
     /** from y to son dias completos de Colombia (la base corre en UTC); las filas de Access no tienen fecha. */
     private static final String COLOMBIAN_DAY = "CAST(n.anulado_en AT TIME ZONE 'America/Bogota' AS DATE)";
     private static final String WHERE = " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR n.agencia_id = :agencyId)"
@@ -64,10 +74,7 @@ public class AnnulmentLogRepository {
      * anulacion en curso (lockChangeable), asi que nadie la cambia entre la foto y el 0.
      */
     public DocumentSnapshot purchaseSnapshot(AnnulmentModule module, Long id) {
-        return jdbc.queryForObject("SELECT p.agencia_id, rc.prefijo, p.numero_factura, p.kilos_brutos, p.kilos_netos,"
-                        + " p.vr_bruto, p.neto_a_pagar, p.forma_pago, p.cedula, p.nombres, p.apellidos FROM " + module.table()
-                        + " p LEFT JOIN registros_control rc ON rc.agencia_id = p.agencia_id AND rc.activo WHERE p.id = :id",
-                new MapSqlParameterSource("id", id), (rs, i) -> {
+        return jdbc.queryForObject(PURCHASE_SNAPSHOT.get(module), new MapSqlParameterSource("id", id), (rs, i) -> {
                     Map<String, String> values = new LinkedHashMap<>();
                     put(values, "grossKg", rs.getBigDecimal("kilos_brutos"));
                     put(values, "netKg", rs.getBigDecimal("kilos_netos"));
