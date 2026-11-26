@@ -7,6 +7,8 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    ACCESS_ANNULMENT_NOTE,
+    access_annulments,
     CORRECTIONS,
     DISCARDED,
     STOPS,
@@ -269,6 +271,20 @@ def check_payment_corrections():
     assert split_parts({"fpef": "5", "fptx": "300", "fpch": "0", "fpdat": "0"}, Decimal("300"), None) is None
 
 
+def check_access_annulments():
+    # 26-nov: las compras ANULADAS de Access van al registro de anulaciones tal cual (aunque esten en 0), origen
+    # ACCESS, sin usuario, fecha ni motivo (Access no los guarda), con la nota.
+    zeros = {"kilos_brutos": "0", "kilos_netos": "0", "vr_bruto": "0", "neto_a_pagar": "0", "cedula": "990000001"}
+    rows = [{**purchase("1001", "2026-03-01 08:00:00", estado="ANULADA"), **zeros},
+            purchase("1002", "2026-03-02 08:00:00"),
+            {**purchase("1003", "2026-03-03 08:00:00", especial="PASILLA", estado="ANULADA"), **zeros}]
+    found = access_annulments(rows, "XXPR")
+    assert [(f["type"], f["number"], f["invoice"]) for f in found] == [
+        ("COMPRA_SECO", "XXPR 1001", 1001), ("COMPRA_PASILLA", "XXPR 1003", 1003)]
+    assert found[0]["values"]["netKg"] == "0" and found[0]["values"]["netToPay"] == "0"
+    assert ACCESS_ANNULMENT_NOTE == "Access deja la compra en 0 al anular"
+
+
 def check_grower_type():
     # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
     assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
@@ -439,6 +455,7 @@ def main():
     check_correction_actions()
     check_growers_by_id_number()
     check_grower_type()
+    check_access_annulments()
     check_payments()
     check_payment_corrections()
     check_inventory()
