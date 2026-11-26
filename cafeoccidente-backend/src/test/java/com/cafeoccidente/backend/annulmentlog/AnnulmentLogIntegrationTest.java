@@ -20,6 +20,8 @@ import com.cafeoccidente.backend.users.entity.User;
 import com.cafeoccidente.backend.users.repository.RoleRepository;
 import com.cafeoccidente.backend.users.repository.UserRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,7 +109,7 @@ class AnnulmentLogIntegrationTest {
     }
 
     private AnnulmentLogEntry entryOf(String type, Long documentId) {
-        return log.search(new AnnulmentLogFilter(AGENCY, type, null, null, null, 0, 200)).items().stream()
+        return log.search(new AnnulmentLogFilter(AGENCY, type, null, null, null, true, 0, 200)).items().stream()
                 .filter(e -> documentId.equals(e.documentId())).findFirst().orElseThrow();
     }
 
@@ -196,6 +198,45 @@ class AnnulmentLogIntegrationTest {
 
         assertThatThrownBy(() -> jdbc.update("INSERT INTO anulaciones (origen, tipo_documento, numero_documento, agencia_id)"
                 + " VALUES ('WEB', 'COMPRA_SECO', 'XX 1', ?)", AGENCY)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /**
+     * 26-nov: las de Access no tienen fecha de anulacion. Con la casilla marcada (por defecto) salen aunque haya
+     * Desde/Hasta, y traen la fecha de la compra; desmarcada, no salen.
+     */
+    @Test
+    void accessRowsIgnoreTheDatesWhenIncludedAndShowThePurchaseDate() {
+        DryCoffeePurchaseResponse saved = purchase();
+        LocalDate bought = jdbc.queryForObject("SELECT fecha_compra FROM compras_cafe_seco WHERE id = ?", LocalDate.class,
+                saved.id());
+        Long id = jdbc.queryForObject("INSERT INTO anulaciones (origen, tipo_documento, numero_documento, agencia_id,"
+                + " documento_id, nota) VALUES ('ACCESS', 'COMPRA_SECO', 'XX 999002', ?, ?, 'Anulada en Access')"
+                + " RETURNING id", Long.class, AGENCY, saved.id());
+        LocalDate day = LocalDate.of(2000, 1, 1);
+
+        List<AnnulmentLogEntry> included = log.search(new AnnulmentLogFilter(AGENCY, null, null, day, day, true, 0, 200))
+                .items();
+        List<AnnulmentLogEntry> excluded = log.search(new AnnulmentLogFilter(AGENCY, null, null, null, null, false, 0, 200))
+                .items();
+
+        assertThat(included).filteredOn(e -> id.equals(e.id())).singleElement()
+                .satisfies(e -> assertThat(e.purchaseDate()).isEqualTo(bought));
+        assertThat(included).allMatch(e -> "ACCESS".equals(e.origin()));
+        assertThat(excluded).noneMatch(e -> "ACCESS".equals(e.origin()));
+    }
+
+    @Test
+    void aWebRowIsFilteredByItsAnnulmentDayAndAlsoShowsThePurchaseDate() {
+        DryCoffeePurchaseResponse saved = purchase();
+        annulment.annul(AGENCY, AnnulmentModule.DRY, saved.id(), REASON);
+        LocalDate today = jdbc.queryForObject("SELECT CAST(now() AT TIME ZONE 'America/Bogota' AS DATE)", LocalDate.class);
+
+        assertThat(entryOf("COMPRA_SECO", saved.id()).purchaseDate()).isEqualTo(jdbc.queryForObject(
+                "SELECT fecha_compra FROM compras_cafe_seco WHERE id = ?", LocalDate.class, saved.id()));
+        assertThat(log.search(new AnnulmentLogFilter(AGENCY, null, null, today, today, false, 0, 200)).items())
+                .anyMatch(e -> saved.id().equals(e.documentId()));
+        assertThat(log.search(new AnnulmentLogFilter(AGENCY, null, null, today.minusDays(2), today.minusDays(1), false, 0,
+                200)).items()).noneMatch(e -> saved.id().equals(e.documentId()));
     }
 
     private Long accessRow() {
