@@ -19,7 +19,12 @@
         <span class="font-semibold">{{ r.displayNumber }}</span>
         <span *ngIf="r.status === 'ANULADA'" data-testid="annulled" class="font-semibold text-red-700">{{ c.annulledLabel }}</span>
         <app-remittance-files *ngIf="r.remittanceId && r.status === 'VIGENTE'" [remittanceId]="r.remittanceId"></app-remittance-files>
-        <app-button *ngIf="canAnnul()" class="ml-auto" [label]="c.annulLabel" [disabled]="annulling()" (pressed)="pressAnnul()"></app-button>
+        <label *ngIf="canAnnul() && !r.fromAccess" class="ml-auto flex flex-col gap-1 text-sm">
+          <span class="font-medium text-blue-900">{{ c.reasonLabel }}</span>
+          <textarea data-testid="annul-reason" rows="2" maxlength="500" class="w-80 rounded border border-slate-300 px-2 py-1"
+            [value]="annulReason()" (input)="annulReason.set($any($event.target).value)"></textarea>
+        </label>
+        <app-button *ngIf="canAnnul()" [class.ml-auto]="r.fromAccess" [label]="c.annulLabel" [disabled]="annulling()" (pressed)="pressAnnul()"></app-button>
       </div>
       <app-remittance-unmark *ngIf="isAdmin()"></app-remittance-unmark>
       <iframe *ngIf="pdfUrl() as url" [title]="c.pdfTitle" class="h-full min-h-[480px] w-full flex-1 border" [src]="url"></iframe>

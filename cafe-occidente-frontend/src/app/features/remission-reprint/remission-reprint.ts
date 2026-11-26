@@ -9,6 +9,7 @@ import { ContentService } from '../../core/services/content.service';
 import { InventoryService } from '../../core/services/inventory.service';
 import { AccessWindowComponent, AgencyPickerComponent, AppButtonComponent, ConfirmDialogComponent, FormFlowDirective } from '../../shared/ui';
 import { renderPdfPreview } from '../../shared/utils/pdf-preview';
+import { validReason } from '../../shared/utils/annulment-reason';
 import { saveOnce } from '../../shared/utils/save-once';
 import { loadLogoDataUrl } from '../purchase-forms/dry-coffee/dry-coffee-invoice';
 import { buildRemissionDocDefinition } from '../remission-form/remission-invoice';
@@ -28,7 +29,9 @@ export interface RemissionReprintContent {
   readonly annulConfirm: string;
   readonly yesLabel: string;
   readonly noLabel: string;
-  readonly messages: Record<'missingNumber' | 'notFound' | 'pdfError' | 'searchError' | 'annulled' | 'annulError' | 'fromAccess', string>;
+  readonly reasonLabel: string;
+  readonly messages: Record<'missingNumber' | 'notFound' | 'pdfError' | 'searchError' | 'annulled' | 'annulError' | 'fromAccess'
+    | 'reasonRequired', string>;
 }
 
 const fill = (text: string, number: string) => text.replace('{number}', number);
@@ -60,6 +63,8 @@ export class RemissionReprintComponent {
   readonly found = signal<RemissionResponse | null>(null);
   readonly confirmingAnnul = signal(false);
   readonly annulling = signal(false);
+  /** 26-nov: motivo obligatorio (minimo 10 caracteres); queda en el registro de anulaciones. */
+  readonly annulReason = signal('');
   /** Desmarcar remesa (remesas viejas sin remision): solo el Administrador. */
   readonly isAdmin = computed(() => this.auth.isAdmin());
   readonly canAnnul = computed(() =>
@@ -107,6 +112,10 @@ export class RemissionReprintComponent {
       this.message.set(fill(c.messages.fromAccess, remission.displayNumber));
       return;
     }
+    if (c && !validReason(this.annulReason())) {
+      this.message.set(c.messages.reasonRequired);
+      return;
+    }
     this.confirmingAnnul.set(true);
   }
 
@@ -117,9 +126,10 @@ export class RemissionReprintComponent {
     if (!remission || !c) {
       return;
     }
-    saveOnce(this.annulling, () => this.inventoryService.annulRemission(remission.id), {
+    saveOnce(this.annulling, () => this.inventoryService.annulRemission(remission.id, this.annulReason()), {
       next: (annulled) => {
         this.found.set(annulled);
+        this.annulReason.set('');
         this.message.set(fill(c.messages.annulled, annulled.displayNumber));
       },
       error: (err) => this.message.set(serverError(err, c.messages.annulError)),
