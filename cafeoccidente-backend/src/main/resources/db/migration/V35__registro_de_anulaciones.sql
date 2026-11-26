@@ -39,3 +39,9 @@ CREATE TRIGGER tg_anulaciones_sin_cambios BEFORE UPDATE OR DELETE ON anulaciones
     FOR EACH ROW EXECUTE FUNCTION anulaciones_solo_insertar();
 CREATE TRIGGER tg_anulaciones_sin_truncate BEFORE TRUNCATE ON anulaciones
     FOR EACH STATEMENT EXECUTE FUNCTION anulaciones_solo_insertar();
+
+-- 26-nov (Pasto, opcion A): una salida historica de Access puede no tener numero ("SEBASTIAN ORTIZ"); se guarda con
+-- su texto tal cual en numero_remision y sin numero. Solo las de Access (de_access, V33); el contador las ignora.
+ALTER TABLE remisiones ALTER COLUMN numero_remision_anterior DROP NOT NULL;
+ALTER TABLE remisiones ADD CONSTRAINT ck_remisiones_numero_o_de_access
+    CHECK (numero_remision_anterior IS NOT NULL OR de_access);
