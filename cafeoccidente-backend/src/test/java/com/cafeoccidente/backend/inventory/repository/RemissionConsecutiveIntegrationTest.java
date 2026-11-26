@@ -207,6 +207,24 @@ class RemissionConsecutiveIntegrationTest {
                 remission.remittanceId())).isEqualTo("En Access tenía compras de RP y LF");
     }
 
+    /** 26-nov (Pasto, opcion A): una salida historica de Access sin numero se guarda con su texto tal cual, sin numero;
+     *  solo las de Access pueden ir sin numero. */
+    @Test
+    void onlyARemissionFromAccessCanHaveNoNumber() {
+        String insert = "INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, exportado,"
+                + " creado_por_usuario_id, creado_en, numero_remision, estado, de_access)"
+                + " VALUES (NULL, ?, CURRENT_DATE, false, ?, now(), ?, 'VIGENTE', ?)";
+        assertThat(jdbc.update(insert, AGENCY, user.getId(), "PRUEBA SIN NUMERO", true)).isOne();
+        assertThat(jdbc.update(insert, AGENCY, user.getId(), "PA PRUEBA SIN NUMERO", true)).isOne();
+        assertThat(remissions.findByNumber(AGENCY, "PRUEBA SIN NUMERO")).get()
+                .satisfies(r -> {
+                    assertThat(r.remissionNumber()).isNull();
+                    assertThat(r.fromAccess()).isTrue();
+                });
+        assertThatThrownBy(() -> jdbc.update(insert, AGENCY, user.getId(), "WEB SIN NUMERO", false))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
     /** C7 (prueba del 11-nov, punto 7): la lista de Registrar Salidas muestra la cedula y filtra por el fondo. */
     @Test
     void theInventoryListBringsTheSellerAndTheFundOfThePurchase() {
