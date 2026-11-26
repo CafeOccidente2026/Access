@@ -45,6 +45,7 @@ from migrar_punto import (
     payment_mismatches,
     payment_action,
     payment_of,
+    remission_number,
     pending_quotas,
     quota_purchase,
     quota_announcements,
@@ -298,6 +299,20 @@ def check_single_payment_method():
     STOPS.clear()
 
 
+def check_exit_without_number():
+    # 26-nov (Pasto, opcion A): una salida de Access sin numero de remision ("NOMBRE PRUEBA") se carga con su texto
+    # tal cual y sin numero (V35: solo las de Access); se lista y el contador la ignora.
+    DISCARDED.clear()
+    STOPS.clear()
+    grouped = exit_remissions([inv(remision="XX0500", cantidad="5"), inv(remision="NOMBRE PRUEBA", cantidad="3"),
+                               inv(remision="PA NOMBRE PRUEBA", cantidad="2")])
+    assert list(grouped) == [500, "NOMBRE PRUEBA", "PA NOMBRE PRUEBA"] and STOPS == {}
+    assert remission_number(500) == 500 and remission_number("NOMBRE PRUEBA") is None
+    assert len(DISCARDED["Salida de INVENTARIO sin numero de remision (se carga con su texto, sin numero)"]) == 2
+    assert max_remission(exit_remission_rows([inv(remision="NOMBRE PRUEBA", cantidad="3")])) == 0
+    DISCARDED.clear()
+
+
 def check_grower_type():
     # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
     assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
@@ -468,6 +483,7 @@ def main():
     check_correction_actions()
     check_growers_by_id_number()
     check_grower_type()
+    check_exit_without_number()
     check_single_payment_method()
     check_access_annulments()
     check_payments()
