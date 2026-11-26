@@ -271,7 +271,7 @@ class RemittanceIntegrationTest {
         Ref d = dryPurchase();
         RemittanceResponse remittance = remit("RN", List.of(d));
 
-        assertThatThrownBy(() -> annulment.annul(AGENCY, AnnulmentModule.DRY, d.id()))
+        assertThatThrownBy(() -> annulment.annul(AGENCY, AnnulmentModule.DRY, d.id(), "Motivo de prueba de anulación"))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining(remittance.number());
     }
 

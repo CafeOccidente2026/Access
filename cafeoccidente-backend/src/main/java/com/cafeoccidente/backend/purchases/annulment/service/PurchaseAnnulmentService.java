@@ -15,9 +15,10 @@ public interface PurchaseAnnulmentService {
 
     /**
      * Rechaza si ya estaba anulada, si es una compra cerrada en Access, si su inventario tuvo salidas o si su
-     * cuenta por cobrar ya no esta PENDIENTE (Q35).
+     * cuenta por cobrar ya no esta PENDIENTE (Q35). El motivo es obligatorio (minimo 10 caracteres) y queda en el
+     * registro de anulaciones con los valores de la compra antes de anularla (26-nov).
      */
-    AnnulmentCandidate annul(Long agencyId, AnnulmentModule module, Long id);
+    AnnulmentCandidate annul(Long agencyId, AnnulmentModule module, Long id, String reason);
 
     /**
      * Bloquea la compra de la agencia hasta el fin de la transaccion y aplica los mismos rechazos que la anulacion

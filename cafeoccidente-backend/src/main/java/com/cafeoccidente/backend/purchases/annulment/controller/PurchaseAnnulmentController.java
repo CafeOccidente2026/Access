@@ -1,5 +1,8 @@
 package com.cafeoccidente.backend.purchases.annulment.controller;
 
+import com.cafeoccidente.backend.annulmentlog.dto.AnnulmentRequest;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.RequestBody;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.purchases.annulment.dto.AnnulmentCandidate;
@@ -41,8 +44,9 @@ public class PurchaseAnnulmentController {
     }
 
     @PostMapping("/{module}/{id}")
-    public AnnulmentCandidate annul(@PathVariable AnnulmentModule module, @PathVariable Long id) {
-        return service.annul(agency(), module, id);
+    public AnnulmentCandidate annul(@PathVariable AnnulmentModule module, @PathVariable Long id,
+            @Valid @RequestBody(required = false) AnnulmentRequest request) {
+        return service.annul(agency(), module, id, request == null ? null : request.reason());
     }
 
     /** Anular Documento trabaja solo sobre la agencia de trabajo (RF-05.1). */

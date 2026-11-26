@@ -5,6 +5,10 @@ DO $$
 BEGIN
     IF '${appUser}' <> current_user THEN
         EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON flyway_schema_history FROM %I', '${appUser}');
+        -- 26-nov: el registro de anulaciones solo admite insertar; ademas del trigger, la app no tiene el permiso.
+        IF to_regclass('anulaciones') IS NOT NULL THEN
+            EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON anulaciones FROM %I', '${appUser}');
+        END IF;
     END IF;
 END
 $$;

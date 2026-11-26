@@ -33,7 +33,7 @@ public class Remission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "numero_remision_anterior", nullable = false)
+    @Column(name = "numero_remision_anterior")
     private Integer remissionNumber;
 
     @ManyToOne

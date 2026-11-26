@@ -16,29 +16,86 @@
     "HUSK": "Pasilla"
   },
   "fields": [
-    { "key": "agencyName", "label": "Agencia" },
-    { "key": "module", "label": "Formulario" },
-    { "key": "purchaseDate", "label": "Fecha de Compra", "type": "date" },
-    { "key": "fundCode", "label": "Fondo" },
-    { "key": "invoice", "label": "Factura" },
-    { "key": "idNumber", "label": "Cédula" },
-    { "key": "name", "label": "Nombre" },
-    { "key": "specialType", "label": "Especial" },
-    { "key": "netKg", "label": "Kilos Netos", "type": "number" },
-    { "key": "netToPay", "label": "Neto a Pagar", "type": "money" },
-    { "key": "paymentMethod", "label": "Forma de Pago" },
-    { "key": "status", "label": "Estado" }
+    {
+      "key": "agencyName",
+      "label": "Agencia"
+    },
+    {
+      "key": "module",
+      "label": "Formulario"
+    },
+    {
+      "key": "purchaseDate",
+      "label": "Fecha de Compra",
+      "type": "date"
+    },
+    {
+      "key": "fundCode",
+      "label": "Fondo"
+    },
+    {
+      "key": "invoice",
+      "label": "Factura"
+    },
+    {
+      "key": "idNumber",
+      "label": "Cédula"
+    },
+    {
+      "key": "name",
+      "label": "Nombre"
+    },
+    {
+      "key": "specialType",
+      "label": "Especial"
+    },
+    {
+      "key": "netKg",
+      "label": "Kilos Netos",
+      "type": "number"
+    },
+    {
+      "key": "netToPay",
+      "label": "Neto a Pagar",
+      "type": "money"
+    },
+    {
+      "key": "paymentMethod",
+      "label": "Forma de Pago"
+    },
+    {
+      "key": "status",
+      "label": "Estado"
+    }
   ],
   "navigation": [
-    { "direction": "FIRST", "label": "|◄", "title": "Primera compra" },
-    { "direction": "PREV", "label": "◄", "title": "Compra anterior" },
-    { "direction": "NEXT", "label": "►", "title": "Compra siguiente" },
-    { "direction": "LAST", "label": "►|", "title": "Última compra" }
+    {
+      "direction": "FIRST",
+      "label": "|◄",
+      "title": "Primera compra"
+    },
+    {
+      "direction": "PREV",
+      "label": "◄",
+      "title": "Compra anterior"
+    },
+    {
+      "direction": "NEXT",
+      "label": "►",
+      "title": "Compra siguiente"
+    },
+    {
+      "direction": "LAST",
+      "label": "►|",
+      "title": "Última compra"
+    }
   ],
   "messages": {
     "notFound": "No hay ninguna compra con esa factura",
     "noMore": "No hay más compras en esa dirección",
     "annulled": "Documento soporte {invoice} anulado",
-    "error": "No se pudo anular el documento soporte"
-  }
+    "error": "No se pudo anular el documento soporte",
+    "reasonRequired": "Escriba el motivo de la anulación (mínimo 10 caracteres)."
+  },
+  "reasonLabel": "Motivo de la anulación (mínimo 10 caracteres)"
 }

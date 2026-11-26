@@ -241,7 +241,7 @@ class QuotaPurchaseIntegrationTest {
         DryCoffeePurchaseResponse p = buy(quotaAnnouncement, KG);
         assertThat(balance()).isEqualByComparingTo("1500");
 
-        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id(), "Motivo de prueba de anulación");
 
         assertThat(balance()).isEqualByComparingTo("2500");
     }

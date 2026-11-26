@@ -59,7 +59,7 @@ export interface RemissionRequest {
 
 export interface RemissionResponse {
   readonly id: number;
-  readonly remissionNumber: number;
+  readonly remissionNumber: number | null;
   readonly agencyId: number;
   readonly agencyName: string;
   readonly remissionDate: string;

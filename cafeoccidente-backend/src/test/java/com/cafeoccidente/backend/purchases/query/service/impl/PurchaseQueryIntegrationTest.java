@@ -186,7 +186,7 @@ class PurchaseQueryIntegrationTest {
     @Test
     void rn265AnAnnulledPurchaseSaysAnulada() {
         DryCoffeePurchaseResponse saved = mixedDry();
-        annulment.annul(AGENCY, AnnulmentModule.DRY, saved.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, saved.id(), "Motivo de prueba de anulación");
 
         assertThat(query.detail(AnnulmentModule.DRY, saved.id()).status()).isEqualTo("ANULADA");
     }

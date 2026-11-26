@@ -81,10 +81,24 @@ describe('RemissionReprintComponent', () => {
     const component = setup({ findRemissionByNumber: () => of([REMISSION]) });
     component.remissionNumber.set('SDBU-125');
     component.search();
+    component.annulReason.set('Despacho digitado dos veces');
 
     component.pressAnnul();
 
     expect(component.confirmingAnnul()).toBe(true);
+  });
+
+  it('26-nov: Anular Remisión without a reason of at least 10 characters says it is mandatory and does not ask', () => {
+    const annulRemission = vi.fn();
+    const component = setup({ findRemissionByNumber: () => of([REMISSION]), annulRemission });
+    component.search();
+    component.annulReason.set('corto');
+
+    component.pressAnnul();
+
+    expect(component.confirmingAnnul()).toBe(false);
+    expect(component.message()).toBe(content.messages.reasonRequired);
+    expect(annulRemission).not.toHaveBeenCalled();
   });
 
   it('Anular Remisión: only with permission and while in force; two clicks annul it once', () => {
@@ -94,11 +108,12 @@ describe('RemissionReprintComponent', () => {
     component.search();
     expect(component.canAnnul()).toBe(true);
     expect(component.confirmText(content)).toContain('SDBU-125');
+    component.annulReason.set('Despacho digitado dos veces');
 
     component.annul();
     component.annul();
     expect(annulRemission).toHaveBeenCalledTimes(1);
-    expect(annulRemission).toHaveBeenCalledWith(1);
+    expect(annulRemission).toHaveBeenCalledWith(1, 'Despacho digitado dos veces');
     pending.next({ ...REMISSION, status: 'ANULADA' });
     pending.complete();
 
