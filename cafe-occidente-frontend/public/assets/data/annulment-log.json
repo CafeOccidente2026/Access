@@ -6,6 +6,7 @@
   "userLabel": "Usuario",
   "fromLabel": "Desde",
   "toLabel": "Hasta",
+  "includeAccessLabel": "Incluir anuladas de Access (sin fecha)",
   "searchButton": "Consultar",
   "exportButton": "Exportar a Excel",
   "previousButton": "Anterior",
@@ -16,7 +17,7 @@
   "totalLabel": "anulación(es)",
   "title": "REGISTRO DE ANULACIONES",
   "fileName": "registro-anulaciones",
-  "columns": ["Fecha y hora", "Origen", "Agencia", "Documento", "Número", "Usuario", "Motivo", "Valores al anular", "Nota"],
+  "columns": ["Fecha y hora", "Origen", "Fecha de la compra", "Agencia", "Documento", "Número", "Usuario", "Motivo", "Valores al anular", "Nota"],
   "types": {
     "COMPRA_SECO": "Compra de café seco",
     "COMPRA_VERDE": "Compra de café verde",
@@ -24,8 +25,8 @@
     "REMISION": "Remisión"
   },
   "origins": {
-    "WEB": "Web",
-    "ACCESS": "Access (sin fecha, usuario ni motivo)"
+    "WEB": "WEB",
+    "ACCESS": "ACCESS"
   },
   "values": {
     "grossKg": "Kilos brutos",

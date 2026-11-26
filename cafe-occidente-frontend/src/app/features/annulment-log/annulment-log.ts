@@ -13,7 +13,7 @@ import { ContentService } from '../../core/services/content.service';
 import { UserService } from '../../core/services/user.service';
 import { AccessWindowComponent, AppButtonComponent, FormFlowDirective } from '../../shared/ui';
 import { ExportTable, TableExporter } from '../../shared/utils/export-table';
-import { formatKilos, formatMoney } from '../../shared/utils/number-format';
+import { formatDate, formatKilos, formatMoney } from '../../shared/utils/number-format';
 import { serverError } from '../../shared/utils/server-error';
 
 export interface AnnulmentLogContent {
@@ -24,6 +24,7 @@ export interface AnnulmentLogContent {
   readonly userLabel: string;
   readonly fromLabel: string;
   readonly toLabel: string;
+  readonly includeAccessLabel: string;
   readonly searchButton: string;
   readonly exportButton: string;
   readonly previousButton: string;
@@ -75,6 +76,7 @@ export class AnnulmentLogComponent {
   userId: number | null = null;
   from = '';
   to = '';
+  includeAccess = true;
 
   private readonly query = new BehaviorSubject<AnnulmentLogFilter>(this.filter(0, PAGE_SIZE));
   private readonly result = toSignal(this.query.pipe(switchMap((q) => this.service.search(q).pipe(
@@ -103,7 +105,7 @@ export class AnnulmentLogComponent {
       title: c.title,
       columns: c.columns,
       rows: all.items.map((e) => ({
-        cells: [this.when(e), c.origins[e.origin] ?? e.origin, e.agencyName, c.types[e.documentType] ?? e.documentType,
+        cells: [this.when(e), c.origins[e.origin] ?? e.origin, formatDate(e.purchaseDate), e.agencyName, c.types[e.documentType] ?? e.documentType,
           e.documentNumber, e.username, e.reason, this.valuesText(e), e.note],
       })),
     };
@@ -124,6 +126,8 @@ export class AnnulmentLogComponent {
     return new Date(entry.annulledAt).toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
   }
 
+  readonly formatDate = formatDate;
+
   private formatted(key: string, value: string): string {
     const c = this.content();
     const number = Number(value);
@@ -135,6 +139,6 @@ export class AnnulmentLogComponent {
 
   private filter(page: number, size: number): AnnulmentLogFilter {
     return { agencyId: this.agencyId, documentType: this.documentType, userId: this.userId, from: this.from, to: this.to,
-      page, size };
+      includeAccess: this.includeAccess, page, size };
   }
 }

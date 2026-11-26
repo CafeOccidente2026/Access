@@ -32,6 +32,10 @@
         <span class="font-medium text-slate-700">{{ p.toLabel }}</span>
         <input type="date" class="rounded border border-slate-300 bg-white px-2 py-1" [(ngModel)]="to" />
       </label>
+      <label class="flex items-center gap-2 py-1">
+        <input type="checkbox" data-testid="include-access" [(ngModel)]="includeAccess" />
+        <span class="font-medium text-slate-700">{{ p.includeAccessLabel }}</span>
+      </label>
       <app-button data-flow-submit [label]="p.searchButton" variant="access" (pressed)="search()"></app-button>
       <app-button [label]="p.exportButton" variant="access" (pressed)="export()"></app-button>
     </div>
@@ -50,6 +54,7 @@
           <tr *ngFor="let entry of r.items" class="border-t border-slate-200 align-top">
             <td class="py-1 pr-2 whitespace-nowrap">{{ when(entry) }}</td>
             <td class="py-1 pr-2">{{ p.origins[entry.origin] ?? entry.origin }}</td>
+            <td class="py-1 pr-2 whitespace-nowrap">{{ formatDate(entry.purchaseDate) }}</td>
             <td class="py-1 pr-2">{{ entry.agencyName }}</td>
             <td class="py-1 pr-2">{{ p.types[entry.documentType] ?? entry.documentType }}</td>
             <td class="py-1 pr-2 whitespace-nowrap">{{ entry.documentNumber }}</td>

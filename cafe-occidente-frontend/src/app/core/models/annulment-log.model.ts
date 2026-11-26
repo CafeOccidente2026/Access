@@ -7,6 +7,8 @@ export interface AnnulmentLogEntry {
   readonly agencyName: string;
   readonly documentId: number | null;
   readonly annulledAt: string | null;
+  /** Fecha de la compra anulada (yyyy-mm-dd); null en una remision. */
+  readonly purchaseDate: string | null;
   readonly username: string | null;
   readonly reason: string | null;
   /** Foto del documento al anularlo: kilos, valores, forma de pago, caficultor (o los de la remision). */
@@ -25,6 +27,8 @@ export interface AnnulmentLogFilter {
   readonly userId: number | null;
   readonly from: string;
   readonly to: string;
+  /** Las de Access no tienen fecha de anulacion: marcada, salen sin mirar Desde/Hasta; desmarcada, no salen. */
+  readonly includeAccess: boolean;
   readonly page: number;
   readonly size: number;
 }
