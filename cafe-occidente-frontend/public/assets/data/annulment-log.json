@@ -1,0 +1,49 @@
+{
+  "windowTitle": "CONSULTAR ANULACIONES",
+  "heading": "Registro de anulaciones",
+  "agencyLabel": "Agencia",
+  "typeLabel": "Documento",
+  "userLabel": "Usuario",
+  "fromLabel": "Desde",
+  "toLabel": "Hasta",
+  "searchButton": "Consultar",
+  "exportButton": "Exportar a Excel",
+  "previousButton": "Anterior",
+  "nextButton": "Siguiente",
+  "all": "Todos",
+  "emptyMessage": "No hay anulaciones con esos filtros.",
+  "errorMessage": "No se pudo consultar el registro de anulaciones.",
+  "totalLabel": "anulación(es)",
+  "title": "REGISTRO DE ANULACIONES",
+  "fileName": "registro-anulaciones",
+  "columns": ["Fecha y hora", "Origen", "Agencia", "Documento", "Número", "Usuario", "Motivo", "Valores al anular", "Nota"],
+  "types": {
+    "COMPRA_SECO": "Compra de café seco",
+    "COMPRA_VERDE": "Compra de café verde",
+    "COMPRA_PASILLA": "Compra de pasilla",
+    "REMISION": "Remisión"
+  },
+  "origins": {
+    "WEB": "Web",
+    "ACCESS": "Access (sin fecha, usuario ni motivo)"
+  },
+  "values": {
+    "grossKg": "Kilos brutos",
+    "netKg": "Kilos netos",
+    "kg": "Kilos",
+    "grossValue": "Valor bruto",
+    "netToPay": "Neto a pagar",
+    "outputValue": "Valor de salida",
+    "paymentMethod": "Forma de pago",
+    "idNumber": "Cédula",
+    "sellerName": "Caficultor",
+    "destination": "Destino",
+    "conductorIdNumber": "Cédula del conductor",
+    "conductorName": "Conductor",
+    "vehiclePlate": "Placa",
+    "fund": "Fondo",
+    "invoices": "Facturas"
+  },
+  "money": ["grossValue", "netToPay", "outputValue"],
+  "kilos": ["grossKg", "netKg", "kg"]
+}

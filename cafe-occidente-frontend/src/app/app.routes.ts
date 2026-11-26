@@ -118,6 +118,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/history/history').then((m) => m.HistoryComponent),
       },
       {
+        // 26-nov: registro de anulaciones para auditoria, solo el Administrador.
+        path: 'consultar-anulaciones',
+        data: { roles: ADMIN },
+        loadComponent: () => import('./features/annulment-log/annulment-log').then((m) => m.AnnulmentLogComponent),
+      },
+      {
         path: 'anuncios',
         data: { roles: ADMIN_OPS, screens: ['ACTUALIZAR_ANUNCIOS'] },
         loadComponent: () =>
