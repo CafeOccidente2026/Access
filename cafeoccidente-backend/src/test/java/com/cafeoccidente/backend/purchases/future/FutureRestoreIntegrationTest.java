@@ -122,7 +122,7 @@ class FutureRestoreIntegrationTest {
     @Test
     void annulAndThenRestoreDoesNotGiveTheKilosBackTwice() {
         DryCoffeePurchaseResponse p = bill();
-        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id(), "Motivo de prueba de anulación");
         assertThat(balance()).isEqualByComparingTo("2500");
 
         restore.restore(SELLER);

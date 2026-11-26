@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.cafeoccidente.backend.annulmentlog.service.AnnulmentLogService;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
@@ -62,12 +63,14 @@ class RemissionServiceImplTest {
     private final RemissionConsecutiveRepository consecutives = mock(RemissionConsecutiveRepository.class);
     private final RemittanceRepository remittances = mock(RemittanceRepository.class);
     private final ChangeHistoryService history = mock(ChangeHistoryService.class);
+    private final AnnulmentLogService annulmentLog = mock(AnnulmentLogService.class);
 
     /** Agencia de trabajo de la sesion (RF-05.1): la 1, la misma que devuelve agencyRepository. */
     private final CurrentAgencyProvider currentAgencyProvider = mock(CurrentAgencyProvider.class, invocation -> 1L);
     private final RemissionServiceImpl service = new RemissionServiceImpl(
             remissionRepository, remissionLineRepository, inventoryMovementRepository, agencyRepository,
-            growerRepository, securityUtils, currentAgencyProvider, controlRecordService, consecutives, remittances, history);
+            growerRepository, securityUtils, currentAgencyProvider, controlRecordService, consecutives, remittances, history,
+            annulmentLog);
 
     private static RemissionRequest request(LocalDate date, String conductor, Long... movementIds) {
         return new RemissionRequest(date, "ALMACAFE", conductor,
@@ -388,7 +391,7 @@ class RemissionServiceImplTest {
         when(remittances.idByRemission(5L)).thenReturn(Optional.of(55L));
         when(securityUtils.getCurrentUserId()).thenReturn(3L);
 
-        RemissionResponse response = service.annul(5L);
+        RemissionResponse response = service.annul(5L, "Motivo de prueba de anulación");
 
         assertThat(response.status()).isEqualTo("ANULADA");
         assertThat(response.fromAccess()).isFalse();
@@ -396,6 +399,8 @@ class RemissionServiceImplTest {
         assertThat(remission.getAnnulledAt()).isNotNull();
         assertThat(movement.getRemainingKg()).isEqualByComparingTo("500");
         verify(remittances).unmark(1L, 55L, "SDBU-969", 3L);
+        // 26-nov: la anulacion queda en el registro de auditoria, con su motivo, antes de devolver los saldos.
+        verify(annulmentLog).recordRemission(5L, "Motivo de prueba de anulación");
         verify(history).record(ChangeHistoryService.Entity.REMISION, 5L, ChangeHistoryService.Action.ANULAR, 1L,
                 Map.of("number", "SDBU-969", "status", "VIGENTE"), Map.of("number", "SDBU-969", "status", "ANULADA"));
     }
@@ -406,20 +411,21 @@ class RemissionServiceImplTest {
         Remission remission = saved(Remission.VIGENTE);
         remission.setFromAccess(true);
 
-        assertThatThrownBy(() -> service.annul(5L))
+        assertThatThrownBy(() -> service.annul(5L, "Motivo de prueba de anulación"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("La remisión SDBU-969 es una remisión histórica de Access: no se puede anular.");
         assertThat(remission.getStatus()).isEqualTo(Remission.VIGENTE);
         verify(remissionLineRepository, never()).findByRemissionId(any());
         verify(remittances, never()).unmark(any(), any(), any(), any());
         verify(history, never()).record(any(), any(), any(), any(), any(), any());
+        verify(annulmentLog, never()).recordRemission(any(), any());
     }
 
     @Test
     void anAnnulledRemissionCannotBeAnnulledAgain() {
         saved(Remission.ANULADA);
 
-        assertThatThrownBy(() -> service.annul(5L))
+        assertThatThrownBy(() -> service.annul(5L, "Motivo de prueba de anulación"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("ya está anulada");
         verify(remittances, never()).unmark(any(), any(), any(), any());
@@ -432,6 +438,6 @@ class RemissionServiceImplTest {
         other.setId(2L);
         remission.setAgency(other);
 
-        assertThatThrownBy(() -> service.annul(5L)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.annul(5L, "Motivo de prueba de anulación")).isInstanceOf(ResourceNotFoundException.class);
     }
 }

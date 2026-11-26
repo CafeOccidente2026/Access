@@ -233,7 +233,7 @@ class PurchaseCorrectionIntegrationTest {
     @Test
     void cannotCorrectAnAnnulledPurchase() {
         DryCoffeePurchaseResponse p = dryPurchase();
-        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id(), "Motivo de prueba de anulación");
 
         assertThatThrownBy(() -> correctDry(p, "800", CARD))
                 .isInstanceOf(BusinessRuleException.class).hasMessage("El documento soporte ya esta anulado");

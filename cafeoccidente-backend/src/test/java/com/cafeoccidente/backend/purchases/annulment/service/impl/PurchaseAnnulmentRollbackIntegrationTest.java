@@ -92,7 +92,7 @@ class PurchaseAnnulmentRollbackIntegrationTest {
         }).when(repository).annul(any(), any(), any());
 
         // @Repository la traduce a una DataAccessException; lo que importa es que se revirtio todo.
-        assertThatThrownBy(() -> service.annul(AGENCY, AnnulmentModule.DRY, purchaseId))
+        assertThatThrownBy(() -> service.annul(AGENCY, AnnulmentModule.DRY, purchaseId, "Motivo de prueba de anulación"))
                 .hasMessageContaining("falla despues de escribir");
 
         assertThat(jdbc.queryForMap("SELECT estado, kilos_netos, neto_a_pagar FROM compras_cafe_seco WHERE id = ?", purchaseId))

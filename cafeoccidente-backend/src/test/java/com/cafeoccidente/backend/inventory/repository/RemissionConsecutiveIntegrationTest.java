@@ -155,7 +155,7 @@ class RemissionConsecutiveIntegrationTest {
                 List.of(new RemissionLineRequest(movement)), 5, "USADO");
         assertThatThrownBy(() -> remissions.create(again)).isInstanceOf(BusinessRuleException.class);
 
-        var annulled = remissions.annul(remission.id());
+        var annulled = remissions.annul(remission.id(), "Motivo de prueba de anulación");
 
         assertThat(annulled.status()).isEqualTo("ANULADA");
         assertThat(jdbc.queryForObject("SELECT remesa_id FROM compras_cafe_seco WHERE id = ?", Long.class, purchase)).isNull();
@@ -165,7 +165,24 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios WHERE entidad = 'REMISION'"
                 + " AND entidad_id = ? AND accion = 'ANULAR'", Integer.class, remission.id())).isEqualTo(1);
         assertThat(movements.findById(AGENCY, movement).remitted()).isFalse();
-        assertThatThrownBy(() -> remissions.annul(remission.id())).isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(() -> remissions.annul(remission.id(), "Motivo de prueba de anulación")).isInstanceOf(BusinessRuleException.class);
+
+        // 26-nov: la anulacion queda en el registro de auditoria con los valores de la remision antes de anularla.
+        Integer invoice = jdbc.queryForObject("SELECT numero_factura FROM compras_cafe_seco WHERE id = ?", Integer.class, purchase);
+        var entry = jdbc.queryForMap("SELECT origen, numero_documento, motivo, usuario_id IS NOT NULL AS con_usuario,"
+                + " valores ->> 'kg' AS kg, valores ->> 'destination' AS destino, valores ->> 'fund' AS fondo,"
+                + " valores ->> 'invoices' AS facturas FROM anulaciones WHERE tipo_documento = 'REMISION' AND documento_id = ?",
+                remission.id());
+        assertThat(entry).containsEntry("origen", "WEB").containsEntry("numero_documento", remission.displayNumber())
+                .containsEntry("motivo", "Motivo de prueba de anulación").containsEntry("con_usuario", true)
+                .containsEntry("destino", "ALMACAFE").containsEntry("fondo", "RP");
+        assertThat(new BigDecimal((String) entry.get("kg"))).isEqualByComparingTo(balance);
+        assertThat((String) entry.get("facturas")).contains(String.valueOf(invoice));
+
+        // El numero de la remision anulada no se vuelve a usar: la siguiente toma un consecutivo mayor.
+        var again2 = remissions.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "NUEVO"));
+        assertThat(sequenceOf(again2.displayNumber())).isGreaterThan(sequenceOf(remission.displayNumber()));
     }
 
     /** 25-nov: la salida historica que carga migrar_punto.py (de_access) dice que viene de Access y no se anula;
@@ -182,7 +199,7 @@ class RemissionConsecutiveIntegrationTest {
         entityManager.clear(); // la remision creada sigue en cache: se lee de nuevo con la marca de la migracion
 
         assertThat(remissions.findById(remission.id()).fromAccess()).isTrue();
-        assertThatThrownBy(() -> remissions.annul(remission.id()))
+        assertThatThrownBy(() -> remissions.annul(remission.id(), "Motivo de prueba de anulación"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("histórica de Access");
         assertThat(remissions.findById(remission.id()).status()).isEqualTo("VIGENTE");
@@ -266,6 +283,10 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(remittance(AGENCY, "SDBU-RP-9003", "DESMARCADA")).isNotNull();
         assertThatThrownBy(() -> remittance(AGENCY, "SDBU-RP-9002", "BORRADA"))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    private static int sequenceOf(String displayNumber) {
+        return Integer.parseInt(displayNumber.substring(displayNumber.lastIndexOf('-') + 1));
     }
 
     private Long remittance(Long agencyId, String number, String status) {

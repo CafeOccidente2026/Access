@@ -128,7 +128,7 @@ class PurchaseReportIntegrationTest {
         var g = green.create(greenRequest(cash(green.preview(greenRequest(null)).netToPay())));
         var h = husk.create(huskRequest(cash(husk.preview(huskRequest(null)).netToPay())));
         var annulled = dry.create(dryRequest(cash(dry.preview(dryRequest(null)).netToPay())));
-        annulment.annul(AGENCY, AnnulmentModule.DRY, annulled.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, annulled.id(), "Motivo de prueba de anulación");
         LocalDate today = LocalDate.now();
 
         List<PurchaseReportRow> rows = ours(today, today);
