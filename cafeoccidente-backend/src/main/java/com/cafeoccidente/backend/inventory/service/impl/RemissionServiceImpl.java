@@ -1,5 +1,7 @@
 package com.cafeoccidente.backend.inventory.service.impl;
 
+import com.cafeoccidente.backend.annulmentlog.service.AnnulmentLogService;
+import com.cafeoccidente.backend.annulmentlog.service.AnnulmentReason;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
@@ -59,6 +61,8 @@ public class RemissionServiceImpl implements RemissionService {
     private final RemittanceRepository remittances;
     private final ChangeHistoryService history;
 
+    private final AnnulmentLogService annulmentLog;
+
     public RemissionServiceImpl(
             RemissionRepository remissionRepository,
             RemissionLineRepository remissionLineRepository,
@@ -67,7 +71,8 @@ public class RemissionServiceImpl implements RemissionService {
             GrowerRepository growerRepository,
             SecurityUtils securityUtils, CurrentAgencyProvider currentAgencyProvider,
             ControlRecordService controlRecordService, RemissionConsecutiveRepository consecutives,
-            RemittanceRepository remittances, ChangeHistoryService history) {
+            RemittanceRepository remittances, ChangeHistoryService history, AnnulmentLogService annulmentLog) {
+        this.annulmentLog = annulmentLog;
         this.controlRecordService = controlRecordService;
         this.consecutives = consecutives;
         this.remissionRepository = remissionRepository;
@@ -153,7 +158,8 @@ public class RemissionServiceImpl implements RemissionService {
      */
     @Override
     @Transactional
-    public RemissionResponse annul(Long id) {
+    public RemissionResponse annul(Long id, String reason) {
+        String checkedReason = AnnulmentReason.require(reason);
         Long agencyId = currentAgencyProvider.currentAgencyId();
         Remission remission = remissionRepository.findForUpdate(id)
                 .filter(r -> r.getAgency().getId().equals(agencyId))
@@ -166,6 +172,8 @@ public class RemissionServiceImpl implements RemissionService {
         if (Remission.ANULADA.equals(remission.getStatus())) {
             throw new BusinessRuleException("La remisión " + remission.getDisplayNumber() + " ya está anulada");
         }
+        // 26-nov: queda en el registro de anulaciones con kilos, valor, destino, conductor, fondo y facturas.
+        annulmentLog.recordRemission(id, checkedReason);
         List<RemissionLine> lines = remissionLineRepository.findByRemissionId(id);
         for (RemissionLine line : lines) {
             InventoryMovement movement = line.getInventoryMovement();

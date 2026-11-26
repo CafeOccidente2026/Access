@@ -1,5 +1,6 @@
 package com.cafeoccidente.backend.inventory.controller;
 
+import com.cafeoccidente.backend.annulmentlog.dto.AnnulmentRequest;
 import com.cafeoccidente.backend.common.security.CurrentAgencyProvider;
 import com.cafeoccidente.backend.common.security.Roles;
 import com.cafeoccidente.backend.inventory.dto.RemissionRequest;
@@ -39,8 +40,8 @@ public class RemissionController {
 
     @PostMapping("/{id}/annul")
     @PreAuthorize(Roles.ANNUL_REMISSION)
-    public RemissionResponse annul(@PathVariable Long id) {
-        return remissionService.annul(id);
+    public RemissionResponse annul(@PathVariable Long id, @Valid @RequestBody(required = false) AnnulmentRequest request) {
+        return remissionService.annul(id, request == null ? null : request.reason());
     }
 
     @GetMapping("/{id}")

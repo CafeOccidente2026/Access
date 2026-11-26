@@ -1,5 +1,7 @@
 package com.cafeoccidente.backend.purchases.annulment.service.impl;
 
+import com.cafeoccidente.backend.annulmentlog.service.AnnulmentLogService;
+import com.cafeoccidente.backend.annulmentlog.service.AnnulmentReason;
 import com.cafeoccidente.backend.common.exception.BusinessRuleException;
 import com.cafeoccidente.backend.common.exception.ResourceNotFoundException;
 import com.cafeoccidente.backend.common.security.SecurityUtils;
@@ -28,10 +30,13 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
 
     private final PurchaseAnnulmentRepository repository;
     private final SecurityUtils securityUtils;
+    private final AnnulmentLogService annulmentLog;
 
-    public PurchaseAnnulmentServiceImpl(PurchaseAnnulmentRepository repository, SecurityUtils securityUtils) {
+    public PurchaseAnnulmentServiceImpl(PurchaseAnnulmentRepository repository, SecurityUtils securityUtils,
+            AnnulmentLogService annulmentLog) {
         this.repository = repository;
         this.securityUtils = securityUtils;
+        this.annulmentLog = annulmentLog;
     }
 
     @Override
@@ -55,8 +60,10 @@ public class PurchaseAnnulmentServiceImpl implements PurchaseAnnulmentService {
      */
     @Override
     @Transactional
-    public AnnulmentCandidate annul(Long agencyId, AnnulmentModule module, Long id) {
+    public AnnulmentCandidate annul(Long agencyId, AnnulmentModule module, Long id, String reason) {
+        String checkedReason = AnnulmentReason.require(reason);
         lockChangeable(agencyId, module, id, ANNULMENT_LOCKED);
+        annulmentLog.recordPurchase(module, id, checkedReason);
         repository.annul(module, id, securityUtils.getCurrentUserId());
         return repository.lock(module, id).orElseThrow();
     }
