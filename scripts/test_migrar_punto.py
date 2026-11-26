@@ -7,6 +7,8 @@ from datetime import date
 from decimal import Decimal
 
 from migrar_punto import (
+    ACCESS_ANNULMENT_NOTE,
+    access_annulments,
     CORRECTIONS,
     DISCARDED,
     STOPS,
@@ -18,6 +20,7 @@ from migrar_punto import (
     grower_type,
     note_stop,
     pending_corrections,
+    split_parts,
     stop_if_problems,
     unpaid_purchase,
     announcement_number,
@@ -40,7 +43,9 @@ from migrar_punto import (
     opening_purchase_id,
     out_of_range,
     payment_mismatches,
+    payment_action,
     payment_of,
+    remission_number,
     pending_quotas,
     quota_purchase,
     quota_announcements,
@@ -240,6 +245,74 @@ def check_payments():
         CORRECTIONS.clear()
 
 
+def check_payment_corrections():
+    # 26-nov: pago_efectivo = compra que el area da por pagada en efectivo aunque Access no tiene el pago en Caja;
+    # pago_tal_cual = el pago de Access no cuadra con el neto y se carga como esta. Solo si estan en correcciones.csv.
+    compra = {"id_access": "7", "factura": "1003", "fecha_compra": "2026-03-01 08:00:00", "neto_a_pagar": "300",
+              "fpef": "0", "fpch": "0", "fptx": "0", "fpdat": "0", "forma_de_pago": "VALIDA"}
+    assert len(payment_mismatches([compra], [], [])) == 1
+    assert payment_mismatches([compra], [], [], cash_paid={"1003"}) == []
+    paid_some = [{"id_access": "11", "id_transaccion": "1003", "fecha": "2026-03-01", "entradas": "0", "salidas": "10"}]
+    assert len(payment_mismatches([compra], paid_some, [], cash_paid={"1003"})) == 1  # si tiene algun pago, no
+    over = [dict(paid_some[0], salidas="300"), dict(paid_some[0], id_access="12", salidas="5")]
+    assert len(payment_mismatches([compra], over, [])) == 1
+    assert payment_mismatches([compra], over, [], as_is={"1003"}) == []
+    for action in ("pago_efectivo", "pago_tal_cual"):
+        found = corrections_for([correction(tabla="COMPRAS", id_access="7", accion=action, motivo="decision del area")],
+                                "PuntoPrueba")
+        CORRECTIONS.clear()
+        CORRECTIONS.update(found)
+        try:
+            assert payment_action({"id_access": "7"}) == action and payment_action({"id_access": "8"}) is None
+            assert payment_of({"id_access": "7", "fpch": "0"}) == ("EFECTIVO", None)
+        finally:
+            CORRECTIONS.clear()
+    # El desglose que no suma el neto se guarda tal cual solo con pago_tal_cual.
+    assert split_parts({"fpef": "5", "fptx": "300", "fpch": "0", "fpdat": "0"}, Decimal("300"), "pago_tal_cual") ==         [Decimal("5"), Decimal("0"), Decimal("300"), Decimal("0")]
+    assert split_parts({"fpef": "5", "fptx": "300", "fpch": "0", "fpdat": "0"}, Decimal("300"), None) is None
+
+
+def check_access_annulments():
+    # 26-nov: las compras ANULADAS de Access van al registro de anulaciones tal cual (aunque esten en 0), origen
+    # ACCESS, sin usuario, fecha ni motivo (Access no los guarda), con la nota.
+    zeros = {"kilos_brutos": "0", "kilos_netos": "0", "vr_bruto": "0", "neto_a_pagar": "0", "cedula": "990000001"}
+    rows = [{**purchase("1001", "2026-03-01 08:00:00", estado="ANULADA"), **zeros},
+            purchase("1002", "2026-03-02 08:00:00"),
+            {**purchase("1003", "2026-03-03 08:00:00", especial="PASILLA", estado="ANULADA"), **zeros}]
+    found = access_annulments(rows, "XXPR")
+    assert [(f["type"], f["number"], f["invoice"]) for f in found] == [
+        ("COMPRA_SECO", "XXPR 1001", 1001), ("COMPRA_PASILLA", "XXPR 1003", 1003)]
+    assert found[0]["values"]["netKg"] == "0" and found[0]["values"]["netToPay"] == "0"
+    assert ACCESS_ANNULMENT_NOTE == "Access deja la compra en 0 al anular"
+
+
+def check_single_payment_method():
+    # 26-nov (Chachagui): una compra pagada con una sola forma se carga con esa forma; antes la transferencia sola
+    # quedaba como EFECTIVO y la Caja de la web quedaba por debajo de la de Access.
+    base = {"id_access": "9", "fpef": "0", "fpch": "0", "fptx": "0", "fpdat": "0", "numcheque": "0"}
+    assert payment_of({**base, "fpef": "100"}) == ("EFECTIVO", None)
+    assert payment_of({**base, "fpch": "100", "numcheque": "52"}) == ("CHEQUE", "52")
+    assert payment_of({**base, "fptx": "100"}) == ("TRANSFERENCIA", None)
+    STOPS.clear()
+    payment_of({**base, "factura": "1004", "fpdat": "100"})  # datafono solo: no hay cuenta por cobrar que cargar
+    assert "Compra pagada solo con datafono (no se carga su cuenta por cobrar)" in STOPS
+    STOPS.clear()
+
+
+def check_exit_without_number():
+    # 26-nov (Pasto, opcion A): una salida de Access sin numero de remision ("NOMBRE PRUEBA") se carga con su texto
+    # tal cual y sin numero (V35: solo las de Access); se lista y el contador la ignora.
+    DISCARDED.clear()
+    STOPS.clear()
+    grouped = exit_remissions([inv(remision="XX0500", cantidad="5"), inv(remision="NOMBRE PRUEBA", cantidad="3"),
+                               inv(remision="PA NOMBRE PRUEBA", cantidad="2")])
+    assert list(grouped) == [500, "NOMBRE PRUEBA", "PA NOMBRE PRUEBA"] and STOPS == {}
+    assert remission_number(500) == 500 and remission_number("NOMBRE PRUEBA") is None
+    assert len(DISCARDED["Salida de INVENTARIO sin numero de remision (se carga con su texto, sin numero)"]) == 2
+    assert max_remission(exit_remission_rows([inv(remision="NOMBRE PRUEBA", cantidad="3")])) == 0
+    DISCARDED.clear()
+
+
 def check_grower_type():
     # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
     assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
@@ -410,7 +483,11 @@ def main():
     check_correction_actions()
     check_growers_by_id_number()
     check_grower_type()
+    check_exit_without_number()
+    check_single_payment_method()
+    check_access_annulments()
     check_payments()
+    check_payment_corrections()
     check_inventory()
     check_date_cut()
     check_cheque_text()

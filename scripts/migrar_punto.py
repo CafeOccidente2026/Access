@@ -107,6 +107,10 @@ def corrections_for(rows, point):
       - fijar_remision: el contador de remision del punto queda en `valor` (la siguiente es valor + 1).
       - sin_pago (tabla COMPRAS): la compra valida que en Access no tiene ningun pago se carga tal cual, con la
         forma de pago "SIN PAGO" y el desglose en 0 (no sale en Caja ni en Suministros).
+      - pago_efectivo (tabla COMPRAS, 26-nov): el area la da por pagada en efectivo aunque Access no tiene el pago en
+        Caja; se carga con su neto en EFECTIVO (la Caja de la web queda por debajo de la de Access en ese neto).
+      - pago_tal_cual (tabla COMPRAS, 26-nov): el pago de Access no cuadra con el neto y se carga como esta, con su
+        desglose de Access.
     Una fila que no se entiende detiene la carga.
     """
     tables = {simple_name(t): t for t in CORRECTION_TABLES}
@@ -124,7 +128,7 @@ def corrections_for(rows, point):
         ident = s(row, "id_access")
         valid = table is not None and ident.isdigit() and s(row, "motivo") and (
             action == "excluir" or (action == "corregir" and s(row, "campo") and s(row, "valor"))
-            or (action == "sin_pago" and table == "compras"))
+            or (action in ("sin_pago", "pago_efectivo", "pago_tal_cual") and table == "compras"))
         if not valid:
             raise SystemExit("correcciones.csv: fila no valida (tabla de la carga, Id de Access numerico, motivo y"
                              f" accion 'excluir', 'corregir' con campo y valor, o 'fijar_remision'): {row}")
@@ -139,6 +143,19 @@ def unpaid_purchase(row):
     """La compra de Access esta marcada "sin_pago" en correcciones.csv (25-nov, opcion A)."""
     fix = CORRECTIONS.get(("compras", s(row, "id_access")))
     return fix is not None and s(fix, "accion").lower() == "sin_pago"
+
+
+def payment_action(row):
+    """Accion de pago de correcciones.csv para la compra (sin_pago, pago_efectivo o pago_tal_cual); None si no hay."""
+    fix = CORRECTIONS.get(("compras", s(row, "id_access")))
+    action = s(fix, "accion").lower() if fix else ""
+    return action if action in ("sin_pago", "pago_efectivo", "pago_tal_cual") else None
+
+
+def split_parts(row, net, action):
+    """Desglose (efectivo, cheque, transferencia, datafono) de Access; None si no suma el neto, salvo pago_tal_cual."""
+    parts = [parse_decimal(s(row, k)) for k in ("fpef", "fpch", "fptx", "fpdat")]
+    return parts if sum(parts) == net or action == "pago_tal_cual" else None
 
 
 def fixed_remission(found):
@@ -221,9 +238,9 @@ def load_corrections(path, point, definitive):
 
 def check_corrections_used():
     """Una correccion cuyo Id no esta en el CSV del punto es un error de digitacion: detiene la carga."""
-    unpaid = {("compras", s(r, "id_access")) for r in read_csv("compras_migrar.csv") if unpaid_purchase(r)}
+    paid_by_fix = {("compras", s(r, "id_access")) for r in read_csv("compras_migrar.csv") if payment_action(r)}
     for table, ident in CORRECTIONS:
-        if (table, ident) not in EXCLUDED and (table, ident) not in CORRECTED and (table, ident) not in unpaid \
+        if (table, ident) not in EXCLUDED and (table, ident) not in CORRECTED and (table, ident) not in paid_by_fix \
                 and (table, ident) != REMISSION_COUNTER_KEY:
             note_stop("correcciones.csv con un Id que no esta en Access", f"{table} Id {ident}")
 
@@ -873,6 +890,14 @@ def payment_of(row):
         return UNPAID, None
     if parse_decimal(row.get("fpch")) > 0:
         return "CHEQUE", cheque_text(row.get("numcheque"))
+    # 26-nov: pagada solo por transferencia (o solo con datafono) no es EFECTIVO. El datafono necesita su cuenta por
+    # cobrar, que Access no tiene: detiene la carga en vez de inventarla.
+    used = [k for k in ("fpef", "fptx", "fpdat") if parse_decimal(row.get(k)) > 0]
+    if used == ["fptx"]:
+        return "TRANSFERENCIA", None
+    if used == ["fpdat"]:
+        note_stop("Compra pagada solo con datafono (no se carga su cuenta por cobrar)",
+                  f"factura {s(row, 'factura')} (Id {s(row, 'id_access') or '?'})")
     return "EFECTIVO", None
 
 
@@ -1022,16 +1047,26 @@ def exit_remissions(exits):
     for row in exits:
         text = access_remission(row)
         match = re.search(r"(\d+)$", text)
-        if not match:
+        if not match and not text:
             note_stop("Salida de INVENTARIO sin numero de remision", discard_detail(row, 0, row.get("cantidad")))
             continue
-        remission = grouped.setdefault(int(match.group(1)),
+        if not match:
+            # 26-nov (Pasto, opcion A): sin numero ("SEBASTIAN ORTIZ"): se carga con su texto tal cual y sin numero.
+            note_discard("Salida de INVENTARIO sin numero de remision (se carga con su texto, sin numero)",
+                         f"Id {s(row, 'id_access') or '?'}, {s(row, 'fecha')[:10]}, remision '{text}', codigo"
+                         f" {s(row, 'cod_prod')}, cantidad {s(row, 'cantidad')}, destino {s(row, 'destino')}")
+        remission = grouped.setdefault(int(match.group(1)) if match else text,
                                        {"text": text, "date": None, "destino": s(row, "destino"), "lines": []})
         day = parse_date(row.get("fecha"))
         if day and (remission["date"] is None or day > remission["date"]):
             remission["date"] = day
         remission["lines"].append(row)
-    return dict(sorted(grouped.items()))
+    return dict(sorted(grouped.items(), key=lambda item: (isinstance(item[0], str), str(item[0]).zfill(12))))
+
+
+def remission_number(key):
+    """Numero de la remision de una salida (la clave de exit_remissions); None si la salida no tiene numero."""
+    return key if isinstance(key, int) else None
 
 
 def exit_remission_rows(exits):
@@ -1082,11 +1117,13 @@ def load_inventory(cur, agency_id, user_id):
     cur.execute("SELECT DISTINCT ON (producto_id) producto_id, id FROM inventarios WHERE agencia_id = %s"
                 " ORDER BY producto_id, fecha_compra, id", (agency_id,))
     first_entry = dict(cur.fetchall())
-    cur.execute("SELECT numero_remision_anterior FROM remisiones WHERE agencia_id = %s", (agency_id,))
+    cur.execute("SELECT coalesce(numero_remision_anterior::text, numero_remision) FROM remisiones"
+                " WHERE agencia_id = %s", (agency_id,))
     existing = {r[0] for r in cur.fetchall()}
     remissions = lines = 0
     for number, remission in exit_remissions(exits).items():
-        if number in existing:
+        key, number = number, remission_number(number)
+        if str(key) in existing:
             continue
         funds = {products[s(r, "cod_prod")][1] for r in remission["lines"] if s(r, "cod_prod") in products}
         cur.execute(
@@ -1114,7 +1151,8 @@ def load_inventory(cur, agency_id, user_id):
     print(f"  remisiones: {remissions} salidas de INVENTARIO de Access ({lines} lineas), sin remesa.")
 
 
-def payment_mismatches(purchases, cash_rows, supply_rows, unpaid=frozenset()):
+def payment_mismatches(purchases, cash_rows, supply_rows, unpaid=frozenset(), cash_paid=frozenset(),
+                       as_is=frozenset()):
     """
     25-nov: en Access lo pagado en Caja (salidas - entradas, Id_Transaccion = factura) es el neto de la compra, y lo
     de Suministros su parte en cheque. La web arma esos pagos desde la compra, asi que una diferencia (un pago
@@ -1138,8 +1176,10 @@ def payment_mismatches(purchases, cash_rows, supply_rows, unpaid=frozenset()):
         net, cheque = parse_decimal(c.get("neto_a_pagar")), parse_decimal(c.get("fpch"))
         if paid == net and checks == cheque:
             continue
-        if invoice in unpaid and paid == 0 and checks == 0:
-            continue  # marcada "sin_pago" en correcciones.csv y de verdad sin ningun pago
+        if (invoice in unpaid or invoice in cash_paid) and paid == 0 and checks == 0:
+            continue  # sin_pago o pago_efectivo en correcciones.csv, y de verdad sin ningun pago en Access
+        if invoice in as_is:
+            continue  # pago_tal_cual en correcciones.csv: el pago de Access se carga como esta
         rows = "; ".join(f"{name} Id {s(r, 'id_access') or '?'} {s(r, 'fecha')[:19]} entradas"
                          f" {s(r, 'entradas') or s(r, 'valor_suministro') or '0'} salidas"
                          f" {s(r, 'salidas') or s(r, 'vr_gastos_o_comp') or '0'}"
@@ -1154,15 +1194,68 @@ def check_payments():
     """Detiene la carga si lo pagado en Caja/Suministros de Access no cuadra con alguna compra."""
     purchases = read_csv("compras_migrar.csv")
     unpaid = [c for c in purchases if unpaid_purchase(c)]
+    labels = {"pago_efectivo": "PAGADAS EN EFECTIVO sin registro en Caja de Access",
+              "pago_tal_cual": "con su pago TAL CUAL Access (no cuadra con el neto)"}
+    for action, label in labels.items():
+        listed = [c for c in purchases if payment_action(c) == action]
+        print(f"  compras {label} por correcciones.csv: {len(listed)}")
+        for c in listed:
+            fix = CORRECTIONS[("compras", s(c, "id_access"))]
+            parts = ", ".join(f"{k} {s(c, k)}" for k in ("fpef", "fpch", "fptx", "fpdat") if parse_decimal(s(c, k)))
+            print(f"    factura {s(c, 'factura')} (Id {s(c, 'id_access')}, {s(c, 'fecha_compra')[:10]}, neto"
+                  f" {s(c, 'neto_a_pagar')}, desglose de Access: {parts or 'en 0'}) ({s(fix, 'motivo')};"
+                  f" confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'})")
     print(f"  compras SIN PAGO por correcciones.csv: {len(unpaid)}")
     for c in unpaid:
         fix = CORRECTIONS[("compras", s(c, "id_access"))]
         print(f"    factura {s(c, 'factura')} (Id {s(c, 'id_access')}, {s(c, 'fecha_compra')[:10]}, cedula {s(c, 'cedula')},"
               f" neto {s(c, 'neto_a_pagar')}): se carga sin pago, desglose en 0 ({s(fix, 'motivo')};"
               f" confirmo: {s(fix, 'confirmado_por') or 'PENDIENTE'})")
+    by_action = lambda action: {s(c, "factura") for c in purchases if payment_action(c) == action}
     for item in payment_mismatches(purchases, read_csv("caja_migrar.csv"), read_csv("suministros_migrar.csv"),
-                                   {s(c, "factura") for c in unpaid}):
+                                   {s(c, "factura") for c in unpaid}, by_action("pago_efectivo"),
+                                   by_action("pago_tal_cual")):
         note_stop("Compra cuyo pago en Caja/Suministros de Access no cuadra con su neto", item)
+
+
+ACCESS_ANNULMENT_NOTE = "Access deja la compra en 0 al anular"
+
+
+def access_annulments(purchases, prefix):
+    """
+    26-nov: las compras ANULADAS de Access para el registro de anulaciones (V35), tal cual las tiene Access (aunque
+    esten en 0). Access no guarda quien, cuando ni por que se anularon: esos campos quedan vacios.
+    """
+    found = []
+    for row in purchases:
+        if s(row, "forma_de_pago") != "ANULADA":
+            continue
+        invoice = parse_int(s(row, "factura"), None)
+        values = {"grossKg": s(row, "kilos_brutos"), "netKg": s(row, "kilos_netos"), "grossValue": s(row, "vr_bruto"),
+                  "netToPay": s(row, "neto_a_pagar"), "idNumber": s(row, "cedula")}
+        found.append({"type": "COMPRA_PASILLA" if husk_purchase(row) else "COMPRA_SECO",
+                      "number": f"{prefix} {invoice}", "invoice": invoice,
+                      "values": {k: v for k, v in values.items() if v != ""}})
+    return found
+
+
+def load_access_annulments(cur, agency_id):
+    """Inserta las anuladas de Access en anulaciones (origen ACCESS). La tabla solo admite insertar: no se repite."""
+    web = purchases_by_invoice(cur, agency_id, "estado")
+    inserted = 0
+    for item in access_annulments(read_csv("compras_migrar.csv"), agency_prefix(cur, agency_id)):
+        purchase = web.get(item["invoice"])
+        cur.execute(
+            "INSERT INTO anulaciones (origen, tipo_documento, numero_documento, agencia_id, documento_id, valores, nota)"
+            " SELECT 'ACCESS', %(type)s, %(number)s, %(agency)s, %(document)s, %(values)s, %(note)s"
+            " WHERE NOT EXISTS (SELECT 1 FROM anulaciones WHERE origen = 'ACCESS' AND agencia_id = %(agency)s"
+            " AND tipo_documento = %(type)s AND numero_documento = %(number)s)",
+            {"type": item["type"], "number": item["number"], "agency": agency_id,
+             "document": purchase[1] if purchase else None, "values": psycopg2.extras.Json(item["values"]),
+             "note": ACCESS_ANNULMENT_NOTE})
+        inserted += cur.rowcount
+    print(f"  anulaciones: {inserted} compras anuladas de Access al registro (origen ACCESS, sin usuario, fecha ni"
+          " motivo).")
 
 
 def before_cut(row, desde):
@@ -1408,7 +1501,7 @@ def load_purchase_payment_splits(cur, agency_id, desde):
         if purchase is None:
             note_stop("Pago mixto sin compra migrada", invoice)
             continue
-        if sum(parts) != purchase[0]:
+        if split_parts(row, purchase[0], payment_action(row)) is None:
             note_stop("Pago mixto que no suma el neto", (invoice, [str(p) for p in parts], str(purchase[0])))
             continue
         splits.append((purchase[2], purchase[1], *parts, cheque_text(s(row, "numcheque"))))
@@ -1646,6 +1739,7 @@ def main():
             load_quota_announcements(cur, agency_id)
             load_purchases(cur, agency_id, admin_user_id, args.desde)
             load_inventory(cur, agency_id, admin_user_id)
+            load_access_annulments(cur, agency_id)
             load_check_relation_marks(cur, agency_id)
             load_manual_cash_entries(cur, agency_id, args.desde)
             load_supplies_petty_cash_and_packaging(cur, agency_id, args.desde)
