@@ -34,10 +34,11 @@ public class AnnulmentLogController {
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "true") boolean includeAccess,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         String type = documentType == null || documentType.isBlank() ? null : documentType;
-        return service.search(new AnnulmentLogFilter(agencyId, type, userId, from, to, Math.max(page, 0),
+        return service.search(new AnnulmentLogFilter(agencyId, type, userId, from, to, includeAccess, Math.max(page, 0),
                 Math.clamp(size, 1, MAX_PAGE_SIZE)));
     }
 }
