@@ -15,6 +15,9 @@
     "pdfError": "No se pudo generar la remisión",
     "searchError": "No se pudo buscar la remisión",
     "annulled": "Se anuló la remisión {number}.",
-    "annulError": "No se pudo anular la remisión."
-  }
+    "annulError": "No se pudo anular la remisión.",
+    "fromAccess": "La remisión {number} es una remisión histórica de Access: no se puede anular.",
+    "reasonRequired": "Escriba el motivo de la anulación (mínimo 10 caracteres)."
+  },
+  "reasonLabel": "Motivo de la anulación (mínimo 10 caracteres)"
 }

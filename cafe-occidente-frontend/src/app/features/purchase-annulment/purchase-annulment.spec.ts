@@ -73,6 +73,7 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
   }
 
   function askToAnnul(fixture: ReturnType<typeof render>['fixture'], el: HTMLElement): void {
+    fixture.componentInstance.reason.set('Error de digitación en los kilos');
     fixture.componentInstance.startAnnul();
     fixture.detectChanges();
     expect(el.textContent).toContain(data.confirmMessage);
@@ -122,12 +123,31 @@ describe('PurchaseAnnulmentComponent (HU-25)', () => {
     askToAnnul(fixture, el);
 
     dialogButton(el, data.yesLabel)!.click();
-    http.expectOne({ method: 'POST', url: `${URL}/DRY/1` }).flush(annulled);
+    const request = http.expectOne({ method: 'POST', url: `${URL}/DRY/1` });
+    // 26-nov: el motivo va al servidor, que lo guarda en el registro de anulaciones.
+    expect(request.request.body).toEqual({ reason: 'Error de digitación en los kilos' });
+    request.flush(annulled);
     fixture.detectChanges();
 
     expect(component.selected()?.status).toBe('ANULADA');
+    expect(component.reason()).toBe('');
     expect(component.prompt()).toBeNull();
     expect(el.textContent).toContain('Documento soporte 43388 anulado');
+  });
+
+  it('26-nov: without a reason of at least 10 characters it does not ask and says the reason is mandatory', () => {
+    const { fixture, component, el } = render();
+    showFirst(component);
+    fixture.detectChanges();
+    expect(el.querySelector<HTMLTextAreaElement>('[data-testid="reason"]')).not.toBeNull();
+
+    component.reason.set('corto');
+    component.startAnnul();
+    fixture.detectChanges();
+
+    expect(component.prompt()).toBeNull();
+    expect(el.textContent).toContain(data.messages.reasonRequired);
+    http.expectNone({ method: 'POST' });
   });
 
   it('CA-4: Cancelar leaves the purchase as it was', () => {

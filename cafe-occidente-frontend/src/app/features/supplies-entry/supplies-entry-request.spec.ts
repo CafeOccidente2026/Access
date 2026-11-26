@@ -45,6 +45,13 @@ describe('supplies entry', () => {
     expect(invalidField(screens['issuedCheck'], values, messages)).toBe('Falta: Cheque');
     expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: '548' }, messages)).toBe(messages.checkDigits);
     expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: '0548' }, messages)).toBeNull();
+    // 24-nov: de 4 a 15 digitos (Consaca usa cheques de 5), solo numeros y no todos ceros.
+    expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: '13324' }, messages)).toBeNull();
+    expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: '012345678901234' }, messages)).toBeNull();
+    for (const wrong of ['1234567890123456', '00000', '1324A']) {
+      expect(invalidField(screens['issuedCheck'], { ...values, checkNumber: wrong }, messages), wrong).toBe(messages.checkDigits);
+    }
+    expect(messages.checkDigits).toBe('El número de cheque debe tener entre 4 y 15 dígitos');
   });
 
   it('builds the requests without Id, with the check as text and the date only in Ingresar Suministros', () => {

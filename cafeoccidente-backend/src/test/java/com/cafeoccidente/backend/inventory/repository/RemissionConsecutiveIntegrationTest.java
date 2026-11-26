@@ -33,6 +33,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 /**
  * Demo del 23-nov (V31): la remision y su remesa tienen el mismo numero PREFIJO-CONSECUTIVO, de un solo consecutivo
  * por agencia (sin fondo). Sobre la semilla (agencia 1). Transaccional: no deja nada.
@@ -61,6 +63,8 @@ class RemissionConsecutiveIntegrationTest {
     private AgencyRepository agencies;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private EntityManager entityManager;
 
     private Long rp;
     private User user;
@@ -151,7 +155,7 @@ class RemissionConsecutiveIntegrationTest {
                 List.of(new RemissionLineRequest(movement)), 5, "USADO");
         assertThatThrownBy(() -> remissions.create(again)).isInstanceOf(BusinessRuleException.class);
 
-        var annulled = remissions.annul(remission.id());
+        var annulled = remissions.annul(remission.id(), "Motivo de prueba de anulación");
 
         assertThat(annulled.status()).isEqualTo("ANULADA");
         assertThat(jdbc.queryForObject("SELECT remesa_id FROM compras_cafe_seco WHERE id = ?", Long.class, purchase)).isNull();
@@ -161,7 +165,64 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM historial_cambios WHERE entidad = 'REMISION'"
                 + " AND entidad_id = ? AND accion = 'ANULAR'", Integer.class, remission.id())).isEqualTo(1);
         assertThat(movements.findById(AGENCY, movement).remitted()).isFalse();
-        assertThatThrownBy(() -> remissions.annul(remission.id())).isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(() -> remissions.annul(remission.id(), "Motivo de prueba de anulación")).isInstanceOf(BusinessRuleException.class);
+
+        // 26-nov: la anulacion queda en el registro de auditoria con los valores de la remision antes de anularla.
+        Integer invoice = jdbc.queryForObject("SELECT numero_factura FROM compras_cafe_seco WHERE id = ?", Integer.class, purchase);
+        var entry = jdbc.queryForMap("SELECT origen, numero_documento, motivo, usuario_id IS NOT NULL AS con_usuario,"
+                + " valores ->> 'kg' AS kg, valores ->> 'destination' AS destino, valores ->> 'fund' AS fondo,"
+                + " valores ->> 'invoices' AS facturas FROM anulaciones WHERE tipo_documento = 'REMISION' AND documento_id = ?",
+                remission.id());
+        assertThat(entry).containsEntry("origen", "WEB").containsEntry("numero_documento", remission.displayNumber())
+                .containsEntry("motivo", "Motivo de prueba de anulación").containsEntry("con_usuario", true)
+                .containsEntry("destino", "ALMACAFE").containsEntry("fondo", "RP");
+        assertThat(new BigDecimal((String) entry.get("kg"))).isEqualByComparingTo(balance);
+        assertThat((String) entry.get("facturas")).contains(String.valueOf(invoice));
+
+        // El numero de la remision anulada no se vuelve a usar: la siguiente toma un consecutivo mayor.
+        var again2 = remissions.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "NUEVO"));
+        assertThat(sequenceOf(again2.displayNumber())).isGreaterThan(sequenceOf(remission.displayNumber()));
+    }
+
+    /** 25-nov: la salida historica que carga migrar_punto.py (de_access) dice que viene de Access y no se anula;
+     *  la base guarda la observacion de la cabecera de la remesa. */
+    @Test
+    void aRemissionFromAccessSaysSoAndCannotBeAnnulled() {
+        Long movement = dryPurchaseInventory();
+        var remission = remissions.create(new RemissionRequest(LocalDate.now(), "ALMACAFE", null,
+                List.of(new RemissionLineRequest(movement)), 5, "NUEVO"));
+        assertThat(remission.fromAccess()).isFalse();
+        jdbc.update("UPDATE remisiones SET de_access = true WHERE id = ?", remission.id());
+        jdbc.update("UPDATE remesas SET observacion = 'En Access tenía compras de RP y LF' WHERE id = ?",
+                remission.remittanceId());
+        entityManager.clear(); // la remision creada sigue en cache: se lee de nuevo con la marca de la migracion
+
+        assertThat(remissions.findById(remission.id()).fromAccess()).isTrue();
+        assertThatThrownBy(() -> remissions.annul(remission.id(), "Motivo de prueba de anulación"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("histórica de Access");
+        assertThat(remissions.findById(remission.id()).status()).isEqualTo("VIGENTE");
+        assertThat(jdbc.queryForObject("SELECT observacion FROM remesas WHERE id = ?", String.class,
+                remission.remittanceId())).isEqualTo("En Access tenía compras de RP y LF");
+    }
+
+    /** 26-nov (Pasto, opcion A): una salida historica de Access sin numero se guarda con su texto tal cual, sin numero;
+     *  solo las de Access pueden ir sin numero. */
+    @Test
+    void onlyARemissionFromAccessCanHaveNoNumber() {
+        String insert = "INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, exportado,"
+                + " creado_por_usuario_id, creado_en, numero_remision, estado, de_access)"
+                + " VALUES (NULL, ?, CURRENT_DATE, false, ?, now(), ?, 'VIGENTE', ?)";
+        assertThat(jdbc.update(insert, AGENCY, user.getId(), "PRUEBA SIN NUMERO", true)).isOne();
+        assertThat(jdbc.update(insert, AGENCY, user.getId(), "PA PRUEBA SIN NUMERO", true)).isOne();
+        assertThat(remissions.findByNumber(AGENCY, "PRUEBA SIN NUMERO")).get()
+                .satisfies(r -> {
+                    assertThat(r.remissionNumber()).isNull();
+                    assertThat(r.fromAccess()).isTrue();
+                });
+        assertThatThrownBy(() -> jdbc.update(insert, AGENCY, user.getId(), "WEB SIN NUMERO", false))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     /** C7 (prueba del 11-nov, punto 7): la lista de Registrar Salidas muestra la cedula y filtra por el fondo. */
@@ -188,6 +249,24 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(second).isEqualTo(first + 1);
         assertThat(last(other)).isEqualTo(otherBefore);
         assertThat(consecutives.take(other)).isEqualTo(otherBefore + 1);
+    }
+
+    /** 25-nov: el contador se salta los numeros que la agencia ya usa (remesas y remisiones de Access, como SA4819
+     *  en Samaniego o CO9999 en Consaca), para que la remision nueva nunca choque con una vieja. */
+    @Test
+    void theConsecutiveSkipsTheNumbersAlreadyUsedInTheAgency() {
+        int next = last(AGENCY) + 1;
+        remittance(AGENCY, "XX" + next, "VIGENTE");
+        remittance(AGENCY, "XX " + (next + 1), "VIGENTE");
+        jdbc.update("INSERT INTO remisiones (numero_remision_anterior, agencia_id, fecha_remision, exportado,"
+                + " creado_por_usuario_id, creado_en, consecutivo, numero_remision, estado, de_access)"
+                + " VALUES (?, ?, CURRENT_DATE, false, ?, now(), ?, ?, 'VIGENTE', true)",
+                next + 2, AGENCY, user.getId(), next + 2, "XX" + (next + 2));
+        Long other = jdbc.queryForObject("SELECT min(id) FROM agencias WHERE id <> ?", Long.class, AGENCY);
+        remittance(other, "XX" + (next + 3), "VIGENTE");
+
+        assertThat(consecutives.take(AGENCY)).isEqualTo(next + 3);
+        assertThat(last(AGENCY)).isEqualTo(next + 3);
     }
 
     @Test
@@ -222,6 +301,10 @@ class RemissionConsecutiveIntegrationTest {
         assertThat(remittance(AGENCY, "SDBU-RP-9003", "DESMARCADA")).isNotNull();
         assertThatThrownBy(() -> remittance(AGENCY, "SDBU-RP-9002", "BORRADA"))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    private static int sequenceOf(String displayNumber) {
+        return Integer.parseInt(displayNumber.substring(displayNumber.lastIndexOf('-') + 1));
     }
 
     private Long remittance(Long agencyId, String number, String status) {

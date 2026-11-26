@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import dry from '../../../../../public/assets/data/purchase-form-dry.json';
 import { commitPayment, initialPayment, readyPayment, visibleMethods } from './payment-cascade';
 
 const NET = 4944624;
@@ -40,6 +41,16 @@ describe('payment cascade (Form_COMPRAS.bas FPef/FPch/FPtx/FPdat)', () => {
     expect(over.state.amounts).toEqual({ cash: 0, check: 0, transfer: 0, card: 0 });
     const short = commitPayment(NET, { amounts: { cash: 1, check: 0, transfer: 0, card: 2 }, checkNumber: '' }, 'card');
     expect(short.unbalanced).toBe(true);
+  });
+
+  it('24-nov: the check number has 4 to 15 digits, keeps its zeros and is not all zeros', () => {
+    const state = { amounts: { cash: 0, check: NET, transfer: 0, card: 0 }, checkNumber: '' };
+    for (const wrong of ['548', '0000', '00000', '1234567890123456', '1324A']) {
+      expect(readyPayment(NET, { ...state, checkNumber: wrong }), wrong).toBeNull();
+    }
+    expect(readyPayment(NET, { ...state, checkNumber: '13324' })?.checkNumber).toBe('13324');
+    expect(readyPayment(NET, { ...state, checkNumber: '012345678901234' })?.checkNumber).toBe('012345678901234');
+    expect(dry.paymentPanel.checkNumberMessage).toBe('El número de cheque debe tener entre 4 y 15 dígitos');
   });
 
   it('rejects a zero or non-numeric check number', () => {

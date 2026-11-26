@@ -59,7 +59,7 @@ export interface RemissionRequest {
 
 export interface RemissionResponse {
   readonly id: number;
-  readonly remissionNumber: number;
+  readonly remissionNumber: number | null;
   readonly agencyId: number;
   readonly agencyName: string;
   readonly remissionDate: string;
@@ -75,6 +75,8 @@ export interface RemissionResponse {
   readonly status: 'VIGENTE' | 'ANULADA';
   /** Su remesa; null en las remisiones anteriores a V31. */
   readonly remittanceId: number | null;
+  /** Salida historica cargada desde Access: no se puede anular. */
+  readonly fromAccess: boolean;
 }
 
 /** Fila de los reportes de inventario: entrada (factura) o salida (remision); lo del otro tipo va en null. */

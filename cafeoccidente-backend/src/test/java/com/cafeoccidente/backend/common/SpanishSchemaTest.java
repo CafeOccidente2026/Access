@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class SpanishSchemaTest {
 
     private static final Set<String> TABLES = Set.of(
-            "agencias", "anuncios", "anuncios_agencias", "cupos_anuncios", "cheques_relacionados",
+            "agencias", "anulaciones", "anuncios", "anuncios_agencias", "cupos_anuncios", "cheques_relacionados",
             "compras_anunciadas", "compras_cafe_seco", "compras_cafe_verde", "consecutivos_factura",
             "consecutivos_remision_agencia", "cuentas_por_cobrar",
             "cargas_cupos_ness", "compras_pasilla", "consecutivos_transaccion", "cupos_ness", "empaques", "fondos",

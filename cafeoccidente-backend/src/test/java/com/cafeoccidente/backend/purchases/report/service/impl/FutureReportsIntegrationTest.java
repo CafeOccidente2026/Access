@@ -115,7 +115,7 @@ class FutureReportsIntegrationTest {
     void hu34ListsTheDryPurchasesOfThatAnnouncementBetweenTheDatesWithTheAnnulledInZero() {
         DryCoffeePurchaseResponse valid = bill();
         DryCoffeePurchaseResponse annulled = bill();
-        annulment.annul(AGENCY, AnnulmentModule.DRY, annulled.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, annulled.id(), "Motivo de prueba de anulación");
 
         List<PurchaseReportRow> rows = reports.futureAnnouncement(ANNOUNCEMENT, today, today);
 

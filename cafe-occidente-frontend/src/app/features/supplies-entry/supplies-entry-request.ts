@@ -1,4 +1,5 @@
 import { LedgerEntryRequest, PackagingEntryRequest } from '../../core/models/supplies.model';
+import { validCheckNumber } from '../../shared/utils/check-number';
 import { parseDisplayNumber } from '../../shared/utils/number-format';
 import { SuppliesEntryContent, SuppliesScreen } from './supplies-entry.model';
 
@@ -22,9 +23,7 @@ export function idSource(screen: SuppliesScreen): 'fundCode' | 'packagingType' |
   return screen.idFrom ?? null;
 }
 
-const FOUR_DIGITS = /^\d{4}$/;
-
-/** Primer problema antes de guardar (en el orden de la pantalla): un obligatorio vacio o un cheque que no es de 4 digitos. */
+/** Primer problema antes de guardar (en el orden de la pantalla): un obligatorio vacio o un cheque que no es de 4 a 15 digitos. */
 export function invalidField(
   screen: SuppliesScreen,
   values: Record<string, string>,
@@ -35,7 +34,7 @@ export function invalidField(
     return messages.required.replace('{label}', missing.label);
   }
   const check = (values['checkNumber'] ?? '').trim();
-  return check && !FOUR_DIGITS.test(check) ? messages.checkDigits : null;
+  return check && !validCheckNumber(check) ? messages.checkDigits : null;
 }
 
 const orNull = (value: string | undefined) => (value ?? '').trim() || null;

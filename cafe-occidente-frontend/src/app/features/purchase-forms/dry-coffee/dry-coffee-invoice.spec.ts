@@ -49,4 +49,11 @@ describe('buildDryCoffeeInvoiceDocDefinition', () => {
     expect(paymentAmounts({ paymentMethod: 'CHEQUE', netToPay: 500 }))
       .toEqual({ cash: 0, check: 500, transfer: 0, cardTerminal: 0 });
   });
+
+  it('25-nov: a purchase without payment from Access (SIN PAGO, split in 0) reprints FORMAS DE PAGO in 0', () => {
+    const none = { cashAmount: 0, checkAmount: 0, transferAmount: 0, cardAmount: 0, checkNumber: null };
+    const zeros = { cash: 0, check: 0, transfer: 0, cardTerminal: 0 };
+    expect(paymentAmounts({ paymentMethod: 'SIN PAGO', netToPay: 500, payment: none })).toEqual(zeros);
+    expect(paymentAmounts({ paymentMethod: 'SIN PAGO', netToPay: 500 })).toEqual(zeros);
+  });
 });

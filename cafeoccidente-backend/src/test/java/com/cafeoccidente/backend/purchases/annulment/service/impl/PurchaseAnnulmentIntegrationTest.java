@@ -119,7 +119,7 @@ class PurchaseAnnulmentIntegrationTest {
     }
 
     private AnnulmentCandidate annul(DryCoffeePurchaseResponse p) {
-        return service.annul(AGENCY, AnnulmentModule.DRY, p.id());
+        return service.annul(AGENCY, AnnulmentModule.DRY, p.id(), "Motivo de prueba de anulación");
     }
 
     private String status(DryCoffeePurchaseResponse p) {
@@ -244,7 +244,7 @@ class PurchaseAnnulmentIntegrationTest {
     @Test
     void cannotAnnulTwiceNorFromAnotherAgency() {
         DryCoffeePurchaseResponse p = purchase();
-        assertThatThrownBy(() -> service.annul(AGENCY + 1000, AnnulmentModule.DRY, p.id()))
+        assertThatThrownBy(() -> service.annul(AGENCY + 1000, AnnulmentModule.DRY, p.id(), "Motivo de prueba de anulación"))
                 .isInstanceOf(ResourceNotFoundException.class);
         annul(p);
         assertThatThrownBy(() -> annul(p))

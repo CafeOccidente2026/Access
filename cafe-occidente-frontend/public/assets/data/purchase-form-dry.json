@@ -82,7 +82,7 @@
     { "key": "penalty", "label": "Castigo", "type": "currency", "rawDisplay": true, "negativeOnly": true, "display": "money", "liveThousands": true }
   ],
   "discountField": { "key": "shrinkageDiscount", "label": "Descuento Fro", "type": "currency", "integer": true, "display": "money", "liveThousands": true },
-  "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "Digite el número de cheque"},
+  "paymentPanel": {"heading": "FORMAS\nDE\nPAGO", "methods": [{"key": "cash", "label": "Efectivo"}, {"key": "check", "label": "Cheque"}, {"key": "transfer", "label": "Transferencia"}, {"key": "card", "label": "Datáfono"}], "checkNumberLabel": "N° Cheque", "totalLabel": "Tot F de Pago", "unbalancedMessage": "FORMA DE PAGO DESCUADRADA, REVISE", "checkNumberMessage": "El número de cheque debe tener entre 4 y 15 dígitos"},
   "settlementHeading": "LIQUIDACION DOCUMENTO SOPORTE DE COMPRA DE CAFE",
   "settlementFields": [
     { "key": "kgPrice", "label": "Vr. Kilo", "type": "currency", "integer": true, "display": "money" },

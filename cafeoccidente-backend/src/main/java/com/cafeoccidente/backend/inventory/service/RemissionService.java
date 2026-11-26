@@ -18,5 +18,5 @@ public interface RemissionService {
     Optional<RemissionResponse> findByNumber(Long agencyId, String displayNumber);
 
     /** Anular Remision: Administrador o con el permiso ANULAR_REMISION. */
-    RemissionResponse annul(Long id);
+    RemissionResponse annul(Long id, String reason);
 }

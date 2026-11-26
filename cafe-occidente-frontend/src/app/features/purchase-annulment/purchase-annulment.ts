@@ -8,6 +8,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 import { PurchaseAnnulmentService } from '../../core/services/purchase-annulment.service';
 import { AccessWindowComponent, ConfirmDialogComponent, FormFlowDirective, InvoiceNavigatorComponent, NavigatorButton } from '../../shared/ui';
 import { formatKilos, formatMoney } from '../../shared/utils/number-format';
+import { validReason } from '../../shared/utils/annulment-reason';
 import { saveOnce } from '../../shared/utils/save-once';
 import { shortDate } from '../conductor-form/conductor-form';
 import { serverError } from '../../shared/utils/server-error';
@@ -28,7 +29,8 @@ export interface PurchaseAnnulmentContent {
   readonly fields: { key: string; label: string; type?: 'date' | 'number' | 'money' }[];
   /** |◄ ◄ ► ►|: texto del boton y su ayuda, por direccion. */
   readonly navigation: NavigatorButton[];
-  readonly messages: Record<'notFound' | 'noMore' | 'annulled' | 'error', string>;
+  readonly reasonLabel: string;
+  readonly messages: Record<'notFound' | 'noMore' | 'annulled' | 'error' | 'reasonRequired', string>;
 }
 
 /** Valor de una fila de la ficha (Cns_ComprasParaAnular, todos los controles bloqueados). */
@@ -81,6 +83,8 @@ export class PurchaseAnnulmentComponent {
   readonly error = signal(false);
   /** Anulacion en curso: Aceptar queda deshabilitado y un segundo clic no vuelve a enviar. */
   readonly saving = signal(false);
+  /** 26-nov: motivo obligatorio (minimo 10 caracteres); queda en el registro de anulaciones. */
+  readonly reason = signal('');
   readonly value = fieldValue;
 
   search(event: Event, invoice: string): void {
@@ -128,15 +132,20 @@ export class PurchaseAnnulmentComponent {
 
   startAnnul(): void {
     this.message.set(null);
+    if (!this.selected()!.annulmentLocked && !validReason(this.reason())) {
+      this.fail(this.content()!.messages.reasonRequired);
+      return;
+    }
     // El mensaje compartido pone el foco: Cancelar en la pregunta (anular no se deshace), Aceptar en el aviso.
     this.prompt.set(this.selected()!.annulmentLocked ? 'locked' : 'confirm');
   }
 
   confirm(): void {
     const candidate = this.selected()!;
-    saveOnce(this.saving, () => this.service.annul(candidate), {
+    saveOnce(this.saving, () => this.service.annul(candidate, this.reason()), {
       next: (annulled) => {
         this.prompt.set(null);
+        this.reason.set('');
         this.selected.set(annulled);
         this.candidates.update((list) => list.map((c) => (c.module === annulled.module && c.id === annulled.id ? annulled : c)));
         this.error.set(false);

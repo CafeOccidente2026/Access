@@ -8,7 +8,7 @@
     "saveError": "No se pudo guardar el registro",
     "required": "Falta: {label}",
     "growerNotFound": "La cédula no está registrada en TERCEROS",
-    "checkDigits": "El cheque son los últimos 4 dígitos"
+    "checkDigits": "El número de cheque debe tener entre 4 y 15 dígitos"
   },
   "screens": {
     "cash": {

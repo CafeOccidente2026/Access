@@ -42,6 +42,18 @@
           </ng-container>
         </div>
 
+        <label *ngIf="s.status === 'VALIDA' && !s.annulmentLocked" class="flex w-[36rem] flex-col gap-1">
+          <span class="font-medium text-blue-900">{{ c.reasonLabel }}:</span>
+          <textarea
+            data-testid="reason"
+            rows="2"
+            maxlength="500"
+            class="rounded border border-slate-300 px-2 py-1"
+            [value]="reason()"
+            (input)="reason.set($any($event.target).value)"
+          ></textarea>
+        </label>
+
         <div *ngIf="s.status === 'VALIDA' && !prompt()">
           <button type="button" data-testid="annul" class="rounded border border-red-500 bg-red-600 px-4 py-1.5 font-bold text-white hover:bg-red-700" (click)="startAnnul()">{{ c.annulLabel }}</button>
         </div>

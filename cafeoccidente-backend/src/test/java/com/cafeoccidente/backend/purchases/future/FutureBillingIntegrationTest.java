@@ -208,7 +208,7 @@ class FutureBillingIntegrationTest {
         DryCoffeePurchaseResponse p = bill(SELLER, "RN", future, KG);
         assertThat(balance()).isEqualByComparingTo("1500");
 
-        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, p.id(), "Motivo de prueba de anulación");
 
         assertThat(balance()).isEqualByComparingTo("2500");
     }

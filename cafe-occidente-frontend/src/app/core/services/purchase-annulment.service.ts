@@ -10,7 +10,8 @@ import { AnnulmentCandidate } from '../models/purchase-annulment.model';
 export class PurchaseAnnulmentService extends InvoiceListService {
   protected readonly url = `${API_BASE_URL}/purchases/annulment`;
 
-  annul(candidate: AnnulmentCandidate): Observable<AnnulmentCandidate> {
-    return this.http.post<AnnulmentCandidate>(`${this.url}/${candidate.module}/${candidate.id}`, null);
+  /** El motivo es obligatorio y queda en el registro de anulaciones (26-nov). */
+  annul(candidate: AnnulmentCandidate, reason: string): Observable<AnnulmentCandidate> {
+    return this.http.post<AnnulmentCandidate>(`${this.url}/${candidate.module}/${candidate.id}`, { reason: reason.trim() });
   }
 }

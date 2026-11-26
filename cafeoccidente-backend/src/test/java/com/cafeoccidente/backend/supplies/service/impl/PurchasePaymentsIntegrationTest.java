@@ -215,7 +215,7 @@ class PurchasePaymentsIntegrationTest {
         DryCoffeePurchaseResponse saved = dry.create(dryRequest(mixed(dryNet())));
         LocalDate today = LocalDate.now();
 
-        annulment.annul(AGENCY, AnnulmentModule.DRY, saved.id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, saved.id(), "Motivo de prueba de anulación");
 
         assertThat(lines(supplies.cashBook(AGENCY, today, today), saved.invoiceNumber())).isEmpty();
         assertThat(lines(supplies.supplyBook(AGENCY, today, today), saved.invoiceNumber())).isEmpty();

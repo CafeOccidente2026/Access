@@ -33,7 +33,7 @@ public class Remission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "numero_remision_anterior", nullable = false)
+    @Column(name = "numero_remision_anterior")
     private Integer remissionNumber;
 
     @ManyToOne
@@ -84,6 +84,10 @@ public class Remission {
 
     @Column(name = "anulada_en")
     private Instant annulledAt;
+
+    /** Salida historica cargada desde Access por la migracion (V33): no se anula. */
+    @Column(name = "de_access", nullable = false)
+    private boolean fromAccess;
 
     public static final String VIGENTE = "VIGENTE";
     public static final String ANULADA = "ANULADA";

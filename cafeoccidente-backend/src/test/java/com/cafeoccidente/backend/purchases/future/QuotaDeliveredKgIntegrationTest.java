@@ -107,7 +107,7 @@ class QuotaDeliveredKgIntegrationTest {
     @Test
     void asignarCupoShowsTheNormalPurchasesAsDeliveredAndTheSaldoStartsEqualToTheCupo() {
         buy(null, null);
-        annulment.annul(AGENCY, AnnulmentModule.DRY, buy(null, null).id());
+        annulment.annul(AGENCY, AnnulmentModule.DRY, buy(null, null).id(), "Motivo de prueba de anulación");
 
         QuotaCandidateResponse candidate = quotas.available(AGENCY).stream()
                 .filter(c -> c.announcement().announcementNumber().endsWith("-" + number)).findFirst().orElseThrow();
