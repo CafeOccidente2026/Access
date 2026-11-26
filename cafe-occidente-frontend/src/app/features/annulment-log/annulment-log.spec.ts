@@ -123,6 +123,19 @@ describe('AnnulmentLogComponent (26-nov)', () => {
     expect([rows[0][bought], rows[1][bought]]).toEqual(['20/11/2026', '15/03/2024']);
   });
 
+  it('exports a code it does not know as it comes, and an empty purchase date for a remission', async () => {
+    const { component } = render();
+    http.expectOne((r) => r.url === URL).flush(PAGE);
+    const odd = { ...PAGE.items[0], origin: 'OTRO', documentType: 'REMISION_X', purchaseDate: null } as unknown as AnnulmentLogPage['items'][0];
+
+    const done = component.export();
+    http.expectOne((r) => r.url === URL && r.params.get('size') === '5000').flush({ total: 1, items: [odd] });
+    await done;
+
+    const [table] = exporter.xlsx.mock.calls[0] as unknown as [{ rows: { cells: unknown[] }[] }];
+    expect(table.rows[0].cells.slice(1, 5)).toEqual(['OTRO', '', 'El Tambo', 'REMISION_X']);
+  });
+
   it('exports to Excel every annulment of the filter, with its values', async () => {
     const { component } = render();
     http.expectOne((r) => r.url === URL).flush(PAGE);
