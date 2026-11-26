@@ -285,6 +285,19 @@ def check_access_annulments():
     assert ACCESS_ANNULMENT_NOTE == "Access deja la compra en 0 al anular"
 
 
+def check_single_payment_method():
+    # 26-nov (Chachagui): una compra pagada con una sola forma se carga con esa forma; antes la transferencia sola
+    # quedaba como EFECTIVO y la Caja de la web quedaba por debajo de la de Access.
+    base = {"id_access": "9", "fpef": "0", "fpch": "0", "fptx": "0", "fpdat": "0", "numcheque": "0"}
+    assert payment_of({**base, "fpef": "100"}) == ("EFECTIVO", None)
+    assert payment_of({**base, "fpch": "100", "numcheque": "52"}) == ("CHEQUE", "52")
+    assert payment_of({**base, "fptx": "100"}) == ("TRANSFERENCIA", None)
+    STOPS.clear()
+    payment_of({**base, "factura": "1004", "fpdat": "100"})  # datafono solo: no hay cuenta por cobrar que cargar
+    assert "Compra pagada solo con datafono (no se carga su cuenta por cobrar)" in STOPS
+    STOPS.clear()
+
+
 def check_grower_type():
     # 25-nov: el tipo de asociado vacio no se inventa ("C"): detiene la carga (None) y se corrige con correcciones.csv.
     assert grower_type({"tipo": "c"}) == "C" and grower_type({"tipo": "F"}) == "F"
@@ -455,6 +468,7 @@ def main():
     check_correction_actions()
     check_growers_by_id_number()
     check_grower_type()
+    check_single_payment_method()
     check_access_annulments()
     check_payments()
     check_payment_corrections()
