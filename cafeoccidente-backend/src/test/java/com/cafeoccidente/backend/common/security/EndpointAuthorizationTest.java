@@ -9,6 +9,7 @@ import com.cafeoccidente.backend.common.config.ClockConfig;
 import com.cafeoccidente.backend.common.config.CorsConfig;
 import com.cafeoccidente.backend.common.config.SecurityConfig;
 import com.cafeoccidente.backend.controlrecord.service.ControlRecordService;
+import com.cafeoccidente.backend.annulmentlog.service.AnnulmentLogService;
 import com.cafeoccidente.backend.history.service.ChangeHistoryService;
 import com.cafeoccidente.backend.inventory.service.InventoryMovementService;
 import com.cafeoccidente.backend.inventory.service.InventoryReportService;
@@ -137,6 +138,8 @@ class EndpointAuthorizationTest {
         add(ADMIN, get, "/api/users");
         // Historial de cambios (area de compras, 2026-10-22): el Administrador o con el permiso.
         add(ADMIN, "HISTORIAL", get, "/api/history", "/api/history");
+        // Registro de anulaciones (26-nov): solo el Administrador.
+        add(ADMIN, get, "/api/annulment-log");
         // RF-02 Permisos temporales: solo el Administrador los concede y retira.
         add(ADMIN, get, "/api/permissions", "/api/permissions?userId=1");
         add(ADMIN, post, "/api/permissions");
@@ -296,6 +299,7 @@ class EndpointAuthorizationTest {
     @MockitoBean private AgencyRepository agencyRepository;
     @MockitoBean private AgencyService agencyService;
     @MockitoBean private ChangeHistoryService changeHistoryService;
+    @MockitoBean private AnnulmentLogService annulmentLogService;
     @MockitoBean private FundRepository fundRepository;
     @MockitoBean private RoleRepository roleRepository;
     @MockitoBean private AuthService authService;
