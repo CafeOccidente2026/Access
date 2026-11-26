@@ -6,6 +6,7 @@ import com.cafeoccidente.backend.purchases.annulment.repository.AnnulmentModule;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,13 +39,23 @@ public class AnnulmentLogRepository {
             AnnulmentModule.GREEN, SNAPSHOT_COLUMNS + "compras_cafe_verde" + SNAPSHOT_JOIN,
             AnnulmentModule.HUSK, SNAPSHOT_COLUMNS + "compras_pasilla" + SNAPSHOT_JOIN);
 
-    /** from y to son dias completos de Colombia (la base corre en UTC); las filas de Access no tienen fecha. */
+    /**
+     * from y to son dias completos de Colombia (la base corre en UTC). Las filas de Access no tienen fecha de anulacion:
+     * con includeAccess salen sin mirar las fechas; sin el, no salen.
+     */
     private static final String COLOMBIAN_DAY = "CAST(n.anulado_en AT TIME ZONE 'America/Bogota' AS DATE)";
     private static final String WHERE = " WHERE (CAST(:agencyId AS BIGINT) IS NULL OR n.agencia_id = :agencyId)"
             + " AND (CAST(:type AS VARCHAR) IS NULL OR n.tipo_documento = :type)"
             + " AND (CAST(:userId AS BIGINT) IS NULL OR n.usuario_id = :userId)"
-            + " AND (CAST(:from AS DATE) IS NULL OR " + COLOMBIAN_DAY + " >= CAST(:from AS DATE))"
-            + " AND (CAST(:to AS DATE) IS NULL OR " + COLOMBIAN_DAY + " <= CAST(:to AS DATE))";
+            + " AND CASE WHEN n.origen = 'ACCESS' THEN CAST(:includeAccess AS BOOLEAN)"
+            + " ELSE (CAST(:from AS DATE) IS NULL OR " + COLOMBIAN_DAY + " >= CAST(:from AS DATE))"
+            + " AND (CAST(:to AS DATE) IS NULL OR " + COLOMBIAN_DAY + " <= CAST(:to AS DATE)) END";
+    /** La fecha de la compra anulada, de la tabla que dice tipo_documento (una remision no tiene). */
+    private static final String PURCHASE_DATE = "COALESCE(cs.fecha_compra, cv.fecha_compra, cp.fecha_compra)";
+    private static final String PURCHASE_JOINS = " LEFT JOIN compras_cafe_seco cs ON n.tipo_documento = 'COMPRA_SECO'"
+            + " AND cs.id = n.documento_id LEFT JOIN compras_cafe_verde cv ON n.tipo_documento = 'COMPRA_VERDE'"
+            + " AND cv.id = n.documento_id LEFT JOIN compras_pasilla cp ON n.tipo_documento = 'COMPRA_PASILLA'"
+            + " AND cp.id = n.documento_id";
 
     private final NamedParameterJdbcTemplate jdbc;
     private final JsonMapper json;
@@ -117,9 +128,11 @@ public class AnnulmentLogRepository {
 
     public List<AnnulmentLogEntry> search(AnnulmentLogFilter filter) {
         return jdbc.query("SELECT n.id, n.origen, n.tipo_documento, n.numero_documento, a.nombre AS agencia,"
-                        + " n.documento_id, n.anulado_en, u.usuario, n.motivo, n.valores, n.nota FROM anulaciones n"
-                        + " JOIN agencias a ON a.id = n.agencia_id LEFT JOIN usuarios u ON u.id = n.usuario_id" + WHERE
-                        + " ORDER BY n.anulado_en DESC NULLS LAST, n.id DESC LIMIT :size OFFSET :offset",
+                        + " n.documento_id, n.anulado_en, " + PURCHASE_DATE + " AS fecha_compra, u.usuario, n.motivo,"
+                        + " n.valores, n.nota FROM anulaciones n JOIN agencias a ON a.id = n.agencia_id"
+                        + " LEFT JOIN usuarios u ON u.id = n.usuario_id" + PURCHASE_JOINS + WHERE
+                        + " ORDER BY n.anulado_en DESC NULLS LAST, fecha_compra DESC NULLS LAST, n.id DESC"
+                        + " LIMIT :size OFFSET :offset",
                 params(filter).addValue("size", filter.size()).addValue("offset", (long) filter.page() * filter.size()),
                 (rs, i) -> toEntry(rs));
     }
@@ -131,14 +144,16 @@ public class AnnulmentLogRepository {
 
     private static MapSqlParameterSource params(AnnulmentLogFilter filter) {
         return new MapSqlParameterSource().addValue("agencyId", filter.agencyId()).addValue("type", filter.documentType())
-                .addValue("userId", filter.userId()).addValue("from", filter.from()).addValue("to", filter.to());
+                .addValue("userId", filter.userId()).addValue("from", filter.from()).addValue("to", filter.to())
+                .addValue("includeAccess", filter.includeAccess());
     }
 
     private AnnulmentLogEntry toEntry(ResultSet rs) throws SQLException {
         String values = rs.getString("valores");
         return new AnnulmentLogEntry(rs.getLong("id"), rs.getString("origen"), rs.getString("tipo_documento"),
                 rs.getString("numero_documento"), rs.getString("agencia"), (Long) rs.getObject("documento_id", Long.class),
-                rs.getObject("anulado_en", OffsetDateTime.class), rs.getString("usuario"), rs.getString("motivo"),
+                rs.getObject("anulado_en", OffsetDateTime.class),
+                rs.getObject("fecha_compra", LocalDate.class), rs.getString("usuario"), rs.getString("motivo"),
                 values == null ? Map.of() : json.readValue(values, VALUES), rs.getString("nota"));
     }
 

@@ -20,12 +20,12 @@ const PAGE: AnnulmentLogPage = {
   items: [
     {
       id: 2, origin: 'WEB', documentType: 'COMPRA_SECO', documentNumber: 'SDTA 43388', agencyName: 'El Tambo', documentId: 9,
-      annulledAt: '2026-11-26T15:30:00Z', username: 'admin_prueba', reason: 'Error de digitación en los kilos',
+      annulledAt: '2026-11-26T15:30:00Z', purchaseDate: '2026-11-20', username: 'admin_prueba', reason: 'Error de digitación en los kilos',
       values: { netKg: '1200.5', netToPay: '9267436', paymentMethod: 'EFECTIVO', idNumber: '990000998' }, note: null,
     },
     {
       id: 1, origin: 'ACCESS', documentType: 'COMPRA_SECO', documentNumber: 'SDTA 43000', agencyName: 'El Tambo', documentId: 7,
-      annulledAt: null, username: null, reason: null, values: { netKg: '0' }, note: 'Access deja la compra en 0 al anular',
+      annulledAt: null, purchaseDate: '2024-03-15', username: null, reason: null, values: { netKg: '0' }, note: 'Access deja la compra en 0 al anular',
     },
   ],
 };
@@ -93,6 +93,49 @@ describe('AnnulmentLogComponent (26-nov)', () => {
     request.flush({ total: 0, items: [] });
   });
 
+  it('includes the ones from Access (no annulment date) by default and they can be left out', async () => {
+    const { fixture, component, el } = render();
+    const first = http.expectOne((r) => r.url === URL);
+    expect(first.request.params.get('includeAccess')).toBe('true');
+    first.flush(PAGE);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const box = el.querySelector<HTMLInputElement>('[data-testid="include-access"]');
+    expect(box?.checked).toBe(true);
+    expect(el.textContent).toContain(content.includeAccessLabel);
+
+    component.includeAccess = false;
+    component.search();
+
+    expect(http.expectOne((r) => r.url === URL).request.params.get('includeAccess')).toBe('false');
+  });
+
+  it('shows the origin (WEB / ACCESS) and the purchase date of each annulled purchase', () => {
+    const { fixture, el } = render();
+    http.expectOne((r) => r.url === URL).flush(PAGE);
+    fixture.detectChanges();
+
+    const rows = [...el.querySelectorAll('[data-testid="annulments"] tbody tr')].map((r) =>
+      [...r.querySelectorAll('td')].map((td) => td.textContent?.trim()));
+    const origin = content.columns.indexOf('Origen');
+    const bought = content.columns.indexOf('Fecha de la compra');
+    expect([rows[0][origin], rows[1][origin]]).toEqual(['WEB', 'ACCESS']);
+    expect([rows[0][bought], rows[1][bought]]).toEqual(['20/11/2026', '15/03/2024']);
+  });
+
+  it('exports a code it does not know as it comes, and an empty purchase date for a remission', async () => {
+    const { component } = render();
+    http.expectOne((r) => r.url === URL).flush(PAGE);
+    const odd = { ...PAGE.items[0], origin: 'OTRO', documentType: 'REMISION_X', purchaseDate: null } as unknown as AnnulmentLogPage['items'][0];
+
+    const done = component.export();
+    http.expectOne((r) => r.url === URL && r.params.get('size') === '5000').flush({ total: 1, items: [odd] });
+    await done;
+
+    const [table] = exporter.xlsx.mock.calls[0] as unknown as [{ rows: { cells: unknown[] }[] }];
+    expect(table.rows[0].cells.slice(1, 5)).toEqual(['OTRO', '', 'El Tambo', 'REMISION_X']);
+  });
+
   it('exports to Excel every annulment of the filter, with its values', async () => {
     const { component } = render();
     http.expectOne((r) => r.url === URL).flush(PAGE);
@@ -106,6 +149,7 @@ describe('AnnulmentLogComponent (26-nov)', () => {
     expect(table.columns).toEqual(content.columns);
     expect(table.rows).toHaveLength(2);
     expect(table.rows[0].cells).toContain('Error de digitación en los kilos');
+    expect(table.rows[1].cells).toEqual(expect.arrayContaining(['ACCESS', '15/03/2024']));
     expect(fileName).toBe(content.fileName);
   });
 });
