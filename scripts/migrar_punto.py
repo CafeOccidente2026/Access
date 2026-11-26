@@ -1047,16 +1047,26 @@ def exit_remissions(exits):
     for row in exits:
         text = access_remission(row)
         match = re.search(r"(\d+)$", text)
-        if not match:
+        if not match and not text:
             note_stop("Salida de INVENTARIO sin numero de remision", discard_detail(row, 0, row.get("cantidad")))
             continue
-        remission = grouped.setdefault(int(match.group(1)),
+        if not match:
+            # 26-nov (Pasto, opcion A): sin numero ("SEBASTIAN ORTIZ"): se carga con su texto tal cual y sin numero.
+            note_discard("Salida de INVENTARIO sin numero de remision (se carga con su texto, sin numero)",
+                         f"Id {s(row, 'id_access') or '?'}, {s(row, 'fecha')[:10]}, remision '{text}', codigo"
+                         f" {s(row, 'cod_prod')}, cantidad {s(row, 'cantidad')}, destino {s(row, 'destino')}")
+        remission = grouped.setdefault(int(match.group(1)) if match else text,
                                        {"text": text, "date": None, "destino": s(row, "destino"), "lines": []})
         day = parse_date(row.get("fecha"))
         if day and (remission["date"] is None or day > remission["date"]):
             remission["date"] = day
         remission["lines"].append(row)
-    return dict(sorted(grouped.items()))
+    return dict(sorted(grouped.items(), key=lambda item: (isinstance(item[0], str), str(item[0]).zfill(12))))
+
+
+def remission_number(key):
+    """Numero de la remision de una salida (la clave de exit_remissions); None si la salida no tiene numero."""
+    return key if isinstance(key, int) else None
 
 
 def exit_remission_rows(exits):
@@ -1107,11 +1117,13 @@ def load_inventory(cur, agency_id, user_id):
     cur.execute("SELECT DISTINCT ON (producto_id) producto_id, id FROM inventarios WHERE agencia_id = %s"
                 " ORDER BY producto_id, fecha_compra, id", (agency_id,))
     first_entry = dict(cur.fetchall())
-    cur.execute("SELECT numero_remision_anterior FROM remisiones WHERE agencia_id = %s", (agency_id,))
+    cur.execute("SELECT coalesce(numero_remision_anterior::text, numero_remision) FROM remisiones"
+                " WHERE agencia_id = %s", (agency_id,))
     existing = {r[0] for r in cur.fetchall()}
     remissions = lines = 0
     for number, remission in exit_remissions(exits).items():
-        if number in existing:
+        key, number = number, remission_number(number)
+        if str(key) in existing:
             continue
         funds = {products[s(r, "cod_prod")][1] for r in remission["lines"] if s(r, "cod_prod") in products}
         cur.execute(
