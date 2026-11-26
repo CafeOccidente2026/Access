@@ -165,7 +165,11 @@ class AnnulmentLogIntegrationTest {
                 saved.id())).isZero();
     }
 
-    /** Un caso por sentencia: en PostgreSQL, despues de un error la transaccion queda abortada. */
+    /**
+     * Un caso por sentencia: en PostgreSQL, despues de un error la transaccion queda abortada. Dos capas: si la app
+     * entra con su propio rol (CI, produccion), afterMigrate.sql ya le quito el permiso y la base responde "permiso
+     * denegado"; si entra con el rol dueno (instalaciones de antes), el trigger lo rechaza. Las dos sirven.
+     */
     @ParameterizedTest
     @ValueSource(strings = {"UPDATE anulaciones SET motivo = 'cambiado por alguien' WHERE id = %d",
         "DELETE FROM anulaciones WHERE id = %d", "TRUNCATE anulaciones"})
@@ -173,7 +177,15 @@ class AnnulmentLogIntegrationTest {
         Long id = accessRow();
 
         assertThatThrownBy(() -> jdbc.update(statement.formatted(id))).isInstanceOf(DataAccessException.class)
-                .hasMessageContaining("solo admite insertar");
+                .rootCause().hasMessageMatching("(?s).*(solo admite insertar|permission denied|permiso denegado).*");
+    }
+
+    /** El trigger protege tambien al dueno de la tabla (y a cualquier rol que tuviera el permiso). */
+    @Test
+    void theTriggersThatRejectChangesExist() {
+        assertThat(jdbc.queryForList("SELECT tgname FROM pg_trigger WHERE tgrelid = 'anulaciones'::regclass"
+                + " AND NOT tgisinternal ORDER BY tgname", String.class))
+                .containsExactly("tg_anulaciones_sin_cambios", "tg_anulaciones_sin_truncate");
     }
 
     @Test
