@@ -890,6 +890,14 @@ def payment_of(row):
         return UNPAID, None
     if parse_decimal(row.get("fpch")) > 0:
         return "CHEQUE", cheque_text(row.get("numcheque"))
+    # 26-nov: pagada solo por transferencia (o solo con datafono) no es EFECTIVO. El datafono necesita su cuenta por
+    # cobrar, que Access no tiene: detiene la carga en vez de inventarla.
+    used = [k for k in ("fpef", "fptx", "fpdat") if parse_decimal(row.get(k)) > 0]
+    if used == ["fptx"]:
+        return "TRANSFERENCIA", None
+    if used == ["fpdat"]:
+        note_stop("Compra pagada solo con datafono (no se carga su cuenta por cobrar)",
+                  f"factura {s(row, 'factura')} (Id {s(row, 'id_access') or '?'})")
     return "EFECTIVO", None
 
 
